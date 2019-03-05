@@ -9,7 +9,7 @@ import gdb
 def defer_set_prompt( v ):
     set_prompt()
 
-prompt_color = vdb.config.parameter( "vdb-prompt-color","#ffff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
+prompt_color = vdb.config.parameter( "vdb-prompt-colors-text","#ffff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
 prompt_text = vdb.config.parameter( "vdb-prompt-text","vdb> ", on_set = defer_set_prompt )
 
 # TODO introduce hooks to dynamically insert information, use format string like substitutions for them.

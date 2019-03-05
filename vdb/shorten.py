@@ -11,7 +11,7 @@ import gdb
 import os
 from collections.abc import Iterable
 
-color_shorten = vdb.config.parameter("vdb-shorten-templates", "#f60", gdb_type = vdb.config.PARAM_COLOUR)
+color_shorten = vdb.config.parameter("vdb-shorten-colors-templates", "#f60", gdb_type = vdb.config.PARAM_COLOUR)
 
 
 

@@ -35,6 +35,8 @@ class parameter(gdb.Parameter):
         self.show_doc = docstring + ':'
         self.is_colour = False
         if( gdb_type == PARAM_COLOR ):
+            if( name.find("-colors-") == -1 ):
+                raise Exception("Colour names must have -colors- in their name, '%s' does not" % name )
             self.is_colour = True
             gdb_type = gdb.PARAM_STRING
         if( gdb_type is None ):
