@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+
+import vdb.config
+import vdb.subcommands
+
+import gdb
+
+import shlex
+
+
+# First setup the most important settings that configure which parts we want to have active
+
+
+class cmd_vdb (gdb.Command):
+    """Show vdb status information"""
+
+    def __init__ (self):
+        super (cmd_vdb, self).__init__ ("vdb", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+
+    def invoke (self, arg, from_tty):
+        argv=shlex.split(arg)
+        if( len(argv) > 0 ):
+            if( argv[0] == "start" ):
+                start()
+                return
+            vdb.subcommands.run_subcommand(argv)
+            return
+        print("vdb is loaded with the following configuration:")
+
+cmd_vdb()
+
+enable_prompt = vdb.config.parameter( "vdb-enable-prompt",True)
+enable_backtrace = vdb.config.parameter( "vdb-enable-backtrace",True)
+
+def start():
+    print("Starting vdb modules…")
+    if( enable_prompt ):
+        print("Enabling submodule prompt…")
+        import vdb.prompt
+    if( enable_backtrace ):
+        print("Enabling submodule backtrace…")
+        import vdb.backtrace
+
+
+
+
+#pre_commands = """
+#set confirm off
+#set verbose off
+#set prompt %s
+#set height 0
+#set history expansion on
+#set history save on
+#set follow-fork-mode child
+#set backtrace past-main on
+#set step-mode on
+#set print pretty on
+#set width 0
+#set print elements 15
+#handle SIGALRM nostop print nopass
+#handle SIGBUS  stop   print nopass
+#handle SIGPIPE nostop print nopass
+#handle SIGSEGV stop   print nopass
+#""".strip() % prompt
+#
+
+# This may throw an exception, see pwndbg/pwndbg#27
+try:
+#    gdb.execute("set disassembly-flavor intel")
+    gdb.execute("set disassembly-flavor att")
+except gdb.error:
+    pass
+# vim: tabstop=4 shiftwidth=4 expandtab ft=python
