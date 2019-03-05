@@ -41,25 +41,18 @@ def get_type( ptr, archsize ):
     if( ptr < 0x1000 ):
         return memory_type.NULL
     else:
-#        print("ptr = '%s'" % ptr )
-#        print("ptr = '%x'" % ptr )
         aptr = ptr
         ascii=True
         plen = archsize // 4
         for i in range(0,plen//2):
             b = aptr & 0xFF
-#            print("b = 0x%02x" % b )
             b = chr(b)
             if( b == 0 and i == (plen//2)-1 ):
                 break
             if( b not in string.printable ):
-#                print("NOT PRINTABLE")
                 ascii = False
                 break
-#            else:
-#                print("PRINTABLE")
             aptr = aptr >> 8
-#        print("ascii = '%s'" % ascii )
         if( ascii ):
             return memory_type.ASCII
     return memory_type.UNKNOWN
