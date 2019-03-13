@@ -17,10 +17,11 @@ PARAM_COLOR = PARAM_COLOUR
 
 
 def guess_gdb_type( p ):
+#    print("Guess type of %s is %s" % (p,type(p)))
+    if( isinstance(p,bool) ): # a python bool is a python int too
+        return gdb.PARAM_BOOLEAN
     if( isinstance(p,int) ):
         return gdb.PARAM_INTEGER
-    if( isinstance(p,bool) ):
-        return gdb.PARAM_BOOLEAN
     return gdb.PARAM_STRING
 
 # In case the type is our artifical type colour, it will translate to gdb string and we check internally for a colour
@@ -64,7 +65,9 @@ class parameter(gdb.Parameter):
         try:
             if isinstance(self.value, str):
                 self.value = vdb.util.unquote(self.value)
-            if( self.value == "default" ):
+            if( self.value == "None" ):
+                self.value = None
+            elif( self.value == "default" ):
                 self.value = self.default
             if( self.is_colour ):
                 self.check_colour()

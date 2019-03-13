@@ -4,11 +4,13 @@
 import vdb.config
 import vdb.color
 import vdb.pointer
+import vdb.memory
 
 import gdb
 
 import shlex
 import re
+import traceback
 
 color_names = vdb.config.parameter("vdb-register-colors-names", "#4c0", gdb_type = vdb.config.PARAM_COLOUR)
 
@@ -136,13 +138,16 @@ class Registers():
         except:
             pass
 
-    def format_register( self,name, val,t ):
+    def format_register( self,name, val,t, chained = False ):
         val=int( val.cast(gdb_uint64_t) )
         try:
             ret = vdb.color.color(f" {name:<6}",color_names.value)
 #            print("name = '%s'" % name )
-#            ret += vdb.pointer.color(val,self.archsize)
-            ret += vdb.pointer.chain(val,self.archsize)
+
+            if( chained ):
+                ret += vdb.pointer.chain(val,self.archsize)
+            else:
+                ret += vdb.pointer.color(val,self.archsize)[0]
         except:
             ret = "ERR " + name + " : " + str(val)
             raise
@@ -200,7 +205,7 @@ class Registers():
         for i in range(0,sub64):
             #			print("BARK")
             try:
-                xval.append(int(val[tname][i]))
+                xval.append(int(val[tname][i].cast(gdb_uint64_t)))
             except:
                 xval.append("INVALID")
 
@@ -216,7 +221,7 @@ class Registers():
         for name,valt in self.regs.items():
             val,t =valt
             cnt += 1
-            ret += self.format_register(name,val,t)
+            ret += self.format_register(name,val,t,True)
 #            ret += " RECURSION"
             ret += "\n"
         return ret
@@ -354,6 +359,7 @@ class Registers():
 
         return ret
 
+
 class cmd_registers(gdb.Command):
     """Show the registers nicely (default is expanded)
 short    - Show just the important registers and flags with their hex values
@@ -367,33 +373,39 @@ representations
         super (cmd_registers, self).__init__ ("registers", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
     def invoke (self, arg, from_tty):
-        argv=shlex.split(arg)
-        r = Registers()
-        if( r.thread == 0 ):
-            print("No running thread to read registers from")
-            return
-        if( len(argv) == 0 ):
-            print(r.ex_ints())
-            print(r.flags())
-        elif( len(argv) == 1 ):
-            if( argv[0] == "short" ):
-                print(r.ints())
-                print(r.flags())
-            if( argv[0] == "expanded" ):
+        try:
+            argv=shlex.split(arg)
+            r = Registers()
+            if( r.thread == 0 ):
+                print("No running thread to read registers from")
+                return
+
+            vdb.memory.print_legend("Ama")
+
+            if( len(argv) == 0 ):
                 print(r.ex_ints())
                 print(r.flags())
-            if( argv[0] == "all" ):
-                print(r.ints())
-                print(r.flags())
-                print(r.floats())
-                print(r.vectors())
-            if( argv[0] == "full" ):
-                print(r.ex_ints())
-                print(r.flags())
-                print(r.ex_floats())
-                print(r.ex_vectors())
-        else:
-            print("Invalid argument(s) to registers: '%s'" % arg )
+            elif( len(argv) == 1 ):
+                if( argv[0] == "short" ):
+                    print(r.ints())
+                    print(r.flags())
+                if( argv[0] == "expanded" ):
+                    print(r.ex_ints())
+                    print(r.flags())
+                if( argv[0] == "all" ):
+                    print(r.ints())
+                    print(r.flags())
+                    print(r.floats())
+                    print(r.vectors())
+                if( argv[0] == "full" ):
+                    print(r.ex_ints())
+                    print(r.flags())
+                    print(r.ex_floats())
+                    print(r.ex_vectors())
+            else:
+                print("Invalid argument(s) to registers: '%s'" % arg )
+        except Exception as e:
+            traceback.print_exc()
 
 cmd_registers()
 

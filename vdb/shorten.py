@@ -333,7 +333,7 @@ vdb.subcommands.add_subcommand( [ "show", "shorten" ], show_shorten )
 
 
 
-foldables = [ 
+foldables = [
 	"feedconfig::condition_base",
 	"dissected_message",
 	"parser_base",

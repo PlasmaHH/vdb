@@ -20,6 +20,10 @@ color_defobj   = vdb.config.parameter("vdb-bt-colors-default-object",           
 color_rtti     = vdb.config.parameter("vdb-bt-colors-rtti-warning",             "#c00",    gdb_type = vdb.config.PARAM_COLOUR)
 #color_ = vdb.config.parameter( "vdb-bt-colors-","#")
 
+show_addresses = vdb.config.parameter("vdb-bt-show-addresses", True )
+#frame_marker = vdb.config.parameter("vdb-bt-selected-frame-marker", "[*]" )
+frame_marker = vdb.config.parameter("vdb-bt-selected-frame-marker","► ")
+
 class ArgVal():
 
 	def __init__( self, sym, val ):
@@ -179,203 +183,205 @@ class SignalFrame():
 
 class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
 
-	def __init__(self, fobj,eli=[]):
-		super(BacktraceDecorator, self).__init__(fobj)
-		self.fobj = fobj
+    def __init__(self, fobj,eli=[]):
+        super(BacktraceDecorator, self).__init__(fobj)
+        self.fobj = fobj
 #		print("len(eli) = '%s'" % len(eli) )
-		self.elis = eli
+        self.elis = eli
 
-	def elided(self):
-		frame = self.fobj.inferior_frame()
-		signal_frame = False
-		if( frame.type() == gdb.SIGTRAMP_FRAME ):
-			signal_frame = True
-		if( frame == gdb.newest_frame() ):
-			signal_frame = True
+    def elided(self):
+        frame = self.fobj.inferior_frame()
+        signal_frame = False
+        if( frame.type() == gdb.SIGTRAMP_FRAME ):
+            signal_frame = True
+        if( frame == gdb.newest_frame() ):
+            signal_frame = True
 
 #		print("len(self.elis) = '%s'" % len(self.elis) )
-		ret = []
-		for e in self.elis:
-			ret.append(e)
-		if( signal_frame ):
-			ret.append( SignalFrame(self.fobj) )
+        ret = []
+        for e in self.elis:
+            ret.append(e)
+        if( signal_frame ):
+            ret.append( SignalFrame(self.fobj) )
 
-		return ret
+        return ret
 
-	def function(self):
-		frame = self.fobj.inferior_frame()
+    def function(self):
+        frame = self.fobj.inferior_frame()
 
-		name = frame.name()
-		if( name is None ):
-			return "<unknown>"
-		name = str(name)
-		name = vdb.shorten.function(name)
+        name = frame.name()
+        if( name is None ):
+            return "<unknown>"
+        name = str(name)
+        name = vdb.shorten.function(name)
 
 
-		cpos = len(name)
-		tparamstart=0
+        cpos = len(name)
+        tparamstart=0
 
-		if( name[-1] == ">" ):
-			level=0
+        if( name[-1] == ">" ):
+            level=0
 
-			for i in range(len(name)-1,-1,-1):
-				if( name[i] == ">" ):
-					level += 1
-				elif( name[i] == "<" ):
-					level -= 1
-				if( level == 0):
-					tparamstart=i
-					cpos=i
-					break
+            for i in range(len(name)-1,-1,-1):
+                if( name[i] == ">" ):
+                    level += 1
+                elif( name[i] == "<" ):
+                    level -= 1
+                if( level == 0):
+                    tparamstart=i
+                    cpos=i
+                    break
 
-		prefix=name
-		fun=""
-		suffix=""
+        prefix=name
+        fun=""
+        suffix=""
 #		print("cpos = '%s'" % cpos )
 #		print("tparamstart = '%s'" % tparamstart )
-		fns = name.rfind(":",0,cpos)
-		if( fns != -1 ):
-			fns += 1
-			prefix=name[0:fns]
-			if( tparamstart != 0 ):
-#				print("fns = '%s'" % fns )
+        fns = name.rfind(":",0,cpos)
+        if( fns != -1 ):
+            fns += 1
+            prefix=name[0:fns]
+            if( tparamstart != 0 ):
+                #				print("fns = '%s'" % fns )
 #				print("tparamstart = '%s'" % tparamstart )
-				fun=name[fns:tparamstart]
-				suffix=name[tparamstart:]
-			else:
-				fun=name[fns:]
-				suffix=""
-		else:
-			prefix=""
-			fun=name
-		tps=prefix.find("<")
-		tparam = ""
-		if( tps != -1 ):
-			xp = prefix
-			prefix = xp[0:tps]
-			tparam = xp[tps:]
-		name= vdb.color.color(prefix,color_ns.value) + tparam + vdb.color.color(fun,color_function.value) + suffix
+                fun=name[fns:tparamstart]
+                suffix=name[tparamstart:]
+            else:
+                fun=name[fns:]
+                suffix=""
+        else:
+            prefix=""
+            fun=name
+        tps=prefix.find("<")
+        tparam = ""
+        if( tps != -1 ):
+            xp = prefix
+            prefix = xp[0:tps]
+            tparam = xp[tps:]
+        name= vdb.color.color(prefix,color_ns.value) + tparam + vdb.color.color(fun,color_function.value) + suffix
 
 
-		if( frame == gdb.selected_frame() ):
-			name = vdb.color.color("[*]",color_frame.value) + name
+        if( frame == gdb.selected_frame() ):
+            name = vdb.color.color(frame_marker.value,color_frame.value) + name
 
-		sal = frame.find_sal()
-		addr = sal.pc
-		if( int(addr) != 0 ):
-			if frame.type() == gdb.INLINE_FRAME:
-				name = "[i] " + name
-		else:
-			if frame.type() == gdb.INLINE_FRAME:
-				name = " [inlined]        " + name
-			else:
-				name = "                  " + name
-		
-		return name
+        sal = frame.find_sal()
+        addr = sal.pc
+        if( int(addr) != 0 ):
+            if frame.type() == gdb.INLINE_FRAME:
+                name = "[i] " + name
+        else:
+            if frame.type() == gdb.INLINE_FRAME:
+                name = " [inlined]        " + name
+            else:
+                name = "                  " + name
 
-	def filename(self):
-		frame = self.fobj.inferior_frame()
-		sal = frame.find_sal()
-		fname="<unknown>"
-		try:
-			fname = sal.symtab.filename
-			fname = vdb.shorten.path(fname)
-			fname = vdb.color.color(fname,color_filename.value)
-		except:
-			try:
-				fname = sal.symtab.objfile
-				fname = vdb.color.color(fname,color_objfile.value)
-			except:
-				try:
-					fname = super(BacktraceDecorator,self).filename()
-					if( fname is not None ):
-						fname = vdb.color.color(fname,color_defobj.value)
-				except:
-					pass
-		return fname
+        return name
+
+    def filename(self):
+        frame = self.fobj.inferior_frame()
+        sal = frame.find_sal()
+        fname="<unknown>"
+        try:
+            fname = sal.symtab.filename
+            fname = vdb.shorten.path(fname)
+            fname = vdb.color.color(fname,color_filename.value)
+        except:
+            try:
+                fname = sal.symtab.objfile
+                fname = vdb.color.color(fname,color_objfile.value)
+            except:
+                try:
+                    fname = super(BacktraceDecorator,self).filename()
+                    if( fname is not None ):
+                        fname = vdb.color.color(fname,color_defobj.value)
+                except:
+                    pass
+        return fname
 
 
-	def frame_args(self):
-		args = super(BacktraceDecorator,self).frame_args()
-		if( args is None ):
-			return args
+    def frame_args(self):
+        args = super(BacktraceDecorator,self).frame_args()
+        if( args is None ):
+            return args
 #		print("args = '%s'" % args )
-		ret = [ ]
+        ret = [ ]
 #		gdb.execute("set logging file /dev/null")
 #		gdb.execute("set logging redirect on")
 #		gdb.execute("set logging on")
-		for a in args:
-			if( str(a.symbol()) == "__in_chrg" ):
-				continue
+        for a in args:
+            if( str(a.symbol()) == "__in_chrg" ):
+                continue
 #			print("a.symbol() = '%s'" % a.symbol() )
-			ret.append( ArgVal( a.symbol(), a.value() ) )
+            ret.append( ArgVal( a.symbol(), a.value() ) )
 #		gdb.execute("set logging redirect off")
 #		gdb.execute("set logging off")
-		return ret
+        return ret
 
-	def address(self):
-		frame = self.fobj.inferior_frame()
-		sal = frame.find_sal()
-		addr = sal.pc
-		if( int(addr) == 0 ):
-			addr = None
+    def address(self):
+        if( not show_addresses.value ):
+            return None
+        frame = self.fobj.inferior_frame()
+        sal = frame.find_sal()
+        addr = sal.pc
+        if( int(addr) == 0 ):
+            addr = None
 #		print("addr = '%s'" % addr )
-		return addr
+        return addr
 
 
 
 class BacktraceIterator:
-	def __init__(self, ii):
-		self.input_iterator = ii
-		self.inlined_frames = []
-		self.next_real = None
+    def __init__(self, ii):
+        self.input_iterator = ii
+        self.inlined_frames = []
+        self.next_real = None
 
-	def __iter__(self):
-		return self
+    def __iter__(self):
+        return self
 
-	def __next__(self):
-		try:
-			frame = next(self.input_iterator)
-		except StopIteration:
-			if( self.next_real is None ):
-				raise StopIteration
-			sret = self.next_real
-			self.next_real = None
-			return sret
-		sal = frame._base.find_sal()
-		addr = sal.pc
+    def __next__(self):
+        try:
+            frame = next(self.input_iterator)
+        except StopIteration:
+            if( self.next_real is None ):
+                raise StopIteration
+            sret = self.next_real
+            self.next_real = None
+            return sret
+        sal = frame._base.find_sal()
+        addr = sal.pc
 #		print("Returning BD")
 #		return BacktraceDecorator(frame)
-		toret = None
-		if( int(addr) != 0 ):
-			if( self.next_real is not None ):
-				toret = self.next_real
-			self.next_real = BacktraceDecorator(frame)
-			ifl = self.inlined_frames
-			self.inlined_frames = []
-		else:
-			self.inlined_frames.append( BacktraceDecorator(frame) )
+        toret = None
+        if( int(addr) != 0 ):
+            if( self.next_real is not None ):
+                toret = self.next_real
+            self.next_real = BacktraceDecorator(frame)
+            ifl = self.inlined_frames
+            self.inlined_frames = []
+        else:
+            self.inlined_frames.append( BacktraceDecorator(frame) )
 
-		if( toret ):
-			return BacktraceDecorator( toret, ifl )
+        if( toret ):
+            return BacktraceDecorator( toret, ifl )
 
 #		print("Saving frame for later (%s)" % (len(self.inlined_frames)) )
-		try:
-			return self.__next__()
-		except StopIteration:
-			return BacktraceIterator(frame)
+        try:
+            return self.__next__()
+        except StopIteration:
+            return BacktraceIterator(frame)
 
 class BacktraceFilter ( ):
-	"""Filter backtraces to make them look nicer"""
+    """Filter backtraces to make them look nicer"""
 
-	def __init__ (self):
-		self.name = "BacktraceFilter"
-		self.priority = 100
-		self.enabled = True
-		gdb.frame_filters[self.name] = self
+    def __init__ (self):
+        self.name = "BacktraceFilter"
+        self.priority = 100
+        self.enabled = True
+        gdb.frame_filters[self.name] = self
 
-	def filter( self, frame_iter ):
-		return BacktraceIterator( frame_iter )
+    def filter( self, frame_iter ):
+        return BacktraceIterator( frame_iter )
 #		frame_iter = map( BacktraceDecorator, frame_iter )
 #		return frame_iter
 
@@ -385,44 +391,44 @@ bf=BacktraceFilter()
 
 
 class cmd_Bto (gdb.Command):
-	"""Run the backtrace without filters"""
+    """Run the backtrace without filters"""
 
-	def __init__ (self):
-		super (cmd_Bto, self).__init__ ("bto", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+    def __init__ (self):
+        super (cmd_Bto, self).__init__ ("bto", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
-	def invoke (self, arg, from_tty):
-		argv = gdb.string_to_argv(arg)
-		try:
-			bf.enabled = False
-			if( len(argv) == 1 ):
-				gdb.execute("bt {}".format(argv[0]))
-			else:
-				gdb.execute("bt")
-		except:
-			pass
-		finally:
-			bf.enabled = True
+    def invoke (self, arg, from_tty):
+        argv = gdb.string_to_argv(arg)
+        try:
+            bf.enabled = False
+            if( len(argv) == 1 ):
+                gdb.execute("bt {}".format(argv[0]))
+            else:
+                gdb.execute("bt")
+        except:
+            pass
+        finally:
+            bf.enabled = True
 
 cmd_Bto()
 
 class cmd_bt (gdb.Command):
-	"""Run the backtrace without filters"""
+    """Run the backtrace without filters"""
 
-	def __init__ (self):
-		super (cmd_bt, self).__init__ ("bt", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-		self.dont_repeat()
+    def __init__ (self):
+        super (cmd_bt, self).__init__ ("bt", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.dont_repeat()
 
-	def invoke (self, arg, from_tty):
-		argv = gdb.string_to_argv(arg)
-		try:
-			if( len(argv) == 1 ):
-				btoutput = gdb.execute("backtrace {}".format(argv[0]),False,True)
-			else:
-				btoutput = gdb.execute("backtrace",False,True)
-			btoutput = re.sub( "warning: RTTI symbol not found for class '.*?'\n",vdb.color.color("RTTI",color_rtti.value),btoutput)
-			print(btoutput)
-		except:
-			pass
+    def invoke (self, arg, from_tty):
+        argv = gdb.string_to_argv(arg)
+        try:
+            if( len(argv) == 1 ):
+                btoutput = gdb.execute("backtrace {}".format(argv[0]),False,True)
+            else:
+                btoutput = gdb.execute("backtrace",False,True)
+            btoutput = re.sub( "warning: RTTI symbol not found for class '.*?'\n",vdb.color.color("RTTI",color_rtti.value),btoutput)
+            print(btoutput)
+        except:
+            pass
 
 cmd_bt()
 

@@ -4,6 +4,9 @@
 
 import vdb.config
 import vdb.color
+import vdb.vmmap
+import vdb.util
+import vdb.asm
 
 import gdb
 
@@ -11,63 +14,12 @@ import string
 from enum import Enum,auto
 
 
-color_nullpage      = vdb.config.parameter("vdb-pointer-colors-nullpage",      "#f33",        gdb_type = vdb.config.PARAM_COLOUR)
-color_unknown       = vdb.config.parameter("vdb-pointer-colors-unknown",       ",,underline", gdb_type = vdb.config.PARAM_COLOUR)
-color_ascii         = vdb.config.parameter("vdb-pointer-colors-ascii",         "#aa0",        gdb_type = vdb.config.PARAM_COLOUR)
-
-color_own_stack     = vdb.config.parameter("vdb-pointer-colors-stack-own",     "#050",        gdb_type = vdb.config.PARAM_COLOUR)
-color_foreign_stack = vdb.config.parameter("vdb-pointer-colors-stack-foreign", "#a50",        gdb_type = vdb.config.PARAM_COLOUR)
-color_heap          = vdb.config.parameter("vdb-pointer-colors-heap",          "#55b",        gdb_type = vdb.config.PARAM_COLOUR)
-color_mmap          = vdb.config.parameter("vdb-pointer-colors-mmap",          "#11c",        gdb_type = vdb.config.PARAM_COLOUR)
-color_code          = vdb.config.parameter("vdb-pointer-colors-code",          "#909",        gdb_type = vdb.config.PARAM_COLOUR)
-color_bss           = vdb.config.parameter("vdb-pointer-colors-bss",           "#508",        gdb_type = vdb.config.PARAM_COLOUR)
-
 arrow_right = vdb.config.parameter("vdb-pointer-arrow-right", " → " )
 arrow_left = vdb.config.parameter("vdb-pointer-arrow-left", " ←  " )
+arrow_infinity = vdb.config.parameter("vdb-pointer-arrow-left", " ↔ " )
 
-class memory_type(Enum):
-    OWN_STACK     = auto()
-    FOREIGN_STACK = auto()
-    HEAP          = auto()
-    MMAP          = auto()
-    CODE          = auto()
-    BSS           = auto()
-    ASCII         = auto()
-    NULL          = auto()
-    UNKNOWN       = auto()
+ellipsis = vdb.config.parameter("vdb-pointer-ellipsis", "…" )
 
-
-def get_type( ptr, archsize ):
-    if( ptr < 0x1000 ):
-        return memory_type.NULL
-    else:
-        aptr = ptr
-        ascii=True
-        plen = archsize // 4
-        for i in range(0,plen//2):
-            b = aptr & 0xFF
-            b = chr(b)
-            if( b == 0 and i == (plen//2)-1 ):
-                break
-            if( b not in string.printable ):
-                ascii = False
-                break
-            aptr = aptr >> 8
-        if( ascii ):
-            return memory_type.ASCII
-    return memory_type.UNKNOWN
-
-colormap = {
-    memory_type.OWN_STACK     : color_own_stack,
-    memory_type.FOREIGN_STACK : color_foreign_stack,
-    memory_type.HEAP          : color_heap,
-    memory_type.MMAP          : color_mmap,
-    memory_type.CODE          : color_code,
-    memory_type.BSS           : color_bss,
-    memory_type.ASCII         : color_ascii,
-    memory_type.NULL          : color_nullpage,
-    memory_type.UNKNOWN       : color_unknown,
-        }
 
 gdb_void     = None
 gdb_void_ptr = None
@@ -81,15 +33,71 @@ def update_types( ):
     gdb_void_ptr = gdb_void.pointer()
     gdb_void_ptr_ptr = gdb_void_ptr.pointer()
 
+def read( ptr ):
+    result = None
+    addr=ptr
+    count=1
+    try:
+        result = gdb.selected_inferior().read_memory(addr, count)
+    except gdb.error:
+        pass
+    return result
+
+def as_c_str( ptr, maxlen = 64 ):
+    c_str = bytearray()
+    rptr = ptr
+
+    for i in range(0,maxlen):
+        b = read(rptr)
+        if( b is None ):
+            break
+        b = b[0]
+#        print("type(b) = '%s'" % type(b) )
+        rptr += 1
+        if( b == b'\x00' ):
+            break
+        ib = int.from_bytes(b,byteorder="little")
+        if( ib == (0x7f & ib) ):
+            if( b.decode("ascii") not in string.printable ):
+                break
+        c_str += b
+    if( len(c_str) > 0 ):
+        c_str = vdb.util.maybe_utf8(c_str)
+        return c_str
+    else:
+        return None
+
+def annotate( ptr ):
+    mv=gdb.parse_and_eval("(void*)(%s)" % int(ptr) )
+    mv = str(mv)
+    pbs = mv.find("<")
+    if( pbs != -1 ):
+        mv = mv[pbs:]
+        return mv
+    return None
+
+def as_tail( ptr ):
+    s = as_c_str(ptr)
+    if( s is not None ):
+        return f"[{len(s)}]'{s}'"
+
+    at = vdb.memory.mmap.get_atype( ptr )
+#    print("at = '%s'" % at )
+    if( at  == vdb.memory.access_type.ACCESS_EX ):
+        return vdb.asm.get_single(ptr)
+#    if( mt == vdb.memory.memory_type.CODE ):
+    return None
 
 def color( ptr, archsize ):
     """Colorize the pointer according to the currently known memory situation"""
     ptr=int(ptr)
     plen = archsize // 4
-    t = get_type(ptr,archsize)
-    scolor = colormap.get(t,color_unknown)
+#    t,additional = get_type(ptr,archsize)
 
-    if( t == memory_type.NULL ):
+    s,mm,col,additional = vdb.memory.mmap.color(ptr,colorspec="Asma")
+#    scolor = colormap.get(t,color_unknown)
+
+    if( mm.mtype == vdb.memory.memory_type.NULL ):
         ps = f"{ptr:0{plen}x}"
         ps0 = ""
         ps1 = ""
@@ -100,19 +108,34 @@ def color( ptr, archsize ):
                 rest = True
             else:
                 ps0 += p
-        ret = vdb.color.color("0x" + ps0,scolor.value) + ps1
+        ret = vdb.color.color("0x" + ps0,col) + ps1
     else:
-        print("ptr %x of type %s" % (ptr,t))
-        ret = vdb.color.color(f"0x{ptr:0{plen}x}",scolor.value)
-    return ret
+#        print("ptr %x of type %s" % (ptr,t))
+        ret = vdb.color.color(f"0x{ptr:0{plen}x}",col)
+#    return ( ret, additional )
+    return ( ret, additional )
 
-def chain( ptr, archsize ):
+def chain( ptr, archsize, maxlen = 8 ):
     if( gdb_void == None ):
         update_types()
+    if( maxlen == 0 ):
+        return ellipsis.value
 
 #    print("chain(0x%x,…)" % ptr )
 #    print("type(ptr) = '%s'" % type(ptr) )
-    ret = color(ptr,archsize)
+    ret,add = color(ptr,archsize)
+
+    an = annotate( ptr )
+    plen = archsize // 4
+    plen += 4
+    if( an ):
+        ret += f" {an:<{plen}}"
+    s = as_tail(ptr)
+    if( s is not None ):
+        ret += f"{arrow_right.value}{s}"
+        return ret
+    if( add is not None ):
+        ret += f"   {add[1]}"
     try:
         gptr = gdb.Value(ptr)
 #        print("gptr = '%s'" % gptr )
@@ -127,8 +150,11 @@ def chain( ptr, archsize ):
         nptr = gptr.cast(gdb_void_ptr_ptr)
 #        print("nptr = '%s'" % nptr )
         gvalue = nptr.dereference()
+        if( nptr == gvalue ):
+            ret += arrow_infinity.value + color(gvalue,archsize)[0]
+        else:
 #        print("gvalue = '%s'" % gvalue )
-        ret += arrow_right.value + chain(gvalue,archsize)
+            ret += arrow_right.value + chain(gvalue,archsize,maxlen-1)
     except gdb.MemoryError as e:
 #        print("e = '%s'" % e )
         pass

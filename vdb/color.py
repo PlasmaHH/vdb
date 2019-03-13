@@ -4,6 +4,9 @@
 import colors
 
 def color( s, cs ):
+    s=str(s)
+    if( cs is None ):
+        return s
     cs = cs.split(",")
     if( len(cs) == 1 ):
         return colors.color(s,cs[0])

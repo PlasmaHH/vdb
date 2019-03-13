@@ -34,6 +34,7 @@ cmd_vdb()
 enable_prompt = vdb.config.parameter( "vdb-enable-prompt",True)
 enable_backtrace = vdb.config.parameter( "vdb-enable-backtrace",True)
 enable_register = vdb.config.parameter( "vdb-enable-register",True)
+enable_vmmap = vdb.config.parameter( "vdb-enable-vmmap",True)
 
 def start():
     print("Starting vdb modules…")
@@ -46,6 +47,9 @@ def start():
     if( enable_register ):
         print("Enabling submodule register…")
         import vdb.register
+    if( enable_vmmap ):
+        print("Enabling submodule vmmap…")
+        import vdb.vmmap
 
 
 
