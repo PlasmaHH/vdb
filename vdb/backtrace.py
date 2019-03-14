@@ -12,6 +12,7 @@ import os
 
 
 color_ns       = vdb.config.parameter("vdb-bt-colors-namespace",                "#ddf",    gdb_type = vdb.config.PARAM_COLOUR)
+colors_addr     = vdb.config.parameter("vdb-bt-colors-address",                  None,      gdb_type = vdb.config.PARAM_COLOUR)
 color_function = vdb.config.parameter("vdb-bt-colors-function",                 "#99f",    gdb_type = vdb.config.PARAM_COLOUR)
 color_frame    = vdb.config.parameter("vdb-bt-colors-selected-frame-marker",    "#0f0",    gdb_type = vdb.config.PARAM_COLOUR)
 color_filename = vdb.config.parameter("vdb-bt-colors-filename",                 "#ffff99", gdb_type = vdb.config.PARAM_COLOUR)
@@ -20,8 +21,10 @@ color_defobj   = vdb.config.parameter("vdb-bt-colors-default-object",           
 color_rtti     = vdb.config.parameter("vdb-bt-colors-rtti-warning",             "#c00",    gdb_type = vdb.config.PARAM_COLOUR)
 #color_ = vdb.config.parameter( "vdb-bt-colors-","#")
 
-show_addresses = vdb.config.parameter("vdb-bt-show-addresses", True )
-#frame_marker = vdb.config.parameter("vdb-bt-selected-frame-marker", "[*]" )
+color_addr     = vdb.config.parameter("vdb-bt-color-addresses", True )
+addr_colorspec = vdb.config.parameter("vdb-bt-address-colorspec", "ma" )
+showspec       = vdb.config.parameter("vdb-bt-showspec","naFPs")
+#frame_marker = vdbnfo.config.parameter("vdb-bt-selected-frame-marker", "[*]" )
 frame_marker = vdb.config.parameter("vdb-bt-selected-frame-marker","► ")
 
 class ArgVal():
@@ -207,6 +210,9 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
         return ret
 
     def function(self):
+
+        if( not any((c in showspec.value) for c in "fF" ) ):
+            return None
         frame = self.fobj.inferior_frame()
 
         name = frame.name()
@@ -258,7 +264,10 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
             xp = prefix
             prefix = xp[0:tps]
             tparam = xp[tps:]
-        name= vdb.color.color(prefix,color_ns.value) + tparam + vdb.color.color(fun,color_function.value) + suffix
+        if( "F" in showspec.value ):
+            name= vdb.color.color(prefix,color_ns.value) + tparam + vdb.color.color(fun,color_function.value) + suffix
+        else:
+            name= vdb.color.color(fun,color_function.value)
 
 
         if( frame == gdb.selected_frame() ):
@@ -267,6 +276,8 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
         sal = frame.find_sal()
         addr = sal.pc
         if( int(addr) != 0 ):
+            if( color_addr.value ):
+                name = self.color_address(addr) + " in " + name
             if frame.type() == gdb.INLINE_FRAME:
                 name = "[i] " + name
         else:
@@ -278,6 +289,8 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
         return name
 
     def filename(self):
+        if( "s" not in showspec.value ):
+            return None
         frame = self.fobj.inferior_frame()
         sal = frame.find_sal()
         fname="<unknown>"
@@ -303,6 +316,8 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
         args = super(BacktraceDecorator,self).frame_args()
         if( args is None ):
             return args
+        if( not any((c in showspec.value) for c in "pP" ) ):
+            return None
 #		print("args = '%s'" % args )
         ret = [ ]
 #		gdb.execute("set logging file /dev/null")
@@ -312,14 +327,34 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
             if( str(a.symbol()) == "__in_chrg" ):
                 continue
 #			print("a.symbol() = '%s'" % a.symbol() )
-            ret.append( ArgVal( a.symbol(), a.value() ) )
+            if( "P" in showspec.value ):
+                ret.append( ArgVal( a.symbol(), a.value() ) )
+            else:
+                ret.append( ArgVal( a.symbol(), "") )
 #		gdb.execute("set logging redirect off")
 #		gdb.execute("set logging off")
         return ret
 
-    def address(self):
-        if( not show_addresses.value ):
-            return None
+    def color_address( self, ptr = None ):
+        plen = 64//4 # get from global state
+        if( ptr is None ):
+            ptr = int(self.address(True))
+        addr = f"0x{ptr:0{plen}x}"
+#        return addr
+#        print("type(colors_addr.value) = '%s'" % type(colors_addr.value) )
+    
+        if( len(colors_addr.value) > 0 ):
+            return vdb.color.color(addr,colors_addr.value)
+        else:
+            s,_,_,_ = vdb.memory.mmap.color(ptr,addr,colorspec = addr_colorspec.value )
+            return s
+
+    def address(self,force = False):
+        if( not force ):
+            if( "a" not in showspec.value ):
+                return None
+            if( color_addr.value ):
+                return None
         frame = self.fobj.inferior_frame()
         sal = frame.find_sal()
         addr = sal.pc
@@ -327,6 +362,12 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
             addr = None
 #		print("addr = '%s'" % addr )
         return addr
+
+    def line(self):
+        if( "s" not in showspec.value ):
+            return None
+        l = super(BacktraceDecorator,self).line()
+        return l
 
 
 
@@ -420,9 +461,14 @@ class cmd_bt (gdb.Command):
 
     def invoke (self, arg, from_tty):
         argv = gdb.string_to_argv(arg)
+        # We need to do that first because if we don't we change the currently selected frame midways and that isn't something gdb likes
+        vdb.memory.mmap.parse()
         try:
+            if( color_addr.value ):
+                vdb.memory.print_legend( addr_colorspec.value )
             if( len(argv) == 1 ):
                 btoutput = gdb.execute("backtrace {}".format(argv[0]),False,True)
+#                gdb.execute("backtrace {}".format(argv[0]))
             else:
                 btoutput = gdb.execute("backtrace",False,True)
             btoutput = re.sub( "warning: RTTI symbol not found for class '.*?'\n",vdb.color.color("RTTI",color_rtti.value),btoutput)

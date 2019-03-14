@@ -6,6 +6,7 @@ import vdb.color
 import vdb.util
 
 import gdb
+import intervaltree
 
 import traceback
 import colors
@@ -29,8 +30,9 @@ color_own_stack     = vdb.config.parameter("vdb-memory-colors-stack-own",     "#
 color_foreign_stack = vdb.config.parameter("vdb-memory-colors-stack-foreign", "#f70",        gdb_type = vdb.config.PARAM_COLOUR)
 color_heap          = vdb.config.parameter("vdb-memory-colors-heap",          "#55b",        gdb_type = vdb.config.PARAM_COLOUR)
 color_mmap          = vdb.config.parameter("vdb-memory-colors-mmap",          "#11c",        gdb_type = vdb.config.PARAM_COLOUR)
-color_code          = vdb.config.parameter("vdb-memory-colors-code",          "#909",        gdb_type = vdb.config.PARAM_COLOUR)
-color_bss           = vdb.config.parameter("vdb-memory-colors-bss",           "#508",        gdb_type = vdb.config.PARAM_COLOUR)
+color_shm          = vdb.config.parameter("vdb-memory-colors-shared",          "#15c",        gdb_type = vdb.config.PARAM_COLOUR)
+color_code          = vdb.config.parameter("vdb-memory-colors-code",          "#a0a",        gdb_type = vdb.config.PARAM_COLOUR)
+color_bss           = vdb.config.parameter("vdb-memory-colors-bss",           "#609",        gdb_type = vdb.config.PARAM_COLOUR)
 
 color_ro = vdb.config.parameter("vdb-memory-colors-readonly"    , "#99f", gdb_type = vdb.config.PARAM_COLOUR)
 color_wo = vdb.config.parameter("vdb-memory-colors-writeonly"   , "#ff5", gdb_type = vdb.config.PARAM_COLOUR)
@@ -68,6 +70,7 @@ class memory_type(Enum):
     FOREIGN_STACK = auto()
     HEAP          = auto()
     MMAP          = auto()
+    SHM        = auto()
     CODE          = auto()
     BSS           = auto()
     ASCII         = auto()
@@ -79,6 +82,7 @@ colormap = {
     memory_type.FOREIGN_STACK : color_foreign_stack,
     memory_type.HEAP          : color_heap,
     memory_type.MMAP          : color_mmap,
+    memory_type.SHM        : color_shm,
     memory_type.CODE          : color_code,
     memory_type.BSS           : color_bss,
     memory_type.ASCII         : color_ascii,
@@ -247,6 +251,7 @@ def print_legend( colorspec = "Aasm" ):
         legends.append(vdb.color.color("[STACK(OTHER)]", vdb.memory.color_foreign_stack.value))
         legends.append(vdb.color.color("[HEAP]",         vdb.memory.color_heap.value))
         legends.append(vdb.color.color("[MMAP]",         vdb.memory.color_mmap.value))
+        legends.append(vdb.color.color("[SHM]",          vdb.memory.color_shm.value))
         legends.append(vdb.color.color("[CODE]",         vdb.memory.color_code.value))
         legends.append(vdb.color.color("[BSS]",          vdb.memory.color_bss.value))
     if( "a" in colorspec ):
@@ -274,8 +279,12 @@ def print_legend( colorspec = "Aasm" ):
 
 default_region_prefixes = [
         ( ".bss" , memory_type.BSS ),
+        ( ".tbss" , memory_type.BSS ),
 #        ( ".data", memory_type.DATA ),
         ( ".text", memory_type.CODE ),
+        ( ".init", memory_type.CODE ),
+        ( ".plt", memory_type.CODE ),
+        ( ".fini", memory_type.CODE ),
 ]
 
 class memory_region:
@@ -291,6 +300,9 @@ class memory_region:
         self.can_write = False
         self.thread = None
         self.size = end-start
+        self.procline = None
+        self.maintline = None
+        self.fileline = None
         if( self.size > 0 ):
             self._test_access()
             if( self.can_write and self.can_read ):
@@ -314,7 +326,13 @@ class memory_region:
         s += vdb.util.ifset("Memory Access : {}\n", self.atype )
         s += vdb.util.ifset("Memory Type : {}\n", self.mtype )
         s += vdb.util.ifset("Associated Thread {}\n", self.thread )
+        s += vdb.util.ifset("/proc/<pid>/maps {}\n", self.procline )
+        s += vdb.util.ifset("info files {}\n", self.fileline )
+        s += vdb.util.ifset("maint info sections {}\n", self.maintline )
         return s
+
+    def __repr__( self ):
+        return str(self)
 
     def _test_prefixes( self ):
         if( self.section is not None ):
@@ -341,6 +359,8 @@ class memory_region:
         if( isinstance(other,int) ):
             return self.start < other
         else:
+            if( self.start == other.start ):
+                return self.end < other.end
             return self.start < other.start
 
 class memory_key:
@@ -354,7 +374,7 @@ class memory_map:
 
     def __init__( self ):
         self.archsize = 64 # XXX init properly
-        self.regions = []
+        self.regions = intervaltree.IntervalTree()
         self.parsed_version = 0
         self.needed_version = 1
         self.unknown = memory_region(0,0,None,None)
@@ -364,26 +384,57 @@ class memory_map:
             self.parsed_version = self.needed_version
             self.parse()
 
+    def section( self, start, end ):
+        self.lazy_parse()
+        mskey = memory_region(start,end,None,None)
+        mms = self.regions[start:end]
+#        mm = bisect.bisect_left( self.regions,mskey )
+#        if( mm < 0 or mm >= len(self.regions) ):
+#            return None
+#        mm = self.regions[mm]
+        for mm in mms :
+            mm = mm[2]
+            if( mm.start == start and mm.end == end ):
+                return mm
+        return None
+
+
     def find( self, addr, mm = None ):
+#        print(f"find(0x{addr:x})")
         if( mm is not None ):
             return mm
         self.lazy_parse()
 #        print("len(self.regions) = '%s'" % len(self.regions) )
 #        print("addr = '%s'" % addr )
-#        mm = bisect.bisect_left( self.regions, addr )
-        mm = bisect.bisect_right( self.regions, memory_key(addr) )
-        mm -= 1
-        if( mm < 0 or mm >= len(self.regions) ):
+#        mmi = bisect.bisect_left( self.regions, addr )
+#        mmi = bisect.bisect_right( self.regions, memory_key(addr) )
+
+        mms = self.regions[addr]
+        
+        candidates = []
+        for mm in mms:
+            mm = mm[2]
+#            mm = self.regions[mmi]
+#            print("mm = '%s'" % mm )
+#            print("type(mm.start) = '%s'" % type(mm.start) )
+#            print("type(addr) = '%s'" % type(addr) )
+#            print(f"0x{mm.start:x} <= 0x{addr:x} = {mm.start<=addr}")
+#            print(f"0x{addr:x} <= 0x{mm.start:x} = {addr<=mm.start}")
+            if( mm.start <= addr <= mm.end ):
+                candidates.append(mm)
+            if( mm.start > addr ):
+                break
+
+#        print("candidates = '%s'" % candidates )
+        if( len(candidates) == 0 ):
             return None
-#        print("mm = '%s'" % mm )
-        mm = self.regions[mm]
-#        print("mm.start = '%s'" % mm.start )
-#        print("addr     = '%s'" % addr )
-#        print("mm.end   = '%s'" % mm.end )
-        if( mm.start <= addr and mm.end >= addr ):
-            return mm
-        else:
-            return None
+
+        mr = candidates[0]
+        for c in candidates:
+            if( mr.size > c.size ):
+                mr = c
+        return mr
+
 
     def get_asciicolor( self, addr ):
         """
@@ -474,7 +525,7 @@ class memory_map:
 #        print("mm.section = '%s'" % mm.section )
         return ( ret, mm )
 
-    def color( self, addr, s = None, colorspec = "sma" ):
+    def color( self, addr, s = None, colorspec = "sma", mm = None ):
         """
         returns a tuple of the coloured string as well as the region that matched it, or None
         """
@@ -483,7 +534,8 @@ class memory_map:
             s = str(addr)
             plen = self.archsize // 4
             s = f"0x{addr:0{plen}x}"
-        mm = self.find(addr)
+        if( mm is None ):
+            mm = self.find(addr)
         if( mm is None ):
             mm = self.unknown
         ascii = None
@@ -508,8 +560,15 @@ class memory_map:
 
         return ( s, mm, col, ascii )
 
+    def add_region( self, mm ):
+        self.regions[mm.start:mm.end+1] = mm
+
     def parse( self ):
-        self.regions = []
+        self.regions.clear()
+
+        selected_thread = gdb.selected_thread()
+        if( selected_thread is None ):
+            return
         info_files = gdb.execute("info files",False,True)
         fre = re.compile("(0x[0-9a-fA-F]*) - (0x[0-9a-fA-F]*) is (.*?)(?: in (.*))?$")
         for info in info_files.splitlines():
@@ -520,22 +579,97 @@ class memory_map:
                 end=int(m.group(2),16)
                 section=m.group(3)
                 file=m.group(4)
+                size=end-start
+                if( ignore_empty.value and size == 0 ):
+                    continue
                 mr = memory_region( start, end, section, file )
-                if( ignore_empty.value ):
-                    if( mr.size > 0 ):
-                        self.regions.append( mr )
-#                    else:
-#                        print("Ignoring region %s" % mr )
-                else:
-                    self.regions.append( mr )
+                mr.fileline = info
+                self.add_region( mr )
         nullr = memory_region( 0, 0x1000, None, None )
         nullr.atype = access_type.ACCESS_INV
         nullr.mtype = memory_type.NULL
-        self.regions.append(nullr)
-        self.regions.sort()
+        self.add_region(nullr)
+#        self.regions.sort()
+        info_proc_mapping = gdb.execute("info proc mapping",False,True)
+        mre = re.compile("(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(.*)")
+#        map_regions = []
+        for mapping in info_proc_mapping.splitlines():
+            mapping=mapping.strip()
+            m = mre.match(mapping)
+#            print("mapping = '%s'" % mapping )
+#            print("m = '%s'" % m )
+            if( m ):
+                start=int(m.group(1),16)
+                end=int(m.group(2),16)
+                file=m.group(5)
+#                print(f"{start} {end} {file}")
+                mm = self.section(start,end)
+#                print("mm = '%s'" % mm )
+                size = end-start
+                if( ignore_empty.value and size == 0 ):
+                    continue
+                if( mm is None ):
+                    mm = memory_region( start, end, None, file )
+                    self.add_region(mm)
+                mm.procline = mapping
+                if( len(file) > 0 and mm.file is None ):
+                    mm.file = file
+                if( file.startswith("/SYSV00000000 (deleted)") ):
+                    mm.mtype = memory_type.SHM
+                elif( file == "[stack]" ):
+                    mm.mtype = memory_type.FOREIGN_STACK
+                elif( file == "[heap]" ):
+                    mm.mtype = memory_type.HEAP
+                elif( file == "[vsyscall]" ):
+                    mm.mtype = memory_type.CODE
+                elif( file == "[vdso]" ):
+                    mm.mtype = memory_type.CODE
+
+#        self.regions += map_regions
+#        self.regions.sort()
+        maint_sections = gdb.execute("maint info sections ALLOBJ",False,True)
+        sre = re.compile(".*(0x[0-9a-fA-F]*)->(0x[0-9a-fA-F]*)\s*at\s*(0x[0-9a-fA-F]*):\s*(.*?)\s\s*(.*)")
+#        sec_regions = []
+        for sec in maint_sections.splitlines():
+            sec = sec.strip()
+            m = sre.match(sec)
+            if( m ):
+                start = int(m.group(1),16)
+                # Those are registers and all kinds of other stuff
+                if( start == 0 ):
+                    continue
+                end = int(m.group(2),16)
+                section = m.group(4)
+                rest = m.group(5)
+                rest = set( rest.split() )
+                size = end-start
+                if( ignore_empty.value and size == 0 ):
+                    continue
+#                print(f"{start} {end} {section} {rest} {size}")
+                mm = self.section(start,end)
+                if( mm is None ):
+                    mm = memory_region( start, end, section, None )
+                    self.add_region(mm)
+                else:
+                    if( mm.section is not None and mm.section != section ):
+                        mm.section += f"[{section}]"
+                        print(f"Section mismatch, previous {mm.section}, new {section}")
+                mm.maintline = sec
+#                print("mm = '%s'" % mm )
+#                if( "LOAD" not in rest ):
+#                    print("LOAD mm.mtype = '%s'" % mm.mtype )
+                if( "CODE" in rest ):
+#                    print("CODE mm.mtype = '%s'" % mm.mtype )
+                    if( mm.atype == None and "READONLY" in rest ):
+                        mm.atype = access_type.ACCESS_EX
+                if( ( mm.atype == None or mm.atype == access_type.ACCESS_RW ) and "READONLY" in rest ):
+                    mm.atype = access_type.ACCESS_RO
+#                    mm.mtype = memory_type.HEAP
+#        print("sec_regions = '%s'" % sec_regions )
+#        self.regions += sec_regions
+#        self.regions.sort()
         try:
             # check if any is a stack
-            selected_thread = gdb.selected_thread()
             selected_frame = gdb.selected_frame()
             for thread in gdb.selected_inferior().threads():
                 thread.switch()
@@ -559,17 +693,23 @@ class memory_map:
     def print( self, colorspec ):
         self.lazy_parse()
 #        cnt = 0
-        for r in self.regions:
+        for r in sorted(self.regions):
+            r = r[2]
 #            cnt += 1
 #            if( cnt > 10 ):
 #                break
-            s,mm,col,ascii = self.color(r.start, colorspec = colorspec )
+            s,mm,col,ascii = self.color(r.start, colorspec = colorspec, mm = r )
 #            ms = vdb.color.color(f"0x{r.start:<x}",col)
             ms = vdb.color.color(s,col)
             me = vdb.color.color(f"0x{r.end:<x}",col)
             size= r.end - r.start
+            f = vdb.util.nstr(r.file)
+            s = vdb.util.nstr(r.section)
+
+            sz,suf=vdb.util.num_suffix(r.size,factor = 1)
+            by = f"{sz:.1f}{suf}B"
 #            print("0x{:x} - 0x{:x} {} {}".format(r.start,r.end,r.section,r.file))
-            print("{} - {} {} {}".format(ms,me,r.section,r.file))
+            print("{} - {} {:>10} {:<20} {}".format(ms,me,by,s,f))
 #            print("size = '%s'" % size )
 #            print("r.mtype = '%s'" % r.mtype )
 

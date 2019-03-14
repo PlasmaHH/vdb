@@ -11,6 +11,10 @@ import gdb
 import os
 from collections.abc import Iterable
 
+
+
+__all__ = [ "add_foldable" ]
+
 color_shorten = vdb.config.parameter("vdb-shorten-colors-templates", "#f60", gdb_type = vdb.config.PARAM_COLOUR)
 
 
@@ -333,14 +337,14 @@ vdb.subcommands.add_subcommand( [ "show", "shorten" ], show_shorten )
 
 
 
-foldables = [
-	"feedconfig::condition_base",
-	"dissected_message",
-	"parser_base",
-	"symbol_context",
-	"intermediate_symbol",
-	"buffered_write_device",
-		]
+foldables = [ ]
+
+def add_foldable( fld ):
+    if( isinstance(fld,str) ):
+        foldables.append(fld)
+    else:
+        for f in fld:
+            foldables.append(f)
 
 def function(fname):
 	feedconfig = fname.find("vwd::mdps::feedconfig")
@@ -375,6 +379,5 @@ HOME=os.environ["HOME"]
 def path(fpath):
 	fpath = fpath.replace(HOME,"~")
 	return fpath
-
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

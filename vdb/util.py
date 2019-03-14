@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+def nstr( s ):
+    if( s is None ):
+        return ""
+    return s
+
 def maybe_utf8( ba ):
     try:
         return ba.decode("utf-8")

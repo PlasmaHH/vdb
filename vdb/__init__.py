@@ -7,7 +7,11 @@ import vdb.subcommands
 
 import gdb
 
+import sys
+import os
 import shlex
+import importlib
+import traceback
 
 
 # First setup the most important settings that configure which parts we want to have active
@@ -80,4 +84,39 @@ try:
     gdb.execute("set disassembly-flavor att")
 except gdb.error:
     pass
+
+
+
+
+print("Loading plugins")
+
+plugin_types = [ "plugins" ]
+
+def load_plugins( plugindir ):
+    try:
+        oldpath = []
+        oldpath += sys.path
+        sys.path.append(plugindir)
+
+        for pt in plugin_types:
+            pdir = f"{plugindir}{pt}/"
+            for fn in filter( lambda x : x.endswith(".py"), os.listdir(pdir) ):
+                try:
+                    print(f"Loading plugin {plugindir}{pt}/{fn}")
+                    importname = f"{pt}.{fn[:-3]}"
+                    importlib.import_module(importname)
+                except:
+                    print(f"Error while loading plugin {plugindir}{pt}/{fn}")
+                    traceback.print_exc()
+                    pass
+    except:
+        traceback.print_exc()
+        pass
+    finally:
+        sys.path = oldpath
+
+
+load_plugins("/home/plasmahh/.vdb/")
+
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
