@@ -42,8 +42,6 @@ def num_suffix( num, iso = False, factor = 1.5 ):
     snum = num
     n=0
     while( snum > (factor*p) ):
-#        print("snum = '%s'" % snum )
-#        print("n = '%s'" % n )
         snum /= p
         n += 1
     suffix = suffixes[n]
