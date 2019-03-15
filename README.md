@@ -16,7 +16,7 @@ modules and commands to not interfere with other python plugins.
 ## Quickstart
 First clone the repo
 ```
-git clone <url here>
+git clone https://github.com/PlasmaHH/vdb.git
 ```
 Then add this to your `~/.gdbinit`
 ```

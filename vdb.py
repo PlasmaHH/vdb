@@ -4,8 +4,6 @@
 import sys
 from os import path,walk
 
-import six
-
 directory, file = path.split(__file__)
 directory       = path.expanduser(directory)
 directory       = path.abspath(directory)
