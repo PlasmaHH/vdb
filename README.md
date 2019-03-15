@@ -2,6 +2,7 @@
 A set of python visual enhancements for gdb.
 
 - [Modules](#modules)
+  - [prompt](#prompt)
 - [Configuration](#configuration)
 - [Plugins](#plugins)
 
