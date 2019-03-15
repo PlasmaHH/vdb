@@ -289,6 +289,17 @@ default_region_prefixes = [
         ( ".fini", memory_type.CODE ),
 ]
 
+def read( ptr, count = 1 ):
+    result = None
+    addr=ptr
+    try:
+        result = gdb.selected_inferior().read_memory(addr, count)
+    except gdb.error:
+        pass
+    return result
+
+
+
 class memory_region:
 
     def __init__(self,start,end,section,file):

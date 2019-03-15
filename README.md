@@ -15,8 +15,9 @@ A set of python visual enhancements for gdb.
 			* [`bt`](#bt)
 			* [`bto`](#bto)
 			* [`backtrace`](#backtrace-1)
-				* [level 5 backtrace](#level-5-backtrace)
 	* [vmmap](#vmmap)
+		* [Commands](#commands-1)
+			* [`vmmap`](#vmmap-1)
 	* [register](#register)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
@@ -137,10 +138,19 @@ This should be your default. It will do all the filtering and sometimes write so
 This is like `bt` but disables the filter. You should see additional data, but the unfiltered plain gdb output.
 #### `backtrace`
 This is an unmodified gdb version, that is it is running the decorator, but not additional filters and outputs. It may be overridden by additional gdb plugins that you have. This has the added disadvantage that the `n` showspec doesn't have any effect, as well as the RTTI warning filter not working.
-##### level 5 backtrace
 
 ## vmmap
-shows
+A module that allows access to the internal information of memory maps. It ties together information from the sources of
+* `info files`
+* `maint info sections`
+* `info proc mapping`
+### Commands
+#### `vmmap`
+Without parameters it shows a list of memory ranges and colours their addresses according to the memory types. The ranges can overlap. Additionally it shows section names and source files.
+
+Different components of gdb provide different section names, if there is an alternative name it will be shown in []. Also the file information can differ, as some show the file name that was used to load, others dereference all symlinks.
+
+As one of the parameters it accepts a colorspec, the other is an address. If the address lies within overlapping sections it will show the smallest matching section.
 ## register
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when

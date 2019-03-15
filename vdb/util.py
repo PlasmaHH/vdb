@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import gdb
+
 def nstr( s ):
     if( s is None ):
         return ""
@@ -16,6 +18,19 @@ def ifset( s, p ):
     if( p is not None ):
         return s.format(p)
     return ""
+
+def xint( s ):
+    val = gdb.parse_and_eval(s)
+    r = int(val)
+    return r
+    try:
+        r = int(s,16)
+    except:
+        try:
+            r = int(s)
+        except:
+            raise Exception("%s can not be parsed as integer, neither base 10 or 16" % s )
+    return r
 
 def unquote( s ):
     if( s.startswith('"')):
