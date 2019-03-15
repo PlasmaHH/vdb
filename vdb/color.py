@@ -11,7 +11,7 @@ def color( s, cs ):
     if( len(cs) == 1 ):
         return colors.color(s,cs[0])
     else:
-        cs.append(["","",""])
+        cs += ["","",""]
         return colors.color(s,fg=cs[0],bg=cs[1],style=cs[2])
 
 def scolor( s, cs ):

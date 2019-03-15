@@ -11,6 +11,7 @@ import gdb
 
 import sys
 import types
+import traceback
 
 PARAM_COLOUR = 0x800
 PARAM_COLOR = PARAM_COLOUR
@@ -32,6 +33,7 @@ class parameter(gdb.Parameter):
         self.docstring = docstring
         self.name = name
         self.default = default
+        self.theme_default = None
         self.set_doc = 'Set ' + docstring
         self.show_doc = docstring + ':'
         self.is_colour = False
@@ -40,6 +42,7 @@ class parameter(gdb.Parameter):
                 raise Exception("Colour names must have -colors- in their name, '%s' does not" % name )
             self.is_colour = True
             gdb_type = gdb.PARAM_STRING
+            self.theme_default = default
         if( gdb_type is None ):
             gdb_type = guess_gdb_type(default)
         super(parameter, self).__init__(name, gdb.COMMAND_SUPPORT, gdb_type )
@@ -74,6 +77,7 @@ class parameter(gdb.Parameter):
             if( self.on_set is not None ):
                 self.on_set(self.value)
         except:
+            traceback.print_exc()
             self.value = self.previous_value
             raise
         self.previous_value = self.value

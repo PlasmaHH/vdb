@@ -108,7 +108,7 @@ def start():
 #""".strip() % prompt
 #
 
-# This may throw an exception, see pwndbg/pwndbg#27
+
 try:
 #    gdb.execute("set disassembly-flavor intel")
     gdb.execute("set disassembly-flavor att")

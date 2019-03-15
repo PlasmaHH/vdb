@@ -1,11 +1,31 @@
 # VDB
 A set of python visual enhancements for gdb.
 
-- [Modules](#modules)
-  - [prompt](#prompt)
-- [Configuration](#configuration)
-- [Plugins](#plugins)
+<!-- vim-markdown-toc Redcarpet -->
 
+	* [Overview](#overview)
+	* [Quickstart](#quickstart)
+	* [Disabling modules](#disabling-modules)
+* [Modules](#modules)
+	* [prompt](#prompt)
+		* [Configuration](#configuration)
+	* [backtrace](#backtrace)
+		* [Commands](#commands)
+			* [`bt`](#bt)
+			* [`bto`](#bto)
+			* [`backtrace`](#backtrace)
+	* [vmmap](#vmmap)
+	* [register](#register)
+* [global functionality](#global-functionality)
+	* [shorten](#shorten)
+* [Configuration](#configuration)
+	* [gdb config](#gdb-config)
+	* [Color settings](#color-settings)
+		* [colorspec](#colorspec)
+* [Plugins](#plugins)
+* [Themes](#themes)
+
+<!-- vim-markdown-toc -->
 ## Overview
 vdb aims to display as much information as it can without cluttering the
 display. It can filter and colorize output, and when the terminal isn't enough
@@ -36,6 +56,14 @@ vdb-enable-backtrace
 vdb-enable-register
 vdb-enable-vmmap
 ```
+Additionally there is the gdb config 
+```
+vdb-available-modules
+```
+available which will not only allow for a more concise way to disable modules, it will also control the order in which
+they are loaded. Must be set before a vdb start and contains a comma separated list.
+
+The drawback however is that you will miss out new modules when updating, as they are not in the list.
 # Modules
 ## prompt
 This module allows you to configure the prompt to display more information.
@@ -161,3 +189,4 @@ the current one, and all above that and load all the file we find there, stoppin
 
 Note to self: should we maybe have a setting that determines if we stop or continue loading? maybe three modes? stop,
 forward and backward? So we can have global, project and subproject specific files that override each other?
+# Themes

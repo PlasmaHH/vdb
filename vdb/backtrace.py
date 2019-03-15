@@ -480,7 +480,7 @@ class cmd_bt (gdb.Command):
                 btoutput = gdb.execute("backtrace",False,True)
             btoutput = re.sub( "warning: RTTI symbol not found for class '.*?'\n",vdb.color.color("RTTI",color_rtti.value),btoutput)
             if( "n" not in showspec.value ):
-                btoutput = re.sub( "^(\s*)#[0-9]", " ", btoutput, flags = re.MULTILINE )
+                btoutput = re.sub( "^(\s*)#[0-9]*", " ", btoutput, flags = re.MULTILINE )
             print(btoutput)
         except:
             pass

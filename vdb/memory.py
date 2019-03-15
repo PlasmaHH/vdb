@@ -247,13 +247,15 @@ def print_legend( colorspec = "Aasm" ):
     if( "A" in colorspec ):
         legends.append(vdb.color.color("[ASCII]",        vdb.memory.color_ascii.value))
     if( "m" in colorspec ):
-        legends.append(vdb.color.color("[STACK(OWN)]",   vdb.memory.color_own_stack.value))
-        legends.append(vdb.color.color("[STACK(OTHER)]", vdb.memory.color_foreign_stack.value))
-        legends.append(vdb.color.color("[HEAP]",         vdb.memory.color_heap.value))
-        legends.append(vdb.color.color("[MMAP]",         vdb.memory.color_mmap.value))
-        legends.append(vdb.color.color("[SHM]",          vdb.memory.color_shm.value))
-        legends.append(vdb.color.color("[CODE]",         vdb.memory.color_code.value))
-        legends.append(vdb.color.color("[BSS]",          vdb.memory.color_bss.value))
+        legends.append(vdb.color.color("[STACK(OWN)]",   colormap[memory_type.OWN_STACK ].value ))
+        legends.append(vdb.color.color("[STACK(OTHER)]", colormap[memory_type.FOREIGN_STACK ].value ))
+        legends.append(vdb.color.color("[HEAP]",         colormap[memory_type.HEAP ].value ))
+        legends.append(vdb.color.color("[MMAP]",         colormap[memory_type.MMAP ].value ))
+        legends.append(vdb.color.color("[SHM]",          colormap[memory_type.SHM ].value ))
+        legends.append(vdb.color.color("[CODE]",         colormap[memory_type.CODE ].value ))
+        legends.append(vdb.color.color("[BSS]",          colormap[memory_type.BSS ].value ))
+        legends.append(vdb.color.color("[NULL]",         colormap[memory_type.NULL ].value ))
+#        legends.append(vdb.color.color("[UNK]",          colormap[memory_type.UNKNOWN ].value ))
     if( "a" in colorspec ):
         legends.append(vdb.color.color("[RO]",   access_colors[access_type.ACCESS_RO].value ))
         legends.append(vdb.color.color("[WO]",   access_colors[access_type.ACCESS_WO].value ))
