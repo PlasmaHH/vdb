@@ -1,7 +1,7 @@
 # VDB
 A set of python visual enhancements for gdb.
-
-<!-- vim-markdown-toc Redcarpet -->
+* [VDB](#vdb)
+<!-- vim-markdown-toc GFM -->
 
 	* [Overview](#overview)
 	* [Quickstart](#quickstart)
@@ -13,12 +13,13 @@ A set of python visual enhancements for gdb.
 		* [Commands](#commands)
 			* [`bt`](#bt)
 			* [`bto`](#bto)
-			* [`backtrace`](#backtrace)
+			* [`backtrace`](#backtrace-1)
+				* [level 5 backtrace](#level-5-backtrace)
 	* [vmmap](#vmmap)
 	* [register](#register)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
-* [Configuration](#configuration)
+* [Configuration](#configuration-1)
 	* [gdb config](#gdb-config)
 	* [Color settings](#color-settings)
 		* [colorspec](#colorspec)
@@ -26,6 +27,8 @@ A set of python visual enhancements for gdb.
 * [Themes](#themes)
 
 <!-- vim-markdown-toc -->
+
+
 ## Overview
 vdb aims to display as much information as it can without cluttering the
 display. It can filter and colorize output, and when the terminal isn't enough
@@ -131,6 +134,7 @@ This should be your default. It will do all the filtering and sometimes write so
 This is like `bt` but disables the filter. You should see additional data, but the unfiltered plain gdb output.
 #### `backtrace`
 This is an unmodified gdb version, that is it is running the decorator, but not additional filters and outputs. It may be overridden by additional gdb plugins that you have. This has the added disadvantage that the `n` showspec doesn't have any effect, as well as the RTTI warning filter not working.
+##### level 5 backtrace
 
 ## vmmap
 shows
