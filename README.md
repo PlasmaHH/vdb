@@ -95,6 +95,7 @@ vdb-bt-selected-frame-marker
 ```
 
 ## vmmap
+shows
 ## register
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
