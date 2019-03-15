@@ -78,6 +78,8 @@ The showspec setting
 ```
 vdb-bt-showspec","naFPs")`
 ```
+
+
 tells what should be displayed in the backtrace. Missing items are suppressed. The string can contain (in any order)
 * `n` The number. Currently this is always displayed, but we will figure out a way to filter this out
 * `a` The address, coloured according to the above settings
@@ -87,8 +89,11 @@ tells what should be displayed in the backtrace. Missing items are suppressed. T
   print some values for them
 * `s` shows the source of that frame. Can be a source file (with line) or some object file name.
 
-#frame_marker = vdbnfo.config.parameter("vdb-bt-selected-frame-marker", "[*]" )
-frame_marker = vdb.config.parameter("vdb-bt-
+You can also change the marker for the selected frame, this may be useful if your terminal does not support the utf8 character.
+```
+vdb-bt-selected-frame-marker
+```
+
 ## vmmap
 ## register
 # global functionality

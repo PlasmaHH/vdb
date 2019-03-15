@@ -425,7 +425,7 @@ class memory_map:
             if( mm.start > addr ):
                 break
 
-        print("candidates = '%s'" % candidates )
+#        print("candidates = '%s'" % candidates )
         if( len(candidates) == 0 ):
             return None
 
