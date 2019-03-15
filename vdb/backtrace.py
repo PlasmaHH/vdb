@@ -211,9 +211,20 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
 
     def function(self):
 
-        if( not any((c in showspec.value) for c in "fF" ) ):
-            return None
         frame = self.fobj.inferior_frame()
+        sal = frame.find_sal()
+        addr = sal.pc
+        address = ""
+        if( int(addr) != 0 ):
+            if( color_addr.value ):
+                address = self.color_address(addr) + " in "
+        if( not any((c in showspec.value) for c in "fF" ) ):
+            if( "a" in showspec.value ):
+                return address[:-4] 
+            else:
+                return None
+        if( "a" not in showspec.value ):
+            address = ""
 
         name = frame.name()
         if( name is None ):
@@ -273,11 +284,7 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
         if( frame == gdb.selected_frame() ):
             name = vdb.color.color(frame_marker.value,color_frame.value) + name
 
-        sal = frame.find_sal()
-        addr = sal.pc
         if( int(addr) != 0 ):
-            if( color_addr.value ):
-                name = self.color_address(addr) + " in " + name
             if frame.type() == gdb.INLINE_FRAME:
                 name = "[i] " + name
         else:
@@ -286,7 +293,7 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
             else:
                 name = "                  " + name
 
-        return name
+        return address + name
 
     def filename(self):
         if( "s" not in showspec.value ):
@@ -472,6 +479,8 @@ class cmd_bt (gdb.Command):
             else:
                 btoutput = gdb.execute("backtrace",False,True)
             btoutput = re.sub( "warning: RTTI symbol not found for class '.*?'\n",vdb.color.color("RTTI",color_rtti.value),btoutput)
+            if( "n" not in showspec.value ):
+                btoutput = re.sub( "^(\s*)#[0-9]", " ", btoutput, flags = re.MULTILINE )
             print(btoutput)
         except:
             pass

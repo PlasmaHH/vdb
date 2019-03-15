@@ -18,6 +18,7 @@ First clone the repo
 ```
 git clone https://github.com/PlasmaHH/vdb.git
 ```
+Install dependencies from the `requirements.txt` or install as a package.
 Then add this to your `~/.gdbinit`
 ```
 source ~/git/vdb/vdb.py
@@ -93,6 +94,14 @@ You can also change the marker for the selected frame, this may be useful if you
 ```
 vdb-bt-selected-frame-marker
 ```
+### Commands
+We provide the following commands
+#### `bt`
+This should be your default. It will do all the filtering and sometimes write some additional data.
+#### `bto`
+This is like `bt` but disables the filter. You should see additional data, but the unfiltered plain gdb output.
+#### `backtrace`
+This is an unmodified gdb version, that is it is running the decorator, but not additional filters and outputs. It may be overridden by additional gdb plugins that you have. This has the added disadvantage that the `n` showspec doesn't have any effect, as well as the RTTI warning filter not working.
 
 ## vmmap
 shows
