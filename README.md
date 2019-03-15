@@ -1,8 +1,9 @@
 # VDB
 A set of python visual enhancements for gdb.
-* [VDB](#vdb)
+
 <!-- vim-markdown-toc GFM -->
 
+* [VDB](#vdb)
 	* [Overview](#overview)
 	* [Quickstart](#quickstart)
 	* [Disabling modules](#disabling-modules)
@@ -27,7 +28,9 @@ A set of python visual enhancements for gdb.
 * [Themes](#themes)
 
 <!-- vim-markdown-toc -->
-
+<!--
+# VDB
+-->
 
 ## Overview
 vdb aims to display as much information as it can without cluttering the
