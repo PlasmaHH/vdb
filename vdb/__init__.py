@@ -35,28 +35,58 @@ class cmd_vdb (gdb.Command):
 
 cmd_vdb()
 
+
+def load_plugins( plugindir ):
+    print("Loading plugins…")
+    try:
+        oldpath = []
+        oldpath += sys.path
+        sys.path.append(plugindir)
+
+        for pt in enabled_modules + [ "plugins" ]:
+            pdir = f"{plugindir}{pt}/"
+            if( os.path.isdir(pdir) ):
+                for fn in filter( lambda x : x.endswith(".py"), os.listdir(pdir) ):
+                    try:
+                        print(f"Loading plugin {plugindir}{pt}/{fn}")
+                        importname = f"{pt}.{fn[:-3]}"
+                        importlib.import_module(importname)
+                    except:
+                        print(f"Error while loading plugin {plugindir}{pt}/{fn}")
+                        traceback.print_exc()
+                        pass
+    except:
+        traceback.print_exc()
+        pass
+    finally:
+        sys.path = oldpath
+
 enable_prompt = vdb.config.parameter( "vdb-enable-prompt",True)
 enable_backtrace = vdb.config.parameter( "vdb-enable-backtrace",True)
 enable_register = vdb.config.parameter( "vdb-enable-register",True)
 enable_vmmap = vdb.config.parameter( "vdb-enable-vmmap",True)
 
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap" )
+
+available_modules = configured_modules.value.split(",")
+
+enabled_modules = [ ]
 def start():
     print("Starting vdb modules…")
-    if( enable_prompt ):
-        print("Enabling submodule prompt…")
-        import vdb.prompt
-    if( enable_backtrace ):
-        print("Enabling submodule backtrace…")
-        import vdb.backtrace
-    if( enable_register ):
-        print("Enabling submodule register…")
-        import vdb.register
-    if( enable_vmmap ):
-        print("Enabling submodule vmmap…")
-        import vdb.vmmap
-
-
-
+    for mod in available_modules:
+        try:
+            bval = gdb.parameter( f"vdb-enable-{mod}")
+            if( bval ):
+                print(f"Loading module {mod}…")
+                importlib.import_module(f"vdb.{mod}")
+                enabled_modules.append(mod)
+            else:
+                print(f"Skipping load of module {mod}…")
+        except:
+            print(f"Error loading module {mod}:")
+            traceback.print_exc()
+            pass
+    load_plugins(os.path.expanduser("~") + "/.vdb/")
 
 #pre_commands = """
 #set confirm off
@@ -84,39 +114,6 @@ try:
     gdb.execute("set disassembly-flavor att")
 except gdb.error:
     pass
-
-
-
-
-print("Loading plugins")
-
-plugin_types = [ "plugins" ]
-
-def load_plugins( plugindir ):
-    try:
-        oldpath = []
-        oldpath += sys.path
-        sys.path.append(plugindir)
-
-        for pt in plugin_types:
-            pdir = f"{plugindir}{pt}/"
-            for fn in filter( lambda x : x.endswith(".py"), os.listdir(pdir) ):
-                try:
-                    print(f"Loading plugin {plugindir}{pt}/{fn}")
-                    importname = f"{pt}.{fn[:-3]}"
-                    importlib.import_module(importname)
-                except:
-                    print(f"Error while loading plugin {plugindir}{pt}/{fn}")
-                    traceback.print_exc()
-                    pass
-    except:
-        traceback.print_exc()
-        pass
-    finally:
-        sys.path = oldpath
-
-
-load_plugins("/home/plasmahh/.vdb/")
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

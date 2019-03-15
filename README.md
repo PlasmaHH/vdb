@@ -78,12 +78,12 @@ vdb-bt-address-colorspec
 ```
 The showspec setting
 ```
-vdb-bt-showspec","naFPs")`
+vdb-bt-showspec
 ```
 
 
 tells what should be displayed in the backtrace. Missing items are suppressed. The string can contain (in any order)
-* `n` The number. Currently this is always displayed, but we will figure out a way to filter this out
+* `n` The frame number.
 * `a` The address, coloured according to the above settings
 * `f` or `F` the function name. For `F` we use the full name (minuse folds and shortens), for `f` we display just the
   name without any parameters or templates.
