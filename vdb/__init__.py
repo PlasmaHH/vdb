@@ -41,7 +41,7 @@ def load_plugins( plugindir ):
     try:
         oldpath = []
         oldpath += sys.path
-        sys.path.append(plugindir)
+        sys.path = [plugindir] + sys.path
 
         for pt in enabled_modules + [ "plugins" ]:
             pdir = f"{plugindir}{pt}/"
