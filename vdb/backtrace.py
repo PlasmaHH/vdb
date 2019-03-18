@@ -230,7 +230,7 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
         if( name is None ):
             return "<unknown>"
         name = str(name)
-        name = vdb.shorten.function(name)
+        name = vdb.shorten.symbol(name)
 
 
         cpos = len(name)

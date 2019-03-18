@@ -14,8 +14,7 @@ class subcommands:
         else:
             rest=s[1:]
             s=s[0]
-            sc=subcommands()
-            self.subcommands[s] = sc
+            sc = self.subcommands.setdefault(s,subcommands())
             sc.add_subcommand(rest,f)
 
     def run_subcommand( self, args ):
@@ -24,12 +23,19 @@ class subcommands:
         sc = self.subcommands.get(s,None)
         if( sc is None ):
             print("Unknown vdb subcommand '%s'" % s )
-            print("Known dict: %s" % subcommands )
+            print("Known commands:")
+            globals.show()
         else:
             if( isinstance(sc,subcommands) ):
                 sc.run_subcommand(rest)
             else:
                 sc(rest)
+    def show( self, prefix = "" ):
+        for k,s in self.subcommands.items():
+            if( isinstance(s,subcommands) ):
+                s.show(f"{prefix} {k}")
+            else:
+                print(f"{prefix} {k}")
 
 globals = subcommands()
 
@@ -39,4 +45,8 @@ def run_subcommand( args ):
 def add_subcommand( s, f ):
     globals.add_subcommand(s,f)
 
+def show( argv  ):
+    globals.show()
+
+add_subcommand( [ "show", "subcommands" ], show )
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

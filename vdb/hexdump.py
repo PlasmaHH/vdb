@@ -6,17 +6,20 @@ import vdb.color
 import vdb.memory
 import vdb.pointer
 import vdb.util
-import traceback
+import vdb.shorten
+
 
 import gdb
 
 import string
+import traceback
 import re
 
+symre=re.compile("0x[0-9a-fA-F]* <([^+]*)(\+[0-9]*)*>")
 def hexdump( addr, xlen = 8*16 ):
     olen = xlen
     plen = 64//4
-    print(f'  {" "*plen}  0  1  2  3   4  5  6  7    8  9  A  B   C  D  E  F    01234567 89ABCDEF')
+    print(f'  {" "*plen}  0  1  2  3   4  5  6  7    8  9  A  B   C  D  E  F   01234567 89ABCDEF')
     data = vdb.memory.read(addr,xlen)
     if( data is None ):
         data = vdb.memory.read(addr,1)
@@ -26,32 +29,67 @@ def hexdump( addr, xlen = 8*16 ):
                 xlen -= 1
                 data = vdb.memory.read(addr,xlen)
     if( data is None ):
-        print(f"Can not access memory at 0x{addr}")
+        print(f"Can not access memory at 0x{addr:x}")
         return
     xaddr = addr
+    p,add,col,mm = vdb.pointer.color(addr,64)
+    nm = gdb.parse_and_eval(f"(void*)({addr})")
+    current_symbol = None
+    color_list = ["#f00","#0f0","#00f","#ff0","#f0f","#0ff" ]
+    next_color = -1
+    sym_color = None
     while(len(data) > 0 ):
         dc = data[:16]
         data = data[16:]
-        p,_ = vdb.pointer.color(xaddr,64)
+        p,_,_,_ = vdb.pointer.color(xaddr,64)
         cnt = 0
         l = ""
         t = ""
+        s = ""
         for d in dc:
-            d = int.from_bytes(d,"little")
-            l += f"{d:02x} "
-            c = chr(d)
-            if( c in string.printable and not ( c in "\t\n\r\v") ):
-                t += c
+            nm = gdb.parse_and_eval(f"(void*)({xaddr+cnt})")
+            m=symre.match(str(nm))
+            if( m ):
+#                print("m.group(0) = '%s'" % m.group(0) )
+#                print("m.group(1) = '%s'" % m.group(1) )
+                nsym = m.group(1)
+                nsym = vdb.shorten.symbol(nsym)
+#                print("nsym = '%s'" % nsym )
+                if( current_symbol != nsym ):
+                    if( nsym ):
+                        next_color += 1
+                        next_color %= len(color_list)
+                        sym_color = color_list[next_color]
+                        s += vdb.color.color(nsym,sym_color)
+                        s += " "
+                    else:
+                        sym_color = None
+                    current_symbol = nsym
             else:
-                t += "."
+                sym_color = None
+                current_symbol = None
+
+            d = int.from_bytes(d,"little")
+            l += vdb.color.color(f"{d:02x} ",sym_color)
+            c = chr(d)
+            if( c in string.printable and not ( c in "\t\n\r\v\f") ):
+                t += vdb.color.color(c,sym_color)
+            else:
+                t += vdb.color.color(".",sym_color)
             cnt += 1
             if( cnt == 8 ):
                 t += " "
                 l += "-"
             if( cnt % 4 == 0 ):
                 l += " "
+        cnt = (16-cnt)
+        t += (cnt-1)*" "
+        l += (cnt)*"   "
+        l += ((cnt-1)//4)*" "
+        l += ((cnt+7)//8)*" "
+        t += ((cnt+7)//8)*" "
 #        print("len(t) = '%s'" % len(t) )
-        print(f"{p}: {l} {t}")
+        print(f"{p}: {l}{t} {s}")
 #        print("dc = '%s'" % dc )
 #        print("len(dc) = '%s'" % len(dc) )
 #        print("data = '%s'" % data )
@@ -74,14 +112,15 @@ def call_hexdump( arg ):
     addr = None
     xlen = None
     if( len(argv) == 1 ):
-        addr = vdb.util.xint(argv[0])
+        addr = vdb.util.gint(argv[0])
+        hexdump(addr)
     elif( len(argv) == 2 ):
-        addr = vdb.util.xint(argv[0])
-        xlen = vdb.util.xint(argv[1])
+        addr = vdb.util.gint(argv[0])
+        xlen = vdb.util.gint(argv[1])
+        hexdump(addr,xlen)
     else:
         print("Usage: hexdump <addr> <len>")
         return
-    hexdump(addr,xlen)
 
 
 
@@ -89,7 +128,7 @@ class cmd_hexdump (gdb.Command):
     """Run the backtrace without filters"""
 
     def __init__ (self):
-        super (cmd_hexdump, self).__init__ ("xdump", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        super (cmd_hexdump, self).__init__ ("hexdump", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.dont_repeat()
 
     def invoke (self, arg, from_tty):

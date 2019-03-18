@@ -13,8 +13,6 @@ from collections.abc import Iterable
 
 
 
-__all__ = [ "add_foldable" ]
-
 color_shorten = vdb.config.parameter("vdb-shorten-colors-templates", "#f60", gdb_type = vdb.config.PARAM_COLOUR)
 
 
@@ -303,9 +301,12 @@ def template_fold(fname,template):
 
 
 
-shortens = { 
-		"(anonymous namespace)": "(anon)",
-		}
+shortens = {
+        "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >": "std::string",
+        "std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >": "std::wstring",
+        "std::basic_ostream<char, std::char_traits<char> >": "std::ostream",
+        "(anonymous namespace)": "(anon)",
+        }
 
 def add_shorten( f, t ):
     shortens[f] = t
@@ -331,13 +332,16 @@ def show_shorten( args ):
         print(f"{xs:<{mlen}} => '{t}'")
 
 
-vdb.subcommands.add_subcommand( "add_shorten", add_shorten_v )
+vdb.subcommands.add_subcommand( [ "add", "shorten" ], add_shorten_v )
 vdb.subcommands.add_subcommand( [ "show", "shorten" ], show_shorten )
 
 
 
 
 foldables = [ ]
+conditional_foldables = {
+        ".*" : []
+        }
 
 def add_foldable( fld ):
     if( isinstance(fld,str) ):
@@ -346,34 +350,56 @@ def add_foldable( fld ):
         for f in fld:
             foldables.append(f)
 
-def function(fname):
-	feedconfig = fname.find("vwd::mdps::feedconfig")
-	for old,new in shortens.items():
-		fname = fname.replace(old,new)
-	for fold in foldables:
-		fname = template_fold(fname,fold)
-	if( feedconfig != 0 ):
-		fname = template_fold(fname,"boost::variant")
-	if( fname.endswith(")") or fname.endswith(") const") ):
-#		print("fname = '%s'" % fname )
-		oppos = fname.rfind("(")
-		if( oppos != -1 ):
-			fname = fname[0:oppos] # + color("(...)","#ff6611")
-	return fname
+def add_conditional( cond, fld ):
+    foldables = conditional_foldables.get(cond,[])
+    if( isinstance(fld,str) ):
+        foldables.append(fld)
+    else:
+        for f in fld:
+            foldables.append(d )
 
-class ArgVal():
+def add_foldable_v( argv ):
+    if( len(argv) not in [1,2] ):
+        print("add_foldable expects 1 or 2 arguments, %s given" % len(argv) )
+    elif( len(argv) == 1 ):
+        add_foldable( argv[0] )
+    elif( len(argv) == 2 ):
+        add_conditional( argv[0], argv[1] )
 
-	def __init__( self, sym, val ):
-#		print("sym = '%s'" % sym )
-#		print("val = '%s'" % val )
-		self.sym = sym
-		self.val = val
+def show_foldable( args ):
+    print("Foldables are:")
+    for f in foldables:
+        print(f)
 
-	def symbol(self):
-		return self.sym
+    print("Conditional foldables:")
+    for c,fl in conditional_foldables.items():
+        print(c)
+        for f in fl:
+            print(f"    {f}")
 
-	def value(self):
-		return self.val
+vdb.subcommands.add_subcommand( [ "add","foldable" ], add_foldable_v )
+vdb.subcommands.add_subcommand( [ "show","foldable"] , show_foldable )
+
+
+
+
+def symbol(fname):
+    for old,new in shortens.items():
+        fname = fname.replace(old,new)
+    for fold in foldables:
+        fname = template_fold(fname,fold)
+
+    for k,fl in conditional_foldables.items():
+        m = re.search(k,fname)
+        if( m ):
+            for f in fl:
+                fname = template_fold(fname,f)
+    if( fname.endswith(")") or fname.endswith(") const") ):
+        #		print("fname = '%s'" % fname )
+        oppos = fname.rfind("(")
+        if( oppos != -1 ):
+            fname = fname[0:oppos] # + color("(...)","#ff6611")
+    return fname
 
 HOME=os.environ["HOME"]
 def path(fpath):

@@ -19,10 +19,12 @@ def ifset( s, p ):
         return s.format(p)
     return ""
 
-def xint( s ):
+def gint( s ):
     val = gdb.parse_and_eval(s)
     r = int(val)
     return r
+
+def xint( s ):
     try:
         r = int(s,16)
     except:
