@@ -20,6 +20,14 @@ A set of python visual enhancements for gdb.
 		* [Commands](#commands-1)
 			* [`vmmap`](#vmmap-1)
 	* [register](#register)
+	* [hexdump](#hexdump)
+		* [Commands](#commands-2)
+			* [`hd`](#hd)
+	* [asm](#asm)
+		* [Commands](#commands-3)
+			* [`dis`](#dis)
+			* [`dis/d`](#disd)
+			* [`dis/r`](#disr)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
 * [Configuration](#configuration-1)
@@ -63,6 +71,8 @@ vdb-enable-prompt
 vdb-enable-backtrace
 vdb-enable-register
 vdb-enable-vmmap
+vdb-enable-hexdump
+vdb-enable-asm
 ```
 Additionally there is the gdb config 
 ```
@@ -87,12 +97,12 @@ Maybe also add a feature to autoselect a thread or a frame (given by some comple
 
 ## backtrace
 We provide a backtrace decorator we various colouring options. It will also who some information about whether something
-is inlined.
+is inlined or some information about signals and crashes.
 
 ![](img/bt.png)
 
-* `vdb-bt-colors-namespace Colour all namespace names (for the purpose of this plugin, this includes class type names)
-* `vdb-bt-colors-address` Addresses in the address column.
+* `vdb-bt-colors-namespace` Colour all namespace names (for the purpose of this plugin, this includes class type names)
+* `vdb-bt-colors-address` Addresses in the address column. Set this to none to use the global pointer colours by memory area type.
 * `vdb-bt-colors-function` Function name (without any namespace and template parameters)
 * `vdb-bt-colors-selected-frame-marker` The marker that shows which frame gdb has currently selected
 * `vdb-bt-colors-filename` The filename (and line number) of the source code for this frame
@@ -157,6 +167,33 @@ Different components of gdb provide different section names, if there is an alte
 
 As one of the parameters it accepts a colorspec, the other is an address. If the address lies within overlapping sections it will show the smallest matching section.
 ## register
+
+
+## hexdump
+This module provides a coloured hexdump of raw memory, possibly annotated in various ways.
+
+### Commands
+
+#### `hd`
+This command dumps the range of memory specified by the parameter. If you omit the second size parameter, it will be set
+to the value of `vdb-hexdump-default-len`. It will try to dump that many bytes, if along the way it reaches a point
+where memory will not be accessible anymore, it stops.
+
+## asm
+This is a disassembler module
+
+### Commands
+
+#### `dis`
+This is a "plain" disassembly. It expects a gdb expression as a parameter that would be accepted by gdbs `disassemble`
+command.
+
+"maodbnprT"
+
+![](img/disassemble.png)
+#### `dis/d`
+#### `dis/r`
+
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
 you suppress loading of the modules that load it.
@@ -166,6 +203,7 @@ There is a configurable way to shorten type names. We will have
   regexes here)
 * template folding. We have a list of types (or maybe we should use regexes here too?) that we mark and then we fold the
   complete list of template parameters into one empty list (and colour that).
+
 
 # Configuration
 The configurability is using two mechanisms. One is the gdb settings. Besides
