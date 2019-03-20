@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import shlex
+
 class Parameter:
     def __init__( self, *args, **kwargs ):
         self._value = ""
@@ -49,4 +51,8 @@ def execute( *args, **kwargs ):
 
 def selected_thread( ):
     return None
+
+def string_to_argv( arg ):
+    argv=shlex.split(arg)
+    return argv
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

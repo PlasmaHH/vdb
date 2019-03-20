@@ -4,12 +4,14 @@
 import vdb.shorten
 import vdb.color
 import vdb.pointer
+import vdb.dot
 
 import gdb
 
 import re
 import traceback
 import sys
+import os
 
 asm_colors = [
         ( "j.*", "#f0f" ),
@@ -19,16 +21,32 @@ asm_colors = [
         ( "ret.*", "#8f9" ),
         ]
 
+asm_colors_dot = [
+        ( "j.*", "#f000f0" ),
+        ( "mov.*", "#007f7f" ),
+        ( "cmp.*|test.*", "#f09090" ),
+        ( "call.*", "#6666ff" ),
+        ( "ret.*", "#80f090" ),
+        ]
+
 pre_colors = [
         ( "lock.*","#f0f" ),
         ( "rep.*","#f29" ),
         ]
 
+pre_colors_dot = [
+        ( "lock.*","#f000f0" ),
+        ( "rep.*","#f02090" ),
+        ]
 
 next_marker = vdb.config.parameter("vdb-asm-next-marker", " → " )
+next_marker_dot = vdb.config.parameter("vdb-asm-next-marker-dot", " → " )
+
 next_mark_ptr = vdb.config.parameter("vdb-asm-next-mark-pointer", True )
 shorten_header = vdb.config.parameter("vdb-asm-shorten-header", False )
+
 offset_fmt = vdb.config.parameter("vdb-asm-offset-format", " <+{offset:<{maxlen}}>:" )
+offset_fmt_dot = vdb.config.parameter("vdb-asm-offset-format-dot", " <+{offset:<{maxlen}}>" )
 
 color_ns       = vdb.config.parameter("vdb-asm-colors-namespace",   "#ddf", gdb_type = vdb.config.PARAM_COLOUR)
 color_function = vdb.config.parameter("vdb-asm-colors-function",    "#99f", gdb_type = vdb.config.PARAM_COLOUR)
@@ -40,8 +58,25 @@ color_bytes    = vdb.config.parameter("vdb-asm-colors-bytes",       "#059", gdb_
 color_prefix   = vdb.config.parameter("vdb-asm-colors-prefix",      "#f29", gdb_type = vdb.config.PARAM_COLOUR)
 color_mnemonic = vdb.config.parameter("vdb-asm-colors-mnemonic",    None,   gdb_type = vdb.config.PARAM_COLOUR)
 color_args     = vdb.config.parameter("vdb-asm-colors-args",        "#99f", gdb_type = vdb.config.PARAM_COLOUR)
-asm_showspec   = vdb.config.parameter("vdb-asm-showspec", "maobnprT" )
 
+
+
+color_ns_dot       = vdb.config.parameter("vdb-asm-colors-namespace-dot",       "#d0d0f0", gdb_type = vdb.config.PARAM_COLOUR)
+color_function_dot = vdb.config.parameter("vdb-asm-colors-function-dot",        "#9090f0", gdb_type = vdb.config.PARAM_COLOUR)
+color_bytes_dot    = vdb.config.parameter("vdb-asm-colors-bytes-dot",           "#9090f0", gdb_type = vdb.config.PARAM_COLOUR)
+color_marker_dot   = vdb.config.parameter("vdb-asm-colors-next-marker-dot",     "#008000", gdb_type = vdb.config.PARAM_COLOUR)
+color_addr_dot     = vdb.config.parameter("vdb-asm-colors-addr-dot",            "#0000c0", gdb_type = vdb.config.PARAM_COLOUR)
+color_offset_dot   = vdb.config.parameter("vdb-asm-colors-offset-dot",          "#909090", gdb_type = vdb.config.PARAM_COLOUR)
+color_bytes_dot    = vdb.config.parameter("vdb-asm-colors-bytes-dot",           "#005090", gdb_type = vdb.config.PARAM_COLOUR)
+color_prefix_dot   = vdb.config.parameter("vdb-asm-colors-prefix-dot",          "#f02090", gdb_type = vdb.config.PARAM_COLOUR)
+color_mnemonic_dot = vdb.config.parameter("vdb-asm-colors-mnemonic-dot",             None, gdb_type = vdb.config.PARAM_COLOUR)
+color_args_dot     = vdb.config.parameter("vdb-asm-colors-args-dot",            "#3030a0", gdb_type = vdb.config.PARAM_COLOUR)
+
+
+
+
+asm_showspec   = vdb.config.parameter("vdb-asm-showspec", "maodbnprT" )
+dot_fonts      = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
 ix = -1
 def next_index( ):
@@ -56,6 +91,9 @@ class instruction( ):
         self.args = None
         self.reference = None
         self.target_address = None
+        self.conditional_jump = False
+        self.call = False
+        self.return_ = False
         self.target_name = None
 #        self.target_offset = None
         self.target_of = set()
@@ -178,6 +216,7 @@ ascii mockup:
                 self.fr = fr
                 self.to = to
                 self.coloridx = next_index()
+                self.lines = 0
 
             def __str__( self ):
                 return f"0x{self.fr:x} -> 0x{self.to:x}, {self.coloridx}"
@@ -275,7 +314,11 @@ ascii mockup:
                         ret += "-"
                         alen += 1
                     else:
-                        ret += acolor("|",c.coloridx)
+                        if( ar.lines == 0 ):
+                            ret += acolor("I",c.coloridx)
+                        else:
+                            ret += acolor("|",c.coloridx)
+                        ar.lines += 1
                         alen += 1
                 elif( ar.to == ins.address ):
                     xarrow = ar
@@ -283,7 +326,11 @@ ascii mockup:
                     ret += acolor("#",c.coloridx)
                     alen += 1
                 else:
-                    ret += acolor("|",c.coloridx)
+                    if( ar.lines == 0 ):
+                        ret += acolor("I",c.coloridx)
+                    else:
+                        ret += acolor("|",c.coloridx)
+                    ar.lines += 1
                     alen += 1
             if( xidx is not None ):
                 ridx = xidx
@@ -296,7 +343,10 @@ ascii mockup:
                     ret += acolor("<",adict[ridx].coloridx)
                 alen += 1
             if( right ):
-                ret += acolor(">",adict[ridx].coloridx)
+                if( up and down ):
+                    ret += acolor("~",adict[ridx].coloridx)
+                else:
+                    ret += acolor(">",adict[ridx].coloridx)
                 alen += 1
 #            print("alen = '%s'" % alen )
 #            print("ret = '%s'" % ret )
@@ -393,7 +443,7 @@ ascii mockup:
             return
         self.finish()
 
-    def print( self, showspec = "maobnprT" ):
+    def print( self, showspec = "maodbnprT" ):
         self.lazy_finish()
         print(f"Instructions in range 0x{self.start:x} - 0x{self.end:x} of {self.function}")
         for i in self.instructions:
@@ -407,15 +457,15 @@ ascii mockup:
             if( "o" in showspec ):
                 line += vdb.color.color(offset_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value)
 
-            mt=str.maketrans("v^-|<>+#Q","╭╰─│◄►┴├⥀" )
-            if( len(i.jumparrows) ):
-                ja=i.jumparrows.translate(mt)
-#                print("self.maxarrows = '%s'" % self.maxarrows )
-#                print("i.arrowwidth = '%s'" % i.arrowwidth )
-                fillup = " " * (self.maxarrows - i.arrowwidth)
-                line += f"{ja}{fillup}"
-            else:
-                line += " " * self.maxarrows
+            if( "d" in showspec ):
+#                mt=str.maketrans("v^-|<>+#Q~I","╭╰─│◄►┴├⥀◆↑" )
+                mt=str.maketrans("v^-|<>+#Q~I","╭╰─│◄►┴├⥀◆I" )
+                if( len(i.jumparrows) ):
+                    ja=i.jumparrows.translate(mt)
+                    fillup = " " * (self.maxarrows - i.arrowwidth)
+                    line += f"{ja}{fillup}"
+                else:
+                    line += " " * self.maxarrows
 
             if( "b" in showspec ):
                 line += vdb.color.color(f" {' '.join(i.bytes):<{self.maxbytes*3}}",color_bytes.value)
@@ -465,6 +515,119 @@ ascii mockup:
 
             print(line)
 
+    def color_dot_relist( self, s, l ):
+        for r,c in l:
+            if( re.match(r,s) ):
+                return vdb.dot.color(s,c)
+        return s
+
+
+    def ins_to_dot( self, i, node, showspec ):
+#        if( "m" in showspec ):
+#            if( i.marked ):
+#                line = vdb.color.color(next_marker.value,color_marker.value)
+#            else:
+#                line = " " * len(next_marker.value)
+        tr = vdb.dot.tr()
+        tr["align"] = "left"
+        node.table.add(tr)
+
+        plen = 64//4
+
+        if( "m" in showspec ):
+            if( i.marked ):
+                tr.td_raw(vdb.dot.color(next_marker_dot.value,color_marker_dot.value))
+            else:
+                tr.td("&nbsp;")
+
+        if( "a" in showspec ):
+            tr.td_raw(vdb.dot.color(f"0x{i.address:0{plen}x}",color_addr_dot.value))
+
+        if( "o" in showspec ):
+            tr.td_raw(vdb.dot.color(offset_fmt_dot.value.format(offset = i.offset, maxlen = self.maxoffset),color_offset_dot.value))
+
+        if( "b" in showspec ):
+            tr.td_raw(vdb.dot.color(' '.join(i.bytes),color_bytes_dot.value))
+
+        if( "n" in showspec ):
+            tr.td("&nbsp;")
+            txt = ""
+            if( len(i.prefix) > 0 ):
+                if( len(color_prefix_dot.value) > 0 ):
+                    pcol = vdb.dot.color(i.prefix,color_prefix_dot.value)
+                else:
+                    pcol = self.color_dot_relist(i.prefix,pre_colors_dot)
+                txt += pcol
+                txt += "&nbsp;"
+
+            if( len(color_mnemonic_dot.value) > 0 ):
+                mcol = vdb.dot.color(i.mnemonic,color_mnemonic_dot.value)
+            else:
+                mcol = self.color_dot_relist(i.mnemonic,asm_colors_dot)
+            txt += mcol
+            tr.td_raw(txt)
+        
+        if( "p" in showspec ):
+            if( i.args is not None ):
+                tr.td_raw(vdb.dot.color(i.args,color_args_dot.value))
+            else:
+                tr.td_raw(vdb.dot.color("&nbsp;",color_args_dot.value))
+
+        if( "r" in showspec ):
+            if( i.reference is not None ):
+                tr.td_raw(vdb.dot.color(vdb.shorten.symbol(i.reference),color_function_dot.value))
+
+        if( any((c in showspec) for c in "tT" ) ):
+            if( "T" in showspec ):
+                if( i.target_name is not None ):
+                    tr.td_raw(vdb.dot.color(vdb.shorten.symbol(i.target_name),color_function_dot.value))
+
+        for td in tr.tds:
+            td["align"]="left"
+
+
+    def to_dot( self,showspec ):
+        self.lazy_finish()
+        g = vdb.dot.graph("disassemble")
+        g.node_attributes["fontname"] = dot_fonts.value
+
+        node = None
+        previous_node = None
+        previous_instruction = None
+        for ins in self.instructions:
+            if( node is None or len(ins.target_of) > 0 ):
+                node = g.node(ins.address)
+                if( previous_node is not None ):
+                    if( previous_instruction is not None and ( not previous_instruction.return_ ) ):
+                        if( previous_instruction.target_address and not ( previous_instruction.conditional_jump or previous_instruction.call ) ):
+                            pass
+                        else:
+                            e=previous_node.edge( ins.address )
+                            if( previous_instruction and previous_instruction.conditional_jump ):
+                                e["color"] = "#ff0000"
+                            elif( previous_instruction and previous_instruction.call ):
+                                e["color"] = "#6600ff"
+                    previous_node = None
+                    previous_instruction = None
+            if( node.table is None ):
+                node.table = vdb.dot.table()
+                node.table.attributes["border"] = "1"
+                node.table.attributes["cellspacing"] = "0"
+                node.table.attributes["cellborder"] = "0"
+            self.ins_to_dot(ins,node,showspec)
+            previous_node = node
+            previous_instruction = ins
+            if( ins.target_address and not ins.call ):
+                e=node.edge(ins.target_address)
+                if( ins.conditional_jump ):
+                    e["color"] = "#00ff00"
+                node = None
+            if( ins.return_ ):
+                node = None
+        return g
+
+
+
     def add( self, ins ):
         self.finished = False
         self.instructions.append(ins)
@@ -479,12 +642,17 @@ ascii mockup:
         # "up" jumping part of the target_of, the "down" jumping part is done in finish()
         self.add_target(ins)
 
-
+x86_unconditional_jump_mnemonics = set([ "jmp" ] )
+x86_return_mnemonics = set (["ret","retq","iret"])
+x86_call_mnemonics = set(["call","callq","int"])
 x86_prefixes = set([ "rep", "lock" ])
 
 def parse_from_gdb( arg ):
     ret = listing()
     prefixes = x86_prefixes
+    unconditional_jump_mnemonics = x86_unconditional_jump_mnemonics
+    return_mnemonics = x86_return_mnemonics
+    call_mnemonics = x86_call_mnemonics
 
     dis = gdb.execute(f'disassemble/r {arg}',False,True)
     linere = re.compile("^(=>)*\s*(0x[0-9a-f]*)\s*<\+([0-9]*)>:\s*([^<]*)(<[^+]*(.*)>)*")
@@ -529,6 +697,8 @@ def parse_from_gdb( arg ):
                 tpos += 1
             ins.mnemonic = tokens[tpos]
             tpos += 1
+            if( ins.mnemonic in return_mnemonics ):
+                ins.return_ = True
             if( len(tokens) > tpos ):
                 ins.args = tokens[tpos]
                 tpos += 1
@@ -540,8 +710,13 @@ def parse_from_gdb( arg ):
                     ins.reference = " ".join(tokens[tpos+1:])
 #                    print("ins.reference = '%s'" % ins.reference )
                 else:
+                    if( ins.mnemonic not in unconditional_jump_mnemonics ):
+                        ins.conditional_jump = True
                     ins.target_address = vdb.util.xint(tokens[tpos-1])
                     ins.target_name = " ".join(tokens[tpos:])
+            if( ins.mnemonic in call_mnemonics ):
+                ins.call = True
+                ins.conditional_jump = False
 #            print("tokens = '%s'" % tokens[tpos:] )
             ret.add(ins)
             continue
@@ -585,9 +760,24 @@ def parse_from( arg ):
     return parse_from_gdb(arg)
 
 def disassemble( arg ):
-    listing = parse_from(arg)
-    listing.print(asm_showspec.value)
+    argv = gdb.string_to_argv(arg)
+    dotty = False
 
+    if( len(argv) > 0 ):
+        if( argv[0] == "/d" ):
+            dotty = True
+            argv=argv[1:]
+
+    listing = parse_from(" ".join(argv))
+    listing.print(asm_showspec.value)
+    if( dotty ):
+        g = listing.to_dot(asm_showspec.value)
+        g.write("dis.dot")
+        os.system("nohup dot -Txlib dis.dot &")
+
+
+def get_single( bpos ):
+    return "<instruction>"
 
 class Dis (gdb.Command):
     """Disassemble with bells and whistels"""
@@ -608,7 +798,7 @@ Dis()
 
 if __name__ == "__main__":
     try:
-        disassemble( sys.argv[1] )
+        disassemble( " ".join(sys.argv[1:] ))
     except:
         traceback.print_exc()
         pass

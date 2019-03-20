@@ -123,7 +123,7 @@ def chain( ptr, archsize, maxlen = 8 ):
 
 #    print("chain(0x%x,…)" % ptr )
 #    print("type(ptr) = '%s'" % type(ptr) )
-    ret,add = color(ptr,archsize)
+    ret,add,_,_ = color(ptr,archsize)
 
     an = annotate( ptr )
     plen = archsize // 4

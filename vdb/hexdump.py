@@ -15,11 +15,13 @@ import string
 import traceback
 import re
 
+color_head       = vdb.config.parameter("vdb-hexdump-colors-header",                "#ffa",    gdb_type = vdb.config.PARAM_COLOUR)
+
 symre=re.compile("0x[0-9a-fA-F]* <([^+]*)(\+[0-9]*)*>")
 def hexdump( addr, xlen = 8*16 ):
     olen = xlen
     plen = 64//4
-    print(f'  {" "*plen}  0  1  2  3   4  5  6  7    8  9  A  B   C  D  E  F   01234567 89ABCDEF')
+    print(vdb.color.color(f'  {" "*plen}  0  1  2  3   4  5  6  7    8  9  A  B   C  D  E  F   01234567 89ABCDEF',color_head.value))
     data = vdb.memory.read(addr,xlen)
     if( data is None ):
         data = vdb.memory.read(addr,1)

@@ -8,6 +8,7 @@ import vdb.shorten
 import re
 import gdb
 import os
+import traceback
 
 
 
@@ -436,29 +437,6 @@ class BacktraceFilter ( ):
 # disable this line to completely disable the filter
 bf=BacktraceFilter()
 
-
-
-class cmd_Bto (gdb.Command):
-    """Run the backtrace without filters"""
-
-    def __init__ (self):
-        super (cmd_Bto, self).__init__ ("bto", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-
-    def invoke (self, arg, from_tty):
-        argv = gdb.string_to_argv(arg)
-        try:
-            bf.enabled = False
-            if( len(argv) == 1 ):
-                gdb.execute("bt {}".format(argv[0]))
-            else:
-                gdb.execute("bt")
-        except:
-            pass
-        finally:
-            bf.enabled = True
-
-cmd_Bto()
-
 class cmd_bt (gdb.Command):
     """Run the backtrace without filters"""
 
@@ -471,19 +449,33 @@ class cmd_bt (gdb.Command):
         # We need to do that first because if we don't we change the currently selected frame midways and that isn't something gdb likes
         vdb.memory.mmap.parse()
         try:
-            if( color_addr.value ):
+            full=""
+            if( len(argv) > 0 and argv[0] == "/r" ):
+                bf.enabled = False
+                argv = argv[1:]
+            elif( len(argv) > 0 and argv[0] == "/f" ):
+                full="full"
+                argv = argv[1:]
+            elif( color_addr.value ):
                 vdb.memory.print_legend( addr_colorspec.value )
+            if( len(argv) > 1 ):
+                print("Too many arguments, expecting at most 1, ignoring all")
             if( len(argv) == 1 ):
-                btoutput = gdb.execute("backtrace {}".format(argv[0]),False,True)
-#                gdb.execute("backtrace {}".format(argv[0]))
+                btoutput = gdb.execute("backtrace {} {}".format(full,argv[0]),False,True)
             else:
-                btoutput = gdb.execute("backtrace",False,True)
+                btoutput = gdb.execute("backtrace {}".format(full),False,True)
             btoutput = re.sub( "warning: RTTI symbol not found for class '.*?'\n",vdb.color.color("RTTI",color_rtti.value),btoutput)
             if( "n" not in showspec.value ):
                 btoutput = re.sub( "^(\s*)#[0-9]*", " ", btoutput, flags = re.MULTILINE )
             print(btoutput)
-        except:
+        except gdb.error as e:
+            print(e)
             pass
+        except:
+            traceback.print_exc()
+            pass
+        finally:
+            bf.enabled = True
 
 cmd_bt()
 
