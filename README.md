@@ -89,6 +89,8 @@ Maybe also add a feature to autoselect a thread or a frame (given by some comple
 We provide a backtrace decorator we various colouring options. It will also who some information about whether something
 is inlined.
 
+![](img/bt.png)
+
 * `vdb-bt-colors-namespace Colour all namespace names (for the purpose of this plugin, this includes class type names)
 * `vdb-bt-colors-address` Addresses in the address column.
 * `vdb-bt-colors-function` Function name (without any namespace and template parameters)

@@ -389,13 +389,23 @@ class BacktraceIterator:
         return self
 
     def __next__(self):
+#        print("__next__")
         try:
             frame = next(self.input_iterator)
+#            print("frame = '%s'" % frame )
         except StopIteration:
             if( self.next_real is None ):
+                if( len(self.inlined_frames) > 0 ):
+                    inf = self.inlined_frames[0]
+                    self.inlined_frames = self.inlined_frames[1:]
+#                    print("Return inlined %s" % inf )
+                    return inf
+#                print("self.inlined_frames = '%s'" % self.inlined_frames )
                 raise StopIteration
             sret = self.next_real
             self.next_real = None
+#            print("Return next real %s" % self.next_real)
+#            print("sret = '%s'" % sret )
             return sret
         sal = frame._base.find_sal()
         addr = sal.pc
@@ -412,12 +422,25 @@ class BacktraceIterator:
             self.inlined_frames.append( BacktraceDecorator(frame) )
 
         if( toret ):
+#            print("Return toret %s" % toret )
             return BacktraceDecorator( toret, ifl )
 
-#		print("Saving frame for later (%s)" % (len(self.inlined_frames)) )
+#        print("Saving frame for later (%s)" % (len(self.inlined_frames)) )
+#        print("self.next_real = '%s'" % self.next_real )
+        if( self.next_real is None and len(self.inlined_frames) > 0 ):
+#            print("###########################################################################")
+            inf = self.inlined_frames[0]
+            self.inlined_frames = self.inlined_frames[1:]
+            return inf
         try:
-            return self.__next__()
+            ret = self.__next__()
+#            print("Return self next %s" % ret )
+#            print("self.inlined_frames = '%s'" % self.inlined_frames )
+#            if( len(self.inlined_frames) > 0 ):
+#                print("self.inlined_frames[0].fobj.inferior_frame() = '%s'" % self.inlined_frames[0].fobj.inferior_frame() )
+            return ret
         except StopIteration:
+#            print("Stop iteration at %s" % frame)
             return BacktraceIterator(frame)
 
 class BacktraceFilter ( ):

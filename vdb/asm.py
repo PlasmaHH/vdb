@@ -26,7 +26,7 @@ asm_colors_dot = [
         ( "mov.*", "#007f7f" ),
         ( "cmp.*|test.*", "#f09090" ),
         ( "call.*", "#6666ff" ),
-        ( "ret.*", "#80f090" ),
+        ( "ret.*", "#308020" ),
         ]
 
 pre_colors = [
@@ -75,8 +75,10 @@ color_args_dot     = vdb.config.parameter("vdb-asm-colors-args-dot",            
 
 
 
-asm_showspec   = vdb.config.parameter("vdb-asm-showspec", "maodbnprT" )
-dot_fonts      = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
+asm_showspec     = vdb.config.parameter("vdb-asm-showspec", "maodbnprT" )
+
+asm_showspec_dot = vdb.config.parameter("vdb-asm-showspec-dot", "maodbnprT" )
+dot_fonts        = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
 ix = -1
 def next_index( ):
@@ -315,7 +317,8 @@ ascii mockup:
                         alen += 1
                     else:
                         if( ar.lines == 0 ):
-                            ret += acolor("I",c.coloridx)
+#                            ret += acolor("I",c.coloridx)
+                            ret += acolor("|",c.coloridx)
                         else:
                             ret += acolor("|",c.coloridx)
                         ar.lines += 1
@@ -327,7 +330,8 @@ ascii mockup:
                     alen += 1
                 else:
                     if( ar.lines == 0 ):
-                        ret += acolor("I",c.coloridx)
+#                        ret += acolor("I",c.coloridx)
+                        ret += acolor("|",c.coloridx)
                     else:
                         ret += acolor("|",c.coloridx)
                     ar.lines += 1
@@ -538,10 +542,10 @@ ascii mockup:
             if( i.marked ):
                 tr.td_raw(vdb.dot.color(next_marker_dot.value,color_marker_dot.value))
             else:
-                tr.td("&nbsp;")
+                tr.td_raw("&nbsp;")
 
         if( "a" in showspec ):
-            tr.td_raw(vdb.dot.color(f"0x{i.address:0{plen}x}",color_addr_dot.value))
+            tr.td_raw(vdb.dot.color(f"0x{i.address:0{plen}x}",color_addr_dot.value))["port"] = str(i.address)
 
         if( "o" in showspec ):
             tr.td_raw(vdb.dot.color(offset_fmt_dot.value.format(offset = i.offset, maxlen = self.maxoffset),color_offset_dot.value))
@@ -550,7 +554,7 @@ ascii mockup:
             tr.td_raw(vdb.dot.color(' '.join(i.bytes),color_bytes_dot.value))
 
         if( "n" in showspec ):
-            tr.td("&nbsp;")
+            tr.td_raw("&nbsp;")
             txt = ""
             if( len(i.prefix) > 0 ):
                 if( len(color_prefix_dot.value) > 0 ):
@@ -571,7 +575,7 @@ ascii mockup:
             if( i.args is not None ):
                 tr.td_raw(vdb.dot.color(i.args,color_args_dot.value))
             else:
-                tr.td_raw(vdb.dot.color("&nbsp;",color_args_dot.value))
+                tr.td_raw("&nbsp;")
 
         if( "r" in showspec ):
             if( i.reference is not None ):
@@ -618,7 +622,10 @@ ascii mockup:
             previous_node = node
             previous_instruction = ins
             if( ins.target_address and not ins.call ):
-                e=node.edge(ins.target_address)
+                port = None
+                if( ins.target_address < ins.address ):
+                    port = ins.target_address
+                e=node.edge(ins.target_address,port)
                 if( ins.conditional_jump ):
                     e["color"] = "#00ff00"
                 node = None
@@ -645,7 +652,7 @@ ascii mockup:
 x86_unconditional_jump_mnemonics = set([ "jmp" ] )
 x86_return_mnemonics = set (["ret","retq","iret"])
 x86_call_mnemonics = set(["call","callq","int"])
-x86_prefixes = set([ "rep", "lock" ])
+x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock" ])
 
 def parse_from_gdb( arg ):
     ret = listing()
@@ -767,11 +774,16 @@ def disassemble( arg ):
         if( argv[0] == "/d" ):
             dotty = True
             argv=argv[1:]
+        elif( argv[0] == "/r" ):
+            argv=argv[1:]
+            gdb.execute("disassemble " + " ".join(argv))
+            return
+
 
     listing = parse_from(" ".join(argv))
     listing.print(asm_showspec.value)
     if( dotty ):
-        g = listing.to_dot(asm_showspec.value)
+        g = listing.to_dot(asm_showspec_dot.value)
         g.write("dis.dot")
         os.system("nohup dot -Txlib dis.dot &")
 

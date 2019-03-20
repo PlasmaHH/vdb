@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 def dot_escape( txt ):
+    txt = txt.replace("&","&amp;")
     txt = txt.replace(">","&gt;")
     txt = txt.replace("<","&lt;")
     return txt
@@ -73,8 +74,9 @@ class table:
         self.trs.append(tr)
 
 class edge:
-    def __init__( self, to ):
+    def __init__( self, to, port = None ):
         self.to = to
+        self.port = port
         self.attributes = {}
 
     def __setitem__( self, name, val ):
@@ -82,12 +84,18 @@ class edge:
 
     def write( self, f, fr ):
         if( len(self.attributes) ):
-            f.write(f'"{fr}" -> "{self.to}" [')
+            if( self.port is not None ):
+                f.write(f'"{fr}" -> "{self.to}":"{self.port}" [')
+            else:
+                f.write(f'"{fr}" -> "{self.to}" [')
             for n,v in self.attributes.items():
                 f.write(f' {n} = "{v}", ')
             f.write(" ]\n")
         else:
-            f.write(f'"{fr}" -> "{self.to}";\n')
+            if( self.port is not None ):
+                f.write(f'"{fr}" -> "{self.to}":"{self.port}";\n')
+            else:
+                f.write(f'"{fr}" -> "{self.to}";\n')
 
 class node:
     def __init__( self, name ):
@@ -111,8 +119,8 @@ class node:
             st.write(f)
         f.write("\n>];\n")
 
-    def edge( self, name ):
-        e = edge(str(name))
+    def edge( self, name, port = None ):
+        e = edge(str(name), port)
         self.edges.append(e)
         return e
 
