@@ -39,7 +39,7 @@ A set of python visual enhancements for gdb.
 
 <!-- vim-markdown-toc -->
 <!--
-# VDB
+#VDB
 -->
 
 ## Overview
@@ -179,6 +179,16 @@ This command dumps the range of memory specified by the parameter. If you omit t
 to the value of `vdb-hexdump-default-len`. It will try to dump that many bytes, if along the way it reaches a point
 where memory will not be accessible anymore, it stops.
 
+![](img/hd.png)
+
+If it knows the memory belongs to some symbol, it will colour it in a specific colour and annotate the symbol at the
+side.
+
+The setting
+```
+vdb-hexdump-colors-header
+```
+controls the colour of the header (the one that should make it a bit simpler to find certain bytes)
 ## asm
 This is a disassembler module
 
@@ -188,11 +198,62 @@ This is a disassembler module
 This is a "plain" disassembly. It expects a gdb expression as a parameter that would be accepted by gdbs `disassemble`
 command.
 
-"maodbnprT"
+The displayed data can be controlled by the following showspec setting
+
+```
+vdb-asm-showspec
+```
+
+The order is fixed and the showspec entries mean the following:
+
+* `m` Shows a marker (configured by `vdb-asm-next-marker`) for the next-to-be-executed instruction
+* `a` Shows the address
+* `o` Shows the offset
+* `d` Shows a tree view of the known jumps in the current listing. They are coloured in a round robin fashion.
+* `b` Shows the instruction bytes
+* `n` Shows the mnemonic (along with its prefix).
+* `p` Shows the parameters to the mnemonic
+* `r` Shows a reference, this is mostly arbitrary text that the disassembler gave us (or text that we failed to parse properly)
+* `t` or `T` Shows for jump and call targets the target name, run through the standard shorten and colour mechanism
+
+
+The following settings control the colours
+```
+vdb-asm-colors-namespace
+vdb-asm-colors-function
+vdb-asm-colors-bytes
+vdb-asm-colors-next-marker
+vdb-asm-colors-addr
+vdb-asm-colors-offset
+vdb-asm-colors-bytes
+vdb-asm-colors-prefix
+vdb-asm-colors-mnemonic
+vdb-asm-colors-args
+```
+
+If you set the addr colour to `None` (default) it will use the standard pointer colouring. If you set the mnemonic
+colouring to `None` (default) it will use a list of regexes to check for which colouor to chose for which mnemonic. Same
+for the prefix.
+
+You have a little more control over the way offset is formatted by using the setting `vdb-asm-offset-format` which
+defaults to `<+{offset:<{maxlen}}>:` where `offset` is the offset value and `maxlen` is the maximum width of an integer
+encountered while parsing the current listing.
+
 
 ![](img/disassemble.png)
 #### `dis/d`
+Outputs the disassembler just like the plain format, additionally creates a `dis.dot` file that will contain a dotty
+representation of what we think might be basic blocks and (conditional) jump instructions.
+
+The following example is the same as the disassembler listing above. It doesn't use the `r` and `t` showspecs for
+brevity.
+
+![](img/dis.dot.png)
+
+The whole settings for colours of the terminal listing exist too for the dot ones, just append `-dot` to the setting
+name. The showspecs are the same with the exception of the tree view.
 #### `dis/r`
+This calls the gdb disassembler without any formatting
 
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when

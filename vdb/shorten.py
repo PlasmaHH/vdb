@@ -381,9 +381,31 @@ vdb.subcommands.add_subcommand( [ "add","foldable" ], add_foldable_v )
 vdb.subcommands.add_subcommand( [ "show","foldable"] , show_foldable )
 
 
+loaded_typedefs = False
+def lazy_load_typedefs( ):
+    global loaded_typedefs
+    if( loaded_typedefs ):
+        return
+    loaded_typedefs = True
+    print("Getting typelist")
+    typelist = gdb.execute("info types",False,True)
+    print("Got it")
+
+    candidates = set()
+    cnt = 0
+    print("len(typelist) = '%s'" % len(typelist) )
+    for line in typelist.splitlines():
+        if( line.find("typedef") != -1 ):
+            cnt += 1
+            candidates.add(line)
+    print("cnt = '%s'" % cnt )
+    print("len(candidates) = '%s'" % len(candidates) )
+    print("candidates = '%s'" % candidates )
+
 
 
 def symbol(fname):
+    lazy_load_typedefs()
     for old,new in shortens.items():
         fname = fname.replace(old,new)
     for fold in foldables:
