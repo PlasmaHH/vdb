@@ -82,7 +82,7 @@ color_call_dot       = vdb.config.parameter("vdb-asm-colors-call-dot",       "#6
 
 
 
-arrow_prefer_right = vdb.config.parameter("vdb-asm-arrow-prefer-right",False)
+tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
 asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnprT" )
 asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maodbnprT" )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
@@ -250,7 +250,7 @@ ascii mockup:
 
         def find_next( cl, ar ):
             clen = len(cl)
-            if( arrow_prefer_right.value ):
+            if( tree_prefer_right.value ):
                 r = range(clen-1,-1,-1)
             else:
                 r = range(0,clen)

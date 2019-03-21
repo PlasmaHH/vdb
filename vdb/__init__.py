@@ -67,8 +67,9 @@ enable_vmmap = vdb.config.parameter( "vdb-enable-vmmap",True)
 enable_hexdump = vdb.config.parameter( "vdb-enable-hexdump",True)
 enable_asm = vdb.config.parameter( "vdb-enable-asm",True)
 enable_grep = vdb.config.parameter( "vdb-enable-grep",True)
+enable_pahole = vdb.config.parameter( "vdb-enable-pahole",True)
 
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep" )
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole" )
 
 
 enabled_modules = [ ]

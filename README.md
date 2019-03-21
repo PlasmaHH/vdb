@@ -214,7 +214,8 @@ The order is fixed and the showspec entries mean the following:
 * `m` Shows a marker (configured by `vdb-asm-next-marker`) for the next-to-be-executed instruction
 * `a` Shows the address
 * `o` Shows the offset
-* `d` Shows a tree view of the known jumps in the current listing. They are coloured in a round robin fashion.
+* `d` Shows a tree view of the known jumps in the current listing. They are coloured in a round robin fashion. It tries
+  to detected computed jumps but isn't very good in it.
 * `b` Shows the instruction bytes
 * `n` Shows the mnemonic (along with its prefix).
 * `p` Shows the parameters to the mnemonic
@@ -244,11 +245,14 @@ You have a little more control over the way offset is formatted by using the set
 defaults to `<+{offset:<{maxlen}}>:` where `offset` is the offset value and `maxlen` is the maximum width of an integer
 encountered while parsing the current listing.
 
-
 ![](img/disassemble.png)
+
+In case your tree view is very wide, you might
+like setting the option `vdb-asm-tree-prefer-right` to make the arrows prefer being more on the right side.
 #### `dis/d`
 Outputs the disassembler just like the plain format, additionally creates a `dis.dot` file that will contain a dotty
-representation of what we think might be basic blocks and (conditional) jump instructions.
+representation of what we think might be basic blocks and (conditional) jump instructions. It will also try to start
+dot with the command specified in `vdb-asm-`
 
 The following example is the same as the disassembler listing above. It doesn't use the `r` and `t` showspecs for
 brevity.
@@ -256,7 +260,14 @@ brevity.
 ![](img/dis.dot.png)
 
 The whole settings for colours of the terminal listing exist too for the dot ones, just append `-dot` to the setting
-name. The showspecs are the same with the exception of the tree view.
+name. The showspecs are the same with the exception of the tree view. The layout of graphviz can sometimes be a mess,
+therefore we offer the following ways to influence things in the graph (besides colour):
+
+* `vdb-asm-prefer-linear-dot` configures that the layout should give priority to the order of instructions when laying
+  out the graph (makes dot edges unconstrained for non consecutive instructions). Can get a bit messy when there are
+  unconditional jumps.
+* `vdb-asm-font-dot` is a comma separated list of fonts. It is embedded int the `.dot` file and the exact format depends
+  on how your graphviz is compiled, on the majority of the system it should be the names you can get via `fc-list`.
 #### `dis/r`
 This calls the gdb disassembler without any formatting
 
