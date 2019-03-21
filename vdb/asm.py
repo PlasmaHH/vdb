@@ -805,7 +805,7 @@ class Dis (vdb.command.command):
     def __init__ (self):
         super (Dis, self).__init__ ("dis", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
-    def do_invoke (self, argv )
+    def do_invoke (self, argv ):
         try:
             disassemble( argv )
         except:
