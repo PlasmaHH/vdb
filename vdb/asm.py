@@ -806,8 +806,13 @@ class Dis (vdb.command.command):
         super (Dis, self).__init__ ("dis", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
     def do_invoke (self, argv ):
+
         try:
+            da=gdb.selected_frame().architecture().disassemble(0x402293,count=10)
+            print("da = '%s'" % da )
             disassemble( argv )
+        except gdb.error as e:
+            print(e)
         except:
             traceback.print_exc()
             raise

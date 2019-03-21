@@ -26,9 +26,11 @@ class command(gdb.Command):
 #            print("a0 = '%s'" % a0 )
 #            print("a1 = '%s'" % a1 )
             vdb.pipe.call(pcmd,gout,a1)
+            return
         except:
+            pass
 #            traceback.print_exc()
-            self.do_invoke(argv)
+        self.do_invoke(argv)
 
 
     def invoke (self, arg, from_tty):
