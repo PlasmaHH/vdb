@@ -52,6 +52,17 @@ def execute( *args, **kwargs ):
 def selected_thread( ):
     return None
 
+class Value:
+    def __init__( self, x ):
+        self.x = x
+
+evaldict = {
+        "*((void**)0xa37d60+0)" : 4
+        }
+def parse_and_eval( s ):
+    print("s = '%s'" % s )
+    return evaldict.get(s,0)
+
 def string_to_argv( arg ):
     argv=shlex.split(arg)
     return argv

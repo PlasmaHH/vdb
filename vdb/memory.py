@@ -552,6 +552,7 @@ class memory_map:
         if( mm is None ):
             mm = self.unknown
         ascii = None
+        col = None
         for cs in colorspec:
             if( cs == "s" ):
                 # section colors (.bss, .data etc.)
@@ -564,7 +565,9 @@ class memory_map:
                 col,_ = self.get_acolor(addr,mm)
             elif( cs == "A" ):
                 # is the pointer value an ascii string?
-                col,ascii = self.get_asciicolor(addr)
+                mt,ascii = self.get_asciicolor(addr)
+                if( mt is not None ):
+                    col = color_ascii.value
             if( col is not None ):
                 break
 

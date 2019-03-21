@@ -74,13 +74,18 @@ color_prefix_dot   = vdb.config.parameter("vdb-asm-colors-prefix-dot",          
 color_mnemonic_dot = vdb.config.parameter("vdb-asm-colors-mnemonic-dot",             None, gdb_type = vdb.config.PARAM_COLOUR)
 color_args_dot     = vdb.config.parameter("vdb-asm-colors-args-dot",            "#3030a0", gdb_type = vdb.config.PARAM_COLOUR)
 
+color_jump_false_dot = vdb.config.parameter("vdb-asm-colors-jump-false-dot", "#ff0000", gdb_type = vdb.config.PARAM_COLOUR)
+color_jump_true_dot  = vdb.config.parameter("vdb-asm-colors-jump-true-dot",  "#00ff00", gdb_type = vdb.config.PARAM_COLOUR)
+color_jump_dot       = vdb.config.parameter("vdb-asm-colors-jump-dot",       "#000088", gdb_type = vdb.config.PARAM_COLOUR)
+color_call_dot       = vdb.config.parameter("vdb-asm-colors-call-dot",       "#6600ff", gdb_type = vdb.config.PARAM_COLOUR)
 
 
 
-asm_showspec     = vdb.config.parameter("vdb-asm-showspec", "maodbnprT" )
 
-asm_showspec_dot = vdb.config.parameter("vdb-asm-showspec-dot", "maodbnprT" )
-dot_fonts        = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
+arrow_prefer_right = vdb.config.parameter("vdb-asm-arrow-prefer-right",False)
+asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnprT" )
+asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maodbnprT" )
+dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
 ix = -1
 def next_index( ):
@@ -94,14 +99,13 @@ class instruction( ):
         self.mnemonic = None
         self.args = None
         self.reference = None
-        self.target_address = None
+        self.targets = set()
         self.conditional_jump = False
         self.call = False
         self.return_ = False
         self.target_name = None
 #        self.target_offset = None
         self.target_of = set()
-        self.jump_arrows = []
         self.address = None
         self.offset = None
         self.bytes = None
@@ -110,6 +114,19 @@ class instruction( ):
         self.infix = ""
         self.jumparrows = ""
         self.arrowwidth = 0
+
+    def __str__( self ):
+        ta = "None"
+        if( len(self.targets) ):
+            ta = ""
+            for t in self.targets:
+                ta += f"0x{t:x}"
+        to = "("
+        for target in self.target_of:
+            to += f"0x{target:x}"
+        to += ")"
+        ret = f"INS @{self.address:x} => {ta} <={to}"
+        return ret
 
 class listing( ):
 
@@ -199,10 +216,13 @@ ascii mockup:
 ╰───►   A3:
 """
     def add_target( self,ins ):
-        if( ins.target_address ):
-            tgt = self.by_addr.get(ins.target_address,None)
-            if( tgt is not None ):
-                tgt.target_of.add(ins.address)
+#        print("add_target")
+#        print("ins = '%s'" % ins )
+        if( len(ins.targets) > 0  ):
+            for tga in ins.targets:
+                tgt = self.by_addr.get(tga,None)
+                if( tgt is not None ):
+                    tgt.target_of.add(ins.address)
 
     def finish( self ):
         global ix
@@ -221,141 +241,103 @@ ascii mockup:
                 self.to = to
                 self.coloridx = next_index()
                 self.lines = 0
+                self.rows = 0
+                self.done = False
+                self.merger = None
 
             def __str__( self ):
-                return f"0x{self.fr:x} -> 0x{self.to:x}, {self.coloridx}"
+                return f"0x{self.fr:x} -> 0x{self.to:x}, c={self.coloridx},l={self.lines},r={self.rows},d={self.done}"
 
-        def find_next( cl ):
+        def find_next( cl, ar ):
             clen = len(cl)
-            for i in range(0,clen) :
-                if( cl[i] is None ):
-                    return (cl,i)
-            cl += [ None ]
-            return ( cl, clen )
+            if( arrow_prefer_right.value ):
+                r = range(clen-1,-1,-1)
+            else:
+                r = range(0,clen)
 
-        def to_arrows( ins, cl, xidx, adict = False, down = False, up = False, left = False, right = False, ignore_target = False  ):
+            for i in r:
+                if( cl[i] is None ):
+                    cl[i] = ar
+                    return i
+                if( cl[i].done ):
+                    old = cl[i]
+                    ar.merger = old
+                    cl[i] = ar
+                    return i
+
+            cl += [ None ]
+            cl[clen] = ar
+            return clen
+
+        def to_arrows( ins, cl, ignore_target = False  ):
 #            print("###################")
             ret = ""
             alen = 0
-#            print("eset = '%s'" % eset )
+#            print("ins.address = '%x'" % ins.address )
+
 #            print("current_lines = '%s'" % current_lines )
-            if( xidx is not None ):
-                xarrow = cl[xidx]
             ridx = 0
             doneleft = False
+            leftarrow = None
+            remove_indices = set()
             for cidx in range(0,len(cl)):
-                c = cl[cidx]
-                ar = adict[cidx]
+                ar = cl[cidx]
 #                print("ar = '%s'" % ar )
-                if( c is None ):
-                    if( len(ins.target_of) > 0 ):
-                        if( doneleft ):
-                            if( ar.to == ins.address ):
-                                ret += acolor("+",xarrow.coloridx)
-                            else:
-                                ret += acolor("-",xarrow.coloridx)
-#                                ret += acolor("-",-1)
-                            alen += 1
-                        else:
-                            if( ar.to == ins.address ):
-                                ret += acolor("^",ar.coloridx)
-                                xarrow = ar
-                                alen += 1
-                                ridx = cidx
-                                doneleft = True
-                            elif( ar.to in ins.target_of ):
-#                                print("ins.target_of = '%s'" % ins.target_of )
-                                ret += acolor("#",ar.coloridx)
-                                xarrow = ar
-                                alen += 1
-                            elif( doneleft ):
-                                ret += acolor("-",xarrow.coloridx)
-                                alen += 1
-                            else:
-                                ret += " "
-                                alen += 1
-                    elif( ins.target_address is not None and not ignore_target ):
-                        if( up and not doneleft ):
-                            if( ar.fr == ins.address ):
-                                doneleft = True
-                                xarrow = ar
-                                ret += acolor("^",xarrow.coloridx)
-#                                ret += acolor(f"^{ar.fr}",xarrow.coloridx)
-                                ridx = cidx
-                            else:
-                                ret += " "
-                        else:
-                            ret += acolor("-",xarrow.coloridx)
-#                            ret += acolor("-",-1)
-                        alen += 1
-#                    elif( xidx is not None and cidx == xidx ):
-#                        ret += acolor("^",xarrow.coloridx)
-#                        alen += 1
+                if( ar is None ):
+                    # No vertical line expected here, lets see if we need some horizontal
+                    if( leftarrow is not None ):
+                        ret += acolor("-",leftarrow.coloridx)
                     else:
                         ret += " "
-                        alen += 1
-                elif( xidx is not None and cidx == xidx ):
-                    if( up and down ):
-                        ret += acolor("#",xarrow.coloridx)
-                        alen += 1
-                        doneleft = True
-                    elif( up ):
-                        ret += acolor("^",xarrow.coloridx)
-                        alen += 1
-                    elif( down ):
-                        ret += acolor("v",xarrow.coloridx)
-                        doneleft = True
-                        alen += 1
-                elif( xidx is not None and cidx > xidx ):
-                    if( xarrow is None ):
-                        ret += "-"
-                        alen += 1
-                    else:
-                        ret += acolor("-",xarrow.coloridx)
-                        alen += 1
-                elif( xidx is not None and cidx < xidx ):
-                    if( xarrow is None ):
-                        ret += "-"
-                        alen += 1
-                    else:
-                        if( ar.lines == 0 ):
-#                            ret += acolor("I",c.coloridx)
-                            ret += acolor("|",c.coloridx)
+                else: # c is not None here
+                    if( ar.done ):
+                        remove_indices.add(cidx)
+                    if( ar.rows == 0 ):
+                        # arrow starts here, so goes down
+                        # but what if there already was another?
+                        if( leftarrow is not None ):
+                            if( ar.merger ):
+                                ret += acolor("+",leftarrow.coloridx)
+                            else:
+                                ret += acolor("T",leftarrow.coloridx)
                         else:
-                            ret += acolor("|",c.coloridx)
-                        ar.lines += 1
-                        alen += 1
-                elif( ar.to == ins.address ):
-                    xarrow = ar
-                    doneleft = True
-                    ret += acolor("#",c.coloridx)
-                    alen += 1
-                else:
-                    if( ar.lines == 0 ):
-#                        ret += acolor("I",c.coloridx)
-                        ret += acolor("|",c.coloridx)
+                            if( ar.merger ):
+                                if( ar.to == ar.fr ):
+                                    ret += acolor("^",ar.coloridx)
+                                else:
+                                    ret += acolor("#",ar.coloridx)
+                            elif( ins.address in ins.targets ):
+                                ret += " "
+                            else:
+                                ret += acolor("v",ar.coloridx)
+                            leftarrow = ar
                     else:
-                        ret += acolor("|",c.coloridx)
-                    ar.lines += 1
-                    alen += 1
-            if( xidx is not None ):
-                ridx = xidx
-            if( left ):
-                ar = adict[ridx]
-#                print("ar = '%s'" % ar )
-                if( ar.to == ar.fr ):
-                    ret += acolor("Q",adict[ridx].coloridx)
-                else:
-                    ret += acolor("<",adict[ridx].coloridx)
+                        if( ar.done ):
+                            if( leftarrow is not None ):
+                                ret += acolor("u",leftarrow.coloridx)
+                            else:
+                                ret += acolor("^",ar.coloridx)
+                                leftarrow = ar
+                        else:
+                            # arrow already had a start
+                            if( ar.lines == 0 ):
+                                ret += acolor("|",ar.coloridx)
+                            else:
+                                ret += acolor("|",ar.coloridx)
+                        ar.lines += 1
+                    ar.rows += 1
                 alen += 1
-            if( right ):
-                if( up and down ):
-                    ret += acolor("~",adict[ridx].coloridx)
+                # back to the current_line loop from here
+            if( leftarrow is not None ):
+                if( ins.address in ins.targets ):
+                    ret += acolor("Q",leftarrow.coloridx)
+                elif( leftarrow.to == ins.address ):
+                    ret += acolor(">",leftarrow.coloridx)
                 else:
-                    ret += acolor(">",adict[ridx].coloridx)
+                    ret += acolor("<",leftarrow.coloridx)
                 alen += 1
-#            print("alen = '%s'" % alen )
-#            print("ret = '%s'" % ret )
+            for i in remove_indices:
+                cl[i] = None
             return ( ret, alen )
 
 
@@ -365,83 +347,40 @@ ascii mockup:
 
         for ins in self.instructions:
 #            print("INS_----------------------------------")
+#            print("ins = '%s'" % ins )
             self.add_target(ins)
-            runidx = None
 
-            if( len( ins.target_of) > 0 ):
-#                print("ins.address = '%x'" % ins.address )
-                for cidx in range(0,len(current_lines)):
-                    cl = current_lines[cidx]
-                    if( cl ):
-#                        print("cl = '%s'" % cl )
-                        if( cl.fr in ins.target_of ):
-                            current_lines[cidx] = None
-                            runidx = cidx
-
-            for cidx in range(0,len(current_lines)):
-                cl = current_lines[cidx]
-                if( cl ):
-                    if( cl.to == ins.target_address and ins.target_address < ins.address ):
-                        current_lines[cidx] = None
-                        runidx = cidx
+            # Remove those arrows that end here, whiche are always from above. Those that start here are not yet in the
+            # list
+            for cl in current_lines:
+                if( cl is not None ):
+                    # One of the arrow ends targets this instruction
+                    if( cl.to == ins.address or cl.fr == ins.address ):
+                        cl.done = True
+#                        print("DONE_01 cl = '%s'" % cl )
 
 
-#            for to in ins.target_of:
-#                print("to = '%s'" % to )
-#                ai = arrow_indices.get(to,None )
-#                print("ai = '%s'" % ai )
-#                if( ai is not None ):
-
-            ri = False
+            # Now add the new ones
+            for tgt in ins.targets:
+                if( self.start <= tgt <= self.end ):
+                    if( tgt == ins.address ):
+                        ar = arrow(ins.address,tgt)
+                        find_next( current_lines, ar )
+                        ar.done = True
+#                        print("ADD2 %s" % ar)
+                    # Target is further down, add an arrow
+                    elif( tgt > ins.address ):
+                        ar = arrow(ins.address,tgt)
+                        find_next( current_lines, ar )
+#                        print("ADD1 %s" % ar)
             if( len(ins.target_of) > 0 ):
-                ri = True
-
-            if( ins.target_address ):
-                if( self.start <= ins.target_address <= self.end ):
-                    # the target it further down
-                    if( ins.target_address >= ins.address ):
-                        current_lines,lidx = find_next( current_lines )
-                        ar = arrow(ins.address,ins.target_address)
-                        current_lines[lidx] = ar
-                        adict[lidx] = ar
-                        if( ins.target_address == ins.address ):
-                            (ins.jumparrows,ins.arrowwidth) = to_arrows(ins,current_lines,lidx,adict,left=True )
-                            current_lines[lidx] = None
-                        else:
-                            (ins.jumparrows,ins.arrowwidth) = to_arrows(ins,current_lines,lidx,adict,down=True,left=True )
-                    # the target is further up
-                    else:
-                        (ins.jumparrows,ins.arrowwidth) = to_arrows(ins,current_lines,None,adict,up=True,left = True )
-#                    ins.jumparrows = "UPJUMP"
-#                ins.jumparrows = "<"
-                else:
-                    (ins.jumparrows,ins.arrowwidth) = to_arrows(ins,current_lines,None,adict,ignore_target = True)
-            # not a jump starting from here
-            else:
-                # but a jump going to here
-                if( len(ins.target_of) > 0 ):
-                    for to in ins.target_of:
-                        if( to < ins.address ):
-                            (ins.jumparrows,ins.arrowwidth) = to_arrows(ins, current_lines, None, adict, up = True, right = True )
-                        else:
-                            current_lines,lidx = find_next( current_lines )
-                            ar = arrow(to,ins.address)
-                            current_lines[lidx] = ar
-                            adict[lidx] = ar
-                            up=False
-                            for t in ins.target_of:
-                                if( t < ins.address ):
-                                    up = True
-                                    break
-
-                            (ins.jumparrows,ins.arrowwidth) = to_arrows(ins, current_lines, lidx, adict, up = up, down = True, right = True )
-#                            ins.jumparrows += "*"
-                # also no jump to here
-                else:
-                    (ins.jumparrows,ins.arrowwidth) = to_arrows(ins, current_lines, runidx, adict )
-#            print("current_lines = '%s'" % current_lines )
-#            if( len(ins.target_of) > 0 ):
-#                ins.jumparrows = ">"
+                # We are a target of something, lets have a look if those are further down
+                for target in ins.target_of :
+                    if( target > ins.address ):
+                        # yep, further down, we need a new arrow
+                        ar = arrow(target,ins.address)
+                        find_next( current_lines, ar )
+            (ins.jumparrows,ins.arrowwidth) = to_arrows(ins,current_lines)
         self.maxarrows = len(current_lines)+1
 
     def lazy_finish( self ):
@@ -449,12 +388,14 @@ ascii mockup:
             return
         self.finish()
 
-    def print( self, showspec = "maodbnprT" ):
+
+    def to_str( self, showspec = "maodbnprT" ):
         self.lazy_finish()
         hf = self.function
         if( shorten_header.value ):
             hf = vdb.shorten.symbol(hf)
-        print(f"Instructions in range 0x{self.start:x} - 0x{self.end:x} of {hf}")
+        ret = ""
+        ret += f"Instructions in range 0x{self.start:x} - 0x{self.end:x} of {hf}\n"
         for i in self.instructions:
             if( "m" in showspec ):
                 if( i.marked ):
@@ -468,7 +409,7 @@ ascii mockup:
 
             if( "d" in showspec ):
 #                mt=str.maketrans("v^-|<>+#Q~I","╭╰─│◄►┴├⥀◆↑" )
-                mt=str.maketrans("v^-|<>+#Q~I","╭╰─│◄►┴├⥀◆I" )
+                mt=str.maketrans("v^-|<>u#Q~T+","╭╰─│◄►┴├⥀◆┬┼" )
                 if( len(i.jumparrows) ):
                     ja=i.jumparrows.translate(mt)
                     fillup = " " * (self.maxarrows - i.arrowwidth)
@@ -515,14 +456,19 @@ ascii mockup:
                 if( i.reference is not None ):
                     line += vdb.shorten.symbol(i.reference)
             if( any((c in showspec) for c in "tT" ) ):
-#                if( i.target_address is not None ):
-#                    line += i.target_address
+#                if( i.targets is not None ):
+#                    line += i.targets
                 if( "T" in showspec ):
                     if( i.target_name is not None ):
                         line += vdb.shorten.symbol(i.target_name)
 
 
-            print(line)
+            ret += line + "\n"
+
+        return ret
+
+    def print( self, showspec = "maodbnprT" ):
+        print(self.to_str(showspec))
 
     def color_dot_relist( self, s, l ):
         for r,c in l:
@@ -608,14 +554,14 @@ ascii mockup:
                 node = g.node(ins.address)
                 if( previous_node is not None ):
                     if( previous_instruction is not None and ( not previous_instruction.return_ ) ):
-                        if( previous_instruction.target_address and not ( previous_instruction.conditional_jump or previous_instruction.call ) ):
+                        if( len(previous_instruction.targets) > 0  and not ( previous_instruction.conditional_jump or previous_instruction.call ) ):
                             pass
                         else:
                             e=previous_node.edge( ins.address )
                             if( previous_instruction and previous_instruction.conditional_jump ):
-                                e["color"] = "#ff0000"
+                                e["color"] = color_jump_false_dot.value
                             elif( previous_instruction and previous_instruction.call ):
-                                e["color"] = "#6600ff"
+                                e["color"] = color_call_dot.value
                     previous_node = None
                     previous_instruction = None
             if( node.table is None ):
@@ -626,17 +572,18 @@ ascii mockup:
             self.ins_to_dot(ins,node,showspec)
             previous_node = node
             previous_instruction = ins
-            if( ins.target_address and not ins.call ):
-                port = None
-                if( ins.target_address < ins.address ):
-                    port = ins.target_address
-                e=node.edge(ins.target_address,port)
-                if( ins.conditional_jump ):
-                    e["color"] = "#00ff00"
-                else:
-                    e["color"] = "#000088"
-                if( prefer_linear_dot.value ):
-                    e["constraint"] = "false"
+            if( len(ins.targets) > 0 and not ins.call ):
+                for tgt in ins.targets:
+                    port = None
+                    if( tgt < ins.address ):
+                        port = tgt
+                    e=node.edge(tgt,port)
+                    if( ins.conditional_jump ):
+                        e["color"] = color_jump_true_dot.value
+                    else:
+                        e["color"] = color_jump_dot.value
+                    if( prefer_linear_dot.value ):
+                        e["constraint"] = "false"
                 node = None
             if( ins.return_ ):
                 node = None
@@ -658,23 +605,30 @@ ascii mockup:
         # "up" jumping part of the target_of, the "down" jumping part is done in finish()
         self.add_target(ins)
 
-x86_unconditional_jump_mnemonics = set([ "jmp" ] )
+x86_unconditional_jump_mnemonics = set([ "jmp", "jmpq" ] )
 x86_return_mnemonics = set (["ret","retq","iret"])
 x86_call_mnemonics = set(["call","callq","int"])
 x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock" ])
 
-def parse_from_gdb( arg ):
+def parse_from_gdb( arg, fakedata = None ):
     ret = listing()
     prefixes = x86_prefixes
     unconditional_jump_mnemonics = x86_unconditional_jump_mnemonics
     return_mnemonics = x86_return_mnemonics
     call_mnemonics = x86_call_mnemonics
 
-    dis = gdb.execute(f'disassemble/r {arg}',False,True)
+    if( fakedata is None ):
+        dis = gdb.execute(f'disassemble/r {arg}',False,True)
+    else:
+        dis = fakedata
+#    print("dis = '%s'" % dis )
     linere = re.compile("^(=>)*\s*(0x[0-9a-f]*)\s*<\+([0-9]*)>:\s*([^<]*)(<[^+]*(.*)>)*")
     funcre = re.compile("for function (.*):")
     bytere = re.compile("^[0-9a-fA-F][0-9a-fA-F]$")
+    jmpre  = re.compile("^\*(0x[0-9a-fA-F]*)\(.*")
+    cmpre  = re.compile("^\$(0x[0-9a-fA-F]*),.*")
     current_function=""
+    last_cmp_immediate = 1
 #    print("dis = '%s'" % dis )
     for line in dis.splitlines():
         ins = instruction()
@@ -718,8 +672,14 @@ def parse_from_gdb( arg ):
             if( len(tokens) > tpos ):
                 ins.args = tokens[tpos]
                 tpos += 1
-#            print("len(tokens) = '%s'" % len(tokens) )
-#            print("tpos = '%s'" % tpos )
+
+            if( ins.mnemonic == "cmp" ):
+                m = re.search(cmpre,ins.args)
+#                print("m = '%s'" % m )
+                if( m is not None ):
+                    cmparg = m.group(1)
+                    last_cmp_immediate = vdb.util.xint(cmparg)
+
             if( len(tokens) > tpos ):
 #                print("tokens[tpos] = '%s'" % tokens[tpos] )
                 if( tokens[tpos] == "#" ):
@@ -728,8 +688,29 @@ def parse_from_gdb( arg ):
                 else:
                     if( ins.mnemonic not in unconditional_jump_mnemonics ):
                         ins.conditional_jump = True
-                    ins.target_address = vdb.util.xint(tokens[tpos-1])
+                    ins.targets.add(vdb.util.xint(tokens[tpos-1]))
                     ins.target_name = " ".join(tokens[tpos:])
+            elif( ins.mnemonic in unconditional_jump_mnemonics ):
+                m = re.search(jmpre,ins.args)
+                if( m is not None ):
+                    table = m.group(1)
+                    cnt = 0
+                    while True:
+                        jmpval = gdb.parse_and_eval(f"*((void**){table}+{cnt})")
+#                        print("jmpval = '%s'" % jmpval )
+                        if( jmpval == 0 ):
+                            break
+                        if( cnt > last_cmp_immediate ):
+                            break
+#                        print("last_cmp_immediate = '%s'" % last_cmp_immediate )
+                        ins.targets.add(int(jmpval))
+                        cnt += 1
+                    ins.reference = f"{len(ins.targets)} computed jump targets " # + str(ins.targets)
+#                    print("jmpval = '%s'" % jmpval )
+#                    print("m = '%s'" % m )
+#                    print("m.group(1) = '%s'" % m.group(1) )
+#                    print("ins = '%s'" % ins )
+
             if( ins.mnemonic in call_mnemonics ):
                 ins.call = True
                 ins.conditional_jump = False
@@ -767,6 +748,8 @@ def parse_from_gdb( arg ):
             continue
         if( line in set(["End of assembler dump."]) ):
             continue
+        if( len(line) == 0 ):
+            continue
         print(f"Don't know what to do with '{line}'")
 #			print("m = '%s'" % m )
     return ret
@@ -797,7 +780,18 @@ def disassemble( argv ):
 
 
 def get_single( bpos ):
-    return "<instruction>"
+    ret="<??>"
+    try:
+        da=gdb.selected_frame().architecture().disassemble(int(bpos),count=1)
+        da=da[0]
+        fake = f"0x{da['addr']:x} <+0>: {da['asm']}"
+        li = parse_from_gdb("",fake)
+        ret = li.to_str(asm_showspec.value.replace("a","").replace("o",""))
+        ret = ret.splitlines()
+        ret = ret[1]
+    except:
+        pass
+    return ret
 
 class Dis (vdb.command.command):
     """Disassemble with bells and whistels"""
@@ -808,8 +802,8 @@ class Dis (vdb.command.command):
     def do_invoke (self, argv ):
 
         try:
-            da=gdb.selected_frame().architecture().disassemble(0x402293,count=10)
-            print("da = '%s'" % da )
+#            da=gdb.selected_frame().architecture().disassemble(0x402293,count=10)
+#            print("da = '%s'" % da )
             disassemble( argv )
         except gdb.error as e:
             print(e)

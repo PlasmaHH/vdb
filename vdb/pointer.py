@@ -115,6 +115,15 @@ def color( ptr, archsize ):
 #    return ( ret, additional )
     return ( ret, additional, col, mm )
 
+def escape_spaces( s ):
+    s = s.replace("\\","\\\\")
+    s = s.replace("\t","\\t")
+    s = s.replace("\n","\\n")
+    s = s.replace("\r","\\r")
+    s = s.replace("\v","\\v")
+    s = s.replace("\f","\\f")
+    return s
+
 def chain( ptr, archsize, maxlen = 8 ):
     if( gdb_void == None ):
         update_types()
@@ -135,7 +144,9 @@ def chain( ptr, archsize, maxlen = 8 ):
         ret += f"{arrow_right.value}{s}"
         return ret
     if( add is not None ):
-        ret += f"   {add[1]}"
+        ascstring = add[1]
+        ascstring = escape_spaces(ascstring)
+        ret += f"   {ascstring}"
     try:
         gptr = gdb.Value(ptr)
 #        print("gptr = '%s'" % gptr )
