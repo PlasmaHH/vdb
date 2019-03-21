@@ -158,7 +158,7 @@ class SignalFrame():
 		frame = self.fobj.inferior_frame()
 		sighandler = frame.newer()
 		try:
-			# vwd signal handler first
+			# signal handler first
 			si=sighandler.read_var("si")
 			v=sighandler.read_var("v")
 		except:

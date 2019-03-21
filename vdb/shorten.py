@@ -463,18 +463,17 @@ def path(fpath):
 
 def test( ):
     x=parse_function("abort ()")
-#    x=parse_function("vwd::abort<abc> ()")
-#    x=parse_function("vwd::abort<abc<def::ghi>> ()")
-#    x=parse_function("vwd::abort<abc,def<xxx>,ghi> ()")
-#    x=parse_function("vwd::abort<abc,def<xxx>> (unsigned)")
-#    x=parse_function("vwd::abort<abc,def<xxx>> ()")
-#    x=parse_function("vwd::mdps::str0<int>::str1<long>::fx::fy")
-#    x=parse_function("vwd::x0<a1<b1>::x>::f0")
-#    x=parse_function("vwd::x0<a1<b1>::x<bar>::u>::f0")
+#    x=parse_function("abort<abc> ()")
+#    x=parse_function("abort<abc<def::ghi>> ()")
+#    x=parse_function("abort<abc,def<xxx>,ghi> ()")
+#    x=parse_function("abort<abc,def<xxx>> (unsigned)")
+#    x=parse_function("abort<abc,def<xxx>> ()")
+#    x=parse_function("xxx::str0<int>::str1<long>::fx::fy")
+#    x=parse_function("x0<a1<b1>::x>::f0")
+#    x=parse_function("x0<a1<b1>::x<bar>::u>::f0")
 #    x=parse_function("mx<true>::cde<abc<abg>::xyz>")
 #    x=parse_function("mx<true>::cde<abc<abg>::xyz>()")
 #    x=parse_function("mx<true>::cde<abc<abg>::xyz>(int,int)")
-#		x=parse_function("vwd::mdps::feedconfig::mapper<vwd::data::intermediate_symbol<int, vwd::data::default_key_hash, vwd::data::intermediate_field_id<unsigned short>, boost::variant<unsigned long, vwd::hstring, vwd::decimal<int, signed char>, vwd::tagged<vwd::tag_wrapper<unsigned long>, vwd::epoch_tag<1000ul, 1ul> >, vwd::tagged<vwd::hstring, vwd::datetime_tag_descriptor<10ul, 0ul, 4ul, 5ul, 2ul, 8ul, 2ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul> >, vwd::tagged<vwd::tag_wrapper<unsigned long>, vwd::epoch_tag<1000000000ul, 1ul> > >, vwd::mdps::feedconfig::action_cache_hook<void, impact::additional_storage<void, vwd::empty_crtp_base<void> > > >, vwd::buffered_write_device<vwd::none_device, vwd::static_autoflush<false>, vwd::static_autoresize<false> >, true>::clean_symbol<vwd::data::symbols_storage<vwd::data::intermediate_symbol<int, vwd::data::default_key_hash, vwd::data::intermediate_field_id<unsigned short>, boost::variant<unsigned long, vwd::hstring, vwd::decimal<int, signed char>, vwd::tagged<vwd::tag_wrapper<unsigned long>, vwd::epoch_tag<1000ul, 1ul> >, vwd::tagged<vwd::hstring, vwd::datetime_tag_descriptor<10ul, 0ul, 4ul, 5ul, 2ul, 8ul, 2ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul> >, vwd::tagged<vwd::tag_wrapper<unsigned long>, vwd::epoch_tag<1000000000ul, 1ul> > >, vwd::mdps::feedconfig::action_cache_hook<void, impact::additional_storage<void, vwd::empty_crtp_base<void> > > > >::status_iterator::element>(vwd::data::symbols_storage<vwd::data::intermediate_symbol<int, vwd::data::default_key_hash, vwd::data::intermediate_field_id<unsigned short>, boost::variant<unsigned long, vwd::hstring, vwd::decimal<int, signed char>, vwd::tagged<vwd::tag_wrapper<unsigned long>, vwd::epoch_tag<1000ul, 1ul> >, vwd::tagged<vwd::hstring, vwd::datetime_tag_descriptor<10ul, 0ul, 4ul, 5ul, 2ul, 8ul, 2ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul> >, vwd::tagged<vwd::tag_wrapper<unsigned long>, vwd::epoch_tag<1000000000ul, 1ul> > >, vwd::mdps::feedconfig::action_cache_hook<void, impact::additional_storage<void, vwd::empty_crtp_base<void> > > > >::status_iterator::element)")
     print("x = '%s'" % x )
 
 if __name__ == "__main__":
