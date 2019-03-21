@@ -4,12 +4,12 @@
 
 import vdb.config
 import vdb.subcommands
+import vdb.command
 
 import gdb
 
 import sys
 import os
-import shlex
 import importlib
 import traceback
 
@@ -17,14 +17,13 @@ import traceback
 # First setup the most important settings that configure which parts we want to have active
 
 
-class cmd_vdb (gdb.Command):
+class cmd_vdb (vdb.command.command):
     """Show vdb status information"""
 
     def __init__ (self):
         super (cmd_vdb, self).__init__ ("vdb", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
-    def invoke (self, arg, from_tty):
-        argv=shlex.split(arg)
+    def do_invoke (self, argv ):
         if( len(argv) > 0 ):
             if( argv[0] == "start" ):
                 start()
@@ -67,14 +66,15 @@ enable_register = vdb.config.parameter( "vdb-enable-register",True)
 enable_vmmap = vdb.config.parameter( "vdb-enable-vmmap",True)
 enable_hexdump = vdb.config.parameter( "vdb-enable-hexdump",True)
 enable_asm = vdb.config.parameter( "vdb-enable-asm",True)
+enable_grep = vdb.config.parameter( "vdb-enable-grep",True)
 
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm" )
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep" )
 
-available_modules = configured_modules.value.split(",")
 
 enabled_modules = [ ]
 def start():
     print("Starting vdb modules…")
+    available_modules = configured_modules.value.split(",")
     for mod in available_modules:
         try:
             bval = gdb.parameter( f"vdb-enable-{mod}")

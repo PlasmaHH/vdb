@@ -5,6 +5,7 @@ import vdb.shorten
 import vdb.color
 import vdb.pointer
 import vdb.dot
+import vdb.command
 
 import gdb
 
@@ -42,8 +43,9 @@ pre_colors_dot = [
 next_marker = vdb.config.parameter("vdb-asm-next-marker", " → " )
 next_marker_dot = vdb.config.parameter("vdb-asm-next-marker-dot", " → " )
 
-next_mark_ptr = vdb.config.parameter("vdb-asm-next-mark-pointer", True )
-shorten_header = vdb.config.parameter("vdb-asm-shorten-header", False )
+next_mark_ptr     = vdb.config.parameter("vdb-asm-next-mark-pointer", True )
+shorten_header    = vdb.config.parameter("vdb-asm-shorten-header", False )
+prefer_linear_dot = vdb.config.parameter("vdb-asm-prefer-linear-dot",False)
 
 offset_fmt = vdb.config.parameter("vdb-asm-offset-format", " <+{offset:<{maxlen}}>:" )
 offset_fmt_dot = vdb.config.parameter("vdb-asm-offset-format-dot", " <+{offset:<{maxlen}}>" )
@@ -449,7 +451,10 @@ ascii mockup:
 
     def print( self, showspec = "maodbnprT" ):
         self.lazy_finish()
-        print(f"Instructions in range 0x{self.start:x} - 0x{self.end:x} of {self.function}")
+        hf = self.function
+        if( shorten_header.value ):
+            hf = vdb.shorten.symbol(hf)
+        print(f"Instructions in range 0x{self.start:x} - 0x{self.end:x} of {hf}")
         for i in self.instructions:
             if( "m" in showspec ):
                 if( i.marked ):
@@ -628,6 +633,10 @@ ascii mockup:
                 e=node.edge(ins.target_address,port)
                 if( ins.conditional_jump ):
                     e["color"] = "#00ff00"
+                else:
+                    e["color"] = "#000088"
+                if( prefer_linear_dot.value ):
+                    e["constraint"] = "false"
                 node = None
             if( ins.return_ ):
                 node = None
@@ -766,8 +775,7 @@ def parse_from( arg ):
     # other disssembler options go here
     return parse_from_gdb(arg)
 
-def disassemble( arg ):
-    argv = gdb.string_to_argv(arg)
+def disassemble( argv ):
     dotty = False
 
     if( len(argv) > 0 ):
@@ -791,15 +799,15 @@ def disassemble( arg ):
 def get_single( bpos ):
     return "<instruction>"
 
-class Dis (gdb.Command):
+class Dis (vdb.command.command):
     """Disassemble with bells and whistels"""
 
     def __init__ (self):
         super (Dis, self).__init__ ("dis", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
-    def invoke (self, arg, from_tty):
+    def do_invoke (self, argv )
         try:
-            disassemble( arg )
+            disassemble( argv )
         except:
             traceback.print_exc()
             raise
@@ -810,7 +818,7 @@ Dis()
 
 if __name__ == "__main__":
     try:
-        disassemble( " ".join(sys.argv[1:] ))
+        disassemble( sys.argv[1:] )
     except:
         traceback.print_exc()
         pass

@@ -9,11 +9,22 @@ import vdb.subcommands
 import re
 import gdb
 import os
+import traceback
 from collections.abc import Iterable
 
 
 
 color_shorten = vdb.config.parameter("vdb-shorten-colors-templates", "#f60", gdb_type = vdb.config.PARAM_COLOUR)
+
+
+def log(fmt, *more ):
+    try:
+        print(fmt.format(*more))
+    except:
+        print(fmt)
+
+def indent( i, fmt, *more ):
+    log("  " * i + fmt, *more )
 
 
 
@@ -106,8 +117,6 @@ class type_or_function:
 					p.add_shorten(fro,to)
 			self.shortens[fro] = to
 
-				
-
 	def __str__(self):
 		if( len(self.name) == 0 ):
 			return ""
@@ -153,122 +162,124 @@ class type_or_function:
 
 
 def parse_fragment( frag, obj, level = 0 ):
-#	indent(level,"Parsing fragment '{}'",frag[:50])
-	sofar = ""
+    #	indent(level,"Parsing fragment '{}'",frag[:50])
+    sofar = ""
 
-	i = -1
-	while i < len(frag)-1:
-#		print("len(frag) = '%s'" % len(frag) )
+    i = -1
+    while i < len(frag)-1:
+        #		print("len(frag) = '%s'" % len(frag) )
 #		print("i = '%s'" % i )
-		i += 1
+        i += 1
 #		print("i = '%s'" % i )
 #		indent(level,"frag[%s] = '%s'" % (i,frag[i]) )
-		s=frag[i]
-		if( s == " "):
-			continue
-		if( s == "(" ):
-			obj.name = sofar
-			while True:
-				ct = type_or_function()
-				i += 1
-				i += parse_fragment( frag[i:], ct, level+1 ) 
+        s=frag[i]
+        if( s == " "):
+            continue
+        if( s == "(" ):
+            obj.name = sofar
+            while True:
+                ct = type_or_function()
+                i += 1
+                i += parse_fragment( frag[i:], ct, level+1 ) 
 #				indent(level,"param {}",ct)
 #				print("frag[i:] = '%s'" % frag[i:] )
 #				print("frag[i+1:] = '%s'" % frag[i+1:] )
-				obj.add_param(ct)
-				if( frag[i] == ")" ):
-					return i+1
-			continue
-		if( s == ")" ):
-			obj.name = sofar
-			return i
-		if( s == ":" ):
-			obj.add_ns( sofar )
-			sofar = ""
-			continue
-		if( s == "," ):
-			obj.name = sofar
-			return i
-		if( s == "<" ):
-			obj.name = sofar
-			sofar = ""
-			while True:
-#				indent(level,"obj = '%s'" % obj )
-				ct = type_or_function()
-				i += parse_fragment( frag[i+1:], ct,level+1 )
+                obj.add_param(ct)
+                if( frag[i] == ")" ):
+                    return i+1
+            continue
+        if( s == ")" ):
+            obj.name = sofar
+            return i
+        if( s == ":" ):
+            obj.add_ns( sofar )
+            sofar = ""
+            continue
+        if( s == "," ):
+            obj.name = sofar
+            return i
+        if( s == "<" ):
+            obj.name = sofar
+            sofar = ""
+            while True:
+                #				indent(level,"obj = '%s'" % obj )
+                ct = type_or_function()
+                i += parse_fragment( frag[i+1:], ct,level+1 )
 #				indent(level,"ct = '%s'" % ct )
-				obj.add_template( ct )
-				i+=1
+                obj.add_template( ct )
+                i+=1
 #				print("i = '%s'" % i )
 #				print("len(frag) = '%s'" % len(frag) )
-				if( i+1 == len(frag) ):
-					return i
+                if( i+1 == len(frag) ):
+                    return i
 #				indent(level,"T frag[%s] = '%s'" % (i,frag[i]) )
-				if( frag[i] == "," ):
-					continue
-				if( frag[i] == ">" ):
-					if( frag[i+1] == ":" ):
-						sub = type_or_function()
-						obj.subobject = sub
-						obj = sub
-						break
-					else:
-						return i
-			continue
-		if( s == ">" ):
-			obj.name = sofar
+                if( frag[i] == "," ):
+                    continue
+                if( frag[i] == ">" ):
+                    if( frag[i+1] == ":" ):
+                        sub = type_or_function()
+                        obj.subobject = sub
+                        obj = sub
+                        break
+                    else:
+                        return i
+            continue
+        if( s == ">" ):
+            obj.name = sofar
 #			print("i = '%s'" % i )
-			return i
+            return i
 #		indent(level,"{} += {}".format(sofar,s))
 
-		sofar += s
-	if( len(sofar) > 0 ):
-		obj.name =sofar
-	return i
+        sofar += s
+    if( len(sofar) > 0 ):
+        obj.name =sofar
+    return i
 
 
 
 
 def parse_function( fun ):
-#	print("fun = '%s'" % fun )
-	func = type_or_function()
-	rest = fun
-	sub = func
-	while len(rest) > 0:
-		i = parse_fragment( rest , sub )
+    #	print("fun = '%s'" % fun )
+    func = type_or_function()
+    rest = fun
+    sub = func
+    while len(rest) > 0:
+        i = parse_fragment( rest , sub )
 #		print("sub = '%s'" % sub )
 #		print("rest = '%s'" % rest )
 #		print("i = '%s'" % i )
-		if( i == len(rest) ):
-			break
-		i += 1
-		rest = rest[i:]
+        if( i == len(rest) ):
+            break
+        i += 1
+        rest = rest[i:]
 #		print("rest = '%s'" % rest )
 #		print("i = '%s'" % i )
-		if( len(rest) > 0 ):
-			sub0 = type_or_function()
-			sub.add_tail(sub0)
-			sub = sub0
-	sf = str(func)
-	s0 = sf.replace(" ","")
-	s1 = fun.replace(" ","")
-	if( s0 != s1 ):
-#		func.dump()
-		print("Recreating the function signature leads a difference (%s,%s)" % (len(s0),len(s1)))
-		print("fun = '%s'" % fun )
-		cnt = 0
-		d0 = ""
-		d1 = ""
-		for i in range(0,len(s0)):
-			if( s0[i] != s1[i] ):
-				d0 = s0[i-10:i+40]
-				d1 = s1[i-10:i+40]
-				break
-		print("Found   :" + d0)
-		print("Expected:" + d1)
+        if( len(rest) > 0 ):
+            sub0 = type_or_function()
+            sub.add_tail(sub0)
+            sub = sub0
+    sf = str(func)
+    s0 = sf.replace(" ","")
+    s1 = fun.replace(" ","")
+    if( s0 != s1 ):
+        #		func.dump()
+        print("Recreating the function signature leads a difference (%s,%s)" % (len(s0),len(s1)))
+        print("fun = '%s'" % fun )
+        print("sf  = '%s'" % sf )
+        cnt = 0
+        d0 = ""
+        d1 = ""
+        for i in range(0,len(s0)):
+            if( s0[i] != s1[i] ):
+                d0 = s0[i-10:i+40]
+                d1 = s1[i-10:i+40]
+                break
+        print("Found   :" + d0)
+        print("Expected:" + d1)
+        func.dump()
 
 #	func.dump()
-	return func
+    return func
 
 
 
@@ -386,6 +397,7 @@ def lazy_load_typedefs( ):
     global loaded_typedefs
     if( loaded_typedefs ):
         return
+    return
     loaded_typedefs = True
     print("Getting typelist")
     typelist = gdb.execute("info types",False,True)
@@ -395,17 +407,38 @@ def lazy_load_typedefs( ):
     cnt = 0
     print("len(typelist) = '%s'" % len(typelist) )
     for line in typelist.splitlines():
-        if( line.find("typedef") != -1 ):
+        # Want only typedefs of templates
+        if( line.find("typedef") != -1 and line.find("<") != -1 ):
+            sl = line.split()
+            # Rules out typdef members of templates
+            if( sl[-1].find(">") != -1 ):
+                continue
+            if( sl[0] == "File" ):
+                continue
+            if( sl[1] != "typedef" ):
+                print("Not sure what this is: %s" % line)
+                continue
+            sl = sl[2:]
+            to = sl[-1]
+            if( to.endswith(";") ):
+                to = to[:-1]
+            fr = " ".join(sl[:-1])
             cnt += 1
-            candidates.add(line)
+            candidates.add((fr,to))
     print("cnt = '%s'" % cnt )
     print("len(candidates) = '%s'" % len(candidates) )
-    print("candidates = '%s'" % candidates )
+    for fr,to in candidates:
+        print("Shortening '%s' => '%s'" % (fr,to))
+        add_shorten(fr,to)
+#    print("candidates = '%s'" % candidates )
 
 
 
 def symbol(fname):
     lazy_load_typedefs()
+
+#    fun = parse_function(fname)
+
     for old,new in shortens.items():
         fname = fname.replace(old,new)
     for fold in foldables:
@@ -428,4 +461,26 @@ def path(fpath):
 	fpath = fpath.replace(HOME,"~")
 	return fpath
 
+def test( ):
+    x=parse_function("abort ()")
+#    x=parse_function("vwd::abort<abc> ()")
+#    x=parse_function("vwd::abort<abc<def::ghi>> ()")
+#    x=parse_function("vwd::abort<abc,def<xxx>,ghi> ()")
+#    x=parse_function("vwd::abort<abc,def<xxx>> (unsigned)")
+#    x=parse_function("vwd::abort<abc,def<xxx>> ()")
+#    x=parse_function("vwd::mdps::str0<int>::str1<long>::fx::fy")
+#    x=parse_function("vwd::x0<a1<b1>::x>::f0")
+#    x=parse_function("vwd::x0<a1<b1>::x<bar>::u>::f0")
+#    x=parse_function("mx<true>::cde<abc<abg>::xyz>")
+#    x=parse_function("mx<true>::cde<abc<abg>::xyz>()")
+#    x=parse_function("mx<true>::cde<abc<abg>::xyz>(int,int)")
+#		x=parse_function("vwd::mdps::feedconfig::mapper<vwd::data::intermediate_symbol<int, vwd::data::default_key_hash, vwd::data::intermediate_field_id<unsigned short>, boost::variant<unsigned long, vwd::hstring, vwd::decimal<int, signed char>, vwd::tagged<vwd::tag_wrapper<unsigned long>, vwd::epoch_tag<1000ul, 1ul> >, vwd::tagged<vwd::hstring, vwd::datetime_tag_descriptor<10ul, 0ul, 4ul, 5ul, 2ul, 8ul, 2ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul> >, vwd::tagged<vwd::tag_wrapper<unsigned long>, vwd::epoch_tag<1000000000ul, 1ul> > >, vwd::mdps::feedconfig::action_cache_hook<void, impact::additional_storage<void, vwd::empty_crtp_base<void> > > >, vwd::buffered_write_device<vwd::none_device, vwd::static_autoflush<false>, vwd::static_autoresize<false> >, true>::clean_symbol<vwd::data::symbols_storage<vwd::data::intermediate_symbol<int, vwd::data::default_key_hash, vwd::data::intermediate_field_id<unsigned short>, boost::variant<unsigned long, vwd::hstring, vwd::decimal<int, signed char>, vwd::tagged<vwd::tag_wrapper<unsigned long>, vwd::epoch_tag<1000ul, 1ul> >, vwd::tagged<vwd::hstring, vwd::datetime_tag_descriptor<10ul, 0ul, 4ul, 5ul, 2ul, 8ul, 2ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul> >, vwd::tagged<vwd::tag_wrapper<unsigned long>, vwd::epoch_tag<1000000000ul, 1ul> > >, vwd::mdps::feedconfig::action_cache_hook<void, impact::additional_storage<void, vwd::empty_crtp_base<void> > > > >::status_iterator::element>(vwd::data::symbols_storage<vwd::data::intermediate_symbol<int, vwd::data::default_key_hash, vwd::data::intermediate_field_id<unsigned short>, boost::variant<unsigned long, vwd::hstring, vwd::decimal<int, signed char>, vwd::tagged<vwd::tag_wrapper<unsigned long>, vwd::epoch_tag<1000ul, 1ul> >, vwd::tagged<vwd::hstring, vwd::datetime_tag_descriptor<10ul, 0ul, 4ul, 5ul, 2ul, 8ul, 2ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul, 0ul> >, vwd::tagged<vwd::tag_wrapper<unsigned long>, vwd::epoch_tag<1000000000ul, 1ul> > >, vwd::mdps::feedconfig::action_cache_hook<void, impact::additional_storage<void, vwd::empty_crtp_base<void> > > > >::status_iterator::element)")
+    print("x = '%s'" % x )
+
+if __name__ == "__main__":
+    try:
+        test()
+    except:
+        traceback.print_exc()
+        pass
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

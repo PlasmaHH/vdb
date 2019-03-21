@@ -4,6 +4,7 @@
 
 import vdb.config
 import vdb.shorten
+import vdb.command
 
 import re
 import gdb
@@ -460,15 +461,14 @@ class BacktraceFilter ( ):
 # disable this line to completely disable the filter
 bf=BacktraceFilter()
 
-class cmd_bt (gdb.Command):
+class cmd_bt (vdb.command.command):
     """Run the backtrace without filters"""
 
     def __init__ (self):
         super (cmd_bt, self).__init__ ("bt", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.dont_repeat()
 
-    def invoke (self, arg, from_tty):
-        argv = gdb.string_to_argv(arg)
+    def do_invoke (self, argv ):
         # We need to do that first because if we don't we change the currently selected frame midways and that isn't something gdb likes
         vdb.memory.mmap.parse()
         try:

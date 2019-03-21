@@ -7,6 +7,7 @@ import vdb.memory
 import vdb.pointer
 import vdb.util
 import vdb.shorten
+import vdb.command
 
 
 import gdb
@@ -109,8 +110,8 @@ def hexdump( addr, xlen = -1 ):
     if( olen != xlen ):
         print(f"Could only access {xlen} of {olen} requested bytes")
 
-def call_hexdump( arg ):
-    argv = gdb.string_to_argv(arg)
+def call_hexdump( argv ):
+#    argv = gdb.string_to_argv(arg)
     colorspec = "sma"
     if( len(argv) == 0 ):
         print("You should at least tell me what to dump")
@@ -130,24 +131,22 @@ def call_hexdump( arg ):
 
 
 
-class cmd_hexdump (gdb.Command):
-    """Run the backtrace without filters"""
+class cmd_hexdump (vdb.command.command):
+    """Shows a hexdump of a specified memory range"""
 
     def __init__ (self):
         super (cmd_hexdump, self).__init__ ("hexdump", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.dont_repeat()
 
-    def invoke (self, arg, from_tty):
+    def do_invoke (self, argv):
         try:
-            call_hexdump(arg)
+            call_hexdump(argv)
         except:
             traceback.print_exc()
             raise
             pass
 
 cmd_hexdump()
-
-
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

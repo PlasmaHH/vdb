@@ -4,11 +4,12 @@
 import vdb.config
 import vdb.color
 import vdb.memory
-import traceback
+import vdb.command
 
 import gdb
 
 import re
+import traceback
 
 def show_region( addr ):
     ga = gdb.parse_and_eval(f"(void*){addr}")
@@ -20,16 +21,15 @@ def show_region( addr ):
     print( f"Address {ca} is in {str(mm)}" )
 
 
-class cmd_vmmap (gdb.Command):
+class cmd_vmmap (vdb.command.command):
     """Run the backtrace without filters"""
 
     def __init__ (self):
         super (cmd_vmmap, self).__init__ ("vmmap", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.dont_repeat()
 
-    def invoke (self, arg, from_tty):
+    def do_invoke (self, argv ):
         try:
-            argv = gdb.string_to_argv(arg)
             colorspec = "sma"
             if( len(argv) == 0 ):
                 pass

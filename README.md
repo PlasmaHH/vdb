@@ -38,9 +38,6 @@ A set of python visual enhancements for gdb.
 * [Themes](#themes)
 
 <!-- vim-markdown-toc -->
-<!--
-#VDB
--->
 
 ## Overview
 vdb aims to display as much information as it can without cluttering the

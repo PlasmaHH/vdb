@@ -5,10 +5,10 @@ import vdb.config
 import vdb.color
 import vdb.pointer
 import vdb.memory
+import vdb.command
 
 import gdb
 
-import shlex
 import re
 import traceback
 
@@ -360,7 +360,7 @@ class Registers():
         return ret
 
 
-class cmd_registers(gdb.Command):
+class cmd_registers(vdb.command.command):
     """Show the registers nicely (default is expanded)
 short    - Show just the important registers and flags with their hex values
 expanded - Show the important registers in a recursively expanded way, depending on their usual type maybe as integers
@@ -372,9 +372,8 @@ representations
     def __init__ (self):
         super (cmd_registers, self).__init__ ("registers", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
-    def invoke (self, arg, from_tty):
+    def do_invoke (self, argv ):
         try:
-            argv=shlex.split(arg)
             r = Registers()
             if( r.thread == 0 ):
                 print("No running thread to read registers from")
