@@ -285,8 +285,8 @@ to an externally called grep, as well as the parameters to grep.
 
 ## pahole
 This is an enhanced and redone version of the pahole python command that once came with gdb. It has support for virtual
-inheritance and a possibly more useful layout display. Bitfield support is missing for now. Type names are shortened via
-the standard mechanism where possible.
+inheritance and a possibly more useful layout display. Bitfield support is missing for now as well as proper support for
+unions. Type names are shortened via the standard mechanism where possible.
 ### Commands
 
 #### `pahole`
@@ -294,11 +294,8 @@ This expects a type and can have one of two flavours, see below. Setting `vdb-pa
 default, but you can always override with `/c` or `/e`
 
 The following examples are for the following code:
-<div style="-webkit-column-count: 2; -moz-column-count: 2; column-count: 2; -webkit-column-rule: 1px dotted #e0e0e0; -moz-column-rule: 1px dotted #e0e0e0; column-rule: 1px dotted #e0e0e0;">
 
-<div style="display: inline-block;">
-<h2>A type with multiple virtual base classes</h2>
-<pre><code class="language-cpp">
+```c++
 struct f0 {
 	char c;
 	uint32_t x;
@@ -317,21 +314,33 @@ struct f2 : f1,f0 {
 	virtual ~f2(){}
 	char o;
 };
+```
 
+and the other code is
 
-</code></pre>
+```
+struct innerst {
+	int i;
+	double po;
+};
 
-</div>
-<div style="display: inline-block;">
-<h2>Bad</h2>
-        <pre><code class="language-c">int foo (void) 
-	{
-    int i;
-}
-</code></pre>
-</div>
-</div>
+struct small {
+	char c = 'C';
+	uint16_t x = 0x8787;
+	char h = 'H';
+};
 
+struct big {
+	uint64_t n = 0x7272727272727272;
+};
+
+struct morev : virtual small, virtual big, virtual innerst {
+	uint64_t y = 0x4b4b4b4b4b4b4b4b;
+	uint16_t p = 0x1515;
+	char u = 'U';
+};
+
+```
 
 
 #### `pahole/c`
