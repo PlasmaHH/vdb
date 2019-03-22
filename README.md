@@ -36,6 +36,12 @@ This is work in progress and not yet ready for real world usage, it is more of a
 			* [`dis`](#dis)
 			* [`dis/d`](#disd)
 			* [`dis/r`](#disr)
+	* [grep](#grep)
+	* [pahole](#pahole)
+		* [Commands](#commands-4)
+			* [`pahole`](#pahole-1)
+			* [`pahole/c`](#paholec)
+			* [`pahole/e`](#paholee)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
 * [Configuration](#configuration-1)
@@ -269,7 +275,74 @@ therefore we offer the following ways to influence things in the graph (besides 
 * `vdb-asm-font-dot` is a comma separated list of fonts. It is embedded int the `.dot` file and the exact format depends
   on how your graphviz is compiled, on the majority of the system it should be the names you can get via `fc-list`.
 #### `dis/r`
+
 This calls the gdb disassembler without any formatting
+## grep
+When loading this module, all our commands support a pipe like syntax to call grep on the output. The data will be piped
+to an externally called grep, as well as the parameters to grep.
+
+![](img/grep.png)
+
+## pahole
+This is an enhanced and redone version of the pahole python command that once came with gdb. It has support for virtual
+inheritance and a possibly more useful layout display. Bitfield support is missing for now. Type names are shortened via
+the standard mechanism where possible.
+### Commands
+
+#### `pahole`
+This expects a type and can have one of two flavours, see below. Setting `vdb-pahole-default-condensed` will change the
+default, but you can always override with `/c` or `/e`
+
+The following examples are for the following code:
+<div style="-webkit-column-count: 2; -moz-column-count: 2; column-count: 2; -webkit-column-rule: 1px dotted #e0e0e0; -moz-column-rule: 1px dotted #e0e0e0; column-rule: 1px dotted #e0e0e0;">
+
+<div style="display: inline-block;">
+<h2>A type with multiple virtual base classes</h2>
+<pre><code class="language-cpp">
+struct f0 {
+	char c;
+	uint32_t x;
+	virtual ~f0(){}
+};
+
+struct f1 : f0 {
+	char c;
+	uint32_t x;
+	virtual ~f1(){}
+};
+
+struct f2 : f1,f0 {
+	char c;
+	uint32_t x;
+	virtual ~f2(){}
+	char o;
+};
+
+
+</code></pre>
+
+</div>
+<div style="display: inline-block;">
+<h2>Bad</h2>
+        <pre><code class="language-c">int foo (void) 
+	{
+    int i;
+}
+</code></pre>
+</div>
+</div>
+
+
+
+#### `pahole/c`
+This shows the types layout in a condensed format, one line per member, showing which bytes belong to it in the front
+
+![](img/pahole.f.c.png)
+
+#### `pahole/e`
+This shows the layout in an extended format, one line per byte.
+
+![](img/pahole.f.e.png)
 
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
