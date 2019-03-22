@@ -294,6 +294,9 @@ This expects a type and can have one of two flavours, see below. Setting `vdb-pa
 default, but you can always override with `/c` or `/e`
 
 The following examples are for the following code:
+<table>
+<tr>
+<td>
 
 ```c++
 struct f0 {
@@ -315,10 +318,10 @@ struct f2 : f1,f0 {
 	char o;
 };
 ```
+</td>
+<td>
 
-and the other code is
-
-```
+```c++
 struct innerst {
 	int i;
 	double po;
@@ -341,17 +344,22 @@ struct morev : virtual small, virtual big, virtual innerst {
 };
 
 ```
+</td>
+</tr>
+</table>
 
 
 #### `pahole/c`
 This shows the types layout in a condensed format, one line per member, showing which bytes belong to it in the front
 
 ![](img/pahole.f.c.png)
+![](img/pahole.m.c.png)
 
 #### `pahole/e`
 This shows the layout in an extended format, one line per byte.
 
 ![](img/pahole.f.e.png)
+![](img/pahole.m.e.png)
 
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
