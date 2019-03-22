@@ -34,6 +34,7 @@ class cmd_vdb (vdb.command.command):
 
 cmd_vdb()
 
+theme = vdb.config.parameter( "vdb-theme",None)
 
 def load_plugins( plugindir ):
     print("Loading plugins…")
@@ -57,6 +58,25 @@ def load_plugins( plugindir ):
     except:
         traceback.print_exc()
         pass
+    finally:
+        sys.path = oldpath
+
+def load_themes( vdbdir ):
+    if( len(theme.value) == 0 ):
+        print("Not loading any theme")
+        return
+    tdir = f"{vdbdir}themes/"
+    tfile = f"{tdir}{theme.value}.py"
+    if( not os.path.isfile(tfile) ):
+        raise gdb.GdbError(f"Theme file {tfile} not found, can't load")
+    print("Trying to load theme from " + tfile)
+    try:
+        oldpath = []
+        oldpath += sys.path
+        sys.path = [tdir] + sys.path
+        importlib.import_module(theme.value)
+    except:
+        traceback.print_exc()
     finally:
         sys.path = oldpath
 
@@ -89,7 +109,9 @@ def start():
             print(f"Error loading module {mod}:")
             traceback.print_exc()
             pass
-    load_plugins(os.path.expanduser("~") + "/.vdb/")
+    vdb_dir = os.path.expanduser("~") + "/.vdb/"
+    load_plugins(vdb_dir)
+    load_themes(vdb_dir)
 
 #pre_commands = """
 #set confirm off

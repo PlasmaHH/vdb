@@ -52,17 +52,6 @@ class parameter(gdb.Parameter):
 
     def check_colour( self ):
         x = vdb.color.color("",self.value)
-#    @property
-#    def native_value(self):
-#        return value_to_gdb_native(self.value)
-#
-#    @property
-#    def native_default(self):
-#        return value_to_gdb_native(self.default)
-#
-#    @property
-#    def is_changed(self):
-#        return self.value != self.default
 
     def get_set_string(self):
         try:
@@ -81,43 +70,40 @@ class parameter(gdb.Parameter):
             self.value = self.previous_value
             raise
         self.previous_value = self.value
-        return 'Set %s to %r' % (self.docstring, self.value)
+        pval = self.value
+        if isinstance(self.value, str):
+            if( len(pval) == 0 ):
+                pval = "None"
+        if( self.is_colour ):
+            return 'Set %s to %s' % (self.docstring, vdb.color.color(pval,self.value))
+        else:
+            return 'Set %s to %r' % (self.docstring, pval )
 
     def get_show_string(self, svalue):
         return '%s (currently: %r)' % (self.docstring, self.value)
 
-#    def __int__(self):
-#        return int(self.value)
-#
-#    def __str__(self):
-#        return str(self.value)
-#
-#    def __bool__(self):
-#        return bool(self.value)
-#
-#    def __lt__(self, other):
-#        return self.optname <= other.optname
-#
-#    def __div__(self, other):
-#        return self.value / other
-#
-#    def __floordiv__(self, other):
-#        return self.value // other
-#
-#    def __mul__(self, other):
-#        return self.value * other
-#
-#    def __sub__(self, other):
-#        return self.value - other
-#
-#    def __add__(self, other):
-#        return self.value + other
-#
-#    def __pow__(self, other):
-#        return self.value ** other
-#
-#    def __mod__(self, other):
-#        return self.value % other
-#
+
+def set_string( s ):
+    s = s.strip()
+    if(len(s) == 0):
+        return
+    if( s[0] == "#" ):
+        return
+    try:
+#        print("s = '%s'" % s )
+        gdb.execute(f"set {s}")
+    except:
+        traceback.print_exc()
+
+def set_iterable( l ):
+    for i in l:
+        set_string(i)
+
+def set( s ):
+    if( isinstance(s,str) ):
+        xs = s.splitlines()
+        set_iterable(xs)
+    else:
+        set_iterable(s)
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

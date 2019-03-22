@@ -28,22 +28,31 @@ This is work in progress and not yet ready for real world usage, it is more of a
 		* [Commands](#commands-1)
 			* [`vmmap`](#vmmap-1)
 	* [register](#register)
-	* [hexdump](#hexdump)
 		* [Commands](#commands-2)
+			* [`reg`](#reg)
+			* [`reg/s` (short)](#regs-short)
+			* [`reg/e` (expanded)](#rege-expanded)
+			* [`reg/a` (all)](#rega-all)
+			* [`reg/f` (full)](#regf-full)
+	* [hexdump](#hexdump)
+		* [Commands](#commands-3)
 			* [`hd`](#hd)
 	* [asm](#asm)
-		* [Commands](#commands-3)
+		* [Commands](#commands-4)
 			* [`dis`](#dis)
 			* [`dis/d`](#disd)
 			* [`dis/r`](#disr)
 	* [grep](#grep)
 	* [pahole](#pahole)
-		* [Commands](#commands-4)
+		* [Commands](#commands-5)
 			* [`pahole`](#pahole-1)
 			* [`pahole/c`](#paholec)
 			* [`pahole/e`](#paholee)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
+	* [pointer (chaining)](#pointer-chaining)
+	* [memory layout](#memory-layout)
+	* [type layout](#type-layout)
 * [Configuration](#configuration-1)
 	* [gdb config](#gdb-config)
 	* [Color settings](#color-settings)
@@ -179,6 +188,22 @@ Different components of gdb provide different section names, if there is an alte
 As one of the parameters it accepts a colorspec, the other is an address. If the address lies within overlapping sections it will show the smallest matching section.
 ## register
 
+### Commands
+
+#### `reg`
+This command is like `info register` just with a bit more information and options. It can display the most basic
+registers or an existed version of all registers. Just a hex value overview, or a detailed dereference chain. It
+colouors the pointer according to where they point to (see the legend of the command). It tries to detect when a pointer
+value is invalid, but contains an ascii string instead (hints to it being read from re-used memory). It has the
+following variants (and defaults to what is configured in `vdb-register-default`, which itself defaults to `/e`):
+#### `reg/s` (short)
+![](img/reg.s.png)
+#### `reg/e` (expanded)
+![](img/reg.e.png)
+#### `reg/a` (all)
+![](img/reg.a.png)
+#### `reg/f` (full)
+(not yet implemented)
 
 ## hexdump
 This module provides a coloured hexdump of raw memory, possibly annotated in various ways.
@@ -371,6 +396,18 @@ There is a configurable way to shorten type names. We will have
 * template folding. We have a list of types (or maybe we should use regexes here too?) that we mark and then we fold the
   complete list of template parameters into one empty list (and colour that).
 
+## pointer (chaining)
+The submodule for pointer colouring supports chaining them as well, which will lead to a string of dereferenced pointers
+until a determined length is reached or something useful is found. You can find examples in the register commands. It
+uses internally the memory layout module
+
+## memory layout
+Provides information about the memory layout gathered from various sources. Primary source of information for the vmmap
+command as well as the pointer colouring.
+
+## type layout
+This is the submodule that is responsible for parsing gdb type information and reconstructing an in-memory layout. This
+is mainly used by the pahole command.
 
 # Configuration
 The configurability is using two mechanisms. One is the gdb settings. Besides
@@ -417,3 +454,6 @@ the current one, and all above that and load all the file we find there, stoppin
 Note to self: should we maybe have a setting that determines if we stop or continue loading? maybe three modes? stop,
 forward and backward? So we can have global, project and subproject specific files that override each other?
 # Themes
+Themes are not really special files themselves, they are python plugins that provide a package of all the necessary code
+to change colours to a specific predetermined set. Unlike all the other plugins, themes are selectively loaded, thus you
+can have many in the subdirectory, they will all be ignored, just the one configured not.

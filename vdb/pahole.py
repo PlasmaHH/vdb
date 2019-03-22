@@ -11,6 +11,8 @@ import gdb.types
 
 import traceback
 
+default_condensed = vdb.config.parameter("vdb-pahole-default-condensed",False)
+
 def print_pahole( layout, condense ):
 #        print("PRINT RESULT")
     color_list = ["#f00","#0f0","#00f","#ff0","#f0f","#0ff" ]
@@ -80,9 +82,12 @@ It prints the type and displays comments showing where holes are."""
 #        print("argv = '%s'" % argv )
         if len(argv) == 0 :
             raise gdb.GdbError('pahole takes 1 arguments.')
-        condensed = False
+        condensed = default_condensed.value
         if( argv[0] == "/c" ):
             condensed = True
+            argv=argv[1:]
+        if( argv[0] == "/e" ):
+            condensed = False
             argv=argv[1:]
 
         if len(argv) != 1:

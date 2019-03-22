@@ -13,6 +13,7 @@ import re
 import traceback
 
 color_names = vdb.config.parameter("vdb-register-colors-names", "#4c0", gdb_type = vdb.config.PARAM_COLOUR)
+reg_default = vdb.config.parameter("vdb-register-default","/e")
 
 
 flag_bits = [
@@ -382,21 +383,20 @@ representations
             vdb.memory.print_legend("Ama")
 
             if( len(argv) == 0 ):
-                print(r.ex_ints())
-                print(r.flags())
-            elif( len(argv) == 1 ):
-                if( argv[0] == "short" ):
+                argv.append(reg_default.value)
+            if( len(argv) == 1 ):
+                if( argv[0] == "/s" ):
                     print(r.ints())
                     print(r.flags())
-                if( argv[0] == "expanded" ):
+                if( argv[0] == "/e" ):
                     print(r.ex_ints())
                     print(r.flags())
-                if( argv[0] == "all" ):
+                if( argv[0] == "/a" ):
                     print(r.ints())
                     print(r.flags())
                     print(r.floats())
                     print(r.vectors())
-                if( argv[0] == "full" ):
+                if( argv[0] == "/f" ):
                     print(r.ex_ints())
                     print(r.flags())
                     print(r.ex_floats())
