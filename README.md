@@ -108,6 +108,7 @@ This module allows you to configure the prompt to display more information.
 
 For now this only sets the prompt to `vdb> ` in a certain colour. In the future we will add more information about the
 currently running program or core file, maybe we can hack together a good multiline or airline prompt.
+
 XXX Maybe as a first one the thread that is selected, as for breakpoints or other things this changes unintuitively.
 Maybe also add a feature to autoselect a thread or a frame (given by some complex path?)
 ### Configuration
@@ -116,7 +117,7 @@ Maybe also add a feature to autoselect a thread or a frame (given by some comple
 * `vdb-prompt-text` The text of the prompt, defaults to `vdb> `
 
 ## backtrace
-We provide a backtrace decorator we various colouring options. It will also who some information about whether something
+We provide a backtrace decorator with various colouring options. It will also show some information about whether something
 is inlined or some information about signals and crashes.
 
 ![](img/bt.png)
@@ -137,16 +138,16 @@ Addresses (in the address column) is some special biest. Since the gdb decoratio
 integers/pointers, we are forced to hack around this by putting the strings elsewhere. There are situations  where this
 can look funny. You can use the following setting to disable the colouring then. 
 ```
-vdb-bt-color-addresses
+vdb-bt-color-addresses=true
 ```
 Per default the colour is chosen by the
 pointer color according to the colorspec (See section colorspec) below.
 ```
-vdb-bt-address-colorspec
+vdb-bt-address-colorspec="ma"
 ```
 The showspec setting
 ```
-vdb-bt-showspec
+vdb-bt-showspec="naFPs"
 ```
 
 
@@ -159,7 +160,7 @@ tells what should be displayed in the backtrace. Missing items are suppressed. T
   print some values for them
 * `s` shows the source of that frame. Can be a source file (with line) or some object file name.
 
-You can also change the marker for the selected frame, this may be useful if your terminal does not support the utf8 character.
+You can also change the marker for the selected frame, this may be useful if your terminal does not support the default utf8 character.
 ```
 vdb-bt-selected-frame-marker
 ```
@@ -172,7 +173,7 @@ This is like `bt` but disables the filter aka. raw. You should not see additiona
 #### `bt/f`
 This is like `bt` but also passes the `full` parameter to backtrace to show all local variables per stackframe. These are not currently filtered.
 #### `backtrace`
-This is an unmodified gdb version, that is it is running the decorator, but not additional filters and outputs. It may be overridden by additional gdb plugins that you have. This has the added disadvantage that the `n` showspec doesn't have any effect, as well as the RTTI warning filter not working.
+This is an unmodified gdb version, that is running the decorator, but not additional filters and outputs. It may be overridden by additional gdb plugins that you have. This has the added disadvantage that the `n` showspec doesn't have any effect, as well as the RTTI warning filter not working.
 
 ## vmmap
 A module that allows access to the internal information of memory maps. It ties together information from the sources of
