@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import vdb
 import vdb.shorten
 
 import gdb
 
 import itertools
 import re
+
+
+vdb.enabled_modules.append("layout")
 
 class byte_descriptor:
     def __init__(self,prefix,fname,ftype):

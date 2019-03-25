@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
 import vdb.config
 import vdb.subcommands
 import vdb.command
@@ -88,8 +87,9 @@ enable_hexdump = vdb.config.parameter( "vdb-enable-hexdump",True)
 enable_asm = vdb.config.parameter( "vdb-enable-asm",True)
 enable_grep = vdb.config.parameter( "vdb-enable-grep",True)
 enable_pahole = vdb.config.parameter( "vdb-enable-pahole",True)
+enable_ftree = vdb.config.parameter( "vdb-enable-ftree",True)
 
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole" )
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree" )
 
 
 enabled_modules = [ ]

@@ -84,7 +84,7 @@ color_call_dot       = vdb.config.parameter("vdb-asm-colors-call-dot",       "#6
 
 tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
 asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnprT" )
-asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maodbnprT" )
+asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnprT" )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
 ix = -1

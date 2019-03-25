@@ -4,6 +4,7 @@
 import vdb.config
 import vdb.color
 import vdb.util
+import vdb
 
 import gdb
 import intervaltree
@@ -15,6 +16,7 @@ import bisect
 from enum import Enum,auto
 
 
+vdb.enabled_modules.append("memory")
 # Color concept:
 # - first more generic colours like for stack/heap/etc.
 # - then if there is none, use the more specific ones for sections

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
+import vdb
 import vdb.config
 import vdb.color
 import vdb.vmmap
@@ -13,6 +13,7 @@ import gdb
 import string
 from enum import Enum,auto
 
+vdb.enabled_modules.append("pointer")
 
 arrow_right = vdb.config.parameter("vdb-pointer-arrow-right", " → " )
 arrow_left = vdb.config.parameter("vdb-pointer-arrow-left", " ←  " )

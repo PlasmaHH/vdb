@@ -457,3 +457,13 @@ forward and backward? So we can have global, project and subproject specific fil
 Themes are not really special files themselves, they are python plugins that provide a package of all the necessary code
 to change colours to a specific predetermined set. Unlike all the other plugins, themes are selectively loaded, thus you
 can have many in the subdirectory, they will all be ignored, just the one configured not.
+
+You can set the theme by setting
+
+```
+vdb-theme
+```
+
+to the name of the theme/python module to load from the directory `$HOME/.vdb/themes`. You don't specify the `.py`
+ending, but the file must have it. Themes will be loaded when you do `vdb start` (most likely in your `.gdbinit`).
+

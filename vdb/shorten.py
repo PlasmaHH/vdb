@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import vdb
 import vdb.color
 import vdb.config
 import vdb.subcommands
@@ -10,9 +11,11 @@ import re
 import gdb
 import os
 import traceback
+
 from collections.abc import Iterable
 
 
+vdb.enabled_modules.append("shorten")
 
 color_shorten = vdb.config.parameter("vdb-shorten-colors-templates", "#f60", gdb_type = vdb.config.PARAM_COLOUR)
 
@@ -357,12 +360,14 @@ conditional_foldables = {
 
 def add_foldable( fld ):
     if( isinstance(fld,str) ):
-        foldables.append(fld)
+        add_foldable(fld.splitlines())
     else:
         for f in fld:
-            foldables.append(f)
+            f = f.strip()
+            if( len(f) > 0 ):
+                foldables.append(f)
 
-def add_conditional( cond, fld ):
+def add_conditional( cond, fld = None ):
     foldables = conditional_foldables.get(cond,[])
     if( isinstance(fld,str) ):
         foldables.append(fld)
@@ -381,7 +386,7 @@ def add_foldable_v( argv ):
 def show_foldable( args ):
     print("Foldables are:")
     for f in foldables:
-        print(f)
+        print(f"'{f}'")
 
     print("Conditional foldables:")
     for c,fl in conditional_foldables.items():

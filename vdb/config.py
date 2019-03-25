@@ -93,7 +93,8 @@ def set_string( s ):
 #        print("s = '%s'" % s )
         gdb.execute(f"set {s}")
     except:
-        traceback.print_exc()
+        print(f"Failed to set {s}")
+#        traceback.print_exc()
 
 def set_iterable( l ):
     for i in l:
