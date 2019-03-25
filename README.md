@@ -81,7 +81,10 @@ Then add this to your `~/.gdbinit`
 source ~/git/vdb/vdb.py
 vdb start
 ```
-
+In case a depdendency is not available, the module needing it will not load, but all others should. In practice this
+means screens full of error messages and a limited feature set, but for a lot of modules plain pyhton is enough. The
+most noteable exception though is the ansicolor module which of course  is necessary since basically all features are
+about colours.
 ## Disabling modules
 There is one boolean gdb option per module. Setting those to off before `vdb
 start` will prevent the corresponding module from being loaded. Once loaded a
