@@ -15,7 +15,11 @@ import colors
 import traceback
 import re
 import os
+import datetime
 
+dot_filebase = vdb.config.parameter("vdb-ftree-filebase","ftree")
+dot_command = vdb.config.parameter("vdb-ftree-dot-command", "nohup dot -Txlib {filename} &>/dev/null &" )
+max_array_elements = vdb.config.parameter("vdb-ftree-max-array-elements",8)
 
 code_dict = {
 gdb.TYPE_CODE_PTR : ".TYPE_CODE_PTR",
@@ -211,6 +215,21 @@ def guess_vptr_type( val ):
         traceback.print_exc()
         return val
 
+def vector_size( name,m,ptr,value_cache):
+#    print("name = '%s'" % name )
+#    print("m = '%s'" % m )
+#    print("ptr = '%s'" % ptr )
+#    for k,v in value_cache.items():
+#        print("k = '%s'" % k )
+#        print("v = '%s'" % v )
+
+    end = "{0}_M_finish".format(*m)
+    exval = value_cache.get(end,None)
+#    print("end = '%s'" % end )
+#    print("exval = '%s'" % exval )
+    dif = exval-ptr
+#    print("dif = '%s'" % dif )
+    return dif
 
 class ftree:
     def __init__( self ):
@@ -220,7 +239,8 @@ class ftree:
         self.value_cache = {}
         self.array_element_filter = []
         self.array_element_filter = [ 
-                ( "(.*std::unordered_.*<.*>.*::{std::_Hashtable<.*>}_M_h)::{.*}_M_buckets$", "{0}::{{unsigned long}}_M_bucket_count" )
+                ( "(.*std::unordered_.*<.*>.*::{std::_Hashtable<.*>}_M_h)::{.*}_M_buckets$", "{0}::{{unsigned long}}_M_bucket_count" ),
+                ( "(.*std::vector<.*>::.*)_M_start$", vector_size )
                 ]
 
     def next_port( self ):
@@ -238,6 +258,7 @@ class ftree:
         real_type = fval.type.strip_typedefs()
         self.print_gdbval(fval,real_type)
         try:
+            self.value_cache[name] = fval
             if( real_type.code == gdb.TYPE_CODE_PTR ):
 #                print("PTR is %s" % fval )
                 try:
@@ -279,7 +300,6 @@ class ftree:
                     rettd.content = "none real code %s" % gdb_type_code(real_type.code)
                 else:
                     rettd.content = str(fval)
-                    self.value_cache[name] = fval
             return ( rettd , moreptr )
         except gdb.MemoryError:
             return ( td, moreptr )
@@ -396,7 +416,7 @@ class ftree:
             if( m ):
 #                print(vdb.color.color("#########################################","#ff0"))
                 if( callable(action) ):
-                    elements = action(name,ptr)
+                    elements = action(name,m,ptr,self.value_cache)
                 else:
 #                    print("m = '%s'" % m )
 #                    print("action = '%s'" % action )
@@ -441,6 +461,8 @@ class ftree:
                     if( elements is not None ):
                         xtable = vdb.dot.table()
                         ptd.content = xtable
+                        if( elements > max_array_elements.value ):
+                            elements = max_array_elements.value
                         for i in range(0,elements):
                             eptr = ptr + i
                             etbl,moreptr = self.table_entry( f"{name}[{i}]" , eptr.dereference(),f )
@@ -523,6 +545,9 @@ class cmd_ftree (vdb.command.command):
         val = px
         try:
             self.print("")
+            filebase = dot_filebase.value
+            now=datetime.datetime.now()
+            filebase=now.strftime(filebase)
             g = vdb.dot.graph("ftree")
             f = ftree()
 #            rf = recurse_fields( val.dereference() )
@@ -534,8 +559,13 @@ class cmd_ftree (vdb.command.command):
 
             self.print_result()
             print("limit = '%s'" % limit )
-            g.write("ftree")
-            os.system("nohup dot -Txlib ftree.dot &")
+            g.write(filebase)
+
+            filename = filebase + ".dot"
+            cmd=dot_command.value.format(filename=filename, filebase=filebase)
+            print(f"Created '{filename}', starting {cmd}")
+            os.system(cmd)
+#            os.system("nohup dot -Txlib ftree.dot &")
         except Exception as e:
             traceback.print_exc()
 
