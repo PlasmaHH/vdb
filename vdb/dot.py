@@ -127,21 +127,24 @@ class node:
         self.rows = {}
         self.rownames = []
         self.edges = []
+        self.plainlabel = None
 
     def write(self,f):
-        f.write(f'"{self.name}" [ shape=plaintext label=<\n')
-        if( self.table ):
-            self.table.write(f)
-#            if( something 
-        if( len(self.rows) ):
-            st = table()
-            st.attributes["border"] = "0"
-            st.attributes["cellspacing"] = "0"
-            st.attributes["cellborder"] = "1"
-            for rn in self.rownames:
-                st.trs.append(self.rows[rn])
-            st.write(f)
-        f.write("\n>];\n")
+        if( self.plainlabel is not None ):
+            f.write(f'"{self.name}" [ label="{self.plainlabel}" ];\n')
+        else:
+            f.write(f'"{self.name}" [ shape=plaintext label=<\n')
+            if( self.table ):
+                self.table.write(f)
+            if( len(self.rows) ):
+                st = table()
+                st.attributes["border"] = "0"
+                st.attributes["cellspacing"] = "0"
+                st.attributes["cellborder"] = "1"
+                for rn in self.rownames:
+                    st.trs.append(self.rows[rn])
+                st.write(f)
+            f.write("\n>];\n")
 
     def edge( self, name, port = None, srcport = None, tgtport = None ):
         e = edge(str(name), port, srcport, tgtport)

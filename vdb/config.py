@@ -65,7 +65,7 @@ class parameter(gdb.Parameter):
             if( self.is_colour ):
                 self.check_colour()
             if( self.on_set is not None ):
-                self.on_set(self.value)
+                self.on_set(self)
         except:
             traceback.print_exc()
             self.value = self.previous_value
