@@ -263,7 +263,9 @@ class ftree:
 #                print("PTR is %s" % fval )
                 try:
                     # This causes an attempt to read the value. If it is unreachable memory or so, it will throw
-                    str(fval.dereference())
+#                    str(fval.dereference())
+                    rm=gdb.selected_inferior().read_memory(fval,1)
+                    print("rm = '%s'" % rm )
                     port = self.next_port()
                     moreptr.append( ( fval, name, port, rettd, f ) )
                     rettd["port"] = port
