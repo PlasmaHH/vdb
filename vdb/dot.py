@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import traceback
+
 def dot_escape( txt ):
     txt = txt.replace("&","&amp;")
     txt = txt.replace(">","&gt;")
@@ -9,6 +11,7 @@ def dot_escape( txt ):
 
 def write_attributes( f, attributes ):
     for attr,val in attributes.items():
+        val = str(val)
         val = dot_escape(val)
         attr = dot_escape(attr)
         f.write(f' {attr}="{val}" ')
@@ -24,7 +27,10 @@ class td:
         f.write("<td ")
         write_attributes(f,self.attributes)
         f.write(">")
-        f.write(self.content)
+        if( isinstance(self.content,table) ):
+            self.content.write(f)
+        else:
+            f.write(str(self.content))
         f.write("</td>\n")
 
     def __setitem__( self, name, val ):
@@ -61,8 +67,14 @@ class table:
     def __init__( self ):
         self.attributes = {}
         self.trs = []
+        self.attributes["border"] = "0"
+        self.attributes["cellspacing"] = "0"
+        self.attributes["cellborder"] = "1"
+        self.attributes["cellpadding"] = "0"
 
     def write(self,f):
+        if( len(self.trs) == 0 ):
+            return
         f.write("<table ")
         write_attributes(f,self.attributes)
         f.write(">")
@@ -73,29 +85,40 @@ class table:
     def add( self, tr ):
         self.trs.append(tr)
 
+    def tr( self ):
+        t = tr()
+        self.add(t)
+        return t
+
 class edge:
-    def __init__( self, to, port = None ):
+    def __init__( self, to, port = None, srcport = None, tgtport = None ):
         self.to = to
         self.port = port
+        self.srcport = srcport
+        self.tgtport = tgtport
         self.attributes = {}
 
     def __setitem__( self, name, val ):
         self.attributes[name] = val
 
     def write( self, f, fr ):
+        tpstr = ""
+        spstr = ""
+        if( self.port is not None ):
+            tpstr = f':"{self.port}"'
+        elif( self.tgtport is not None ):
+            tpstr = f':"{self.tgtport}"'
+        if( self.srcport is not None ):
+            spstr = f':"{self.srcport}"'
+
         if( len(self.attributes) ):
-            if( self.port is not None ):
-                f.write(f'"{fr}" -> "{self.to}":"{self.port}" [')
-            else:
-                f.write(f'"{fr}" -> "{self.to}" [')
+            f.write(f'"{fr}"{spstr} -> "{self.to}"{tpstr} [')
+
             for n,v in self.attributes.items():
                 f.write(f' {n} = "{v}", ')
-            f.write(" ]\n")
+            f.write(" ];\n")
         else:
-            if( self.port is not None ):
-                f.write(f'"{fr}" -> "{self.to}":"{self.port}";\n')
-            else:
-                f.write(f'"{fr}" -> "{self.to}";\n')
+            f.write(f'"{fr}"{spstr} -> "{self.to}"{tpstr};\n')
 
 class node:
     def __init__( self, name ):
@@ -109,6 +132,7 @@ class node:
         f.write(f'"{self.name}" [ shape=plaintext label=<\n')
         if( self.table ):
             self.table.write(f)
+#            if( something 
         if( len(self.rows) ):
             st = table()
             st.attributes["border"] = "0"
@@ -119,8 +143,8 @@ class node:
             st.write(f)
         f.write("\n>];\n")
 
-    def edge( self, name, port = None ):
-        e = edge(str(name), port)
+    def edge( self, name, port = None, srcport = None, tgtport = None ):
+        e = edge(str(name), port, srcport, tgtport)
         self.edges.append(e)
         return e
 

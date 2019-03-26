@@ -25,6 +25,7 @@ def guess_gdb_type( p ):
         return gdb.PARAM_INTEGER
     return gdb.PARAM_STRING
 
+
 # In case the type is our artifical type colour, it will translate to gdb string and we check internally for a colour
 # string
 class parameter(gdb.Parameter):
@@ -74,6 +75,9 @@ class parameter(gdb.Parameter):
         if isinstance(self.value, str):
             if( len(pval) == 0 ):
                 pval = "None"
+
+        if( verbosity.value is None or verbosity.value < 2 ):
+            return ""
         if( self.is_colour ):
             return 'Set %s to %s' % (self.docstring, vdb.color.color(pval,self.value))
         else:
@@ -81,6 +85,9 @@ class parameter(gdb.Parameter):
 
     def get_show_string(self, svalue):
         return '%s (currently: %r)' % (self.docstring, self.value)
+
+
+verbosity = parameter("vdb-config-verbosity",3)
 
 
 def set_string( s ):
