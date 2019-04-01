@@ -21,18 +21,30 @@ def print_pahole( layout, condense ):
         cidx = -2
     cnt = 0
     current_entity = None
-#    print("layout.max_type_len = '%s'" % layout.max_type_len )
-#    print("layout.max_name_len = '%s'" % layout.max_name_len )
+    max_type_len = 0
     previous_text = None
     start = 0
     end = 0
+    for bd in layout.bytes:
+        if( bd.object is not None ):
+            bx = bd.object.type.strip_typedefs()
+            enttypename = bx.name
+            if( enttypename is None ):
+                enttypename = str(bx)
+            enttypename = vdb.shorten.symbol(enttypename)
+#            max_type_len = max(max_type_len,len(enttypename))
+            max_type_len = max(max_type_len,len(vdb.color.colors.strip_color(enttypename)))
+            bd.pahole_enttypename = enttypename
     for bd in layout.bytes:
         if( bd.prefix is None ):
             ent = "<unused>"
         else:
             ent = bd.name()
+#        print("ent = '%s'" % ent )
+
         if( len(ent) > 2 and ent.startswith("::") ):
             ent = ent[2:]
+        ent = vdb.shorten.symbol(ent)
 
         # XXX extra colour for empty
         if( ent != current_entity ):
@@ -40,15 +52,14 @@ def print_pahole( layout, condense ):
             cidx += 1
             cidx %= len(color_list)
         cos = vdb.color.color(f"[{cnt:3d}]",color_list[cidx])
-        if( bd.type is not None ):
-            enttypename = bd.type.name
-            if( enttypename is None ):
-                enttypename = str(bd.type)
-#                print(("[%%3d] : %%%ss     %%-%ss %%s" % (layout.max_type_len,layout.max_name_len)) % (cnt,enttypename,ent,code))
-            ename = vdb.color.color(f"{enttypename:>{layout.max_type_len}}","#cc4400")
-#                ("[%%3d] : %%%ss     %%-%ss %%s" % (layout.max_type_len,layout.max_name_len)) % (cnt,enttypename,ent,code))
+        if( bd.prefix is not None ):
+#            print("bd.type = '%s'" % bd.type )
+#            print("type(bd.type) = '%s'" % type(bd.type) )
+#            print("bx = '%s'" % bx )
+            enttypename = bd.pahole_enttypename
+            ename = vdb.color.color(f"{enttypename:>{max_type_len}}","#cc4400")
         else:
-            ename = " " * layout.max_type_len
+            ename = " " * max_type_len
             ent = "<unused>"
         if( condense ):
             txt = f"{ename} {ent}"
@@ -61,7 +72,6 @@ def print_pahole( layout, condense ):
         else:
             print(f"{cos} {ename} {ent}")
         end = cnt
-#            print(("[%%3d] : %%%ss     %%-%ss %%s" % (layout.max_type_len,layout.max_name_len)) % (cnt,"",ent,"<code>"))
         cnt += 1
 
     cidx += 1
@@ -97,8 +107,10 @@ It prints the type and displays comments showing where holes are."""
         if ptype.code != gdb.TYPE_CODE_STRUCT and ptype.code != gdb.TYPE_CODE_UNION:
             raise gdb.GdbError('%s is not a struct/union type: %s' % (" ".join(argv), ptype.code))
         try:
-            tl = vdb.layout.type_layout(ptype)
-            print_pahole(tl,condensed)
+#            tl = vdb.layout.type_layout(ptype)
+            xl = vdb.layout.object_layout(ptype)
+#            print_pahole(tl,condensed)
+            print_pahole(xl,condensed)
         except Exception as e:
             traceback.print_exc()
 

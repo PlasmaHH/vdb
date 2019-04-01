@@ -3,11 +3,13 @@
 
 import vdb
 import vdb.shorten
+import vdb.util
 
 import gdb
 
 import itertools
 import re
+import traceback
 
 
 vdb.enabled_modules.append("layout")
@@ -16,138 +18,281 @@ class byte_descriptor:
     def __init__(self,prefix,fname,ftype):
         self.prefix = prefix
         self.type = ftype
-        self.member_name = fname
+#        self.member_name = fname
         self.code = None
         self.endcode = None
+        self.object = None
 
     def name( self ):
-        return f"{self.prefix}::{self.member_name}"
-
-class type_layout:
-    def __init__ (self, atype ):
-        self.bytes = []
-        self.max_type_len = 0
-        self.max_code_len = 0
-        self.max_name_len = 0
-        self.outer_type_name = ""
-        self.atype = atype
-        self.VTT = None
-        self.parse(atype,0,"")
-
-    def parse (self, atype, level, name, outername = "", offset = None):
-        mprefix = outername
-
-        # first/outer call, initialize a few things
-        if( offset is None ):
-            offset = 0
-            self.bytes = list(itertools.repeat(byte_descriptor(None,None,None),atype.sizeof))
-            self.max_type_len = 0
-            mprefix = atype.name
-            mprefix = vdb.shorten.symbol(mprefix)
-            self.outer_type_name = atype.name
-
-        if( offset < 0 ):
-#            print(" ---- WARNING VIRTUAL INHERITANCE : GDB DOESN'T GIVE ENOUGH INFORMATION TO PROPERLY POSITION OBJECT ---- ")
-            if( self.VTT is None ):
-                af = atype.fields()[0]
-                cmd = "p &'VTT for %s'" % (self.outer_type_name)
-#                print("cmd = '%s'" % cmd )
-                ofresult = gdb.execute(cmd,False,True)
-#                print("ofresult = '%s'" % ofresult )
-                g = re.search("(0x[a-fA-F0-9]*) <VTT for",ofresult)
-#                print("g = '%s'" % g )
-#                print("g.group(1) = '%s'" % g.group(1) )
-                self.VTT=g.group(1)
-            cmd="p ((uint64_t*)(%s%s))[0]" % (self.VTT,offset)
-            ofresult = gdb.execute(cmd,False,True)
-#            print("ofresult = '%s'" % ofresult )
-            g = re.search("= ([0-9]*)",ofresult)
-            newoffset=g.group(1)
-            offset = int(newoffset)
-
-        if name is None:
-            name = ''
-        tag = atype.tag
-        if tag is None:
-            tag = ''
+#        print("self.prefix = '%s'" % self.prefix )
+#        print("self.object.name = '%s'" % self.object.name )
+        if( self.prefix is not None and len(self.prefix) > 0 ):
+            return f"{self.prefix}{self.object.name}"
+        else:
+#        return f"{self.prefix}::{self.member_name}"
+            return f"{self.object.name}"
+"""
 
 
-        kind = 'struct' if atype.code == gdb.TYPE_CODE_STRUCT else 'union'
-#        print ('/* %4d     */ %s%s %s {' % (atype.sizeof, ' ' * (2 * level), kind, tag))
-        endpos = 0
-#        print("atype.code = '%s'" % atype.code )
-        for field in atype.fields():
-            # Skip static fields
-            if not hasattr (field, ('bitpos')):
-                continue
-            # find the type
-            ftype = field.type.strip_typedefs()
-            ftypename = ftype.name
-            if( ftypename is None ):
-                ftypename = str(ftype)
-#            print("ftypename = '%s'" % ftypename )
-#            print("field.__dict__ = '%s'" % field.__dict__ )
-#            print("ftype = '%s'" % ftype )
-#            print("ftype.name = '%s'" % ftype.name )
-#            print("ftypename = '%s'" % ftypename )
-#            print("field = '%s'" % field )
-#            print("field.artificial = '%s'" % field.artificial )
-#            print("field.name = '%s'" % field.name )
+Plan:
 
-            bytepos = field.bitpos // 8
-#            print("ftype = '%s'" % ftype )
-            if ftype.code != gdb.TYPE_CODE_STRUCT:
-#                print("offset = '%s'" % offset )
-#                print("bytepos = '%s'" % bytepos )
-#                print("ftype.sizeof = '%s'" % ftype.sizeof )
-                for i in range(offset+bytepos,offset+bytepos+ftype.sizeof):
-#                    print("i = '%s'" % i )
-                    bd = byte_descriptor( mprefix,field.name, ftype )
-                    self.bytes[i] = bd
-                    self.max_name_len = max(self.max_name_len, len(bd.name()) )
-                    self.max_type_len = max(self.max_type_len, len(str(ftype)) )
+    an "outer" object descriptor that is collecting info for each byte. In case we need bitfields we use a special version of a byte descriptor.
 
-            # Detect hole
-            if endpos < field.bitpos:
-                hole = field.bitpos - endpos
-#                print ('/* XXX %d bit hole, try to pack */' % hole)
+    The byte descriptor has a reference to the actual type object it refers to. This can be traversed through their
+    parent references unto the root object, allowing to reconstruct a complete name. For reasons of convenience and
+    speed we shall provide a "flattened down" version of the access descriptor (if we have the information we might
+    colour it according to private/protected/public)
 
-            # Are we a bitfield?
-            if field.bitsize > 0:
-                fieldsize = field.bitsize
+    This should make it possible to trivially implement pahole by going through all the bytes. We should take care of
+    the bytes all having the same descriptor object so we can easily do the condensed implementation by using "is"
+    object identity.
+
+    Similar we operate for the hexdump annotation by checking for each byte if we have to change the description and colour
+
+    For the ftree view things might get a bit more complicated. We should recurse down and the subobjects return the
+    rowcount they occupy, then we set rowspan for the td. We do that by traversing recursively bottom up through the
+    parsed type tree. This process will then also lead to a list of pointers to other objects. First we extract those of subobjects of ourself.
+
+    For accessing unions we need to have some way to help chosing. Per default we should maybe take either the most
+    complicated type or a non pointer type.
+
+    Additionally for subobjects we need to have a mechanism to cast them to other types that they might not be unioned
+    of, for things like std containers that store their objects in aligned buffers. 
+
+    For the actual values we have two options: trying to get them via op[] on the values, and trying to cast offsets to
+    that object. We should use the later only when we can't get it via the earlier, or for downcasting/crosscasting.
+
+
+
+
+
+
+"""
+
+
+def fixup_intparam( ip ):
+    return ip.group(1)
+
+fxre = re.compile("([0-9]+)ul")
+
+def fixup_type( t ):
+    return fxre.sub(fixup_intparam,t)
+
+def guess_vptr_type( val ):
+    """ Takes a pointer and tries to figure out if it points to an object that has a virtual table and then returns the
+    "real" type according to that virtual table. This is to workaround some gdb bug where the dynamic type is
+    inaccessible"""
+    # otherwise gdb prints potentially some more text about it
+    try:
+        ptrval = int(val)
+        vptr = gdb.parse_and_eval( f"*(void**)({ptrval})" )
+        vpx = re.search("vtable for (.*?)\+[0-9]*>",str(vptr))
+        if( vpx ):
+            gdb_vptype=gdb.lookup_type(fixup_type(vpx.group(1)))
+            val = val.cast(gdb_vptype.pointer())
+    except:
+        pass
+#        traceback.print_exc()
+    return ( val, val.type )
+
+
+class object:
+
+    def __init__( self, gtype, field = None ):
+        self.type = gtype
+        self.size = gtype.sizeof
+        self.offset = -1
+        self.subobjects = []
+        if( field is not None ):
+            self.name = field.name
+            self.bit_offset = field.bitpos
+            self.byte_offset = self.bit_offset // 8
+            self.is_base_class = field.is_base_class
+        else:
+            self.name = "<anonymous>"
+            self.bit_offset = -1
+            self.byte_offset = -1
+            self.is_base_class = False
+        self.final = False
+        self.parent = None
+        pass
+
+    def get_path( self ):
+        path = ""
+        if( self.parent is not None ):
+            return self.parent.get_path() + "::{" + str(self.type.strip_typedefs()) + "}::" + self.name
+        return path
+
+    def __str__(self):
+        s = f"{self.type}[{self.size}] : {self.name}, @{len(self.subobjects)},b{self.is_base_class}"
+        return s
+
+def get_vtt_name( atype ):
+    VTT=None
+    try:
+        cmd = "p &'VTT for %s'" % (atype.name)
+#        print("cmd = '%s'" % cmd )
+        ofresult = gdb.execute(cmd,False,True)
+        g = re.search("(0x[a-fA-F0-9]*) <VTT for",ofresult)
+#        print("g = '%s'" % g )
+        VTT=g.group(1)
+#        print("VTT = '%s'" % VTT )
+    except:
+        pass
+    return VTT
+
+
+def get_vtt_entry( vtt, offset ):
+#    print("vtt = '%s'" % vtt )
+#    print("offset = '%s'" % offset )
+    cmd="p ((uint64_t*)(%s%s))[0]" % (vtt,offset)
+#    print("cmd = '%s'" % cmd )
+    ofresult = gdb.execute(cmd,False,True)
+#    print("ofresult = '%s'" % ofresult )
+    g = re.search("= ([0-9]*)",ofresult)
+    newoffset=g.group(1)
+#    print("g = '%s'" % g )
+    offset = int(newoffset)
+    return offset
+
+
+class object_layout:
+    def __init__( self, type = None, value = None ):
+        if( type is None ):
+            type = value.type
+        self.type = type
+        self.bytes = list(itertools.repeat(byte_descriptor(None,None,None),self.type.sizeof))
+        self.value = value
+        self.vtt = get_vtt_name(self.type)
+        self.vtype = None
+#        print("self.vtt = '%s'" % self.vtt )
+
+
+#        print("self.value = '%s'" % self.value )
+#        print("self.type = '%s'" % self.type )
+#        print("self.value.dynamic_type = '%s'" % self.value.dynamic_type )
+        if( self.value is not None ):
+            self.type = self.value.dynamic_type
+            _,self.vtype = guess_vptr_type( self.value )
+            if( self.type == self.value.dynamic_type and self.type != self.vtype ):
+                self.type = self.vtype
+#        print("self.vtype = '%s'" % self.vtype )
+
+#        print("self.type == type = '%s'" % (self.type == type ))
+#        print("self.type is type = '%s'" % (self.type is type ))
+
+#        print("self.type == self.value.dynamic_type = '%s'" % (self.type == self.value.dynamic_type ))
+#        print("self.type == self.value.type = '%s'" % (self.type == self.value.type ))
+#        print("self.type == self.vtype = '%s'" % (self.type == self.vtype ))
+#        print("self.value.dynamic_type == self.vtype = '%s'" % (self.value.dynamic_type == self.vtype ))
+
+#        print("self.type is self.value.dynamic_type = '%s'" % (self.type is self.value.dynamic_type ))
+#        print("self.type is self.value.type = '%s'" % (self.type is self.value.type ))
+#        print("self.type is self.vtype = '%s'" % (self.type is self.vtype ))
+#        print("self.value.dynamic_type is self.vtype = '%s'" % (self.value.dynamic_type is self.vtype ))
+
+
+        self.object = object(self.type)
+        self.object.name = str(self.type)
+        # chose how to print the scope of the outer thing 
+        if( self.value is not None ):
+            self.object.is_base_class = False
+        else:
+            self.object.is_base_class = True
+#        print("self.type = '%s'" % self.type )
+        self.parse(self.type,self.object)
+        for i in range(0,len(self.bytes)):
+            b = self.bytes[i]
+            o = self.bytes[i].object
+#            print("%s " % i, end="")
+            if( o is None or not o.final ):
+                b.prefix = None
+#                print("<unused>")
+#                print("o = '%s'" % o )
             else:
-                if (ftype.code == gdb.TYPE_CODE_STRUCT or ftype.code == gdb.TYPE_CODE_UNION) and len(ftype.fields()) == 0:
-                    fieldsize = 0 # empty struct
+                xo = o.parent
+                fullname = ""
+                while( xo is not None ):
+                    if( xo.is_base_class ):
+                        fullname = xo.name + "::" + fullname
+                    else:
+                        if( xo.name is None ):
+                            fullname = "{union}" + "." + fullname
+                        else:
+                            fullname = xo.name + "." + fullname
+                    xo = xo.parent
+                b.prefix = fullname
+#                print(f"{o.type.strip_typedefs()} {fullname}")
+
+    def extract_fields( self, atype ):
+        ret = []
+        uninteresting_codes = set()
+
+#        print("atype = '%s'" % atype )
+
+        try:
+            # This throws when the object has no subobjects, thus it is a plain type
+            for f in atype.fields():
+                if( f.type.code in uninteresting_codes ):
+                    continue
                 else:
-                    fieldsize = 8 * ftype.sizeof # will get packing wrong for structs
+                    ret.append(f)
+        except:
+            self.final = True
+#            print("self = '%s'" % self )
+            pass
 
-#            print("field.bitpos = '%s'" % field.bitpos )
-#            print ('/* %3d %4d */' % (field.bitpos // 8, fieldsize // 8), end="")
-            endpos = field.bitpos + fieldsize
+        return ret
 
-            if ftype.code == gdb.TYPE_CODE_STRUCT:
-                self.parse (ftype, level + 1, field.name, mprefix + "::" + field.name,offset+bytepos)
-#            else:
-#                print (' ' * (4 + 2 * level), end="")
-#                print ('%s %s' % (str (ftype), field.name))
-
-        code = "%s%s %s { // %4d" % ( ' ' * (2 * level), kind, tag,atype.sizeof)
-        endcode = " " * (2*level) + "} // %s" % atype.name
-        self.max_code_len = max(self.max_code_len,len(code))
-        self.max_code_len = max(self.max_code_len,len(endcode))
-        self.bytes[offset].code = code
-        asof = atype.sizeof-1
-        self.bytes[offset+asof].endcode = endcode
-#        print (' ' * (14 + 2 * level), end="")
-#        print ('} %s' % name)
-        if( endpos//8 < atype.sizeof ):
-            hole = (8*atype.sizeof) - endpos
-#            print('/* XXX %d bit hole at the end, might be packed by the compiler */' % hole)
-
-
-
-
-
+    def parse( self, atype, parent, offset = 0 ):
+#        print("atype = '%s'" % atype )
+        for f in self.extract_fields(atype):
+            if( not hasattr(f,"bitpos") ):
+                # Ignore static fields
+                continue
+#            print("")
+            so = object(f.type,f)
+#            print("parent = '%s'" % parent )
+            so.parent = parent
+            parent.subobjects.append(so)
+#            print("so.name = '%s'" % so.name )
+#            print("so.type = '%s'" % so.type )
+#            print("so.type.strip_typedefs() = '%s'" % so.type.strip_typedefs() )
+#            print("so.bit_offset = '%s'" % so.bit_offset )
+#            print("so.byte_offset = '%s'" % so.byte_offset )
+#            print("so.size = '%s'" % so.size )
+#            print("offset = '%s'" % offset )
+#            print("")
+            bd = byte_descriptor(None,None,None)
+            bd.object = so
+            if( so.bit_offset >= 0 ):
+                so.byte_offset += offset
+                for i in range( so.byte_offset, so.byte_offset + so.size ):
+#                    print("i = '%s'" % i )
+                    self.bytes[i] = bd
+            else:
+                voffset = get_vtt_entry( self.vtt, so.byte_offset )
+                so.byte_offset = voffset
+#                print("VIRTUAL")
+                # Virtual, get the real position
+                pass
+            code = so.type.strip_typedefs().code
+#            if( f.is_base_class ):
+#                self.parse( so.type, so, offset )
+#            print("vdb.util.gdb_type_code(code) = '%s'" % vdb.util.gdb_type_code(code) )
+            if( code == gdb.TYPE_CODE_STRUCT ):
+                # empty subobjects can sometimes occupy space too
+                if( len(f.type.fields()) == 0 ):
+                    so.final = True
+                else:
+                    self.parse( so.type, so, so.byte_offset )
+            elif( code == gdb.TYPE_CODE_UNION ):
+                self.parse( so.type, so, so.byte_offset )
+#                print("Sorry, unions not yet properly supported")
+            else:
+#                print("so.type.code = '%s'" % so.type.code )
+                so.final = True
+#            print("so = '%s'" % so )
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

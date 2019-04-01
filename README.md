@@ -48,6 +48,12 @@ This is work in progress and not yet ready for real world usage, it is more of a
 			* [`pahole`](#pahole-1)
 			* [`pahole/c`](#paholec)
 			* [`pahole/e`](#paholee)
+	* [ftree](#ftree)
+		* [Commands](#commands-6)
+			* [`ftree`](#ftree-1)
+		* [Special Filter Functionality](#special-filter-functionality)
+			* [Downcasting to hidden types](#downcasting-to-hidden-types)
+			* [dynamic array/vector type detection](#dynamic-arrayvector-type-detection)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
 	* [pointer (chaining)](#pointer-chaining)
@@ -389,6 +395,43 @@ This shows the layout in an extended format, one line per byte.
 
 ![](img/pahole.f.e.png)
 ![](img/pahole.m.e.png)
+
+
+## ftree
+The ftree module allows for creation of dotty files that create a tree (or directed graph) out of a datastructure.
+### Commands
+
+#### `ftree`
+The ftree command expects a pointer to an object. It will create a dot file based on the filename configured in
+`vdb-ftree-filebase`. The string there will be fed through strftime and then `.dot` will be appended to it. The default
+is `ftree` so it will always overwrite the last one. Using `ftree.%s` will be the most trivial way to create a file for
+each invocation.
+
+After the dot file is created, the generated filename will be fed to the string format in `vdb-ftree-dot-command` and
+the created command will be excuted, usually to display the generated file directly.
+
+Pointers will be displayed with their value, and a dot edge drawn to the object it points to. When the memory is
+inaccessible, the background of that table cell will be drawn in the color configured in `vdb-ftree-colors-invalid`.
+Various other kinds of exceptions generated during the creation of the target node can unfortunately also lead to that
+colour.
+
+### Special Filter Functionality
+
+#### Downcasting to hidden types
+When there is a pointer of a base class type, we try to get the dynamic type via RTTI from gdb. If the type has integers
+as template parameters (or some other corner cases) gdb will sometimes fail to find the type information (because the
+internal string representation does not match up) and then we try to work around that. 
+
+Sometimes there is a pointer pointing to base classes of a non-virtual type, thus we don't have any RTTI. In that case
+we have a mechanism that gets a type path (that is all the types and members involved that lead to it), applies a regex
+to it, and then transforms it into a new type string and then cast it to that. See the examples for some `std::`
+containers that have nodes. They are accessed through a base class and then `static_cast`ed to the right type, thus we
+have to do the same.
+
+#### dynamic array/vector type detection
+For types like `std::vector` there is usually internally a pointer to the object being stored, but the type system has
+no idea that it is pointing to an array, not a single object. Similar to the hidden type thing we have a regex mechanism
+that can be used to access other members that then can be used to determine the amount of elements.
 
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when

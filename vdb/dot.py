@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import traceback
+import io
 
 def dot_escape( txt ):
     txt = txt.replace("&","&amp;")
@@ -59,6 +60,11 @@ class tr:
         for td in self.tds:
             td.write(f)
         f.write("</tr>\n")
+
+    def __str__( self ):
+        f = io.StringIO()
+        self.write(f)
+        return f.getvalue()
 
     def __setitem__( self, name, val ):
         self.attributes[name] = val
@@ -181,7 +187,7 @@ class graph:
     def write( self, filename ):
         if( not filename.endswith( ".dot" )):
             filename += ".dot"
-        print("filename = '%s'" % filename )
+#        print("filename = '%s'" % filename )
         with open(filename,"w+") as f:
             f.write("digraph %s {\n" % self.name )
             f.write("node [ ")
