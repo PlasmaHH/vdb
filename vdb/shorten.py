@@ -443,6 +443,9 @@ def lazy_load_typedefs( ):
 def symbol(fname):
     lazy_load_typedefs()
 
+    if( fname is None ):
+        return fname
+
 #    fun = parse_function(fname)
 
     for old,new in shortens.items():

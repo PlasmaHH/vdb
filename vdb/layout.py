@@ -103,6 +103,7 @@ class object:
         self.size = gtype.sizeof
         self.offset = -1
         self.subobjects = []
+        self.field = field
         if( field is not None ):
             self.name = field.name
             self.bit_offset = field.bitpos
@@ -120,7 +121,12 @@ class object:
     def get_path( self ):
         path = ""
         if( self.parent is not None ):
-            return self.parent.get_path() + "::{" + str(self.type.strip_typedefs()) + "}::" + self.name
+            if( self.name is None ):
+                xname = "<anonymous>"
+            else:
+                xname = self.name
+
+            return self.parent.get_path() + "::{" + str(self.type.strip_typedefs()) + "}::" + xname
         return path
 
     def __str__(self):
@@ -239,7 +245,7 @@ class object_layout:
                     ret.append(f)
         except:
             self.final = True
-#            print("self = '%s'" % self )
+            print("self = '%s'" % self )
             pass
 
         return ret

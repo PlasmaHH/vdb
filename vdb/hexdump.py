@@ -16,9 +16,18 @@ import string
 import traceback
 import re
 
+def set_colors( cfg ):
+    cfg.elements = cfg.value.split(",")
+
 color_head       = vdb.config.parameter("vdb-hexdump-colors-header",                "#ffa",    gdb_type = vdb.config.PARAM_COLOUR)
 
 default_len = vdb.config.parameter("vdb-hexdump-default-len",8*16)
+
+
+color_list = vdb.config.parameter("vdb-hexdump-colors-symbols", "#f00,#0f0,#00f,#ff0,#f0f,#0ff" ,on_set  = set_colors)
+set_colors(color_list)
+
+
 
 symre=re.compile("0x[0-9a-fA-F]* <([^+]*)(\+[0-9]*)*>")
 def hexdump( addr, xlen = -1 ):
@@ -42,7 +51,6 @@ def hexdump( addr, xlen = -1 ):
     p,add,col,mm = vdb.pointer.color(addr,64)
     nm = gdb.parse_and_eval(f"(void*)({addr})")
     current_symbol = None
-    color_list = ["#f00","#0f0","#00f","#ff0","#f0f","#0ff" ]
     next_color = -1
     sym_color = None
     while(len(data) > 0 ):
@@ -65,8 +73,8 @@ def hexdump( addr, xlen = -1 ):
                 if( current_symbol != nsym ):
                     if( nsym ):
                         next_color += 1
-                        next_color %= len(color_list)
-                        sym_color = color_list[next_color]
+                        next_color %= len(color_list.elements)
+                        sym_color = color_list.elements[next_color]
                         s += vdb.color.color(nsym,sym_color)
                         s += " "
                     else:

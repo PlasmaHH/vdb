@@ -31,6 +31,7 @@ dot_filebase   = vdb.config.parameter("vdb-ftree-filebase","ftree")
 dot_command    = vdb.config.parameter("vdb-ftree-dot-command", "nohup dot -Txlib {filename} &>/dev/null &" )
 array_elements = vdb.config.parameter("vdb-ftree-array-elements","0,1,2,3,-4,-3,-2,-1",on_set  = set_array_elements )
 color_invalid  = vdb.config.parameter("vdb-ftree-colors-invalid","#ff2222",gdb_type = vdb.config.PARAM_COLOUR)
+color_union    = vdb.config.parameter("vdb-ftree-colors-union","#ffff66",gdb_type = vdb.config.PARAM_COLOUR)
 
 set_array_elements(array_elements)
 def fixup_intparam( ip ):
@@ -113,9 +114,9 @@ def std_vector_size( m,ptr,value_cache):
 
 def std_hashtable_node( m, val, path ):
 #    print("m = '%s'" % m )
-#    print("path = '%s'" % path )
+    print("path = '%s'" % path )
     xm = re.findall( "{(std::_Hashtable<[^}]*>)}", path )
-#    print("xm = '%s'" % xm )
+    print("xm = '%s'" % xm )
     if( len(xm) > 0 ):
 
         node_type = gdb.lookup_type(xm[-1] + "::__node_type")
@@ -124,6 +125,23 @@ def std_hashtable_node( m, val, path ):
             node_type = node_type.strip_typedefs()
             return node_type.pointer()
     return None
+
+def std_tree_node( m, val, path ):
+    print("m = '%s'" % m )
+    print("path = '%s'" % path )
+    xm = re.findall( "{(std::_Rb_tree<[^}]*>)}::_M_t", path )
+#    print("xm = '%s'" % xm )
+    if( len(xm) > 0 ):
+
+        node_type = gdb.lookup_type(xm[-1] + "::_Link_type")
+
+        if( node_type is not None ):
+            node_type = node_type.strip_typedefs()
+            return node_type
+
+    return None
+
+
 
 
 class pointer:
@@ -152,8 +170,9 @@ class ftree:
 #                ( "(.*std::unordered_.*<.*>.*::{std::_Hashtable<.*>}_M_h)::{.*}_M_buckets$", "{0}::{{unsigned long}}_M_bucket_count" ),
                 ( "(.*std::_Vector_base<.*>::.*)_M_start$", std_vector_size )
                 ]
-        self.downcast_filter = [ 
-                ( "std::__detail::_Hash_node_base", std_hashtable_node )
+        self.node_downcast_filter = [
+                ( "std::__detail::_Hash_node_base", std_hashtable_node ),
+                ( "std::_Rb_tree_node_base", std_tree_node )
                 ]
 
     def next_port( self ):
@@ -194,17 +213,31 @@ class ftree:
 #            for so in obj.subobjects:
             for so in self.flat_subobjects( obj ):
                 if( so.type.strip_typedefs().code == gdb.TYPE_CODE_UNION ):
-                    print("NO UNION SUPPORT YET")
-                    continue
+                    print("NO FULL UNION SUPPORT YET, EXPECT FUNNY RESULTS")
+#                    if( so.name is None ):
+#                        print("UNION IS ANONYMOUS, HAVE NO IDEA HOW TO GET THE VALUE THERE YET")
+#                        rbk=val[so.field]
+#                        print("rbk = '%s'" % rbk )
+#                        continue
 #                print("so = '%s'" % so )
-                soval = val[so.name]
+#                print("val = '%s'" % val )
+#                print("val.type = '%s'" % val.type )
+#                print("so.field = '%s'" % so.field )
+                if( so.name is None ):
+                    soval = val[so.field]
+#                    print("soval = '%s'" % soval )
+                else:
+                    soval = val[so.name]
+#                    print("val[so.name] = '%s'" % val[so.name] )
                 l,r,p = self.xtable(so,soval)
                 ret += l
                 rows += r
                 ptrlist += p
-        if( obj.parent is not None  and len(ret) > 0 ):
+        if( obj.parent is not None and len(ret) > 0 ):
             td = vdb.dot.td(obj.name)
             td["rowspan"] = rows
+            if( obj.type.code == gdb.TYPE_CODE_UNION ):
+                td["bgcolor"] = color_union.value
 #            ret[0] = f'<td rowspan="{rows}" >{obj.name}</td>' + ret[0]
             xtr = ret[0]
             xtr.tds = [ td ] + xtr.tds
@@ -511,11 +544,11 @@ class ftree:
 #                    print("elements = '%s'" % elements )
                 return elements
 
-    def try_downcast( self, val, path ):
+    def try_node_downcast( self, val, path ):
 #        print("path = '%s'" % path )
 #        print("val.type = '%s'" % val.type )
 #        print("val = '%s'" % val )
-        for df,action in self.downcast_filter:
+        for df,action in self.node_downcast_filter:
 #            print("df = '%s'" % df )
 #            print("str(val.type) = '%s'" % str(val.type) )
             m = re.findall( df, str(val.type) )
@@ -530,6 +563,8 @@ class ftree:
         return val
 
     def shorten( self, s ):
+        if( s is None ):
+            return s
         s = vdb.shorten.symbol(s)
         s = vdb.color.colors.strip_color(s)
         if( len(s) > 30 ):
@@ -574,7 +609,7 @@ class ftree:
 
 #        print("########### XTREE %s" % val )
 
-        val = self.try_downcast(val,path)
+        val = self.try_node_downcast(val,path)
 
         dval = val.dereference()
         xl = vdb.layout.object_layout( value = dval )
@@ -659,7 +694,7 @@ class ftree:
                         return None
 #                print("xs = '%s'" % xs )
 
-            val = self.try_downcast(val,f,fullname)
+            val = self.try_node_downcast(val,f,fullname)
             tbl,ptrlist = self.table( val.dereference(),str(val.type), True,f)
             n = graph.node(ptrval)
             n.table = tbl

@@ -433,6 +433,10 @@ For types like `std::vector` there is usually internally a pointer to the object
 no idea that it is pointing to an array, not a single object. Similar to the hidden type thing we have a regex mechanism
 that can be used to access other members that then can be used to determine the amount of elements.
 
+The setting `vdb-ftree-array-elements` is a comma seperated list of python like element indices, that is when they are
+negative they are counted from the back of the array. Since arrays can be very long, this limits the amount of things
+displayed. Per default its the first and last four items.
+
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
 you suppress loading of the modules that load it.
