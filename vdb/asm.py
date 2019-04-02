@@ -87,6 +87,13 @@ asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnprT" )
 asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnprT" )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
+
+def set_colors( cfg ):
+    cfg.elements = cfg.value.split(",")
+
+color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00,#0f0,#00f,#ff0,#f0f,#0ff" ,on_set  = set_colors)
+set_colors(color_list)
+
 ix = -1
 def next_index( ):
     global ix
@@ -229,9 +236,8 @@ ascii mockup:
         ix = -1
 
         def acolor( s, idx ):
-            color_list = ["#f00","#0f0","#00f","#ff0","#f0f","#0ff" ]
             if( idx >= 0 ):
-                return vdb.color.color(s,color_list[idx % len(color_list) ] )
+                return vdb.color.color(s,color_list.elements[idx % len(color_list.elements) ] )
             else:
                 return s
 
