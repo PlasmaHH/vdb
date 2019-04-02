@@ -3,3 +3,9 @@
 *.swo
 __pycache__
 .gdb_history
+*.dot
+nohup.out
+mock?.txt
+mock.txt
+m.txt
+gdb.txt

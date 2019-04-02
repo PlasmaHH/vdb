@@ -27,22 +27,18 @@ def set_array_elements( cfg ):
     for i in elem:
         cfg.elements.append(int(i))
 
+verbosity      = vdb.config.parameter("vdb-ftree-verbosity",3 )
 dot_filebase   = vdb.config.parameter("vdb-ftree-filebase","ftree")
 dot_command    = vdb.config.parameter("vdb-ftree-dot-command", "nohup dot -Txlib {filename} &>/dev/null &" )
 array_elements = vdb.config.parameter("vdb-ftree-array-elements","0,1,2,3,-4,-3,-2,-1",on_set  = set_array_elements )
 color_invalid  = vdb.config.parameter("vdb-ftree-colors-invalid","#ff2222",gdb_type = vdb.config.PARAM_COLOUR)
 color_union    = vdb.config.parameter("vdb-ftree-colors-union","#ffff66",gdb_type = vdb.config.PARAM_COLOUR)
+color_vcast    = vdb.config.parameter("vdb-ftree-colors-virtual-cast","#ccaaff",gdb_type = vdb.config.PARAM_COLOUR)
+color_dcast    = vdb.config.parameter("vdb-ftree-colors-down-cast","#aaffaa",gdb_type = vdb.config.PARAM_COLOUR)
+shorten_head   = vdb.config.parameter("vdb-ftree-shorten-head",15 )
+shorten_tail   = vdb.config.parameter("vdb-ftree-shorten-tail",15 )
 
 set_array_elements(array_elements)
-def fixup_intparam( ip ):
-    return ip.group(1)
-
-fxre = re.compile("([0-9]+)ul")
-
-def fixup_type( t ):
-#    print("type(t) = '%s'" % type(t) )
-    return fxre.sub(fixup_intparam,t)
-
 
 
 def indent( i, fmt, *more ):
@@ -68,34 +64,7 @@ def get_type( vt, alternative = None ):
         return None
 
 
-def unprefix( arg, prefix ):
-    string = str(arg)
-    if( string.startswith(prefix) ):
-        return string[len(prefix):]
-    else:
-        return string
 
-
-def guess_vptr_type( val ):
-    """ Takes a pointer and tries to figure out if it points to an object that has a virtual table and then returns the
-    "real" type according to that virtual table. This is to workaround some gdb bug where the dynamic type is
-    inaccessible"""
-    # otherwise gdb prints potentially some more text about it
-    try:
-#        print("val = '%s'" % val )
-        ptrval = int(val)
-        vptr = gdb.parse_and_eval( f"*(void**)({ptrval})" )
-#        print("vptr = '%s'" % vptr )
-        vpx = re.search("vtable for (.*?)\+[0-9]*>",str(vptr))
-        if( vpx ):
-#            print("vpx = '%s'" % vpx )
-            gdb_vptype=gdb.lookup_type(fixup_type(vpx.group(1)))
-            val = val.cast(gdb_vptype.pointer())
-#            print("val = '%s'" % val )
-        return val
-    except:
-        traceback.print_exc()
-        return val
 
 def std_vector_size( m,ptr,value_cache):
 #    print("m = '%s'" % m )
@@ -114,21 +83,43 @@ def std_vector_size( m,ptr,value_cache):
 
 def std_hashtable_node( m, val, path ):
 #    print("m = '%s'" % m )
-    print("path = '%s'" % path )
+#    print("path = '%s'" % path )
+    if( path.endswith("_M_buckets") ):
+        return None
     xm = re.findall( "{(std::_Hashtable<[^}]*>)}", path )
-    print("xm = '%s'" % xm )
+#    print("xm = '%s'" % xm )
+    if( verbosity.value > 4 ):
+        print("xm = '%s'" % xm )
+        print("path = '%s'" % path )
     if( len(xm) > 0 ):
-
-        node_type = gdb.lookup_type(xm[-1] + "::__node_type")
+        xtype = xm[-1] + "::__node_type"
+        node_type = gdb.lookup_type(xtype)
+        if( verbosity.value > 4 ):
+            print("xtype = '%s'" % xtype )
+            print("node_type = '%s'" % node_type )
 
         if( node_type is not None ):
             node_type = node_type.strip_typedefs()
             return node_type.pointer()
     return None
 
+def std_hashtable_member( m, val, path ):
+#    print("m = '%s'" % m )
+#    print("path = '%s'" % path )
+#    xm = re.findall( "{(std::_Hashtable<[^}]*>)}", path )
+#    print("xm = '%s'" % xm )
+    node_type = gdb.lookup_type(m[0])
+
+    if( node_type is not None ):
+        node_type = node_type.strip_typedefs()
+        return node_type
+    return None
+
+
+
 def std_tree_node( m, val, path ):
-    print("m = '%s'" % m )
-    print("path = '%s'" % path )
+#    print("m = '%s'" % m )
+#    print("path = '%s'" % path )
     xm = re.findall( "{(std::_Rb_tree<[^}]*>)}::_M_t", path )
 #    print("xm = '%s'" % xm )
     if( len(xm) > 0 ):
@@ -140,6 +131,24 @@ def std_tree_node( m, val, path ):
             return node_type
 
     return None
+
+def std_tree_member( m, val, path ):
+#    print("m = '%s'" % m )
+#    print("val = '%s'" % val )
+#    print("path = '%s'" % path )
+    xm = re.findall( "{(std::_Rb_tree<[^}]*>)}::_M_t", path )
+#    print("xm = '%s'" % xm )
+    if( len(xm) > 0 ):
+
+        node_type = gdb.lookup_type(xm[-1] + "::value_type")
+
+        if( node_type is not None ):
+            node_type = node_type.strip_typedefs()
+            return node_type
+
+    return None
+
+
 
 
 
@@ -161,18 +170,21 @@ class ftree:
         self.written_tables = set()
         self.current_port = 0
         self.value_cache = {}
-        self.array_element_filter = []
         self.nodes = intervaltree.IntervalTree()
         self.edge_redirects = { }
         self.subobject_ports = { }
         self.array_element_filter = [
-                ( "(.*std::unordered_.*::{std::_Hashtable<.*>}.*_M_h.*)::{[^}]*}::_M_buckets$",  "{0}::{{unsigned long}}::_M_bucket_count" ),
+                ( "(.*::{std::_Hashtable<.*>}.*_M_h.*)::{[^}]*}::_M_buckets$",  "{0}::{{unsigned long}}::_M_bucket_count" ),
 #                ( "(.*std::unordered_.*<.*>.*::{std::_Hashtable<.*>}_M_h)::{.*}_M_buckets$", "{0}::{{unsigned long}}_M_bucket_count" ),
                 ( "(.*std::_Vector_base<.*>::.*)_M_start$", std_vector_size )
                 ]
         self.node_downcast_filter = [
                 ( "std::__detail::_Hash_node_base", std_hashtable_node ),
                 ( "std::_Rb_tree_node_base", std_tree_node )
+                ]
+        self.member_cast_filter = [
+                ( "std::__detail::_Hash_node_value_base<([^}]*)>::{[^}]*}::_M_storage::.*__data" , std_hashtable_member ),
+                ( "std::_Rb_tree.*_Rb_tree_node_base.*_M_storage" , std_tree_member )
                 ]
 
     def next_port( self ):
@@ -190,24 +202,37 @@ class ftree:
                 ret.append(so)
         return ret
 
-    def xtable( self, obj, val ):
+    def xtable( self, obj, val, path ):
 
-#        print("########### xtable")
-#        print("obj = '%s'" % obj )
-#        print("val = '%s'" % val )
         ret = []
         ptrlist = []
         rows = 0
         maxcols = 0
-        if( obj.final ):
+
+#        nval = self.try_member_cast( val, obj.get_path() )
+        nval = self.try_member_cast( val, path + obj.get_path() )
+        if( nval is not None ):
+            xval = nval
+            nlayout = vdb.layout.object_layout( value = nval )
+            xobj = nlayout.object
+            l,r,p = self.xtable(xobj,xval,path)
+            ret += l
+            rows += r
+            ptrlist += p
+        elif( obj.final ):
             xval = val
             tr = vdb.dot.tr()
 
 #            td = tr.td(xval)
-            td,ptrlist = self.table_entry( obj, val, None )
-            tr.tds.append(td)
-            ret += [ tr ]
-            rows += 1
+            td,ptrlist,istd = self.table_entry( obj, val, path, None )
+            if( istd ):
+                tr.tds.append(td)
+                ret += [ tr ]
+                rows += 1
+            else:
+                # really is a list of tr
+                ret += td
+                rows += len(td)
         else:
 #            print("len(obj.subobjects) = '%s'" % len(obj.subobjects) )
 #            for so in obj.subobjects:
@@ -227,17 +252,31 @@ class ftree:
                     soval = val[so.field]
 #                    print("soval = '%s'" % soval )
                 else:
+                    print("val = '%s'" % val )
+                    print("val.type = '%s'" % val.type )
+                    print("obj = '%s'" % obj )
                     soval = val[so.name]
 #                    print("val[so.name] = '%s'" % val[so.name] )
-                l,r,p = self.xtable(so,soval)
+                l,r,p = self.xtable(so,soval,path)
                 ret += l
                 rows += r
                 ptrlist += p
         if( obj.parent is not None and len(ret) > 0 ):
             td = vdb.dot.td(obj.name)
             td["rowspan"] = rows
+
+            if( obj.offset != 0 ):
+#                print("obj = '%s'" % obj )
+#                print("obj.offset = '%s'" % obj.offset )
+                port = self.next_port()
+                td["port"] = port
+#                print("val = '%s'" % val )
+                self.subobject_ports[int(val.address)] = port
+#                print("port = '%s'" % port )
             if( obj.type.code == gdb.TYPE_CODE_UNION ):
                 td["bgcolor"] = color_union.value
+                if( obj.name is None ):
+                    td.content = vdb.dot.dot_escape("<union>")
 #            ret[0] = f'<td rowspan="{rows}" >{obj.name}</td>' + ret[0]
             xtr = ret[0]
             xtr.tds = [ td ] + xtr.tds
@@ -247,8 +286,8 @@ class ftree:
 #        print("rows = '%s'" % rows )
         return ( ret, rows, ptrlist )
 
-    def array_entry( self, obj, fval, elements ):
-        print("array_entry")
+    def array_entry( self, fval, elements, path ):
+#        print("array_entry")
         try:
             rettr = []
             ptrlist = []
@@ -266,7 +305,7 @@ class ftree:
             elements = int(elements)
 
             ptr = fval.address
-            print("over = '%s'" % over )
+#            print("over = '%s'" % over )
 
 #            htr = vdb.dot.tr()
 #            htr.td("over")
@@ -291,7 +330,7 @@ class ftree:
                 if( cnt != i ):
                     xtr = vdb.dot.tr()
                     xtd = xtr.td("…")
-                    xtd["colspan"] = 2
+#                    xtd["colspan"] = 2
                     rettr.append(xtr)
                     cnt = i
                 cnt+=1
@@ -301,8 +340,8 @@ class ftree:
                 # lay them out as elements of a table, but the normal process is to make one table per object
                 xtr = vdb.dot.tr()
                 if( entry_object.type.strip_typedefs().code == gdb.TYPE_CODE_STRUCT ):
-                    etbl,rows,moreptr = self.xtable( entry_object, eptr.dereference() )
-                    print("moreptr = '%s'" % moreptr )
+                    etbl,rows,moreptr = self.xtable( entry_object, eptr.dereference() ,path)
+#                    print("moreptr = '%s'" % moreptr )
 #                    print("etbl = '%s'" % etbl )
 #                    print("xtr = '%s'" % xtr )
                     xtd = xtr.td(i)
@@ -311,30 +350,33 @@ class ftree:
                     rettr.append(xtr)
                     rettr += etbl[1:]
                 else:
-                    etbl,moreptr = self.table_entry( entry_object, eptr.dereference(), index = i )
-                    xtr.td(i)
-                    xtr.tds.append(etbl)
-                    rettr.append(xtr)
+                    etbl,moreptr,istd = self.table_entry( entry_object, eptr.dereference(), path, index = i )
+                    if( istd ):
+                        xtr.td(i)
+                        xtr.tds.append(etbl)
+                        rettr.append(xtr)
+                    else:
+                        pass
                 ptrlist += moreptr
 
             if( cnt < elements ):
                 xtr = vdb.dot.tr()
                 xtd = xtr.td("…")
-                xtd["colspan"] = 2
+#                xtd["colspan"] = 2
                 rettr.append(xtr)
         except:
-            print("EXCEPTION")
+#            print("EXCEPTION")
             traceback.print_exc()
-        finally:
-            print("FINALLY")
+#        finally:
+#            print("FINALLY")
 
-        print("ptrlist = '%s'" % ptrlist )
+#        print("ptrlist = '%s'" % ptrlist )
 #                        print("rettr = '%s'" % rettr )
         return ( rettr, ptrlist )
 
     # the right side of the table, that is for plain types just the value representation. Additionally it returns a list
     # of pointers (with some ports maybe?)
-    def table_entry( self, obj, fval, index = None ):
+    def table_entry( self, obj, fval, path, index = None ):
 #        print(f"table_entry( {obj}, {fval}, {elements}")
 #        moreptr = []
         rettd = vdb.dot.td()
@@ -352,14 +394,23 @@ class ftree:
             else:
                 self.value_cache[obj.get_path()] = fval
             if( real_type.code == gdb.TYPE_CODE_PTR ):
+#                print(vdb.color.color("real_type.code = '%s'" % vdb.util.gdb_type_code(real_type.code),"#ff9900" ) )
 #                print("PTR is %s" % fval )
+#                print("obj = '%s'" % obj )
+#                print("fval.dereference().type.code = '%s'" % vdb.util.gdb_type_code(fval.dereference().type.code) )
                 try:
                     # This causes an attempt to read the value. If it is unreachable memory or so, it will throw
                     rm=gdb.selected_inferior().read_memory(fval,1)
                     port = self.next_port()
 #                    moreptr.append( ( fval, obj.get_path(), port, rettd, f ) )
                     rettd["port"] = port
-                    ptrlist.append( pointer( fval, port, obj.get_path() ) )
+                    # Don't follow function pointers (or pointers to pointers, like in a VTT)
+                    if( fval.dereference().type.code == gdb.TYPE_CODE_FUNC ):
+                        pass
+                    elif( fval.dereference().type.code == gdb.TYPE_CODE_PTR and fval.dereference().type.code == gdb.TYPE_CODE_PTR ):
+                        pass
+                    else:
+                        ptrlist.append( pointer( fval, port, obj.get_path() ) )
                     self.subobject_ports[int(fval.address)] = port
                 except gdb.MemoryError:
                     rettd["bgcolor"] = color_invalid.value
@@ -382,17 +433,36 @@ class ftree:
                 rettd.content = "*" + "0x{:x}".format(int(fval.referenced_value().address))
             elif( real_type.code == gdb.TYPE_CODE_STRUCT ):
                 try:
-                    rettd.content = "STRUCT MARKED AS FINAL"
+#                    rettd.content = "STRUCT MARKED AS FINAL"
+                    rettd.content = vdb.dot.dot_escape(str(fval))
+                    port = self.next_port()
+                    rettd["port"] = port
+                    self.subobject_ports[int(fval.address)] = port
 #                    rt,ptrlist = self.table(fval,obj.get_path(),False,f)
 #                    rettd.content = rt
 #                    if( rt is None ):
 #                        rettd.content = "NONE real code %s" % vdb.util.gdb_type_code(real_type.code)
-                    return ( rettd, ptrlist )
+                    return ( rettd, ptrlist, True )
                 except:
                     traceback.print_exc()
                     pass
+            elif( real_type.code == gdb.TYPE_CODE_ARRAY ):
+#                print("real_type.range() = '%s,%s'" % real_type.range() )
+#                print("real_type.fields() = '%s'" % real_type.fields() )
+#                print("real_type.name = '%s'" % real_type.name )
+#                print("real_type.target() = '%s'" % real_type.target() )
+#                print("real_type.target().name = '%s'" % real_type.target().name )
+                if( real_type.target().name in [ "char", "unsigned char" ] ):
+                    # print them as strings
+                    rettd.content = str(fval)
+                else:
+                    s,e = real_type.range()
+                    trs,moreptr = self.array_entry(fval.dereference(),e+1,path)
+#                    rettd.content = "ARRAY OF " + real_type.target().name
+                    return ( trs, moreptr, False )
             else:
-#                print(vdb.color.color("real_type.code = '%s'" % vdb.util.gdb_type_code(real_type.code),"#ff9900" ) )
+                if( verbosity.value > 4 ):
+                    print(vdb.color.color("real_type.code = '%s'" % vdb.util.gdb_type_code(real_type.code),"#ff9900" ) )
 #                print("real_type.name = '%s'" % real_type.name )
                 if( fval is None ):
                     rettd.content = "none real code %s" % vdb.util.gdb_type_code(real_type.code)
@@ -400,12 +470,16 @@ class ftree:
                     # The caller dereferenced a char pointer, thus we try to interpret it as a string
                     # TODO let the caller tell us if we should really do it, probably we pass the pointer then and a
                     # size 
-                    rettd.content = " ".join(str(fval.address).split()[1:])
+#                    print("str(fval.address) = '%s'" % str(fval.address) )
+                    strv = str(fval.address).split()
+                    while( len(strv) > 0 and strv[0][0] != '"' ):
+                        strv = strv[1:]
+                    rettd.content = " ".join(strv)
                 else:
 #                    print("real_type = '%s'" % real_type )
 #                    print("elements = '%s'" % elements )
                     rettd.content = str(fval)
-            return ( rettd, ptrlist )
+            return ( rettd, ptrlist, True )
         except gdb.MemoryError:
             traceback.print_exc()
             pass
@@ -413,79 +487,9 @@ class ftree:
 #            print("BARK")
             traceback.print_exc()
             pass
-        return ( rettd, ptrlist )
+        return ( rettd, ptrlist, True )
 
 
-
-
-    # Expects the value object
-    def table( self, fval, name, header, f ):
-#        print("Table of %s" % fval )
-        if( fval.address in self.written_tables ):
-#            print("Table already generated once")
-            return
-        self.written_tables.add(fval.address)
-        self.print_gdbval(fval)
-        ptrlist = []
-        rt = vdb.dot.table()
-        if( header ):
-            tr = rt.tr()
-#            td = tr.td(str(fval.type))
-#            td["colspan"] = "2"
-            td = tr.td("0x{:x}".format(int(fval.address)))
-            td["colspan"] = "2"
-#        print("fval.type = '%s'" % fval.type )
-
-        rtype = fval.type.strip_typedefs()
-        if( f is not None ):
-            if( rtype.name == "char" ):
-                # It is a string, try to gdb print it 
-                xtr = rt.tr()
-                xtr.td(" ".join(str(fval.address).split()[1:]))
-                return ( rt, ptrlist )
-#        if( rtype.name == "char *" ):
-        if( rtype.code != gdb.TYPE_CODE_STRUCT ):
-            xrtype = f.type.strip_typedefs().unqualified()
-            xtr = rt.tr()
-            xtr.td("UNSUPPORTED %s" % vdb.util.gdb_type_code(rtype.code))
-            xtr.td(str(xrtype))
-            xtr.td(str(vdb.util.gdb_type_code(xrtype.code)) )
-            xtr.td(str(rtype))
-#            print("SKIPPING UNSUPPORTE TYPE CODE %s" % vdb.util.gdb_type_code(rtype.code) )
-            return ( rt, ptrlist )
-        for f in fval.type.fields():
-            rtype = f.type.strip_typedefs()
-#            print("Tf.name = '%s'" % f.name )
-            tr=vdb.dot.tr()
-            if( f.is_base_class ):
-                tdval = fval.cast(f.type)
-                td,moreptr = self.table(tdval,name + "::" + str(f.type),False,f)
-                if( len(td.trs) != 0 ):
-                    td = tr.td_raw(td)
-                    td["colspan"] = 2
-                else:
-                    tr = None
-                ptrlist += moreptr
-                traceback.print_exc()
-            elif( not hasattr(f,"bitpos") ):
-                # static field
-                continue
-            elif( f.type.code == gdb.TYPE_CODE_UNION ):
-#                print("SKIPPING UNION, CURRENTLY NOT SUPPORTED")
-                continue
-            else:
-#                if( f.name is None ):
-#                    self.print_gdbfield(f)
-#                print("f.name = '%s'" % f.name )
-                tdval = fval[f.name]
-                tr.td(f.name)
-#                td,moreptr = self.table_entry(name + "::" + str(f.name),tdval, f)
-                td,moreptr = self.table_entry(name + "::{" + str(rtype) + "}" + str(f.name),tdval, f)
-                ptrlist += moreptr
-                tr.tds.append(td)
-            if( tr is not None ):
-                rt.add(tr)
-        return ( rt, ptrlist )
 
 
     def print_gdbfield( self, f ):
@@ -522,7 +526,8 @@ class ftree:
             pass
 
     def check_for_array( self, ptr ):
-#        print(f"check_for_array( {ptr} )")
+        if( verbosity.value > 3 ):
+            print(f"check_for_array( {ptr} )")
         for are,action in self.array_element_filter:
 #            print("are = '%s'" % are )
             m = re.findall(are,ptr.path)
@@ -543,23 +548,52 @@ class ftree:
                     elements = self.value_cache.get(action,None)
 #                    print("elements = '%s'" % elements )
                 return elements
+    
+    def apply_cast_action( self, val, m, path, action ):
+        if( m ):
+            newtype = action(m,val,path)
+            if( newtype is not None ):
+                newtype = newtype.strip_typedefs()
+                if( newtype.code == gdb.TYPE_CODE_PTR ):
+                    print("Downcasting 0x%x to %s" % (int(val),str(newtype)) )
+                    val = val.cast(newtype)
+                else:
+                    print("Downcasting @0x%x to %s" % (int(val.address),str(newtype)) )
+                    # Not a pointer, lets see if casting works better if we do it through a pointer
+                    valptr = val.address
+                    nvalptr = valptr.cast(newtype.pointer())
+                    val = nvalptr.dereference()
+#                    val = val.cast(newtype)
+                return val
+        return None
+
+    def try_member_cast(  self, val, path ):
+        if( verbosity.value > 4 ):
+            print(f"try_member_cast( @0x{int(val.address):x}, {path})")
+#        print("path = '%s'" % path )
+        for df,action in self.member_cast_filter:
+            m = re.findall( df, path )
+            ret = self.apply_cast_action(val,m,path,action)
+            if( ret is not None ):
+                return ret
+        return None
 
     def try_node_downcast( self, val, path ):
+        xtype = val.type.target().strip_typedefs()
+        if( xtype.code == gdb.TYPE_CODE_PTR ):
+            xtype = xtype.target().strip_typedefs()
+        if( verbosity.value > 3 ):
+            print("val.type = '%s'" % val.type )
+            print("val.type.target() = '%s'" % val.type.target() )
+            print(f"try_node_downcast(0x{int(val):x}, {xtype})")
 #        print("path = '%s'" % path )
-#        print("val.type = '%s'" % val.type )
 #        print("val = '%s'" % val )
         for df,action in self.node_downcast_filter:
 #            print("df = '%s'" % df )
-#            print("str(val.type) = '%s'" % str(val.type) )
-            m = re.findall( df, str(val.type) )
-            if( m ):
-                newtype = action(m,val,path)
-                if( newtype is not None ):
-                    newtype = newtype.strip_typedefs()
-                    print("Downcasting 0x%x to %s" % (int(val),str(newtype)) )
-                    val = val.cast(newtype)
-                    break
-
+            m = re.findall( df, str(xtype) )
+            ret = self.apply_cast_action(val,m,path,action)
+            if( ret is not None ):
+                return ret
         return val
 
     def shorten( self, s ):
@@ -567,9 +601,9 @@ class ftree:
             return s
         s = vdb.shorten.symbol(s)
         s = vdb.color.colors.strip_color(s)
-        if( len(s) > 30 ):
-            s0 = s[:15]
-            s1 = s[-15:]
+        if( len(s) > (shorten_head.value + shorten_tail.value)+1 ):
+            s0 = s[:shorten_head.value]
+            s1 = s[-shorten_tail.value:]
             s = s0 + "…" + s1
         return s
 
@@ -601,33 +635,81 @@ class ftree:
 
 
     # expects a pointer to the object in val. Add code to support non-pointers too for cases where we pass a stack local
-    def xtree (self, val, level, limit, graph, path = "", elements = None ):
+    def ftree (self, val, level, limit, graph, path = "", elements = None ):
+
+        # When someone passes a non-pointer try to make it one
+        if( level == 0 and val.type.code != gdb.TYPE_CODE_PTR ):
+            return self.ftree( val.address, level, limit, graph, path, elements )
 
         if( int(val) in self.visited ):
             return ([],0,[])
         self.visited.add(int(val))
 
-#        print("########### XTREE %s" % val )
 
+
+#        print("########### ftree %s" % val )
+
+        oval = val
         val = self.try_node_downcast(val,path)
+        dcval = val
+
+        ptrval = int(val)
+        xs = self.nodes[ptrval]
+        if( len(xs) > 0 ):
+            for x in xs:
+                self.edge_redirects[ptrval] = x[2].name
+#                print("x[2].name = '%s'" % x[2].name )
+            return None
+
 
         dval = val.dereference()
         xl = vdb.layout.object_layout( value = dval )
 
+#        print("val = '%s'" % val )
+#        print("val.type = '%s'" % val.type )
+#        print("xl.type = '%s'" % xl.type )
+#        print("xl.vtype = '%s'" % xl.vtype )
+#        print("xl.vtt = '%s'" % xl.vtt )
+        val = val.cast(xl.type.pointer())
+        dval = val.dereference()
+#        print("val = '%s'" % val )
+#        print("?? val.type = '%s'" % val.type )
+
+#        print("path = '%s'" % path )
+#        print("xl.object.get_path() = '%s'" % xl.object.get_path() )
+
 #        print("xl.object = '%s'" % xl.object )
 
-        rl,_,ptrlist = self.xtable(xl.object,dval)
+        rl,_,ptrlist = self.xtable(xl.object,dval,path)
 #        print("rl = '%s'" % rl )
 
         n = graph.node(int(val))
         n.table = vdb.dot.table()
 
+        if( elements is None ):
+            self.nodes[ptrval:ptrval+int(val.type.target().sizeof)] = n
         # prepare header tr
         htr = vdb.dot.tr()
         htd = htr.td("0x{:x}".format(int(val)))
 
         ttr = vdb.dot.tr()
         ttd = ttr.td(self.shorten(xl.object.type.name))
+#        print("xl.type = '%s'" % xl.type )
+#        print("xl.vtype = '%s'" % xl.vtype )
+
+#        print("dval.type = '%s'" % dval.type )
+#        print("dval.dynamic_type = '%s'" % dval.dynamic_type )
+
+#        print("oval.type = '%s'" % oval.type )
+#        print("oval.dynamic_type = '%s'" % oval.dynamic_type )
+        # downcast returned something else
+        if( oval.type != dcval.type ):
+            ttd["bgcolor"] = color_dcast.value
+        
+        # The vcast mechanism had to fix something
+        elif( oval.type != val.type ):
+            ttd["bgcolor"] = color_vcast.value
+
         if( elements is not None ):
             ttd.content += f"[{elements}]"
 
@@ -635,13 +717,18 @@ class ftree:
 
         # No subobjects etc. so the best we can do is probably to get a table entry for it
         if( elements is not None ):
-            trs,moreptr = self.array_entry(xl.object,val.dereference(),elements)
+            print("elements = '%s'" % elements )
+            trs,moreptr = self.array_entry(dval,elements,path)
             n.table.trs += trs
             ptrlist += moreptr
+            self.nodes[ptrval:ptrval+int(dval.type.sizeof)*elements] = n
         elif( len(n.table.trs) == 0 ):
-            td,moreptr = self.table_entry(xl.object,val.dereference())
-            n.table.tr().tds.append(td)
-            ptrlist += moreptr
+            td,moreptr,istd = self.table_entry(xl.object,val.dereference(),path)
+            if( istd ):
+                n.table.tr().tds.append(td)
+                ptrlist += moreptr
+            else:
+                pass
 
         # try fixing table layout to have all tr equal td
         tdmax = self.fillup_trs(n.table.trs,0)
@@ -653,132 +740,16 @@ class ftree:
 
         n.table.trs = [ htr, ttr ] + n.table.trs
 
+
         for p in ptrlist:
 
-            elements = self.check_for_array(p)
-#            print("elements = '%s'" % elements )
+            pelements = self.check_for_array(p)
+#            print("pelements = '%s'" % pelements )
 
-            self.xtree( p.val, level+1, limit, graph, path = path + " -> " + p.path, elements = elements )
-            n.edge(int(p.val), srcport = p.src_port)
-
-    # expects a pointer to the object in val. Add code to support non-pointers too for cases where we pass a stack local
-    def ftree (self, val, level, limit, graph, f = None, pval = None, fullname = "" ):
-        try:
-#            self.value_cache.clear()
-#            self.print_gdbval(val)
-
-            if( level >= limit or val is None ):
-                return None
-            val = guess_vptr_type(val)
-#            self.print_gdbval(val)
-            if( int(val) in self.visited ):
-                return None
-            self.visited.add(int(val))
-            ptrval = int(val)
-            if( ptrval ):
-                xs = self.nodes[int(ptrval)]
-                if( len(xs) > 0 ):
-                    for x in xs:
-#                        n = graph.node(ptrval)
-#                        n.edge(x[2].name)
-#                        n.plainlabel = "subobject"
-                        self.edge_redirects[ptrval] = x[2].name
-
-#                        print("ptrval = '%s'" % ptrval )
-#                        for _,_,n in self.nodes:
-#                            print("n.name = '%s'" % n.name )
-#                            for e in n.edges:
-#                                print("e.to = '%s'" % e.to )
-#                                if( e.to == ptrval ):
-#                                    e.to = x[2].name
-                        return None
-#                print("xs = '%s'" % xs )
-
-            val = self.try_node_downcast(val,f,fullname)
-            tbl,ptrlist = self.table( val.dereference(),str(val.type), True,f)
-            n = graph.node(ptrval)
-            n.table = tbl
-
-            if( ptrval ):
-#                print("val = '%s'" % val )
-#                print("ptrval = '%s'" % int(ptrval) )
-                self.nodes[int(ptrval):int(ptrval)+int(val.type.target().sizeof)] = n
-#            print("self.nodes = '%s'" % self.nodes )
-#            print("self.value_cache = '%s'" % self.value_cache )
-
-            while( len(ptrlist) > 0 ):
-#                print("len(ptrlist) = '%s'" % len(ptrlist) )
-                head = ptrlist[0]
-                ptrlist = ptrlist[1:]
-                ptr,name,port,ptd,pf = head
-
-                try:
-                    elements = self.check_for_array(name,ptr)
-                    if( elements is not None ):
-                        xtable = vdb.dot.table()
-                        ptd.content = xtable
-
-                        over = array_elements.elements
-                        if( len(over) == 0 ):
-                            over = range(0,elements)
-
-                        printed_elements = set()
-                        cnt = 0
-                        elements = int(elements)
-                        for i in over:
-                            if( i < 0 ):
-                                i = elements + i
-                            if( i < 0 ):
-                                continue
-                            if( i >= elements ):
-                                continue
-                            if( i in printed_elements ):
-                                continue
-                            printed_elements.add(i)
-
-                            if( cnt != i ):
-                                xtr = xtable.tr()
-                                xtd = xtr.td("…")
-                                xtd["colspan"] = 2
-                                cnt = i
-                            cnt+=1
-
-                            eptr = ptr + i
-                            etbl,moreptr = self.table_entry( f"{name}[{i}]" , eptr.dereference(),pf )
-                            xtr = xtable.tr()
-                            xtr.td(i)
-                            xtd = xtr.tds.append(etbl)
-
-                            ptrlist += moreptr
-                        if( cnt < elements ):
-                            xtr = xtable.tr()
-                            xtd = xtr.td("…")
-                            xtd["colspan"] = 2
-
-#                        print("THIS IS AN ARRAY")
-#                        print("elements = '%s'" % elements )
-#                        print("type(ptr) = '%s'" % type(ptr) )
-#                        print("ptr = '%s'" % ptr )
-#                        print("ptr = '%s'" % ptr )
-                    else:
-                        self.ftree(ptr,level+1,limit,graph,pf,val,fullname + " " + name)
-#                        print("ptr = '%s'" % ptr )
-#                        print("type(ptr) = '%s'" % type(ptr) )
-                        
-                        n.edge(self.edge_redirects.get(int(ptr),int(ptr)),srcport = "%s:e" % port, tgtport = self.subobject_ports.get(int(ptr),None))
-                except:
-                    traceback.print_exc()
-                    pass
-
-        except:
-            traceback.print_exc()
-            pass
-
-#        if( f is None ):
-#            for n,v in self.value_cache.items():
-#                print("n = '%s'" % n )
-
-        return None
+            self.ftree( p.val, level+1, limit, graph, path = path + " -> " + p.path, elements = pelements )
+#            print("p.val = '%s'" % int(p.val) )
+#            print("self.subobject_ports = '%s'" % self.subobject_ports )
+            n.edge(self.edge_redirects.get(int(p.val),int(p.val)), srcport = p.src_port, tgtport = self.subobject_ports.get(int(p.val),None))
 
 
 class cmd_ftree (vdb.command.command):
@@ -842,7 +813,7 @@ class cmd_ftree (vdb.command.command):
 #            print("val['refcount'] = '%s'" % val['refcount'] )
 #            return
 #            f.ftree (val, 0,limit,g )
-            f.xtree( val, 0, limit, g )
+            f.ftree( val, 0, limit, g )
 
 #            xl = vdb.layout.object_layout(val.type,val)
 #            return

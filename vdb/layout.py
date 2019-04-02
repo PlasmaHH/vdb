@@ -69,33 +69,6 @@ Plan:
 
 """
 
-
-def fixup_intparam( ip ):
-    return ip.group(1)
-
-fxre = re.compile("([0-9]+)ul")
-
-def fixup_type( t ):
-    return fxre.sub(fixup_intparam,t)
-
-def guess_vptr_type( val ):
-    """ Takes a pointer and tries to figure out if it points to an object that has a virtual table and then returns the
-    "real" type according to that virtual table. This is to workaround some gdb bug where the dynamic type is
-    inaccessible"""
-    # otherwise gdb prints potentially some more text about it
-    try:
-        ptrval = int(val)
-        vptr = gdb.parse_and_eval( f"*(void**)({ptrval})" )
-        vpx = re.search("vtable for (.*?)\+[0-9]*>",str(vptr))
-        if( vpx ):
-            gdb_vptype=gdb.lookup_type(fixup_type(vpx.group(1)))
-            val = val.cast(gdb_vptype.pointer())
-    except:
-        pass
-#        traceback.print_exc()
-    return ( val, val.type )
-
-
 class object:
 
     def __init__( self, gtype, field = None ):
@@ -117,6 +90,12 @@ class object:
         self.final = False
         self.parent = None
         pass
+
+    def get_base( self ):
+        if( self.parent ):
+            return self.parent.get_base()
+        else:
+            return self
 
     def get_path( self ):
         path = ""
@@ -167,7 +146,6 @@ class object_layout:
         if( type is None ):
             type = value.type
         self.type = type
-        self.bytes = list(itertools.repeat(byte_descriptor(None,None,None),self.type.sizeof))
         self.value = value
         self.vtt = get_vtt_name(self.type)
         self.vtype = None
@@ -179,9 +157,11 @@ class object_layout:
 #        print("self.value.dynamic_type = '%s'" % self.value.dynamic_type )
         if( self.value is not None ):
             self.type = self.value.dynamic_type
-            _,self.vtype = guess_vptr_type( self.value )
+            self.vtype = vdb.util.guess_vptr_type( self.value.address ).type.target()
+
             if( self.type == self.value.dynamic_type and self.type != self.vtype ):
                 self.type = self.vtype
+        self.bytes = list(itertools.repeat(byte_descriptor(None,None,None),self.type.sizeof))
 #        print("self.vtype = '%s'" % self.vtype )
 
 #        print("self.type == type = '%s'" % (self.type == type ))
@@ -199,6 +179,7 @@ class object_layout:
 
 
         self.object = object(self.type)
+        self.object.offset = 0
         self.object.name = str(self.type)
         # chose how to print the scope of the outer thing 
         if( self.value is not None ):
@@ -245,7 +226,7 @@ class object_layout:
                     ret.append(f)
         except:
             self.final = True
-            print("self = '%s'" % self )
+#            print("self = '%s'" % self )
             pass
 
         return ret
@@ -258,9 +239,11 @@ class object_layout:
                 continue
 #            print("")
             so = object(f.type,f)
+            so.offset = offset
 #            print("parent = '%s'" % parent )
             so.parent = parent
             parent.subobjects.append(so)
+#            print(" . . . . . . . . . . . . . ")
 #            print("so.name = '%s'" % so.name )
 #            print("so.type = '%s'" % so.type )
 #            print("so.type.strip_typedefs() = '%s'" % so.type.strip_typedefs() )
@@ -290,6 +273,7 @@ class object_layout:
                 # empty subobjects can sometimes occupy space too
                 if( len(f.type.fields()) == 0 ):
                     so.final = True
+#                    print("STRUCT LAYOUT so = '%s'" % so )
                 else:
                     self.parse( so.type, so, so.byte_offset )
             elif( code == gdb.TYPE_CODE_UNION ):
@@ -298,6 +282,7 @@ class object_layout:
             else:
 #                print("so.type.code = '%s'" % so.type.code )
                 so.final = True
+#                print("LAYOUT ELSE so = '%s'" % so )
 #            print("so = '%s'" % so )
 
 

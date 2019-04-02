@@ -3,6 +3,9 @@
 
 import gdb
 
+import re
+import traceback
+
 def nstr( s ):
     if( s is None ):
         return ""
@@ -105,5 +108,32 @@ gdb.TYPE_CODE_INTERNAL_FUNCTION : ".TYPE_CODE_INTERNAL_FUNCTION",
 def gdb_type_code( code ):
     return code_dict.get(code,code)
 
+
+def fixup_intparam( ip ):
+    return ip.group(1)
+
+fxre = re.compile("([0-9]+)ul")
+
+def fixup_type( t ):
+    return fxre.sub(fixup_intparam,t)
+
+
+
+def guess_vptr_type( val ):
+    """ Takes a pointer and tries to figure out if it points to an object that has a virtual table and then returns the
+    "real" type according to that virtual table. This is to workaround some gdb bug where the dynamic type is
+    inaccessible"""
+    # otherwise gdb prints potentially some more text about it
+    try:
+        ptrval = int(val)
+        vptr = gdb.parse_and_eval( f"*(void**)({ptrval})" )
+        vpx = re.search("vtable for (.*?)\+[0-9]*>",str(vptr))
+        if( vpx ):
+            gdb_vptype=gdb.lookup_type(fixup_type(vpx.group(1)))
+            val = val.cast(gdb_vptype.pointer())
+        return val
+    except:
+        traceback.print_exc()
+        return val
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

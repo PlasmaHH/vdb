@@ -399,6 +399,27 @@ This shows the layout in an extended format, one line per byte.
 
 ## ftree
 The ftree module allows for creation of dotty files that create a tree (or directed graph) out of a datastructure.
+
+For example, the following structure filled with life 
+
+```c++
+struct xtree
+{
+	std::string str{"HELLO WORLD"};
+	std::string& xstr = str;
+	std::unordered_map<int,int> u;
+	std::vector<int> v { 1,2,3,4,5,6,7,8 };
+	std::vector<std::string> sv { "1","2","3","4","5","6" };
+	std::array<double,13> a;
+	std::map<int,int> m;
+};
+```
+
+could be displayed as
+
+![](img/ftree.0.png)
+
+
 ### Commands
 
 #### `ftree`
@@ -410,10 +431,24 @@ each invocation.
 After the dot file is created, the generated filename will be fed to the string format in `vdb-ftree-dot-command` and
 the created command will be excuted, usually to display the generated file directly.
 
-Pointers will be displayed with their value, and a dot edge drawn to the object it points to. When the memory is
-inaccessible, the background of that table cell will be drawn in the color configured in `vdb-ftree-colors-invalid`.
-Various other kinds of exceptions generated during the creation of the target node can unfortunately also lead to that
+Pointers will be displayed with their value, and a dot edge drawn to the object it points to. Cells will be colored
+according to the following settings:
+
+* `vdb-ftree-colors-invalid` When the memory is inaccessible, the background of that table cell will be this color. Various other kinds of exceptions generated during the creation of the target node can unfortunately also lead to that
 colour.
+* `vdb-ftree-colors-union` When this field is a union, it will have this colour. This means that all the direct
+  subfields share the same memory.
+* `vdb-ftree-colors-virtual-cast` is the color of a node when the pointer was pointing to a base class but we determined
+  it really is a derived object.
+* `vdb-ftree-colors-down-cast` When the downcast filter mechanism decided to change the nodes type, it will be colored
+  in this color. Depending on the actual circumstances this and the virtual cast color can compete with each other and
+  only one wins.
+
+Additionally the following settings influence the generated graph:
+
+* `vdb-ftree-shorten-head` When the type string in the nodes header is too long, it will be shortened and this amount of characters will be taken from the type names head
+* `vdb-ftree-shorten-tail` Same as head, but for tail
+* `vdb-ftree-verbosity` Setting this to  4 or 5 will create some debug output about the type matching for the cast and array filters. Usually you want to set this to fine tune the regex.
 
 ### Special Filter Functionality
 
