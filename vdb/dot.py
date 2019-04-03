@@ -24,6 +24,9 @@ class td:
         self.content = content
         self.attributes = {}
 
+    def set( self, nc ):
+        self.content = dot_escape(nc)
+
     def write(self,f):
         f.write("<td ")
         write_attributes(f,self.attributes)

@@ -16,17 +16,13 @@ import string
 import traceback
 import re
 
-def set_colors( cfg ):
-    cfg.elements = cfg.value.split(",")
 
 color_head       = vdb.config.parameter("vdb-hexdump-colors-header",                "#ffa",    gdb_type = vdb.config.PARAM_COLOUR)
 
 default_len = vdb.config.parameter("vdb-hexdump-default-len",8*16)
 
 
-color_list = vdb.config.parameter("vdb-hexdump-colors-symbols", "#f00,#0f0,#00f,#ff0,#f0f,#0ff" ,on_set  = set_colors)
-set_colors(color_list)
-
+color_list = vdb.config.parameter("vdb-hexdump-colors-symbols", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,on_set  = vdb.config.split_colors)
 
 
 symre=re.compile("0x[0-9a-fA-F]* <([^+]*)(\+[0-9]*)*>")

@@ -25,6 +25,8 @@ def guess_gdb_type( p ):
         return gdb.PARAM_INTEGER
     return gdb.PARAM_STRING
 
+def split_colors( cfg ):
+    cfg.elements = cfg.value.split(";")
 
 # In case the type is our artifical type colour, it will translate to gdb string and we check internally for a colour
 # string
@@ -50,6 +52,11 @@ class parameter(gdb.Parameter):
         self.value = default
         self.previous_value = self.value
         self.on_set = on_set
+        try:
+            if( self.on_set is not None ):
+                self.on_set(self)
+        except:
+            pass
 
     def check_colour( self ):
         x = vdb.color.color("",self.value)

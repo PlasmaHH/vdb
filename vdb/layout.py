@@ -4,6 +4,7 @@
 import vdb
 import vdb.shorten
 import vdb.util
+import vdb.cache
 
 import gdb
 
@@ -89,7 +90,27 @@ class object:
             self.is_base_class = False
         self.final = False
         self.parent = None
-        pass
+        # Don't clone that one
+        self.index = None
+
+    def clone( self ):
+        ret = object( self.type, None )
+        ret.type          = self.type
+        ret.size          = self.size
+        ret.offset        = self.offset
+        ret.field         = self.field
+        ret.name          = self.name
+        ret.bit_offset    = self.bit_offset
+        ret.byte_offset   = self.byte_offset
+        ret.is_base_class = self.is_base_class
+        ret.final         = self.final
+        ret.parent        = self.parent
+
+        for so in self.subobjects:
+            cl = so.clone()
+            cl.parent = ret
+            ret.subobjects.append( cl )
+        return ret
 
     def get_base( self ):
         if( self.parent ):
@@ -97,7 +118,7 @@ class object:
         else:
             return self
 
-    def get_path( self ):
+    def get_path( self, recursive = False ):
         path = ""
         if( self.parent is not None ):
             if( self.name is None ):
@@ -105,24 +126,30 @@ class object:
             else:
                 xname = self.name
 
-            return self.parent.get_path() + "::{" + str(self.type.strip_typedefs()) + "}::" + xname
+            path = self.parent.get_path(True) + "::{" + str(self.type.strip_typedefs()) + "}::" + xname
         return path
 
     def __str__(self):
-        s = f"{self.type}[{self.size}] : {self.name}, @{len(self.subobjects)},b{self.is_base_class}"
+        s = f"{self.type}[{self.size}] : {self.name}, @{len(self.subobjects)},b{self.is_base_class} [{self.index}]"
         return s
+
+cgdb = vdb.cache.execute_cache()
 
 def get_vtt_name( atype ):
     VTT=None
     try:
         cmd = "p &'VTT for %s'" % (atype.name)
 #        print("cmd = '%s'" % cmd )
-        ofresult = gdb.execute(cmd,False,True)
+#        ofresult = gdb.execute(cmd,False,True)
+        global cgdb
+        ofresult = cgdb.execute(cmd,False,True)
+#        print("BARK")
         g = re.search("(0x[a-fA-F0-9]*) <VTT for",ofresult)
 #        print("g = '%s'" % g )
         VTT=g.group(1)
 #        print("VTT = '%s'" % VTT )
     except:
+#        traceback.print_exc()
         pass
     return VTT
 
@@ -132,7 +159,9 @@ def get_vtt_entry( vtt, offset ):
 #    print("offset = '%s'" % offset )
     cmd="p ((uint64_t*)(%s%s))[0]" % (vtt,offset)
 #    print("cmd = '%s'" % cmd )
-    ofresult = gdb.execute(cmd,False,True)
+#    ofresult = gdb.execute(cmd,False,True)
+    global cgdb
+    ofresult = cgdb.execute(cmd,False,True)
 #    print("ofresult = '%s'" % ofresult )
     g = re.search("= ([0-9]*)",ofresult)
     newoffset=g.group(1)
@@ -140,6 +169,7 @@ def get_vtt_entry( vtt, offset ):
     offset = int(newoffset)
     return offset
 
+object_cache = { }
 
 class object_layout:
     def __init__( self, type = None, value = None ):
@@ -177,6 +207,11 @@ class object_layout:
 #        print("self.type is self.vtype = '%s'" % (self.type is self.vtype ))
 #        print("self.value.dynamic_type is self.vtype = '%s'" % (self.value.dynamic_type is self.vtype ))
 
+        global object_cache
+        self.object = object_cache.get(str(self.type),None)
+        if( self.object is not None ):
+            self.object = self.object.clone()
+            return
 
         self.object = object(self.type)
         self.object.offset = 0

@@ -13,9 +13,15 @@ import traceback
 
 default_condensed = vdb.config.parameter("vdb-pahole-default-condensed",False)
 
+
+
+
+color_list = vdb.config.parameter("vdb-pahole-colors-members", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,on_set = vdb.config.split_colors)
+
+
+
 def print_pahole( layout, condense ):
 #        print("PRINT RESULT")
-    color_list = ["#f00","#0f0","#00f","#ff0","#f0f","#0ff" ]
     cidx = -1
     if( condense ):
         cidx = -2
@@ -50,8 +56,8 @@ def print_pahole( layout, condense ):
         if( ent != current_entity ):
             current_entity = ent
             cidx += 1
-            cidx %= len(color_list)
-        cos = vdb.color.color(f"[{cnt:3d}]",color_list[cidx])
+            cidx %= len(color_list.elements)
+        cos = vdb.color.color(f"[{cnt:3d}]",color_list.elements[cidx])
         if( bd.prefix is not None ):
 #            print("bd.type = '%s'" % bd.type )
 #            print("type(bd.type) = '%s'" % type(bd.type) )
@@ -65,7 +71,7 @@ def print_pahole( layout, condense ):
             txt = f"{ename} {ent}"
             if( txt != previous_text ):
                 if( previous_text is not None ):
-                    xcos = vdb.color.color(f"[{start:3d}-{end:3d}]",color_list[cidx])
+                    xcos = vdb.color.color(f"[{start:3d}-{end:3d}]",color_list.elements[cidx])
                     print(f"{xcos} {previous_text}")
                 start = cnt
                 previous_text = txt
@@ -75,9 +81,9 @@ def print_pahole( layout, condense ):
         cnt += 1
 
     cidx += 1
-    cidx %= len(color_list)
+    cidx %= len(color_list.elements)
     if( condense ):
-        xcos = vdb.color.color(f"[{start:3d}-{end:3d}]",color_list[cidx])
+        xcos = vdb.color.color(f"[{start:3d}-{end:3d}]",color_list.elements[cidx])
         print(f"{xcos} {previous_text}")
 
 class cmd_pahole(vdb.command.command):

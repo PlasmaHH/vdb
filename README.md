@@ -40,6 +40,7 @@ This is work in progress and not yet ready for real world usage, it is more of a
 	* [asm](#asm)
 		* [Commands](#commands-4)
 			* [`dis`](#dis)
+			* [`dis/<context>`](#discontext)
 			* [`dis/d`](#disd)
 			* [`dis/r`](#disr)
 	* [grep](#grep)
@@ -228,13 +229,13 @@ where memory will not be accessible anymore, it stops.
 ![](img/hd.png)
 
 If it knows the memory belongs to some symbol, it will colour it in a specific colour and annotate the symbol at the
-side.
+side. You can control the color with the semicolon separated list of colours in the `vdb-hexdump-colors-symbols` setting.
 
 The setting
 ```
 vdb-hexdump-colors-header
 ```
-controls the colour of the header (the one that should make it a bit simpler to find certain bytes)
+controls the colour of the header (the one that should make it a bit simpler to find certain bytes). 
 ## asm
 This is a disassembler module
 
@@ -278,6 +279,8 @@ vdb-asm-colors-mnemonic
 vdb-asm-colors-args
 ```
 
+Additionally `vdb-asm-colors-jumps` is a semicolon separated list of colours to use for the jump tree view.
+
 If you set the addr colour to `None` (default) it will use the standard pointer colouring. If you set the mnemonic
 colouring to `None` (default) it will use a list of regexes to check for which colouor to chose for which mnemonic. Same
 for the prefix.
@@ -290,6 +293,12 @@ encountered while parsing the current listing.
 
 In case your tree view is very wide, you might
 like setting the option `vdb-asm-tree-prefer-right` to make the arrows prefer being more on the right side.
+#### `dis/<context>`
+This limits the displayed disassembly to the context of the passed amount of lines around the `$rip` marker. Should
+there be no such marker, this has no special effect. Note that the whole disassembly will be generated, filtered, and
+rendered (at least partially), just the output of the other lines suppressed, so if you want this for speedup, this
+isn't for you. The benefit however is that the jump tree view will be completely fine.
+
 #### `dis/d`
 Outputs the disassembler just like the plain format, additionally creates a `dis.dot` file that will contain a dotty
 representation of what we think might be basic blocks and (conditional) jump instructions. It will also try to start

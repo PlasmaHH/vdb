@@ -88,11 +88,8 @@ asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnprT" )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
 
-def set_colors( cfg ):
-    cfg.elements = cfg.value.split(",")
 
-color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00,#0f0,#00f,#ff0,#f0f,#0ff" ,on_set  = set_colors)
-set_colors(color_list)
+color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,on_set = vdb.config.split_colors)
 
 ix = -1
 def next_index( ):
@@ -395,17 +392,28 @@ ascii mockup:
         self.finish()
 
 
-    def to_str( self, showspec = "maodbnprT" ):
+    def to_str( self, showspec = "maodbnprT", context = None ):
         self.lazy_finish()
         hf = self.function
         if( shorten_header.value ):
             hf = vdb.shorten.symbol(hf)
-        ret = ""
-        ret += f"Instructions in range 0x{self.start:x} - 0x{self.end:x} of {hf}\n"
+        ret = []
+        marked_line = None
+        cnt = 0
+        context_strt = None
+        context_end = None
+
+
+
+        ret.append( f"Instructions in range 0x{self.start:x} - 0x{self.end:x} of {hf}")
         for i in self.instructions:
             if( "m" in showspec ):
                 if( i.marked ):
                     line = vdb.color.color(next_marker.value,color_marker.value)
+                    marked_line = cnt
+                    if( context is not None ):
+                        context_start = marked_line - context + 1
+                        context_end = marked_line + context + 2
                 else:
                     line = " " * len(next_marker.value)
             if( "a" in showspec ):
@@ -469,12 +477,21 @@ ascii mockup:
                         line += vdb.shorten.symbol(i.target_name)
 
 
-            ret += line + "\n"
+            ret.append(line)
+            cnt += 1
+            if( context is not None and context_end is not None and context_end <= cnt ):
+                break
 
-        return ret
+        if( marked_line is not None and context is not None ):
+            if( context_start < 0 ):
+                context_start = 0
+            ret = ret[context_start:context_end]
 
-    def print( self, showspec = "maodbnprT" ):
-        print(self.to_str(showspec))
+
+        return "\n".join(ret)
+
+    def print( self, showspec = "maodbnprT", context = None ):
+        print(self.to_str(showspec, context))
 
     def color_dot_relist( self, s, l ):
         for r,c in l:
@@ -766,9 +783,13 @@ def parse_from( arg ):
 
 def disassemble( argv ):
     dotty = False
+    context = None
 
     if( len(argv) > 0 ):
-        if( argv[0] == "/d" ):
+        if( argv[0][0] == "/" and argv[0][1:].isdigit() ):
+            context = int(argv[0][1:])
+            argv=argv[1:]
+        elif( argv[0] == "/d" ):
             dotty = True
             argv=argv[1:]
         elif( argv[0] == "/r" ):
@@ -778,7 +799,7 @@ def disassemble( argv ):
 
 
     listing = parse_from(" ".join(argv))
-    listing.print(asm_showspec.value)
+    listing.print(asm_showspec.value, context)
     if( dotty ):
         g = listing.to_dot(asm_showspec_dot.value)
         g.write("dis.dot")
