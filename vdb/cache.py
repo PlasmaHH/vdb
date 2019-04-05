@@ -59,6 +59,9 @@ class cache_entry:
         r = f"{self.hits}h,{self.misses}m=>{ratio:.2f}@{len(self.cache)}"
         return r
 
+class cache_result:
+    def __init__(self):
+        self.result = None
 
 class execute_cache:
     class result:
@@ -98,7 +101,7 @@ def lookup_type( name ):
         type_cache.hits += 1
     sw.stop()
     add_time(sw.get(),"gdb.lookup_type")
-    sw.print("gdb.lookup_type(…) took {}s")
+#    sw.print("gdb.lookup_type(…) took {}s")
     return t
 
 re_cache = cache_entry()

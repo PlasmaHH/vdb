@@ -37,6 +37,11 @@ color_union    = vdb.config.parameter("vdb-ftree-colors-union","#ffff66",gdb_typ
 color_vcast    = vdb.config.parameter("vdb-ftree-colors-virtual-cast","#ccaaff",gdb_type = vdb.config.PARAM_COLOUR)
 color_dcast    = vdb.config.parameter("vdb-ftree-colors-down-cast","#aaffaa",gdb_type = vdb.config.PARAM_COLOUR)
 color_ptrblack = vdb.config.parameter("vdb-ftree-colors-blacklist-pointer","#ff9900",gdb_type = vdb.config.PARAM_COLOUR)
+color_limit    = vdb.config.parameter("vdb-ftree-colors-limited","#88aaff",gdb_type = vdb.config.PARAM_COLOUR)
+color_pp       = vdb.config.parameter("vdb-ftree-colors-pretty-print","#76d7c4",gdb_type = vdb.config.PARAM_COLOUR)
+color_varname  = vdb.config.parameter("vdb-ftree-colors-variable-name",None,gdb_type = vdb.config.PARAM_COLOUR)
+
+
 shorten_head   = vdb.config.parameter("vdb-ftree-shorten-head",15 )
 shorten_tail   = vdb.config.parameter("vdb-ftree-shorten-tail",15 )
 color_arrows   = vdb.config.parameter("vdb-ftree-color-arrows",True )
@@ -129,6 +134,30 @@ def std_tree_node( m, val, path ):
 
     return None
 
+def std_list_node( m, val, path ):
+#    print("m = '%s'" % m )
+#    print("path = '%s'" % path )
+    xm = re.findall( "{(std::__cxx11::_List_base<[^}]*>)::_List_impl}::_M_impl", path )
+#    print("xm = '%s'" % xm )
+    if( len(xm) > 0 ):
+
+        alloc_type = vdb.cache.lookup_type(xm[-1] + "::_Node_alloc_type")
+
+        if( alloc_type is not None ):
+#            print("alloc_type = '%s'" % alloc_type )
+            alloc_type = alloc_type.strip_typedefs()
+#            print("alloc_type = '%s'" % alloc_type )
+            nm = re.match("^std::allocator<(.*)>$",alloc_type.name)
+            if( nm is not None ):
+
+#                print("nm = '%s'" % nm )
+                node_type = vdb.cache.lookup_type(nm.group(1))
+                return node_type.pointer()
+
+    return None
+
+
+
 def std_tree_member( m, val, path ):
 #    print("m = '%s'" % m )
 #    print("val = '%s'" % val )
@@ -144,6 +173,37 @@ def std_tree_member( m, val, path ):
             return node_type
 
     return None
+
+def std_list_member( m, val, path ):
+#    print("m = '%s'" % m )
+#    print("val = '%s'" % val )
+#    print("path = '%s'" % path )
+
+    xm = re.findall( "{std::__cxx11::_List_base<([^}]*)>::_List_impl}::_M_impl", path )
+#    print("xm = '%s'" % xm )
+    if( len(xm) > 0 ):
+        vt = xm[-1]
+        ix = vt.find("<")
+        if( ix != -1 ):
+            ob = 1
+            while ob > 0:
+                ix += 1
+                if( vt[ix] == "<" ):
+                    ob += 1
+                elif( vt[ix] == ">" ):
+                    ob -= 1
+            vt = vt[0:ix+1]
+#            print("vt = '%s'" % vt )
+
+
+        value_type = vdb.cache.lookup_type(vt)
+
+        if( value_type is not None ):
+            return value_type
+
+    return None
+
+
 
 
 
@@ -172,6 +232,71 @@ def tuple_re_list( l ):
         ret.append( (r0,e1) )
     return ret
 
+def re_list( l ):
+    ret = []
+    for e0 in l:
+        r0 = re.compile(e0)
+        ret.append( r0 )
+    return ret
+
+
+
+array_element_filter = [
+    ( "^(.*::{std::_Hashtable<.*>}.*_M_h.*)::{[^}]*}::_M_buckets$",  "{0}::{{unsigned long}}::_M_bucket_count" ),
+    ( "^(.*std::_Vector_base<.*>::.*)_M_start$", std_vector_size )
+    ]
+node_downcast_filter = [
+    ( "std::__detail::_Hash_node_base", std_hashtable_node ),
+    ( "std::_Rb_tree_node_base", std_tree_node ),
+    ( "std::__detail::_List_node_base", std_list_node )
+    ]
+member_cast_filter = [
+    ( "std::__detail::_Hash_node_value_base<([^}]*)>::{[^}]*}::_M_storage::.*__data" , std_hashtable_member ),
+    ( "std::_Rb_tree.*_Rb_tree_node_base.*_M_storage" , std_tree_member ),
+    ( "std::__cxx11::_List_base.*_List_node_base.*_M_storage" , std_list_member )
+    ]
+pointer_blacklist = [
+    ".*std::_Vector_base.*_M_end_of_storage",
+    ".*std::_Vector_base.*_M_finish"
+    ]
+member_blacklist = [
+    ]
+pretty_print_types = [
+    "std::__cxx11::string",
+    "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >"
+    ]
+
+def add_array_element_filter( rex, act ):
+    array_element_filter.append( (rex,act) )
+
+def add_node_downcast_filter( rex, act ):
+    node_downcast_filter.append( (rex,act) )
+
+def add_member_cast_filter( rex, act ):
+    member_cast_filter.append( (rex,act) )
+
+def add_pointer_blacklist( rex ):
+    pointer_blacklist.append( rex )
+
+def add_pretty_print_types( rex ):
+    pretty_print_types.append( rex )
+
+def set_array_element_filter( rel ):
+    array_element_filter = rel
+
+def set_node_downcast_filter( rel ):
+    node_downcast_filter = rel
+
+def set_member_cast_filter( rel ):
+    member_cast_filter = rel
+
+def set_pointer_blacklist( rel ):
+    pointer_blacklist = rel
+
+def set_pretty_print_types( rel ):
+    pretty_print_types = rel
+
+
 class ftree:
     def __init__( self ):
         self.visited = set()
@@ -179,27 +304,15 @@ class ftree:
         self.current_port = 0
         self.color_index = 0
         self.value_cache = {}
+        self.pp_cache = {}
         self.nodes = intervaltree.IntervalTree()
         self.edge_redirects = { }
         self.subobject_ports = { }
-        self.array_element_filter = [
-                ( "^(.*::{std::_Hashtable<.*>}.*_M_h.*)::{[^}]*}::_M_buckets$",  "{0}::{{unsigned long}}::_M_bucket_count" ),
-#                ( "(.*std::unordered_.*<.*>.*::{std::_Hashtable<.*>}_M_h)::{.*}_M_buckets$", "{0}::{{unsigned long}}_M_bucket_count" ),
-                ( "^(.*std::_Vector_base<.*>::.*)_M_start$", std_vector_size )
-                ]
-        self.array_element_filter = tuple_re_list(self.array_element_filter)
-        self.node_downcast_filter = [
-                ( "std::__detail::_Hash_node_base", std_hashtable_node ),
-                ( "std::_Rb_tree_node_base", std_tree_node )
-                ]
-        self.member_cast_filter = [
-                ( "std::__detail::_Hash_node_value_base<([^}]*)>::{[^}]*}::_M_storage::.*__data" , std_hashtable_member ),
-                ( "std::_Rb_tree.*_Rb_tree_node_base.*_M_storage" , std_tree_member )
-                ]
-        self.pointer_blacklist = [
-                ".*std::_Vector_base.*_M_end_of_storage",
-                ".*std::_Vector_base.*_M_finish"
-                ]
+        self.array_element_filter = tuple_re_list( array_element_filter )
+        self.node_downcast_filter = tuple_re_list( node_downcast_filter )
+        self.member_cast_filter = tuple_re_list( member_cast_filter )
+        self.pointer_blacklist = re_list( pointer_blacklist )
+        self.pretty_print_types = re_list( pretty_print_types )
 
     def pointer_blacklisted( self, path, ptr ):
         sw = vdb.cache.stopwatch()
@@ -209,7 +322,7 @@ class ftree:
         ms = path + " -> " + ptr.obj.get_path()
         ret = False
         for pbl in self.pointer_blacklist:
-            m = re.match(pbl,ms)
+            m = pbl.match(ms)
 #            print(f"re.match({pbl},{ms}")
             if( m is not None ):
 #                print("pbl = '%s'" % pbl )
@@ -235,26 +348,58 @@ class ftree:
                 ret.append(so)
         return ret
 
-    def xtable( self, obj, val, path ):
+    def needs_pretty_print( self, tname ):
+#        print("tname = '%s'" % tname )
+        cr = self.pp_cache.get(tname,None)
+        if( cr is None ):
+            cr = vdb.cache.cache_result()
+            cr.result = False
+            self.pp_cache[tname] = cr
+            for ppt in self.pretty_print_types:
+                if( ppt.match(tname) is not None ):
+                    cr.result = True
+                    break
+#        print("cr.result = '%s'" % cr.result )
+        return cr.result
 
+    def xtable( self, obj, val, path ):
         ret = []
         ptrlist = []
         rows = 0
         maxcols = 0
 
+        if( obj.type.name is not None ):
+            if( self.needs_pretty_print(obj.type.name) ):
+#                print("obj = '%s'" % obj )
+                tr = vdb.dot.tr()
+                if( obj.index is None and obj.parent is not None ):
+                    tr.td(obj.name)["bgcolor"] = color_pp.value
+                td,ptrlist,istd = self.table_entry( obj, val, path, force_pp = True )
+#                td["bgcolor"] = "#426343"
+                tr.tds.append(td)
+                ret += [ tr ]
+                rows += 1
+                return ( ret, rows, ptrlist )
+
+        so = None
 #        nval = self.try_member_cast( val, obj.get_path() )
         nval = self.try_member_cast( val, path + obj.get_path() )
         if( nval is not None ):
             xval = nval
             nlayout = vdb.layout.object_layout( value = nval )
             xobj = nlayout.object
+#            if( self.needs_pretty_print(xobj.type.name) ):
+#                xobj.parent = obj.parent
             l,r,p = self.xtable(xobj,xval,path)
             ret += l
             rows += r
             ptrlist += p
+            so = xobj
+#            return ( ret, rows, ptrlist )
         elif( obj.final ):
             xval = val
             tr = vdb.dot.tr()
+            so = obj
 
 #            td = tr.td(xval)
 #            print("path = '%s'" % path )
@@ -270,6 +415,9 @@ class ftree:
         else:
 #            print("len(obj.subobjects) = '%s'" % len(obj.subobjects) )
 #            for so in obj.subobjects:
+#            print("Subobjects of %s" % obj )
+#            print("val = '%s'" % val )
+#            print("val.type = '%s'" % val.type )
             for so in self.flat_subobjects( obj ):
                 if( so.type.strip_typedefs().code == gdb.TYPE_CODE_UNION ):
                     print("NO FULL UNION SUPPORT YET, EXPECT FUNNY RESULTS")
@@ -278,18 +426,33 @@ class ftree:
 #                        rbk=val[so.field]
 #                        print("rbk = '%s'" % rbk )
 #                        continue
-#                print("so = '%s'" % so )
-#                print("val = '%s'" % val )
+#                print("")
 #                print("val.type = '%s'" % val.type )
+#                print("so = '%s'" % so )
 #                print("so.field = '%s'" % so.field )
-                if( so.name is None ):
+#                print("so.field.name = '%s'" % so.field.name )
+#                print("so.field.type = '%s'" % so.field.type )
+#                print("so.name = '%s'" % so.name )
+#                print("so.parent = '%s'" % so.parent )
+#                print("so.parent.type = '%s'" % so.parent.type )
+#                print("so.type = '%s'" % so.type )
+                # Check if the member is in one of the base classes, if it is, we need to cast before we can use the
+                # field to access it
+                if( so.parent is not None and so.parent.type != val.type ):
+                    # To just access the field we can even use a pointer
+                    bval = val.address.cast( so.parent.type.pointer() )
+#                    print("bval = '%s'" % bval )
+#                    print("bval.type = '%s'" % bval.type )
+                    soval = bval[so.field]
+                else:
+#                if( so.name is None ):
                     soval = val[so.field]
 #                    print("soval = '%s'" % soval )
-                else:
+#                else:
 #                    print("val = '%s'" % val )
 #                    print("val.type = '%s'" % val.type )
 #                    print("obj = '%s'" % obj )
-                    soval = val[so.name]
+#                    soval = val[so.name]
 #                    print("val[so.name] = '%s'" % val[so.name] )
 #                print("1path = '%s'" % path )
 #                print("so.get_path() = '%s'" % so.get_path() )
@@ -300,6 +463,13 @@ class ftree:
         if( obj.parent is not None and len(ret) > 0 ):
             td = vdb.dot.td(obj.name)
             td["rowspan"] = rows
+            if( obj.type.name is not None and self.needs_pretty_print( obj.type.name ) ):
+                td["bgcolor"] = color_pp.value
+            else:
+                if( len(ret) == 1 and so is not None and so.type.name is not None and self.needs_pretty_print(so.type.name) ):
+                    td["bgcolor"] = color_pp.value
+                if( len(color_varname.value) > 0 ):
+                    td["bgcolor"] = color_varname.value
 
             if( obj.offset != 0 ):
 #                print("obj = '%s'" % obj )
@@ -391,6 +561,8 @@ class ftree:
 #                    print("xtr = '%s'" % xtr )
                     xtd = xtr.td(i)
                     xtd["rowspan"] = rows
+                    if( self.needs_pretty_print(eo.name) ):
+                        xtd["bgcolor"] = color_pp.value
                     port = self.next_port()
                     xtd["port"] = port
                     self.subobject_ports[int(eptr)] = port
@@ -434,7 +606,7 @@ class ftree:
 
     # the right side of the table, that is for plain types just the value representation. Additionally it returns a list
     # of pointers (with some ports maybe?)
-    def table_entry( self, obj, fval, path ):
+    def table_entry( self, obj, fval, path, force_pp = False ):
         sw = vdb.cache.stopwatch()
         sw.start()
 #        print(f"table_entry( {obj}, {fval}, {elements}")
@@ -457,7 +629,9 @@ class ftree:
                 self.value_cache[ f"[{obj.get_base().index}]" + obj.get_path() ] = fval
             else:
                 self.value_cache[obj.get_path()] = fval
-            if( real_type.code == gdb.TYPE_CODE_PTR ):
+            if( force_pp ):
+                rettd.set(str(fval))
+            elif( real_type.code == gdb.TYPE_CODE_PTR ):
 #                print(vdb.color.color("real_type.code = '%s'" % vdb.util.gdb_type_code(real_type.code),"#ff9900" ) )
 #                print("PTR is %s" % fval )
 #                print("obj = '%s'" % obj )
@@ -672,7 +846,7 @@ class ftree:
         sw.start()
 #        print("path = '%s'" % path )
         for df,action in self.member_cast_filter:
-            m = re.findall( df, path )
+            m = df.findall( path )
             ret = self.apply_cast_action(val,m,path,action)
             if( ret is not None ):
                 return ret
@@ -692,7 +866,7 @@ class ftree:
 #        print("val = '%s'" % val )
         for df,action in self.node_downcast_filter:
 #            print("df = '%s'" % df )
-            m = re.findall( df, str(xtype) )
+            m = df.findall( str(xtype) )
             ret = self.apply_cast_action(val,m,path,action)
             if( ret is not None ):
                 return ret
@@ -880,6 +1054,7 @@ class ftree:
             if( level < limit ):
                 self.ftree( p.val, level+1, limit, graph, path = path + " -> " + p.obj.get_path(), elements = pelements )
             if( level >= limit and int(p.val) not in self.visited ):
+                p.origin_td["bgcolor"] = color_limit.value
                 continue
 #            print("p.val = '%s'" % int(p.val) )
 #            print("self.subobject_ports = '%s'" % self.subobject_ports )
@@ -951,7 +1126,10 @@ class cmd_ftree (vdb.command.command):
 #            f.ftree (val, 0,limit,g )
             sw = vdb.cache.stopwatch()
             sw.start()
-            f.ftree( val, 0, limit, g )
+            try:
+                f.ftree( val, 0, limit, g )
+            except:
+                traceback.print_exc()
 #            import cProfile
 #            cProfile.runctx("f.ftree( val, 0, limit, g )",globals(),locals())
 #            print("f.edge_redirects = '%s'" % f.edge_redirects )
