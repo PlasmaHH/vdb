@@ -261,7 +261,6 @@ pointer_blacklist = [
     ".*std::_Vector_base.*_M_finish"
     ]
 member_blacklist = [
-    "::{std::map<.*>}::bl"
     ]
 pretty_print_types = [
     "std::__cxx11::string",

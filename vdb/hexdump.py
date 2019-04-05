@@ -19,11 +19,15 @@ import re
 
 color_head       = vdb.config.parameter("vdb-hexdump-colors-header",                "#ffa",    gdb_type = vdb.config.PARAM_COLOUR)
 
-default_len = vdb.config.parameter("vdb-hexdump-default-len",8*16)
+default_len   = vdb.config.parameter("vdb-hexdump-default-len",8*16)
+repeat_header = vdb.config.parameter("vdb-hexdump-repeat-header",42)
 
 
 color_list = vdb.config.parameter("vdb-hexdump-colors-symbols", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,on_set  = vdb.config.split_colors)
 
+def print_header( ):
+    plen = 64//4
+    print(vdb.color.color(f'  {" "*plen}  0  1  2  3   4  5  6  7    8  9  A  B   C  D  E  F   01234567 89ABCDEF',color_head.value))
 
 symre=re.compile("0x[0-9a-fA-F]* <([^+]*)(\+[0-9]*)*>")
 def hexdump( addr, xlen = -1 ):
@@ -31,7 +35,6 @@ def hexdump( addr, xlen = -1 ):
         xlen = default_len.value
     olen = xlen
     plen = 64//4
-    print(vdb.color.color(f'  {" "*plen}  0  1  2  3   4  5  6  7    8  9  A  B   C  D  E  F   01234567 89ABCDEF',color_head.value))
     data = vdb.memory.read(addr,xlen)
     if( data is None ):
         data = vdb.memory.read(addr,1)
@@ -49,6 +52,7 @@ def hexdump( addr, xlen = -1 ):
     current_symbol = None
     next_color = -1
     sym_color = None
+    line = 0
     while(len(data) > 0 ):
         dc = data[:16]
         data = data[16:]
@@ -99,6 +103,9 @@ def hexdump( addr, xlen = -1 ):
         l += ((cnt-1)//4)*" "
         l += ((cnt+7)//8)*" "
         t += ((cnt+7)//8)*" "
+        if( line % repeat_header.value == 0 ):
+            print_header()
+        line += 1
 #        print("len(t) = '%s'" % len(t) )
         print(f"{p}: {l}{t} {s}")
 #        print("dc = '%s'" % dc )
