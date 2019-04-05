@@ -37,6 +37,7 @@ color_union    = vdb.config.parameter("vdb-ftree-colors-union","#ffff66",gdb_typ
 color_vcast    = vdb.config.parameter("vdb-ftree-colors-virtual-cast","#ccaaff",gdb_type = vdb.config.PARAM_COLOUR)
 color_dcast    = vdb.config.parameter("vdb-ftree-colors-down-cast","#aaffaa",gdb_type = vdb.config.PARAM_COLOUR)
 color_ptrblack = vdb.config.parameter("vdb-ftree-colors-blacklist-pointer","#ff9900",gdb_type = vdb.config.PARAM_COLOUR)
+color_mblack   = vdb.config.parameter("vdb-ftree-colors-blacklist-member","#334400",gdb_type = vdb.config.PARAM_COLOUR)
 color_limit    = vdb.config.parameter("vdb-ftree-colors-limited","#88aaff",gdb_type = vdb.config.PARAM_COLOUR)
 color_pp       = vdb.config.parameter("vdb-ftree-colors-pretty-print","#76d7c4",gdb_type = vdb.config.PARAM_COLOUR)
 color_varname  = vdb.config.parameter("vdb-ftree-colors-variable-name",None,gdb_type = vdb.config.PARAM_COLOUR)
@@ -260,6 +261,7 @@ pointer_blacklist = [
     ".*std::_Vector_base.*_M_finish"
     ]
 member_blacklist = [
+    "::{std::map<.*>}::bl"
     ]
 pretty_print_types = [
     "std::__cxx11::string",
@@ -278,6 +280,9 @@ def add_member_cast_filter( rex, act ):
 def add_pointer_blacklist( rex ):
     pointer_blacklist.append( rex )
 
+def add_member_blacklist( rex ):
+    member_blacklist.append( rex )
+
 def add_pretty_print_types( rex ):
     pretty_print_types.append( rex )
 
@@ -292,6 +297,9 @@ def set_member_cast_filter( rel ):
 
 def set_pointer_blacklist( rel ):
     pointer_blacklist = rel
+
+def set_member_blacklist( rel ):
+    member_blacklist = rel
 
 def set_pretty_print_types( rel ):
     pretty_print_types = rel
@@ -312,6 +320,7 @@ class ftree:
         self.node_downcast_filter = tuple_re_list( node_downcast_filter )
         self.member_cast_filter = tuple_re_list( member_cast_filter )
         self.pointer_blacklist = re_list( pointer_blacklist )
+        self.member_blacklist = re_list( member_blacklist )
         self.pretty_print_types = re_list( pretty_print_types )
 
     def pointer_blacklisted( self, path, ptr ):
@@ -362,11 +371,28 @@ class ftree:
 #        print("cr.result = '%s'" % cr.result )
         return cr.result
 
+    def is_blacklisted( self, obj ):
+        for mb in self.member_blacklist:
+            if( mb.match(obj.get_path()) is not None ):
+                return True
+        return False
+
     def xtable( self, obj, val, path ):
         ret = []
         ptrlist = []
         rows = 0
         maxcols = 0
+
+        if( self.is_blacklisted( obj ) ):
+            tr = vdb.dot.tr()
+            tr.td(obj.name)["bgcolor"] = color_mblack.value
+            tr.td_raw("&nbsp;")
+            ret += [ tr ]
+            rows += 1
+            return ( ret, rows, ptrlist )
+
+
+#        print("obj.get_path() = '%s'" % obj.get_path() )
 
         if( obj.type.name is not None ):
             if( self.needs_pretty_print(obj.type.name) ):
