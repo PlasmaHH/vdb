@@ -75,7 +75,7 @@ class object:
     def __init__( self, gtype, field = None ):
         self.type = gtype
         self.size = gtype.sizeof
-        self.offset = -1
+#        self.offset = -1
         self.subobjects = []
         self.field = field
         if( field is not None ):
@@ -97,7 +97,7 @@ class object:
         ret = object( self.type, None )
         ret.type          = self.type
         ret.size          = self.size
-        ret.offset        = self.offset
+#        ret.offset        = self.offset
         ret.field         = self.field
         ret.name          = self.name
         ret.bit_offset    = self.bit_offset
@@ -130,7 +130,7 @@ class object:
         return path
 
     def __str__(self):
-        s = f"{self.type}[{self.size}] : {self.name}, @{len(self.subobjects)},b{self.is_base_class} [{self.index}]"
+        s = f"{self.type}[{self.size}] : {self.name}, @{len(self.subobjects)},b{self.is_base_class} [{self.index}]{{{self.byte_offset}}}"
         return s
 
 cgdb = vdb.cache.execute_cache()
@@ -143,7 +143,7 @@ def get_vtt_name( atype ):
 #        ofresult = gdb.execute(cmd,False,True)
         global cgdb
         ofresult = cgdb.execute(cmd,False,True)
-#        print("BARK")
+#        print("ofresult = '%s'" % ofresult )
         g = re.search("(0x[a-fA-F0-9]*) <VTT for",ofresult)
 #        print("g = '%s'" % g )
         VTT=g.group(1)
@@ -157,7 +157,9 @@ def get_vtt_name( atype ):
 def get_vtt_entry( vtt, offset ):
 #    print("vtt = '%s'" % vtt )
 #    print("offset = '%s'" % offset )
-    cmd="p ((uint64_t*)(%s%s))[0]" % (vtt,offset)
+#    cmd="p ((uint64_t*)(%s%s))[0]" % (vtt,offset)
+    cmd="p ((uint32_t*)(%s%s))[0]" % (vtt,offset)
+
 #    print("cmd = '%s'" % cmd )
 #    ofresult = gdb.execute(cmd,False,True)
     global cgdb
@@ -172,13 +174,23 @@ def get_vtt_entry( vtt, offset ):
 object_cache = { }
 
 class object_layout:
-    def __init__( self, type = None, value = None ):
-        if( type is None ):
-            type = value.type
-        self.type = type
+    def __init__( self, otype = None, value = None ):
+        if( otype is None ):
+            otype = value.type
+        self.type = otype
         self.value = value
+#        print("self.type = '%s'" % self.type )
         self.vtt = get_vtt_name(self.type)
+#        print("type(self.vtt) = '%s'" % type(self.vtt) )
+        if( self.vtt is None ):
+            xtype = self.type.strip_typedefs()
+#            print("xtype = '%s'" % xtype )
+#            print("(xtype == self.type) = '%s'" % (xtype == self.type) )
+            if( xtype.name != self.type.name ):
+                self.type = xtype
+                self.vtt = get_vtt_name(self.type)
         self.vtype = None
+#        print("self.type = '%s'" % self.type )
 #        print("self.vtt = '%s'" % self.vtt )
 
 
@@ -192,6 +204,7 @@ class object_layout:
             if( self.type == self.value.dynamic_type and self.type != self.vtype ):
                 self.type = self.vtype
         self.bytes = list(itertools.repeat(byte_descriptor(None,None,None),self.type.sizeof))
+        self.descriptors = []
 #        print("self.vtype = '%s'" % self.vtype )
 
 #        print("self.type == type = '%s'" % (self.type == type ))
@@ -214,7 +227,7 @@ class object_layout:
             return
 
         self.object = object(self.type)
-        self.object.offset = 0
+#        self.object.offset = 0
         self.object.name = str(self.type)
         # chose how to print the scope of the outer thing 
         if( self.value is not None ):
@@ -222,6 +235,7 @@ class object_layout:
         else:
             self.object.is_base_class = True
 #        print("self.type = '%s'" % self.type )
+#        print("self.object = '%s'" % self.object )
         self.parse(self.type,self.object)
         for i in range(0,len(self.bytes)):
             b = self.bytes[i]
@@ -260,6 +274,11 @@ class object_layout:
                 else:
                     ret.append(f)
         except:
+            self.object = object(self.type)
+            self.object.byte_offset = 0
+            bd = byte_descriptor(None,None,None)
+            bd.object = self.object
+            self.descriptors.append(bd)
             self.final = True
 #            print("self = '%s'" % self )
             pass
@@ -274,7 +293,7 @@ class object_layout:
                 continue
 #            print("")
             so = object(f.type,f)
-            so.offset = offset
+#            so.offset = offset
 #            print("parent = '%s'" % parent )
             so.parent = parent
             parent.subobjects.append(so)
@@ -291,10 +310,14 @@ class object_layout:
             bd.object = so
             if( so.bit_offset >= 0 ):
                 so.byte_offset += offset
+#                print("so = '%s'" % so )
+#                print("offset = '%s'" % offset )
                 for i in range( so.byte_offset, so.byte_offset + so.size ):
 #                    print("i = '%s'" % i )
                     self.bytes[i] = bd
+                self.descriptors.append(bd)
             else:
+#                print("so = '%s'" % so )
                 voffset = get_vtt_entry( self.vtt, so.byte_offset )
                 so.byte_offset = voffset
 #                print("VIRTUAL")
@@ -310,6 +333,7 @@ class object_layout:
                     so.final = True
 #                    print("STRUCT LAYOUT so = '%s'" % so )
                 else:
+#                    print("so = '%s'" % so )
                     self.parse( so.type, so, so.byte_offset )
             elif( code == gdb.TYPE_CODE_UNION ):
                 self.parse( so.type, so, so.byte_offset )

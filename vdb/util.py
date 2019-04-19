@@ -136,4 +136,12 @@ def guess_vptr_type( val ):
         traceback.print_exc()
         return val
 
+id_store = { }
+
+def next_id( name ):
+    global id_store
+    nid = id_store.get(name,0)
+    id_store[name] = nid+1
+    return nid
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

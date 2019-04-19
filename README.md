@@ -57,6 +57,11 @@ This is work in progress and not yet ready for real world usage, it is more of a
 			* [Pretty print filters](#pretty-print-filters)
 			* [Expansion blacklists](#expansion-blacklists)
 			* [dynamic array/vector type detection](#dynamic-arrayvector-type-detection)
+	* [Dashboards](#dashboards)
+		* [Ports](#ports)
+		* [TTYs](#ttys)
+		* [tmux panes](#tmux-panes)
+		* [Other commands](#other-commands)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
 	* [pointer (chaining)](#pointer-chaining)
@@ -68,6 +73,7 @@ This is work in progress and not yet ready for real world usage, it is more of a
 		* [colorspec](#colorspec)
 * [Plugins](#plugins)
 * [Themes](#themes)
+* [TODO](#todo)
 
 <!-- vim-markdown-toc -->
 
@@ -425,6 +431,10 @@ struct xtree
 	std::map<int,int> m;
 	std::map<int,int> bl;
 	std::list<std::string> l { "A","B","L" };
+	void* ptr = &m;
+	void* ptrptr = &ptr;
+	nunion NU;
+	nunion nu[2];
 };
 ```
 
@@ -522,6 +532,64 @@ displayed. Per default its the first and last four items.
   array. Optionally the callable can be replaced by a string that will then be fed to a format with the regex match as a
   parameter. This will then be the object path to the amount of elements.
 
+
+## Dashboards
+
+Dashboards are a way to configure some output to be done on certain events to specific locations that display them
+outside of the terminal gdb is running on. This is usually a terminal running in some other way. To be most flexible we
+can output to ports (allowing you to also have the output in terminals on other hosts), ttys (and any file really) or
+specific ttys on tmux panes.
+
+Without any special trigger, the command will be executed always before a prompt is being displayed. When registering
+the command via the API you can also call arbitrary python functions and display their return instead.
+
+### Ports
+`dashboard port <port> <command>`
+or
+`dashboard port <host>:<port> <command>`
+
+will open a listen port and anyone connecting to it will get the output for that. If not specified the host will be
+0.0.0.0 or :: depending on whatever python thinks. Anything that tries to format the output for a specific terminal
+width will have no luck getting the width and thus do whatever it thinks is best.
+
+
+### TTYs
+`dashboard tty /dev/ptyXX <command>`
+
+outputs to the specified tty, you can leave out the `/dev/` part if you want to. This is basically the same as the tmux
+target, just that instead of a named tmux pane you chose the tty yourself. If unsure which tty a terminal you have open
+is, just execute `tty` on that terminal.
+### tmux panes
+`dashboard tmux <pane-name> <command>`
+
+The pane-name is a regex that will be applied to all tmux panes, and the first match is then taken, given it provides a
+tty.
+<!--
+For extra convenience we have a tmux command that will directly forward all parameters to a tmux call, thus you can do a
+`tmux list-panes` yourself easily to find a proper pane. We recommend though to have your (project specific) plugin
+directories contain the settings to setup a dashboard. We provide some examples in the example `.vdb` directory that
+will enable you to 
+-->
+### Other commands
+
+* `dashboard show` Shows a list of all dashboards. The meaning of the columns is as follows:
+    * __EN__ Y/N for being enable or not. 
+    * __CLS__ Y/N for clearing the scren before outputting anything. The default. Disable this if you want to send two
+      dashboards to one output.
+    * __ID__ The numerical ID by which this entry is identified in any of the commands that need one.
+    * __Type__ the type this was created as (tmux/tty/port)
+    * __Target__ the type specific description of the target
+    * __Event__ the (gdb) event on which this dashboards output is triggered. before_prompt is the default.
+    * __Command__ the gdb command to execute. Its complete output will be redirected, no pagining available.
+
+* `dashboard enable/disable` Disables a dashboard. It will still be in the list, but not executed upon events. This may
+  mean that something like an open port is still there.
+* `dashboard erase` Completely remove the dashbaord, destroying all associated objects, usually closing listening ports
+  etc.
+* `dashboard [no]cls` Enables or disables the option to clear screen before starting the output. Clearing the screen is
+  done via ansi escape sequences.
+
+
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
 you suppress loading of the modules that load it.
@@ -603,3 +671,27 @@ vdb-theme
 to the name of the theme/python module to load from the directory `$HOME/.vdb/themes`. You don't specify the `.py`
 ending, but the file must have it. Themes will be loaded when you do `vdb start` (most likely in your `.gdbinit`).
 
+# TODO
+There are a lot of ideas and enhancements that are possible or need to be done. Among them are:
+
+* support for other architectures than x86_64 (maybe generic with all values from gdb, even with register autodetetion)
+* fully implement extra flexible .vdb search mechanism
+* hexdump for real objects, likely using a generic annotation mechanism. Can then also be used for annotating buffers to
+  be parsed.
+* symbol position and size caching
+* clearing of caches on events that might have changed it.
+* generic mechanism for hashtable load images and calculations
+* ports/dashboard mechanism that will be able to output generic information to various other places
+* reverse execution support even without records. We might be able to determine possible paths which led to where we are
+  with the possible values. A disasm or similar might get another mode that tells us about it
+* Extract information out of the allocator. With a proper middle layer we can support multiple versions. This could draw
+  some maps of where free space and allocated space is.
+* a stack inspector possibly based on the hexdump annotation mechanism. Try to identify pointers to known things, like
+  local variables. Collect throughout all other function calls the information where some object is and display that too
+  (maybe generically always in hexdump?). Mark local variables on the stack. Possibly annotate disassembly with that
+  information too when available. Is it possible that other diassemblers can help us here? Cache things for function
+  frames.
+* Find a way to quicker get all typedefs and use global ones automatically for shortens. At the moment going through all
+  of them via "info types" takes minutes.
+* For the port output dashboards, maybe check if there is an easy way to find out what the connecting telnet is
+  supporting

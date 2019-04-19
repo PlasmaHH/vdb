@@ -114,7 +114,7 @@ It prints the type and displays comments showing where holes are."""
             raise gdb.GdbError('%s is not a struct/union type: %s' % (" ".join(argv), ptype.code))
         try:
 #            tl = vdb.layout.type_layout(ptype)
-            xl = vdb.layout.object_layout(ptype)
+            xl = vdb.layout.object_layout(stype)
 #            print_pahole(tl,condensed)
             print_pahole(xl,condensed)
         except Exception as e:

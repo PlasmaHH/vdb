@@ -496,7 +496,7 @@ class ftree:
                 if( len(color_varname.value) > 0 ):
                     td["bgcolor"] = color_varname.value
 
-            if( obj.offset != 0 ):
+            if( obj.byte_offset != 0 ):
 #                print("obj = '%s'" % obj )
 #                print("obj.offset = '%s'" % obj.offset )
                 port = self.next_port()
@@ -572,7 +572,8 @@ class ftree:
                 # This will be probably a bit messy. We have "pointers" (array indices) to some objects and we want to
                 # lay them out as elements of a table, but the normal process is to make one table per object
                 xtr = vdb.dot.tr()
-                if( entry_object.type.strip_typedefs().code == gdb.TYPE_CODE_STRUCT ):
+                print("entry_object.type.strip_typedefs() = '%s'" % entry_object.type.strip_typedefs() )
+                if( entry_object.type.strip_typedefs().code == gdb.TYPE_CODE_STRUCT or entry_object.type.strip_typedefs().code == gdb.TYPE_CODE_UNION ):
 #                    print("path = '%s'" % path )
 #                    traceback.print_stack()
                     eo = entry_object.clone()
@@ -586,7 +587,9 @@ class ftree:
 #                    print("xtr = '%s'" % xtr )
                     xtd = xtr.td(i)
                     xtd["rowspan"] = rows
-                    if( self.needs_pretty_print(eo.name) ):
+                    if( entry_object.type.strip_typedefs().code == gdb.TYPE_CODE_UNION ):
+                        xtd["bgcolor"] = color_union.value
+                    elif( self.needs_pretty_print(eo.name) ):
                         xtd["bgcolor"] = color_pp.value
                     port = self.next_port()
                     xtd["port"] = port
@@ -736,6 +739,7 @@ class ftree:
                     return ( trs, moreptr, False )
             else:
                 if( verbosity.value > 4 ):
+                    print("obj.final = '%s'" % obj.final )
                     print(vdb.color.color("real_type.code = '%s'" % vdb.util.gdb_type_code(real_type.code),"#ff9900" ) )
 #                print("real_type.name = '%s'" % real_type.name )
                 if( fval is None ):
@@ -973,8 +977,16 @@ class ftree:
 #                print("x[2].name = '%s'" % x[2].name )
             return None
 
+#        print("val = '%s'" % val )
+#        print("val.type = '%s'" % val.type )
+#        print("val.type.code = '%s'" % vdb.util.gdb_type_code(val.type.code) )
+#        print("val.type.target() = '%s'" % val.type.target() )
+#        print("val.type.target().code = '%s'" % vdb.util.gdb_type_code(val.type.target().code) )
+#        print("val.type.target().strip_typedefs() = '%s'" % val.type.target().strip_typedefs() )
 
+#        print("",flush=True)
         dval = val.dereference()
+#        print("dval = '%s'" % dval )
         xl = vdb.layout.object_layout( value = dval )
 
 #        print("val = '%s'" % val )
@@ -1075,9 +1087,9 @@ class ftree:
 
             pelements = self.check_for_array(p)
 #            print("pelements = '%s'" % pelements )
-
-            if( level < limit ):
-                self.ftree( p.val, level+1, limit, graph, path = path + " -> " + p.obj.get_path(), elements = pelements )
+            if( p.val.type.target().strip_typedefs().code != gdb.TYPE_CODE_VOID ):
+                if( level < limit ):
+                    self.ftree( p.val, level+1, limit, graph, path = path + " -> " + p.obj.get_path(), elements = pelements )
             if( level >= limit and int(p.val) not in self.visited ):
                 p.origin_td["bgcolor"] = color_limit.value
                 continue

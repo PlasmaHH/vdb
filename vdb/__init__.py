@@ -11,7 +11,42 @@ import sys
 import os
 import importlib
 import traceback
+"""
 
+search order:
+    downwards
+    upwards
+
+    home-first
+    local-first
+
+
+vdbinit-search-order
+vdbinit-stop-on-find
+
+vdb-search-order
+vdb-stop-on-find
+
+theme-search-order
+theme-stop-on-find
+
+example tree:
+
+[1]~/.vdb/
+[2]~/.vdbinit
+
+[3]~/git/project/.vdb/
+[4]~/git/project/.vdbinit
+
+
+downwards local-first non-stop:
+
+look at (and load)
+~/.vdb
+~/git/project/.vdb
+~/git/.vdb
+
+"""
 
 # First setup the most important settings that configure which parts we want to have active
 
@@ -36,7 +71,7 @@ cmd_vdb()
 theme = vdb.config.parameter( "vdb-theme",None)
 
 def load_plugins( plugindir ):
-    print("Loading plugins…")
+    print(f"Loading plugins in {plugindir}…")
     try:
         oldpath = []
         oldpath += sys.path
@@ -79,17 +114,18 @@ def load_themes( vdbdir ):
     finally:
         sys.path = oldpath
 
-enable_prompt = vdb.config.parameter( "vdb-enable-prompt",True)
+enable_prompt    = vdb.config.parameter( "vdb-enable-prompt",True)
 enable_backtrace = vdb.config.parameter( "vdb-enable-backtrace",True)
-enable_register = vdb.config.parameter( "vdb-enable-register",True)
-enable_vmmap = vdb.config.parameter( "vdb-enable-vmmap",True)
-enable_hexdump = vdb.config.parameter( "vdb-enable-hexdump",True)
-enable_asm = vdb.config.parameter( "vdb-enable-asm",True)
-enable_grep = vdb.config.parameter( "vdb-enable-grep",True)
-enable_pahole = vdb.config.parameter( "vdb-enable-pahole",True)
-enable_ftree = vdb.config.parameter( "vdb-enable-ftree",True)
+enable_register  = vdb.config.parameter( "vdb-enable-register",True)
+enable_vmmap     = vdb.config.parameter( "vdb-enable-vmmap",True)
+enable_hexdump   = vdb.config.parameter( "vdb-enable-hexdump",True)
+enable_asm       = vdb.config.parameter( "vdb-enable-asm",True)
+enable_grep      = vdb.config.parameter( "vdb-enable-grep",True)
+enable_pahole    = vdb.config.parameter( "vdb-enable-pahole",True)
+enable_ftree     = vdb.config.parameter( "vdb-enable-ftree",True)
+enable_dashboard = vdb.config.parameter( "vdb-enable-dashboard",True)
 
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree" )
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard" )
 
 
 enabled_modules = [ ]
@@ -111,6 +147,19 @@ def start():
             pass
     vdb_dir = os.path.expanduser("~") + "/.vdb/"
     load_plugins(vdb_dir)
+
+    rvdb = os.path.realpath(vdb_dir)
+    cwd = os.path.realpath(os.getcwd())
+    print("rvdb = '%s'" % rvdb )
+    while( cwd != "/" ):
+        cvdb = cwd + "/.vdb"
+        if( cvdb == rvdb ):
+            break
+        print("cwd = '%s'" % cwd )
+        cwd,down = os.path.split(cwd)
+        print("down = '%s'" % down )
+
+
     load_themes(vdb_dir)
 
 #pre_commands = """

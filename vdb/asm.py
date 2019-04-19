@@ -631,7 +631,7 @@ ascii mockup:
 x86_unconditional_jump_mnemonics = set([ "jmp", "jmpq" ] )
 x86_return_mnemonics = set (["ret","retq","iret"])
 x86_call_mnemonics = set(["call","callq","int"])
-x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock" ])
+x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd" ])
 
 def parse_from_gdb( arg, fakedata = None ):
     ret = listing()

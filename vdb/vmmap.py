@@ -35,6 +35,9 @@ class cmd_vmmap (vdb.command.command):
                 pass
             elif( len(argv) == 1 ):
                 try:
+                    if( argv[0] == "refresh" ):
+                        vdb.memory.mmap.parse()
+                        return
                     addr = gdb.parse_and_eval(argv[0])
                     addr = int(addr)
                     return show_region( addr )
