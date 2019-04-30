@@ -41,8 +41,8 @@ class port(target,threading.Thread):
             raise gdb.error("Invalid host:lport/lport argument %s" % hp )
         # open a listen lport, find a way to accept it asynchronously (threading??) and output to all of them
         # host None means 0.0.0.0
-        print("host = '%s'" % host )
-        print("lport = '%s'" % lport )
+#        print("host = '%s'" % host )
+#        print("lport = '%s'" % lport )
         sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind( (host,lport) )
@@ -57,7 +57,7 @@ class port(target,threading.Thread):
     def run( self ):
         while True:
             a,r = self.sock.accept()
-            print("(a,) = '%s'" % (a,) )
+#            print("(a,) = '%s'" % (a,) )
             self.targets.append(a)
             a.send(b"CONNECTED\n")
             self.enabled = True
@@ -121,13 +121,13 @@ class tty(target):
 class tmux(tty):
     def __init__( self, pane_name ):
         p = subprocess.run([ "tmux", "list-panes","-a","-F","#{pane_title}{|}#{pane_tty}" ], encoding = "utf-8", stdout = subprocess.PIPE )
-        print("p = '%s'" % p )
+#        print("p = '%s'" % p )
         output = p.stdout.splitlines()
         tty = None
         self.pane = pane_name
         for line in output:
             line = line.split("{|}")
-            print("line = '%s'" % line )
+#            print("line = '%s'" % line )
             # or regex?
 #            if( line[0] == pane_name ):
             if( re.match( line[0] , pane_name)  ):
@@ -135,7 +135,7 @@ class tmux(tty):
                 break
         if( tty is None ):
             raise gdb.error("Could not find tmux pane named %s" % pane_name )
-        print("tty = '%s'" % tty )
+#        print("tty = '%s'" % tty )
         super().__init__(tty)
 
     def name( self ):
@@ -242,7 +242,7 @@ def trigger_cls( id, to ):
 
 def add_board( tgt, argv ):
     cmd = " ".join(argv)
-    print("cmd = '%s'" % cmd )
+#    print("cmd = '%s'" % cmd )
     db = dashboard()
     global dash_events
     db.output = tgt
@@ -256,7 +256,7 @@ def call_dashboard( argv ):
     # subcommands: list,enable,disable,erase
     if( len(argv) == 0 ):
         raise gdb.error("You need to give at least some parameter")
-    print("argv = '%s'" % argv )
+#    print("argv = '%s'" % argv )
     if( argv[0] == "tty" ):
         if( len(argv) < 3 ):
             raise gdb.error("dashboard tty, need at least 2 parameters")

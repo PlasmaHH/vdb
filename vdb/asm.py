@@ -48,7 +48,9 @@ shorten_header    = vdb.config.parameter("vdb-asm-shorten-header", False )
 prefer_linear_dot = vdb.config.parameter("vdb-asm-prefer-linear-dot",False)
 
 offset_fmt = vdb.config.parameter("vdb-asm-offset-format", " <+{offset:<{maxlen}}>:" )
+offset_txt_fmt = vdb.config.parameter("vdb-asm-text-offset-format", " <{offset:<{maxlen}}>:" )
 offset_fmt_dot = vdb.config.parameter("vdb-asm-offset-format-dot", " <+{offset:<{maxlen}}>" )
+offset_txt_fmt_dot = vdb.config.parameter("vdb-asm-text-offset-format-dot", " <{offset:<{maxlen}}>" )
 
 color_ns       = vdb.config.parameter("vdb-asm-colors-namespace",   "#ddf", gdb_type = vdb.config.PARAM_COLOUR)
 color_function = vdb.config.parameter("vdb-asm-colors-function",    "#99f", gdb_type = vdb.config.PARAM_COLOUR)
@@ -81,7 +83,7 @@ color_call_dot       = vdb.config.parameter("vdb-asm-colors-call-dot",       "#6
 
 
 
-
+nonfunc_bytes      = vdb.config.parameter("vdb-asm-nonfunction-bytes",16)
 tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
 asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnprT" )
 asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnprT" )
@@ -419,7 +421,11 @@ ascii mockup:
             if( "a" in showspec ):
                 line += self.color_address( i.address, i.marked )
             if( "o" in showspec ):
-                line += vdb.color.color(offset_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value)
+                try:
+                    io = vdb.util.xint(i.offset)
+                    line += vdb.color.color(offset_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value)
+                except:
+                    line += vdb.color.color(offset_txt_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value)
 
             if( "d" in showspec ):
 #                mt=str.maketrans("v^-|<>+#Q~I","╭╰─│◄►┴├⥀◆↑" )
@@ -645,8 +651,10 @@ def parse_from_gdb( arg, fakedata = None ):
     else:
         dis = fakedata
 #    print("dis = '%s'" % dis )
-    linere = re.compile("^(=>)*\s*(0x[0-9a-f]*)\s*<\+([0-9]*)>:\s*([^<]*)(<[^+]*(.*)>)*")
+#    linere = re.compile("^(=>)*\s*(0x[0-9a-f]*)\s*<\+([0-9]*)>:\s*([^<]*)(<[^+]*(.*)>)*")
+    linere = re.compile("^(=>)*\s*(0x[0-9a-f]*)(\s*<\+([0-9]*)>:)*\s*([^<]*)(<[^+]*(.*)>)*")
     funcre = re.compile("for function (.*):")
+    rangere = re.compile("Dump of assembler code from (0x[0-9a-f]*) to (0x[0-9a-f]*):")
     bytere = re.compile("^[0-9a-fA-F][0-9a-fA-F]$")
     jmpre  = re.compile("^\*(0x[0-9a-fA-F]*)\(.*")
     cmpre  = re.compile("^\$(0x[0-9a-fA-F]*),.*")
@@ -660,6 +668,12 @@ def parse_from_gdb( arg, fakedata = None ):
             ret.function = fm.group(1)
             current_function = "<" + fm.group(1)
             continue
+        rr = re.search(rangere,line)
+        if( rr ):
+#            print("rr.group(0) = '%s'" % rr.group(0) )
+#            print("rr.group(1) = '%s'" % rr.group(1) )
+#            print("rr.group(2) = '%s'" % rr.group(2) )
+            continue
         m=re.search(linere,line)
         if( m ):
             tokens = line.split()
@@ -668,11 +682,26 @@ def parse_from_gdb( arg, fakedata = None ):
                 ins.marked = True
                 tokens = tokens[1:]
 #            print("tokens = '%s'" % tokens )
+            # the dissamble version without <line+>
+            if( tokens[0][-1] == ":" ):
+                tokens[0] = tokens[0][:-1]
+            elif( tokens[1][-1] != ":" ):
+                while( tokens[1][-1] != ":" ):
+#                    print("tokens[1][-1] = '%s'" % tokens[1][-1] )
+                    tokens[1] += tokens[2]
+#                    print("tokens[1] = '%s'" % tokens[1] )
+                    del tokens[2]
+
             ins.address = vdb.util.xint(tokens[0])
             if( ret.start == 0 ):
                 ret.start = ins.address
             ret.end = max(ret.end,ins.address)
-            ins.offset = tokens[1][2:-2]
+#            print("tokens[1] = '%s'" % tokens[1] )
+            if( len(tokens[1]) < 2 or tokens[1][1] == "+" ):
+                ins.offset = tokens[1][2:-2]
+            else:
+                ins.offset = tokens[1][1:-2]
+#            print("ins.offset = '%s'" % ins.offset )
             tpos = 1
             ibytes = []
             while( tpos < len(tokens) ):
@@ -778,8 +807,32 @@ def parse_from_gdb( arg, fakedata = None ):
     return ret
 
 def parse_from( arg ):
+    rng = arg.split(",")
+    if( len(rng) == 2 ):
+        try:
+            fr=vdb.util.gint(rng[0])
+            to=vdb.util.gint(rng[1])
+#            print("fr = '%x'" % fr )
+#            print("to = '%x'" % to )
+            if( to < fr ):
+                to = fr + to + 1
+            arg = f"0x{fr:x},0x{to:x}"
+
+        except:
+#            print("rng = '%s'" % rng )
+            pass
     # other disssembler options go here
-    return parse_from_gdb(arg)
+    try:
+        ret = parse_from_gdb(arg)
+    except gdb.error as e:
+        if( str(e) == "No function contains specified address." ):
+            return parse_from(arg+","+str(nonfunc_bytes.value))
+        elif( str(e) == "No function contains program counter for selected frame." ):
+            return parse_from("$rip,"+str(nonfunc_bytes.value))
+        else:
+            raise e
+
+    return ret
 
 def disassemble( argv ):
     dotty = False
@@ -825,12 +878,11 @@ class Dis (vdb.command.command):
 
     def __init__ (self):
         super (Dis, self).__init__ ("dis", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.dont_repeat()
 
     def do_invoke (self, argv ):
 
         try:
-#            da=gdb.selected_frame().architecture().disassemble(0x402293,count=10)
-#            print("da = '%s'" % da )
             disassemble( argv )
         except gdb.error as e:
             print(e)

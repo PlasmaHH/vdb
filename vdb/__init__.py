@@ -70,12 +70,43 @@ cmd_vdb()
 
 theme = vdb.config.parameter( "vdb-theme",None)
 
+def is_in_safe_path( pdir ):
+    pdir = os.path.normpath(pdir) + "/"
+#    print("pdir = '%s'" % pdir )
+    sp = gdb.parameter("auto-load safe-path")
+
+    debugdir = gdb.parameter("debug-file-directory")
+
+    datadir = gdb.execute("show data-directory",False,True)
+    datadir = datadir.split('"')[1]
+    vdb_dir = os.path.expanduser("~") + "/.vdb/"
+    vdb_dir = os.path.normpath(vdb_dir)
+
+    sp=sp.replace("$datadir",datadir)
+    sp=sp.replace("$debugdir",debugdir)
+
+    sp = sp.split(":")
+    sp.append(vdb_dir)
+
+    for p in sp:
+        p = os.path.normpath(p) + "/"
+        if( pdir.startswith(p) ):
+#            print("pdir = '%s'" % pdir )
+#            print("p = '%s'" % p )
+            return True
+    return False
+
+
 def load_plugins( plugindir ):
-    print(f"Loading plugins in {plugindir}…")
     try:
         oldpath = []
         oldpath += sys.path
         sys.path = [plugindir] + sys.path
+
+        if( not is_in_safe_path(plugindir) ):
+            return
+
+        print(f"Loading plugins in {plugindir}…")
 
         for pt in enabled_modules + [ "plugins" ]:
             pdir = f"{plugindir}{pt}/"
@@ -100,9 +131,12 @@ def load_themes( vdbdir ):
         print("Not loading any theme")
         return
     tdir = f"{vdbdir}themes/"
+    if( not is_in_safe_path(tdir) ):
+        return
     tfile = f"{tdir}{theme.value}.py"
     if( not os.path.isfile(tfile) ):
-        raise gdb.GdbError(f"Theme file {tfile} not found, can't load")
+        return
+#        raise gdb.GdbError(f"Theme file {tfile} not found, can't load")
     print("Trying to load theme from " + tfile)
     try:
         oldpath = []
@@ -127,6 +161,11 @@ enable_dashboard = vdb.config.parameter( "vdb-enable-dashboard",True)
 
 configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard" )
 
+home_first  = vdb.config.parameter( "vdb-plugin-home-first",True)
+search_down = vdb.config.parameter( "vdb-plugin-search-down",True)
+honor_sp    = vdb.config.parameter( "vdb-plugin-honor-safe-path",True)
+
+
 
 enabled_modules = [ ]
 def start():
@@ -146,21 +185,35 @@ def start():
             traceback.print_exc()
             pass
     vdb_dir = os.path.expanduser("~") + "/.vdb/"
-    load_plugins(vdb_dir)
+
+    plug_dirs = []
 
     rvdb = os.path.realpath(vdb_dir)
     cwd = os.path.realpath(os.getcwd())
-    print("rvdb = '%s'" % rvdb )
+#    print("rvdb = '%s'" % rvdb )
     while( cwd != "/" ):
-        cvdb = cwd + "/.vdb"
-        if( cvdb == rvdb ):
+        cvdb = cwd + "/.vdb/"
+        if( os.path.normpath(cvdb) == os.path.normpath(rvdb) ):
             break
-        print("cwd = '%s'" % cwd )
+#        print("cvdb = '%s'" % cvdb )
+        plug_dirs.append(cvdb)
+#        print("cwd = '%s'" % cwd )
         cwd,down = os.path.split(cwd)
-        print("down = '%s'" % down )
+#        print("down = '%s'" % down )
 
+    if( not search_down.value ):
+        plug_dirs.reverse()
 
-    load_themes(vdb_dir)
+    if( home_first.value ):
+        plug_dirs = [ vdb_dir ] + plug_dirs
+    else:
+        plug_dirs = plug_dirs + [ vdb_dir ]
+
+    for d in plug_dirs:
+        load_plugins(d)
+
+    for d in plug_dirs:
+        load_themes(d)
 
 #pre_commands = """
 #set confirm off

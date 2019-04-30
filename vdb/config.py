@@ -62,6 +62,8 @@ class parameter(gdb.Parameter):
         x = vdb.color.color("",self.value)
 
     def get_set_string(self):
+#        print("self.name = '%s'" % self.name )
+#        print("self.value = '%s'" % self.value )
         try:
             if isinstance(self.value, str):
                 self.value = vdb.util.unquote(self.value)
@@ -120,5 +122,32 @@ def set( s ):
         set_iterable(xs)
     else:
         set_iterable(s)
+
+def execute_string( s ):
+    s = s.strip()
+    if(len(s) == 0):
+        return
+    if( s[0] == "#" ):
+        return
+    try:
+#        print("s = '%s'" % s )
+        gdb.execute(f"{s}")
+    except:
+        print(f"Failed to execute {s}")
+#        traceback.print_exc()
+
+def execute_iterable( l ):
+    for i in l:
+        execute_string(i)
+
+def execute( s ):
+    if( isinstance(s,str) ):
+        xs = s.splitlines()
+        execute_iterable(xs)
+    else:
+        execute_iterable(s)
+
+
+
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
