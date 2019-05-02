@@ -1107,12 +1107,6 @@ class cmd_ftree (vdb.command.command):
 
     def __init__ (self):
         super (cmd_ftree, self).__init__ ("ftree", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-        self.bytes = []
-        self.max_type_len = 0
-        self.max_code_len = 0
-        self.max_name_len = 0
-        self.outer_size = 0
-        self.outer_type_name = ""
         self.result = ""
         self.dont_repeat()
 

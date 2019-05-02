@@ -639,8 +639,15 @@ x86_return_mnemonics = set (["ret","retq","iret"])
 x86_call_mnemonics = set(["call","callq","int"])
 x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd" ])
 
+parse_cache = {}
 def parse_from_gdb( arg, fakedata = None ):
+    global parse_cache
+
+    ret = parse_cache.get(arg,None)
+    if( ret is not None ):
+        return ret
     ret = listing()
+
     prefixes = x86_prefixes
     unconditional_jump_mnemonics = x86_unconditional_jump_mnemonics
     return_mnemonics = x86_return_mnemonics
@@ -769,41 +776,13 @@ def parse_from_gdb( arg, fakedata = None ):
 #            print("tokens = '%s'" % tokens[tpos:] )
             ret.add(ins)
             continue
-
-            address = m.group(2)
-            offset = m.group(3)
-            rest = m.group(4)
-            function = m.group(5)
-            jumpoffset = m.group(6)
-            restl = rest.split(" ")
-            for ac in asm_colors:
-                if( re.match(ac[0],restl[0]) ):
-                    restl[0] = vdb.color.color(restl[0],ac[1])
-                    break
-#					print("m = '%s'" % m )
-            if( function is None ):
-                function = ""
-            else:
-                if( function.startswith(current_function) ):
-                    function = f"<current function{jumpoffset}>"
-                else:
-                    function = vdb.shorten.symbol(function)
-            rest = " ".join(restl)
-            line = ""
-            if( marker is not None ):
-                line += vdb.color.color(f"{marker:<2} ",color_marker.value)
-                line += vdb.color.color(f"{address} ",color_marker.value)
-                line += f"<+{offset:<4}>:  {rest}{function}"
-            else:
-                line += f"   {address} <+{offset:<4}>:  {rest}{function}"
-            print(line)
-            continue
         if( line in set(["End of assembler dump."]) ):
             continue
         if( len(line) == 0 ):
             continue
         print(f"Don't know what to do with '{line}'")
 #			print("m = '%s'" % m )
+    parse_cache[arg] = ret
     return ret
 
 def parse_from( arg ):

@@ -4,13 +4,13 @@
 
 import vdb.command
 import vdb.event
+import vdb.cache
 
 import gdb
 
 import functools
 import traceback
 import os
-import itertools
 import subprocess
 import socket
 import sys
@@ -130,7 +130,7 @@ class tmux(tty):
 #            print("line = '%s'" % line )
             # or regex?
 #            if( line[0] == pane_name ):
-            if( re.match( line[0] , pane_name)  ):
+            if( re.match( pane_name, line[0] ) ):
                 tty = line[1]
                 break
         if( tty is None ):
@@ -152,14 +152,20 @@ class dashboard:
         self.command = None
         self.enabled = True
         self.cls = True
+        self.last_time = 0
 
     def do_output( self ):
+        sw = vdb.cache.stopwatch()
+        sw.start()
 #        print("some dashboard: %s" % self.command)
         cout = gdb.execute(self.command,False,True)
+
 #        print("cout = '%s'" % cout )
         if( self.cls ):
             self.output.write("\033[2J\033[H")
         self.output.write(cout)
+        sw.stop()
+        self.last_time = sw.get()
 
 
     def on_event( self ):
@@ -168,38 +174,11 @@ class dashboard:
         if( self.output is not None ):
             if( self.output.enabled ):
                 self.do_output()
-
-def format_line( line, maxsz, padbefore = " ", padafter = " "  ):
-    ret = ""
-    cnt = 0
-    for cell in line:
-        ret += padbefore
-        ret += "{cell:<{maxsz}}".format(cell = cell, maxsz = maxsz[cnt] )
-        ret += padafter
-        cnt += 1
-    return ret
-
-def format_table( tbl ):
-    ret = ""
-    if( len(tbl) == 0 ):
-        return ret
-    maxsz = list(itertools.repeat(0,len(tbl[0])))
-    for line in tbl:
-#        print("line = '%s'" % line )
-        cnt = 0
-        for cell in line:
-            maxsz[cnt] = max(maxsz[cnt],len(cell))
-            cnt += 1
-    for line in tbl:
-        ret += format_line(line,maxsz)
-        ret += "\n"
-    return ret
-
 dash_events = { }
 
 def show_dashboard( ):
     tbl = []
-    tbl.append( ["EN","CLS","ID","Type","Target","Event(s)","Command"] )
+    tbl.append( ["EN","CLS","ID","Type","Target","Event(s)","Command","ExTime"] )
     for on,evl in dash_events.items():
         for db in evl:
 #            print("on = '%s'" % on )
@@ -215,11 +194,12 @@ def show_dashboard( ):
             cls = "N"
             if( db.cls ):
                 cls = "Y"
+            t = db.last_time
 
-            line  = [str(en),str(cls),str(id),str(typ),str(tgt),str(ev),str(cmd)]
+            line  = [str(en),str(cls),str(id),str(typ),str(tgt),str(ev),str(cmd),str(t)]
             tbl.append(line)
             # Enabled ID   Type  target  event(s)   command
-    txt = format_table(tbl)
+    txt = vdb.util.format_table(tbl)
     print(txt)
 
 def trigger_dashboard( id, to ):

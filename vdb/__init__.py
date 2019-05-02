@@ -158,8 +158,9 @@ enable_grep      = vdb.config.parameter( "vdb-enable-grep",True)
 enable_pahole    = vdb.config.parameter( "vdb-enable-pahole",True)
 enable_ftree     = vdb.config.parameter( "vdb-enable-ftree",True)
 enable_dashboard = vdb.config.parameter( "vdb-enable-dashboard",True)
+enable_hashtable = vdb.config.parameter( "vdb-enable-hashtable",True)
 
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard" )
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard,hashtable" )
 
 home_first  = vdb.config.parameter( "vdb-plugin-home-first",True)
 search_down = vdb.config.parameter( "vdb-plugin-search-down",True)

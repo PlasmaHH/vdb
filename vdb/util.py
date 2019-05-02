@@ -5,6 +5,7 @@ import gdb
 
 import re
 import traceback
+import itertools
 
 def nstr( s ):
     if( s is None ):
@@ -143,5 +144,32 @@ def next_id( name ):
     nid = id_store.get(name,0)
     id_store[name] = nid+1
     return nid
+
+def format_line( line, maxsz, padbefore = " ", padafter = " "  ):
+    ret = ""
+    cnt = 0
+    for cell in line:
+        ret += padbefore
+        ret += "{cell:<{maxsz}}".format(cell = cell, maxsz = maxsz[cnt] )
+        ret += padafter
+        cnt += 1
+    return ret
+
+def format_table( tbl ):
+    ret = ""
+    if( len(tbl) == 0 ):
+        return ret
+    maxsz = list(itertools.repeat(0,len(tbl[0])))
+    for line in tbl:
+#        print("line = '%s'" % line )
+        cnt = 0
+        for cell in line:
+            maxsz[cnt] = max(maxsz[cnt],len(cell))
+            cnt += 1
+    for line in tbl:
+        ret += format_line(line,maxsz)
+        ret += "\n"
+    return ret
+
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
