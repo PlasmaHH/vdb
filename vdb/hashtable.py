@@ -2,13 +2,20 @@
 # -*- coding: utf-8 -*-
 
 import vdb.command
+import vdb.config
 
 import gdb
 
 import traceback
 import math
 import re
+import datetime
+import os
 from PIL import Image
+
+
+raw_filename  = vdb.config.parameter("vdb-hashtable-filename","hashtable.png")
+imgcommand    = vdb.config.parameter("vdb-hashtable-img-command", "gwenview {filename} &>/dev/null &" )
 
 chains_buckets_number = [
         [ "_M_h", "_M_bucket_count" ],
@@ -115,8 +122,8 @@ def eval_hashtable( val ):
             c_skips = n
             break
 
-    print("num_buckets = '%s'" % num_buckets )
-    print("buckptr = '%s'" % buckptr )
+#    print("num_buckets = '%s'" % num_buckets )
+#    print("buckptr = '%s'" % buckptr )
     chainlens = []
     first_nodes = set()
     for b in range(0,num_buckets):
@@ -149,9 +156,9 @@ def eval_hashtable( val ):
         sc += 1
         slotcounts[ch] = sc
         maxchain = max(maxchain,ch)
-    print("maxchain = '%s'" % maxchain )
-    print("slotcounts = '%s'" % slotcounts )
-    print("elements = '%s'" % elements )
+#    print("maxchain = '%s'" % maxchain )
+#    print("slotcounts = '%s'" % slotcounts )
+#    print("elements = '%s'" % elements )
     load = elements / num_buckets
     print("load = '%.3f'" % load )
     tbl = [ ["Chainlen","Bucket%","Num", "Ideal","Ideal%" ] ]
@@ -169,7 +176,7 @@ def eval_hashtable( val ):
     t = vdb.util.format_table(tbl)
     print(t)
     imgsz = math.ceil(math.sqrt(num_buckets))
-    print("imgsz = '%s'" % imgsz )
+#    print("imgsz = '%s'" % imgsz )
     img = Image.new("RGB",(imgsz,imgsz),"black")
     pixels = img.load()
     ix = 0
@@ -185,7 +192,16 @@ def eval_hashtable( val ):
         pixels[ix,iy] = co
 
 #    img.show()
+    filename = raw_filename.value
+    now=datetime.datetime.now()
+    filename=now.strftime(filename)
+#    img.save("hashtable.png")
     img.save("hashtable.png")
+
+    if( len(imgcommand.value) > 0 ):
+        cmd=imgcommand.value.format(filename=filename)
+        print(f"Created '{filename}', starting {cmd}")
+        os.system(cmd)
 
 class cmd_hashtable (vdb.command.command):
     """ """
@@ -197,7 +213,7 @@ class cmd_hashtable (vdb.command.command):
 
     def invoke (self, arg, from_tty):
         argv = gdb.string_to_argv(arg)
-        print("argv = '%s'" % argv )
+#        print("argv = '%s'" % argv )
         if len(argv) > 2:
             raise gdb.GdbError('hashtable takes 1-2 arguments.')
 
