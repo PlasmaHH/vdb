@@ -639,14 +639,37 @@ x86_return_mnemonics = set (["ret","retq","iret"])
 x86_call_mnemonics = set(["call","callq","int"])
 x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd" ])
 
+def fix_marker( ls ):
+#    print("fixing makers...")
+    mark = vdb.util.gint("$rip")
+
+    for i in ls.instructions:
+        if( i.address == mark ):
+            i.marked = True
+        else:
+            i.marked = False
+    return ls
+
 parse_cache = {}
 def parse_from_gdb( arg, fakedata = None ):
+#    print("arg = '%s'" % arg )
+#    print("len(arg) = '%s'" % len(arg) )
     global parse_cache
 
-    ret = parse_cache.get(arg,None)
+    key = arg
+
+    if( len(arg) == 0 ):
+        key = gdb.execute(f"info symbol $rip",False,True)
+#        print("key = '%s'" % key )
+        key = re.sub(r" \+ [0-9]+","",key)
+
+#    print("key = '%s'" % key )
+
+    ret = parse_cache.get(key,None)
     if( ret is not None ):
-        return ret
+        return fix_marker(ret)
     ret = listing()
+
 
     prefixes = x86_prefixes
     unconditional_jump_mnemonics = x86_unconditional_jump_mnemonics
@@ -782,7 +805,8 @@ def parse_from_gdb( arg, fakedata = None ):
             continue
         print(f"Don't know what to do with '{line}'")
 #			print("m = '%s'" % m )
-    parse_cache[arg] = ret
+    parse_cache[key] = ret
+#    print(f"Returning for {key}")
     return ret
 
 def parse_from( arg ):
@@ -809,6 +833,7 @@ def parse_from( arg ):
         elif( str(e) == "No function contains program counter for selected frame." ):
             return parse_from("$rip,"+str(nonfunc_bytes.value))
         else:
+            print("e = '%s'" % e )
             raise e
 
     return ret
