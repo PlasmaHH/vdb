@@ -662,13 +662,16 @@ def parse_from_gdb( arg, fakedata = None ):
         if( gdb.selected_thread() == None ):
             return listing()
 
+#        gdb.execute(f"p $rip")
         key = gdb.execute(f"info symbol $rip",False,True)
 #        print("key = '%s'" % key )
         key = re.sub(r" \+ [0-9]+","",key)
 
+#    print("arg = '%s'" % arg )
 #    print("key = '%s'" % key )
 
     ret = parse_cache.get(key,None)
+#    print("ret = '%s'" % ret )
     if( ret is not None and fakedata is None ):
         return fix_marker(ret)
     ret = listing()
@@ -808,7 +811,8 @@ def parse_from_gdb( arg, fakedata = None ):
             continue
         print(f"Don't know what to do with '{line}'")
 #			print("m = '%s'" % m )
-    parse_cache[key] = ret
+    if( fakedata is None ):
+        parse_cache[key] = ret
 #    print(f"Returning for {key}")
     return ret
 
