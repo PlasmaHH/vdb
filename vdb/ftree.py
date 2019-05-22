@@ -22,16 +22,13 @@ import os
 import datetime
 
 
-def set_array_elements( cfg ):
-    cfg.elements = []
-    elem = cfg.value.split(",")
-    for i in elem:
-        cfg.elements.append(int(i))
+
 
 verbosity      = vdb.config.parameter("vdb-ftree-verbosity",3 )
 dot_filebase   = vdb.config.parameter("vdb-ftree-filebase","ftree")
 dot_command    = vdb.config.parameter("vdb-ftree-dot-command", "nohup dot -Txlib {filename} &>/dev/null &" )
-array_elements = vdb.config.parameter("vdb-ftree-array-elements","0,1,2,3,-4,-3,-2,-1",on_set  = set_array_elements )
+#array_elements = vdb.config.parameter("vdb-ftree-array-elements","0,1,2,3,-4,-3,-2,-1",on_set  = vdb.config.set_array_elements )
+array_elements = vdb.config.parameter("vdb-ftree-array-elements","0:3,-4:-1",on_set  = vdb.config.set_array_elements )
 color_invalid  = vdb.config.parameter("vdb-ftree-colors-invalid","#ff2222",gdb_type = vdb.config.PARAM_COLOUR)
 color_union    = vdb.config.parameter("vdb-ftree-colors-union","#ffff66",gdb_type = vdb.config.PARAM_COLOUR)
 color_vcast    = vdb.config.parameter("vdb-ftree-colors-virtual-cast","#ccaaff",gdb_type = vdb.config.PARAM_COLOUR)
@@ -47,7 +44,7 @@ shorten_head   = vdb.config.parameter("vdb-ftree-shorten-head",15 )
 shorten_tail   = vdb.config.parameter("vdb-ftree-shorten-tail",15 )
 color_arrows   = vdb.config.parameter("vdb-ftree-color-arrows",True )
 
-set_array_elements(array_elements)
+#vdb.config.set_array_elements(array_elements)
 
 color_list = vdb.config.parameter("vdb-ftree-colors-arrows", "#ff0000;#00ff00;#0000ff;#ff8000;#ff00ff;#00ffff" ,on_set = vdb.config.split_colors)
 

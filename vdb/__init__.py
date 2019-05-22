@@ -159,8 +159,9 @@ enable_pahole    = vdb.config.parameter( "vdb-enable-pahole",True)
 enable_ftree     = vdb.config.parameter( "vdb-enable-ftree",True)
 enable_dashboard = vdb.config.parameter( "vdb-enable-dashboard",True)
 enable_hashtable = vdb.config.parameter( "vdb-enable-hashtable",True)
+enable_ssh       = vdb.config.parameter( "vdb-enable-ssh",True)
 
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard,hashtable" )
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard,hashtable,ssh" )
 
 home_first  = vdb.config.parameter( "vdb-plugin-home-first",True)
 search_down = vdb.config.parameter( "vdb-plugin-search-down",True)
@@ -216,6 +217,10 @@ def start():
     for d in plug_dirs:
         load_themes(d)
 
+def enabled( mod ):
+    if( mod in enabled_modules ):
+        return True
+    return False
 #pre_commands = """
 #set confirm off
 #set verbose off

@@ -74,6 +74,9 @@ class port(target,threading.Thread):
         if( len(self.targets) == 0 ):
             self.enabled = False
 
+    def flush( self ):
+        pass
+
     def name( self ):
         return "port"
 
@@ -111,6 +114,9 @@ class tty(target):
 
     def write( self, output ):
         self.file.write(output)
+
+    def flush( self ):
+        self.file.flush()
 
     def name( self ):
         return "tty"
@@ -157,13 +163,20 @@ class dashboard:
     def do_output( self ):
         sw = vdb.cache.stopwatch()
         sw.start()
+        cout=""
 #        print("some dashboard: %s" % self.command)
-        cout = gdb.execute(self.command,False,True)
+        try:
+            cout = gdb.execute(self.command,False,True)
+        except gdb.error as ge:
+            cout = str(ge)
+        except:
+            cout = traceback.format_exc()
 
 #        print("cout = '%s'" % cout )
         if( self.cls ):
             self.output.write("\033[2J\033[H")
         self.output.write(cout)
+        self.output.flush()
         sw.stop()
         self.last_time = sw.get()
 
@@ -288,6 +301,7 @@ class cmd_dashboard (vdb.command.command):
 #            cProfile.runctx("call_dashboard(argv)",globals(),locals())
             call_dashboard(argv)
         except gdb.error as ge:
+#            traceback.print_exc()
             print(ge)
         except:
             traceback.print_exc()

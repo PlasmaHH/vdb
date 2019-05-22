@@ -659,6 +659,9 @@ def parse_from_gdb( arg, fakedata = None ):
     key = arg
 
     if( len(arg) == 0 ):
+        if( gdb.selected_thread() == None ):
+            return listing()
+
         key = gdb.execute(f"info symbol $rip",False,True)
 #        print("key = '%s'" % key )
         key = re.sub(r" \+ [0-9]+","",key)
@@ -666,7 +669,7 @@ def parse_from_gdb( arg, fakedata = None ):
 #    print("key = '%s'" % key )
 
     ret = parse_cache.get(key,None)
-    if( ret is not None ):
+    if( ret is not None and fakedata is None ):
         return fix_marker(ret)
     ret = listing()
 
@@ -834,6 +837,7 @@ def parse_from( arg ):
             return parse_from("$rip,"+str(nonfunc_bytes.value))
         else:
             print("e = '%s'" % e )
+            traceback.print_exc()
             raise e
 
     return ret

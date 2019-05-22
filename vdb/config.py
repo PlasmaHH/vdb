@@ -14,7 +14,8 @@ import types
 import traceback
 
 PARAM_COLOUR = 0x800
-PARAM_COLOR = PARAM_COLOUR
+PARAM_COLOR  = PARAM_COLOUR
+PARAM_FLOAT  = 0x801
 
 
 def guess_gdb_type( p ):
@@ -23,6 +24,8 @@ def guess_gdb_type( p ):
         return gdb.PARAM_BOOLEAN
     if( isinstance(p,int) ):
         return gdb.PARAM_INTEGER
+    if( isinstance(p,float) ):
+        return PARAM_FLOAT
     return gdb.PARAM_STRING
 
 def split_colors( cfg ):
@@ -40,6 +43,7 @@ class parameter(gdb.Parameter):
         self.set_doc = 'Set ' + docstring
         self.show_doc = docstring + ':'
         self.is_colour = False
+        self.is_float = False
         if( gdb_type == PARAM_COLOR ):
             if( name.find("-colors-") == -1 ):
                 raise Exception("Colour names must have -colors- in their name, '%s' does not" % name )
@@ -48,6 +52,11 @@ class parameter(gdb.Parameter):
             self.theme_default = default
         if( gdb_type is None ):
             gdb_type = guess_gdb_type(default)
+        if( gdb_type is  PARAM_FLOAT ):
+            self.is_float = True
+            self.fvalue = float(default)
+            default = str(float(default))
+            gdb_type = gdb.PARAM_STRING
         super(parameter, self).__init__(name, gdb.COMMAND_SUPPORT, gdb_type )
         self.value = default
         self.previous_value = self.value
@@ -73,6 +82,8 @@ class parameter(gdb.Parameter):
                 self.value = self.default
             if( self.is_colour ):
                 self.check_colour()
+            if( self.is_float ):
+                self.fvalue = float(self.value)
             if( self.on_set is not None ):
                 self.on_set(self)
         except:
@@ -148,6 +159,29 @@ def execute( s ):
         execute_iterable(s)
 
 
+def set_array_elements( cfg ):
+    cfg.elements = []
+    elem = cfg.value.split(",")
+    for i in elem:
+        i=i.split(":")
+        if( len(i) == 1 ):
+            cfg.elements.append(int(i[0]))
+        elif( len(i) == 2):
+            s=int(i[0])
+            e=int(i[1])
+            if( s > e ):
+                cfg.elements += list( range(s,e-1,-1) )
+            else:
+                cfg.elements += list( range(s,e+1) )
+        else:
+            s=int(i[0])
+            e=int(i[1])
+            r=int(i[2])
+            if( s > e ):
+                cfg.elements += list( range(s,e-1,-r) )
+            else:
+                cfg.elements += list( range(s,e+1,r) )
+#    print("cfg.elements = '%s'" % cfg.elements )
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

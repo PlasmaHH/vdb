@@ -31,13 +31,51 @@ def print_header( ):
     plen = 64//4
     print(vdb.color.color(f'  {" "*plen}  0  1  2  3   4  5  6  7    8  9  A  B   C  D  E  F   01234567 89ABCDEF',color_head.value))
 
+
+class sym_location:
+
+    def __init__( self ):
+        self.start = 0
+        self.end = 0
+        self.name = ""
+
+sym_cache = intervaltree.IntervalTree()
+
 symre=re.compile("0x[0-9a-fA-F]* <([^+]*)(\+[0-9]*)*>")
+def get_gdb_sym( addr ):
+    addr = int(addr)
+    global sym_cache
+    xs = sym_cache[addr]
+    if( len(xs) > 0 ):
+        print("xs = '%s'" % xs )
+        for x in xs:
+            print("x = '%s'" % x )
+    else:
+        xaddr = addr
+        nm = gdb.parse_and_eval(f"(void*)({xaddr})")
+        m=symre.match(str(nm))
+        if( m ):
+            symsize = 1
+            ssz = m.group(2)
+            if( ssz is not None ):
+                symsize = int(ssz[1:])
+            eaddr = xaddr
+            xaddr -= symsize + 1
+            saddr = eaddr - symsize
+#            print("saddr = 0x%x" % saddr )
+#            print("eaddr = 0x%x" % eaddr )
+#            ret.append( ( saddr, eaddr, m.group(1) ) )
+            ret[saddr:eaddr+1] = m.group(1)
+
+
+
 
 def get_symbols( addr, xlen ):
     ret = intervaltree.IntervalTree()
     xaddr = addr+xlen
 
     while xaddr > addr:
+        nm = get_gdb_sym(xaddr)
         nm = gdb.parse_and_eval(f"(void*)({xaddr})")
         m=symre.match(str(nm))
         if( m ):
