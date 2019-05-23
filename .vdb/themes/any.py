@@ -37,7 +37,7 @@ vdb-asm-showspec-dot                maobnprT
 vdb-asm-showspec                    maodbnprT
 # backtrace colours
 vdb-bt-address-colorspec	ma
-vdb-bt-showspec                     naFPs
+vdb-bt-showspec                     naFPS
 vdb-bt-colors-address               None
 vdb-bt-colors-default-object        #ffbbff
 vdb-bt-colors-filename              #ffff99

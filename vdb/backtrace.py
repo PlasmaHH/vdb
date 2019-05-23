@@ -25,7 +25,7 @@ color_rtti     = vdb.config.parameter("vdb-bt-colors-rtti-warning",             
 
 color_addr     = vdb.config.parameter("vdb-bt-color-addresses", True )
 addr_colorspec = vdb.config.parameter("vdb-bt-address-colorspec", "ma" )
-showspec       = vdb.config.parameter("vdb-bt-showspec","naFPs")
+showspec       = vdb.config.parameter("vdb-bt-showspec","naFPS")
 #frame_marker = vdbnfo.config.parameter("vdb-bt-selected-frame-marker", "[*]" )
 frame_marker = vdb.config.parameter("vdb-bt-selected-frame-marker","► ")
 
@@ -40,8 +40,6 @@ class ArgVal():
 
 	def value(self):
 		return self.val
-
-
 
 signals = {
 1 : "SIGHUP",
@@ -297,8 +295,14 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
 
         return address + name
 
+    def basename( self, fname ):
+        if( "s" in showspec.value ):
+            return os.path.basename(fname)
+        else:
+            return fname
+
     def filename(self):
-        if( "s" not in showspec.value ):
+        if( not any((c in showspec.value) for c in "sS" ) ):
             return None
         frame = self.fobj.inferior_frame()
         sal = frame.find_sal()
@@ -306,15 +310,20 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
         try:
             fname = sal.symtab.filename
             fname = vdb.shorten.path(fname)
+            fname = self.basename(fname)
             fname = vdb.color.color(fname,color_filename.value)
         except:
             try:
                 fname = sal.symtab.objfile
+                fname = vdb.shorten.path(fname)
+                fname = self.basename(fname)
                 fname = vdb.color.color(fname,color_objfile.value)
             except:
                 try:
                     fname = super(BacktraceDecorator,self).filename()
                     if( fname is not None ):
+                        fname = vdb.shorten.path(fname)
+                        fname = self.basename(fname)
                         fname = vdb.color.color(fname,color_defobj.value)
                 except:
                     pass
@@ -337,7 +346,9 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
                 continue
 #			print("a.symbol() = '%s'" % a.symbol() )
             if( "P" in showspec.value ):
-                ret.append( ArgVal( a.symbol(), a.value() ) )
+#                ret.append( ArgVal( a.symbol(), a.value() ) )
+                ret.append( ArgVal( a.symbol(), "A" ) )
+#                ret.append( ArgVal( a.symbol(), "TEST") )
             else:
                 ret.append( ArgVal( a.symbol(), "") )
 #		gdb.execute("set logging redirect off")
@@ -373,7 +384,7 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
         return addr
 
     def line(self):
-        if( "s" not in showspec.value ):
+        if( not any((c in showspec.value) for c in "sS" ) ):
             return None
         l = super(BacktraceDecorator,self).line()
         return l
