@@ -228,7 +228,7 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
 
         name = frame.name()
         if( name is None ):
-            return "<unknown>"
+            return address + "<unknown>"
         name = str(name)
         name = vdb.shorten.symbol(name)
 
@@ -346,8 +346,8 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
                 continue
 #			print("a.symbol() = '%s'" % a.symbol() )
             if( "P" in showspec.value ):
-#                ret.append( ArgVal( a.symbol(), a.value() ) )
-                ret.append( ArgVal( a.symbol(), "A" ) )
+                ret.append( ArgVal( a.symbol(), a.value() ) )
+#                ret.append( ArgVal( a.symbol(), "A" ) )
 #                ret.append( ArgVal( a.symbol(), "TEST") )
             else:
                 ret.append( ArgVal( a.symbol(), "") )

@@ -670,6 +670,10 @@ that are loaded, copies it all over and instructs gdb to only ever use these sha
 files are cached so that for a future invocation you will not have to do the copying again. Since we don't know when you
 are done, you have to clean them up yourself. You also have some control over these files
 
+Additionally we try to find and copy debug files and shared objects that have been loaded via `dlopen()`. The mechanism
+isn't perfect, but you can always manually copy the debug files into the lib directory, just name them the same as the
+`.so` file but add `.debug` to the filename.
+
 ### configuration
 
 For the attach command you can change the way it tries to get the pid of the process name you supply. The most versatile

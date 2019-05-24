@@ -74,6 +74,11 @@ Plan:
     keep master connected ssh connections that long idle. We might also have an option to disable that master things since maybe it doesn't work for some
 
 
+    we need a "cache force" mechanism where we dont do the checksum but override having a hash already so that for huge corefiles we don't need to regenerate the checksum
+
+    check output of "info sharedlibrary" if any is missing, load them and then reset solib search path to have them loaded.
+
+    maybe we can provide debugging so files if they exist on the target system somehow?
 """
 
 class ssh_connection:
@@ -204,20 +209,25 @@ def set_ssh( s ):
         else:
             vdb.prompt.reset_prompt()
 
+csum_cache = {
+        "statistics3:/var/collectd/rrd/core.9323" : "da4a39c3032d7e675e84e8727d919683"
+        }
+
 def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
 #    sw=vdb.cache.stopwatch()
 #    sw.start()
     src = fname.replace("{pid}",str(pid))
-#    print("src = '%s'" % src )
-    s.call(csum_cmd.value + " " + src )
-    print(f"Checking if {src} is already locally cached…")
-#    print("csum_timeout.value = '%s'" % csum_timeout.value )
-#    print("type(csum_timeout.value) = '%s'" % type(csum_timeout.fvalue) )
-    s.fill(csum_timeout.fvalue)
-    csum=s.read().split()
-#    print("csum = '%s'" % csum )
-    csum = csum[0]
-#    print("csum = '%s'" % csum )
+
+    cachekey = f"{s.host}:{fname}"
+    csum = csum_cache.get(cachekey,None)
+    if( csum is None ):
+#        print("src = '%s'" % src )
+        s.call(csum_cmd.value + " " + src )
+        print(f"Checking if {src} is already locally cached…")
+        s.fill(csum_timeout.fvalue)
+        csum=s.read().split()
+        csum = csum[0]
+
     tmpf=tmpfile.value
     if( target is not None ):
         tmpf=target
@@ -230,7 +240,7 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
         os.system(f"scp {scpopt} {s.host}:{src} {fn}")
     else:
         print(f"Using {fn} for {src} from cache")
-    if( symlink is not None ):
+    if( symlink is not None and os.path.isfile(fn) ):
         try:
             os.unlink(symlink)
         except:
@@ -263,6 +273,17 @@ def attach( s, argv ):
     gs = gdbserver(s,["--attach",str(pid)])
     set_ssh( (s,gs) )
 
+def copy_libraries( s, libset, libdir, cwd ):
+    for lib in libset :
+        dn=os.path.dirname(f"{libdir}/{lib}")
+#        ddn=os.path.dirname(f"{libdir}/usr/lib/debug/{lib}")
+        os.makedirs(dn,exist_ok=True)
+#        os.makedirs(ddn,exist_ok=True)
+
+        find_file(s,lib,"lib",symlink=f"{libdir}/{lib}",target=f"{cwd}/{libdir}/lib.{{csum}}.so")
+        find_file(s,"/usr/lib/debug/"+lib+".debug","lib",symlink=f"{libdir}/{lib}.debug",target=f"{cwd}/{libdir}/lib.{{csum}}.so.debug")
+
+
 def core( s, argv ):
 #    print("argv = '%s'" % argv )
     corefile=argv[0]
@@ -284,7 +305,7 @@ def core( s, argv ):
 
     print("Checking which shared objects were loaded…")
     # method 1, get eu-readelf to output whats in the corefile
-    libnotes=subprocess.check_output(["sh","-c",f"eu-readelf -n {cf} | grep /"])
+    libnotes=subprocess.check_output(["sh","-c",f"eu-readelf -n {cf} | grep / | grep -v '(deleted)' "])
     notere=re.compile("[0-9a-fA-F]*-[0-9a-fA-F]*\s*[0-9a-fA-F]*\s*[0-9]*\s*(.*)")
     libset=set()
     for note in libnotes.decode().splitlines():
@@ -322,18 +343,23 @@ def core( s, argv ):
 
     cwd=os.getcwd()
     print("Copying library files over…")
-    for lib in libset :
-        dn=os.path.dirname(f"{libdir}/{lib}")
-        os.makedirs(dn,exist_ok=True)
-        find_file(s,lib,"lib",symlink=f"{libdir}/{lib}",target=f"{cwd}/{libdir}/lib.{{csum}}.so")
-#        os.system(f"scp {s.host}:{lib} {libdir}/")
-
+    copy_libraries(s,libset,libdir,cwd)
     print("Telling gdb to search for libraries only in our cache…")
     gdb.execute(f"add-auto-load-safe-path {cwd}/{libdir}")
     gdb.execute(f"set solib-absolute-prefix {cwd}/{libdir}")
     print("Loading binary and core file…")
     gdb.execute(f"file {bf}")
     gdb.execute(f"core {cf}")
+    slibs=gdb.execute("info sharedlibrary",False,True).splitlines()
+    xlibset = set()
+    for slib in slibs:
+        slib=slib.split()
+        if( slib[0] == "No" ):
+            print("Still missing library " + slib[1])
+            xlibset.add(slib[1])
+    if( len(xlibset) > 0 ):
+        copy_libraries(s,xlibset,libdir,cwd)
+        gdb.execute("set solib-search-path .")
         
 
 
