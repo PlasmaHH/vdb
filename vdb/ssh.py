@@ -213,6 +213,14 @@ csum_cache = {
         "statistics3:/var/collectd/rrd/core.9323" : "da4a39c3032d7e675e84e8727d919683"
         }
 
+def csum( argv ):
+    key = argv[0]
+    cs = argv[1]
+    if( key.find(":") == -1 ):
+        raise gdb.error("ssh csum <key> <csum> : the key parameter must have the form host:file but we found no ':'")
+    global csum_cache
+    csum_cache[key] = cs
+
 def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
 #    sw=vdb.cache.stopwatch()
 #    sw.start()
@@ -376,10 +384,14 @@ def call_ssh( argv ):
 #    print("cmd = '%s'" % cmd )
 #    print("moreargv = '%s'" % moreargv )
 
+    if( len(argv) == 3 and host == "csum" ):
+        csum( argv[1:] )
+        return
+
     s = ssh(host)
     if( cmd == "attach" ):
         attach( s, moreargv )
-    if( cmd == "core" ):
+    elif( cmd == "core" ):
         core( s, moreargv )
 
 def remove_ssh( ev ):

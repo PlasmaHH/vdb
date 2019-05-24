@@ -67,6 +67,7 @@ This is work in progress and not yet ready for real world usage, it is more of a
 	* [ssh](#ssh)
 		* [`attach` to process](#attach-to-process)
 		* [debug `core` file](#debug-core-file)
+		* [Remote csum cache](#remote-csum-cache)
 		* [configuration](#configuration-1)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
@@ -673,6 +674,12 @@ are done, you have to clean them up yourself. You also have some control over th
 Additionally we try to find and copy debug files and shared objects that have been loaded via `dlopen()`. The mechanism
 isn't perfect, but you can always manually copy the debug files into the lib directory, just name them the same as the
 `.so` file but add `.debug` to the filename.
+
+### Remote csum cache
+Instead of calculating the checksum for a remote file, the copy functionality can also take the checksum from a cache.
+The only way to add to the cache is via the command `ssh csum <host>:<file> <csum>` which will be mostly useful for when
+the core and/or binary file has already been copied over but is so huge that even calculating the checksum takes too
+long to be useful. Ususally this is then put into a project specific configuration file.
 
 ### configuration
 
