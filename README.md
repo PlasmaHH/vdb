@@ -308,6 +308,12 @@ encountered while parsing the current listing.
 
 In case your tree view is very wide, you might
 like setting the option `vdb-asm-tree-prefer-right` to make the arrows prefer being more on the right side.
+
+
+Sometimes the display gets a little bit complex:
+![](img/dis.complex.png)
+There isn't too much you can do, but adding more colours sometimes helps to distinguish the arrows better.
+
 #### `dis/<context>`
 This limits the displayed disassembly to the context of the passed amount of lines around the `$rip` marker. Should
 there be no such marker, this has no special effect. Note that the whole disassembly will be generated, filtered, and
