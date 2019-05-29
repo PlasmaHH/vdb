@@ -108,14 +108,25 @@ It prints the type and displays comments showing where holes are."""
 
         if len(argv) != 1:
             raise gdb.GdbError('pahole takes 1 arguments.')
-        stype = gdb.lookup_type (argv[0])
-        ptype = stype.strip_typedefs()
+        sobj = None
+        ptype = None
+        try:
+            stype = gdb.lookup_type (argv[0])
+            ptype = stype.strip_typedefs()
+        except gdb.error as e:
+            sobj = gdb.parse_and_eval(argv[0])
+            stype = sobj.type
+            ptype = stype.strip_typedefs()
+            if( ptype.code == gdb.TYPE_CODE_PTR ):
+                sobj = sobj.dereference()
+                stype = ptype.target()
+                ptype = stype.strip_typedefs()
+#            traceback.print_exc()
+
         if ptype.code != gdb.TYPE_CODE_STRUCT and ptype.code != gdb.TYPE_CODE_UNION:
             raise gdb.GdbError('%s is not a struct/union type: %s' % (" ".join(argv), ptype.code))
         try:
-#            tl = vdb.layout.type_layout(ptype)
-            xl = vdb.layout.object_layout(stype)
-#            print_pahole(tl,condensed)
+            xl = vdb.layout.object_layout(stype,sobj)
             print_pahole(xl,condensed)
         except Exception as e:
             traceback.print_exc()
