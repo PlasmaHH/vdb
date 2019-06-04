@@ -47,8 +47,8 @@ next_mark_ptr     = vdb.config.parameter("vdb-asm-next-mark-pointer", True )
 shorten_header    = vdb.config.parameter("vdb-asm-shorten-header", False )
 prefer_linear_dot = vdb.config.parameter("vdb-asm-prefer-linear-dot",False)
 
-offset_fmt = vdb.config.parameter("vdb-asm-offset-format", " <+{offset:<{maxlen}}>:" )
-offset_txt_fmt = vdb.config.parameter("vdb-asm-text-offset-format", " <{offset:<{maxlen}}>:" )
+offset_fmt = vdb.config.parameter("vdb-asm-offset-format", "<+{offset:<{maxlen}}>:" )
+offset_txt_fmt = vdb.config.parameter("vdb-asm-text-offset-format", "<{offset:<{maxlen}}>:" )
 offset_fmt_dot = vdb.config.parameter("vdb-asm-offset-format-dot", " <+{offset:<{maxlen}}>" )
 offset_txt_fmt_dot = vdb.config.parameter("vdb-asm-text-offset-format-dot", " <{offset:<{maxlen}}>" )
 
@@ -84,8 +84,9 @@ color_call_dot       = vdb.config.parameter("vdb-asm-colors-call-dot",       "#6
 
 
 nonfunc_bytes      = vdb.config.parameter("vdb-asm-nonfunction-bytes",16)
+history_limit      = vdb.config.parameter("vdb-asm-history-limit",4)
 tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
-asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnprT" )
+asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnprTj" )
 asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnprT" )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
@@ -120,6 +121,9 @@ class instruction( ):
         self.infix = ""
         self.jumparrows = ""
         self.arrowwidth = 0
+        self.bt = None
+        self.history = None
+        self.bt_idx = None
 
     def __str__( self ):
         ta = "None"
@@ -139,6 +143,8 @@ class listing( ):
     def __init__( self ):
         self.function = None
         self.instructions = []
+        # map from address to sources
+        self.ins_map = {}
         self.by_addr = {}
         self.maxoffset = 0
         self.maxbytes = 0
@@ -147,15 +153,17 @@ class listing( ):
         self.start = 0
         self.end = 0
         self.finished = False
+        self.current_branch = "a"
+        self.bt_q = []
 
     def color_address( self, addr, marked ):
         mlen = 64//4
         if( next_mark_ptr and marked ):
-            return vdb.color.color(f"0x{addr:0{mlen}x}",color_marker.value)
+            return vdb.color.colorl(f"0x{addr:0{mlen}x}",color_marker.value)
         elif( len(color_addr.value) > 0 ):
-            return vdb.color.color(f"0x{addr:0{mlen}x}",color_addr.value)
+            return vdb.color.colorl(f"0x{addr:0{mlen}x}",color_addr.value)
         else:
-            return vdb.pointer.color(addr,64)[0]
+            return ( vdb.pointer.color(addr,64)[0], mlen+2)
 
     # XXX generic enough for utils?
     def color_relist( self, s, l ):
@@ -345,6 +353,7 @@ ascii mockup:
                 cl[i] = None
             return ( ret, alen )
 
+        self.do_backtrack()
 
         self.finished = True
         current_lines = []
@@ -393,39 +402,131 @@ ascii mockup:
             return
         self.finish()
 
+    def next_backtrack( self ):
+        ret = self.current_branch
+        self.current_branch = chr(ord(ret)+1)
+        return ret
+
+    def q_backtrack_next( self, idx, bt, limit ):
+        self.bt_q.append( (idx,bt,limit) )
+
+    def backtrack_next( self, idx, bt, limit ):
+        ins=self.instructions[idx]
+        if( ins.bt is not None ):
+            return
+        ins.bt = "%s%s" % (bt[0],bt[1])
+        if( limit == 0 ):
+            return
+        if( idx == 0 ):
+            return
+        for src in self.ins_map.get(ins.address,()):
+            src=self.by_addr[src]
+            nb = self.next_backtrack()
+            ins.bt += nb
+            self.q_backtrack_next( src.bt_idx , ( bt[0]+1, nb ), limit - 1 )
+
+        self.q_backtrack_next( idx-1, (bt[0]+1,bt[1]), limit - 1 )
+
+
+    def do_backtrack( self ):
+        self.ins_map = {}
+        idx = 0
+        midx = None
+        self.current_branch = "a"
+#        if( any((c in showspec) for c in "hH" ) ):
+        rec = gdb.current_recording()
+#        else:
+#            rec = None
+        inh = {}
+        if( rec is not None ):
+            try:
+                rins = rec.instruction_history
+            except NotImplementedError:
+                rins = None
+#            print("rins = '%s'" % rins )
+            if( rins is not None ):
+                for h in rins:
+#                    print("h = '%s'" % h )
+#                    print("h.pc = '%s'" % h.pc )
+                    print("h.decoded = '%s'" % h.decoded )
+                    print("h.data = '%s'" % h.data.tolist() )
+                    inh.setdefault(h.pc,[]).append(str(h.number))
+        for i in self.instructions:
+            if( rec is not None ):
+                h = inh.get(i.address,None)
+                if( h is not None ):
+                    i.history = h[-history_limit.value:]
+#                    print("h = '%s'" % h )
+            i.bt_idx = idx
+            i.bt = None
+            for sr in i.target_of:
+                self.ins_map.setdefault(i.address,set()).add(sr)
+            for tgt in i.targets:
+                self.ins_map.setdefault(tgt,set()).add(i.address)
+            if( i.marked ):
+                midx = idx
+            idx += 1
+
+#        print("midx = '%s'" % midx )
+        # Just don't do anything if we have no marker
+        if( midx is None ):
+            return
+
+        self.q_backtrack_next( midx, (0,""), 10 )
+
+        while( len(self.bt_q) > 0 ):
+            x_q = self.bt_q
+            self.bt_q = []
+            for x in x_q:
+                self.backtrack_next( x[0], x[1], x[2] )
+
 
     def to_str( self, showspec = "maodbnprT", context = None ):
         self.lazy_finish()
         hf = self.function
         if( shorten_header.value ):
             hf = vdb.shorten.symbol(hf)
-        ret = []
+
         marked_line = None
         cnt = 0
         context_strt = None
         context_end = None
 
+        otbl = []
 
-
-        ret.append( f"Instructions in range 0x{self.start:x} - 0x{self.end:x} of {hf}")
         for i in self.instructions:
+            line = []
+            otbl.append(line)
             if( "m" in showspec ):
                 if( i.marked ):
-                    line = vdb.color.color(next_marker.value,color_marker.value)
+                    line.append( ( vdb.color.color(next_marker.value,color_marker.value), len(next_marker.value) ) )
                     marked_line = cnt
                     if( context is not None ):
                         context_start = marked_line - context + 1
                         context_end = marked_line + context + 2
                 else:
-                    line = " " * len(next_marker.value)
+                    line.append( "" )
             if( "a" in showspec ):
-                line += self.color_address( i.address, i.marked )
+                line.append( self.color_address( i.address, i.marked ))
+
+            if( "j" in showspec ):
+                line.append( i.bt )
+
+            if( any((c in showspec) for c in "hH" ) ):
+                if( i.history is not None ):
+                    if( "h" in showspec ):
+                        line.append( i.history[0] )
+                    else:
+                        line.append( ",".join(i.history) )
+                else:
+                    line.append(None)
+
             if( "o" in showspec ):
                 try:
                     io = vdb.util.xint(i.offset)
-                    line += vdb.color.color(offset_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value)
+                    line.append( vdb.color.color(offset_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value))
                 except:
-                    line += vdb.color.color(offset_txt_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value)
+                    line.append( vdb.color.color(offset_txt_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value))
 
             if( "d" in showspec ):
 #                mt=str.maketrans("v^-|<>+#Q~I","╭╰─│◄►┴├⥀◆↑" )
@@ -433,68 +534,75 @@ ascii mockup:
                 if( len(i.jumparrows) ):
                     ja=i.jumparrows.translate(mt)
                     fillup = " " * (self.maxarrows - i.arrowwidth)
-                    line += f"{ja}{fillup}"
+                    line.append( (f"{ja}{fillup}", self.maxarrows) )
                 else:
-                    line += " " * self.maxarrows
+                    line.append( "" )
 
             if( "b" in showspec ):
-                line += vdb.color.color(f" {' '.join(i.bytes):<{self.maxbytes*3}}",color_bytes.value)
+                line.append( ( vdb.color.color(f"{' '.join(i.bytes)}",color_bytes.value),len(i.bytes)*3) )
             aslen = 0
-            xline = line + "123456789012345678901234567890"
+#            xline = line + "123456789012345678901234567890"
 #            print(xline)
             if( "n" in showspec ):
                 pre = self.color_prefix(i.prefix)
                 mne = self.color_mnemonic(i.mnemonic)
                 mxe = pre + i.infix + mne
                 mlen = len(i.prefix) + len(i.infix) + len(i.mnemonic)
-                aslen += mlen
-                if( i.args is not None ):
-                    mlen = self.maxmnemoic - mlen
-                else:
-                    mlen = 0
-                aslen += mlen + 1
+#                aslen += mlen
+#                if( i.args is not None ):
+#                    mlen = self.maxmnemoic - mlen
+#                else:
+#                    mlen = 0
+#                aslen += mlen + 1
 #                print("mxe = '%s'" % mxe )
-                line += f" {mxe}{' '*mlen}"
+#                line.append( f" {mxe}{' '*mlen}")
+                line.append( ( mxe, mlen ) )
+#            line.append("%s = %s %s %s" % (mlen,len(i.prefix),len(i.infix),len(i.mnemonic)))
 #            print("aslen = '%s'" % aslen )
 #            print(line+"*")
             if( "p" in showspec ):
                 if( i.args is not None ):
                     aslen += self.maxargs + 1
-                    line += vdb.color.color(f" {i.args:{self.maxargs}}",color_args.value)
-            maxlen = self.maxmnemoic+self.maxargs+2
+#                    line.append( vdb.color.color(f" {i.args:{self.maxargs}}",color_args.value))
+                    line.append( (vdb.color.color(f"{i.args}",color_args.value),len(i.args)) )
+#            maxlen = self.maxmnemoic+self.maxargs+2
 #            print("maxlen = '%s'" % maxlen )
 #            print("aslen = '%s'" % aslen )
 #            print("self.maxmnemoic = '%s'" % self.maxmnemoic )
 #            print("self.maxargs = '%s'" % self.maxargs )
 #            print(line+"|")
-            if( aslen < maxlen ):
-                fillup = maxlen - aslen
+#            if( aslen < maxlen ):
+#                fillup = maxlen - aslen
 #                print("fillup = '%s'" % fillup )
-                line += " " * fillup
-            line += " "
+#                line.append( " " * fillup)
+
             if( "r" in showspec ):
                 if( i.reference is not None ):
-                    line += vdb.shorten.symbol(i.reference)
+                    line.append( vdb.shorten.symbol(i.reference) )
             if( any((c in showspec) for c in "tT" ) ):
 #                if( i.targets is not None ):
-#                    line += i.targets
+#                    line.append( i.targets)
                 if( "T" in showspec ):
                     if( i.target_name is not None ):
-                        line += vdb.shorten.symbol(i.target_name)
+                        line.append( vdb.shorten.symbol(i.target_name))
 
 
-            ret.append(line)
+#            ret.append(line)
             cnt += 1
             if( context is not None and context_end is not None and context_end <= cnt ):
                 break
 
+        ret = otbl
         if( marked_line is not None and context is not None ):
             if( context_start < 0 ):
                 context_start = 0
             ret = ret[context_start:context_end]
 
 
-        return "\n".join(ret)
+#        print("ret = '%s'" % ret )
+        ret = vdb.util.format_table(ret)
+        return f"Instructions in range 0x{self.start:x} - 0x{self.end:x} of {hf}\n" + ret
+#        return "\n".join(ret)
 
     def print( self, showspec = "maodbnprT", context = None ):
         print(self.to_str(showspec, context))
@@ -550,7 +658,7 @@ ascii mockup:
                 mcol = self.color_dot_relist(i.mnemonic,asm_colors_dot)
             txt += mcol
             tr.td_raw(txt)
-        
+
         if( "p" in showspec ):
             if( i.args is not None ):
                 tr.td_raw(vdb.dot.color(i.args,color_args_dot.value))
@@ -648,6 +756,7 @@ def fix_marker( ls ):
             i.marked = True
         else:
             i.marked = False
+    ls.do_backtrack()
     return ls
 
 parse_cache = {}
@@ -670,6 +779,7 @@ def parse_from_gdb( arg, fakedata = None ):
 #    print("arg = '%s'" % arg )
 #    print("key = '%s'" % key )
 
+    ret = None
     ret = parse_cache.get(key,None)
 #    print("ret = '%s'" % ret )
     if( ret is not None and fakedata is None ):

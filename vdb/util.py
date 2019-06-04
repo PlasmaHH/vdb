@@ -149,8 +149,22 @@ def format_line( line, maxsz, padbefore = " ", padafter = " "  ):
     ret = ""
     cnt = 0
     for cell in line:
+        if( cell is None ):
+            cell = ""
+#        ret += str(maxsz[cnt])
         ret += padbefore
-        ret += "{cell:<{maxsz}}".format(cell = cell, maxsz = maxsz[cnt] )
+        if isinstance(cell,tuple):
+            xpad = maxsz[cnt] - cell[1]
+            if( cnt+1 == len(line) ):
+                xpad = 0
+#            ret += " %s " % xpad
+#            ret += " %s " % cell[1]
+            ret += f"{cell[0]}{' ' * xpad}"
+        else:
+            xmaxsz = maxsz[cnt]
+            if( cnt+1 == len(line) ):
+                xmaxsz = 0
+            ret += "{cell:<{maxsz}}".format(cell = cell, maxsz = xmaxsz )
         ret += padafter
         cnt += 1
     return ret
@@ -159,12 +173,18 @@ def format_table( tbl ):
     ret = ""
     if( len(tbl) == 0 ):
         return ret
-    maxsz = list(itertools.repeat(0,len(tbl[0])))
+#    maxsz = list(itertools.repeat(0,len(tbl[0])))
+    maxsz = {}
+#    print("len(maxsz) = '%s'" % len(maxsz) )
     for line in tbl:
 #        print("line = '%s'" % line )
         cnt = 0
         for cell in line:
-            maxsz[cnt] = max(maxsz[cnt],len(cell))
+#            print("cnt = '%s'" % cnt )
+            if isinstance(cell,tuple):
+                maxsz[cnt] = max(maxsz.get(cnt,0),cell[1])
+            else:
+                maxsz[cnt] = max(maxsz.get(cnt,0),len(str(cell)))
             cnt += 1
     for line in tbl:
         ret += format_line(line,maxsz)

@@ -14,6 +14,9 @@ def color( s, cs ):
         cs += ["","",""]
         return colors.color(s,fg=cs[0],bg=cs[1],style=cs[2])
 
+def colorl( s, cs ):
+    return ( color(s,cs),len(s))
+
 def scolor( s, cs ):
     try:
         return color(s,cs)
