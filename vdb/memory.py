@@ -340,7 +340,7 @@ class memory_region:
         s += vdb.util.ifset("File '{}'\n", self.file)
         s += vdb.util.ifset("Memory Access : {}\n", self.atype )
         s += vdb.util.ifset("Memory Type : {}\n", self.mtype )
-        s += vdb.util.ifset("Associated Thread {}\n", self.thread )
+        s += vdb.util.ifset("Associated Thread : {}\n", thread_print(self.thread) )
         s += vdb.util.ifset("/proc/<pid>/maps {}\n", self.procline )
         s += vdb.util.ifset("info files {}\n", self.fileline )
         s += vdb.util.ifset("maint info sections {}\n", self.maintline )
@@ -384,6 +384,11 @@ class memory_key:
 
     def __lt__(self, other):
         return self.value < other.start
+
+def thread_print( thr ):
+    if( thr is None ):
+        return thr
+    return f"{thr.num} LWP {thr.ptid} '{thr.name}'"
 
 class memory_map:
 
