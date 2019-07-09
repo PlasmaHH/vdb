@@ -84,18 +84,45 @@ Plan:
 class ssh_connection:
 
     def __init__( self, host, exlist = [] ):
-        self.pipe = subprocess.Popen( [ "ssh", "-T", host ] + exlist, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = False )
+        self.pipe = subprocess.Popen( [ "ssh", "-x", "-T", host ] + exlist, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = False )
         self.timeout = 0.123456
         self.stdout_buffer = b""
         self.host = host
+
+        self.check()
+
+        r = self.fill()
+#        r = self.read()
+        return
 #        self.pipe.stdout = self.pipe.stdout.detach()
 
 #        self.fill()
 #        self.write("ls\n")
 #        self.fill()
 
-        r = self.read()
+        try:
+            self.pipe.wait(0.1)
+        except:
+            pass
+        print("r = '%s'" % r )
+        print("self.pipe = '%s'" % self.pipe )
+        print("self.pipe.returncode = '%s'" % self.pipe.returncode )
 #        print("len(r) = '%s'" % len(r) )
+
+    def check( self, fail = False ):
+        if( self.pipe.poll() is not None ):
+            m = self.read()
+            if( fail ):
+                print("SSH connection to %s failed:\n%s" % (self.host,m) )
+                self.detach()
+#            print("m = '%s'" % m )
+            return m
+        return None
+
+    def running( self ):
+        pr = self.pipe.returncode
+        print("pr = '%s'" % pr )
+        return ( pr is None )
 
     def detach( self ):
         self.pipe.terminate()
@@ -115,10 +142,11 @@ class ssh_connection:
         self.pipe.stdin.flush()
 
     def fill( self, timeout = None ):
+        if( len(self.stdout_buffer) != 0 ):
+            return
         if( timeout is None ):
             timeout = self.timeout
         pr = select.select( [ self.pipe.stdout,self.pipe.stderr ], [], [], timeout )
-#        print("pr = '%s'" % (pr,) )
         if( len(pr[0]) > 0 ):
             x = pr[0][0]
             r = x.read1(1024*1024)
@@ -179,7 +207,7 @@ def gdbserver( s, argv ):
     gs.call("gdbserver " + " ".join(argv) )
     gs.fill(0.5)
     r=gs.read()
-#    print("r = '%s'" % r )
+    print("r = '%s'" % r )
 #    print(f"target remote localhost:{gport}")
 #    time.sleep(2)
     print("Setting target remote…")
@@ -222,6 +250,8 @@ def csum( argv ):
     csum_cache[key] = cs
 
 def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
+    if( s.check(True) is not None ):
+        return
 #    sw=vdb.cache.stopwatch()
 #    sw.start()
     src = fname.replace("{pid}",str(pid))
@@ -232,9 +262,18 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
 #        print("src = '%s'" % src )
         s.call(csum_cmd.value + " " + src )
         print(f"Checking if {src} is already locally cached…")
+        if( s.check(True) is not None ):
+            return
         s.fill(csum_timeout.fvalue)
-        csum=s.read().split()
-        csum = csum[0]
+        xcsum=s.read().split()
+        csum = xcsum[0]
+        if( not s.running() ):
+            print("BARK")
+            print("s.running() = '%s'" % s.running() )
+            print("s.pipe.returncode = '%s'" % s.pipe.returncode )
+            print(" ".join(xcsum))
+            s.check(True)
+            return
 
     tmpf=tmpfile.value
     if( target is not None ):
@@ -273,10 +312,14 @@ def attach( s, argv ):
         if( len(res) > 1 ):
             print("Found multiple PIDs, please chose one yourself: %s" % res )
             return
+        if( len(res) == 0 ):
+            print(f"Unable to find pid via '{pid_cmd.value}'" % pid_or_name)
+            return
 #        print("res = '%s'" % res )
         pid = res[0]
         print(f"using pid {pid}")
     tfile=find_file(s,"/proc/{pid}/exe","binary",pid)
+    print("tfile = '%s'" % tfile )
     gdb.execute(f"file {tfile}")
     gs = gdbserver(s,["--attach",str(pid)])
     set_ssh( (s,gs) )
@@ -295,21 +338,29 @@ def copy_libraries( s, libset, libdir, cwd ):
 def core( s, argv ):
 #    print("argv = '%s'" % argv )
     corefile=argv[0]
+    if( s.check(True) is not None ):
+        return
+
 
 #    cf="/home/core/core.25211_ftree_1556626851_11_1000_100"
 #    cf="vdb.tmpfile.core.359f81f00f853a554163d133e4bff4ed"
     print(f"Searching for corefile {corefile} on host {s.host}…")
     cf=find_file(s,corefile,"core")
-#    print("cf = '%s'" % cf )
+    if( cf is None ):
+        print(f"Could not find corefile {corefile} on remote host")
+        s.detach()
+        return
+
     psargs=subprocess.check_output(["sh","-c",f"eu-readelf -n {cf} | grep psargs"]).decode("utf-8")
-#    print("psargs = '%s'" % psargs )
 
     binary=psargs.split("psargs:")[1].split()[0]
     print(f"Binary {binary} created corefile, trying to get it…")
-#    print("binary = '%s'" % binary )
-#    bf="vdb.tmpfile.binary.9d2aeda878cfd5ba91552eb4d2fdda2c"
+
     bf=find_file(s,binary,"binary")
 
+    if( bf is None ):
+        print("Failed to find the binary, core file would be useless without it")
+        return
 
     print("Checking which shared objects were loaded…")
     # method 1, get eu-readelf to output whats in the corefile
@@ -370,12 +421,21 @@ def core( s, argv ):
         gdb.execute("set solib-search-path .")
         
 
+def usage( ):
+    print("""Usage:
+  ssh [user@]host <subcommand> <parameter>
+
+  Available subcommands are:
+
+  - core        Loads the specified core file and tries to copy over all dependencies
+  - attach      Attaches to the specified process (either by name or pid)
+    """)
 
 def call_ssh( argv ):
 #    print("argv = '%s'" % argv )
 
     if( len(argv) == 0 ):
-        print("You should at least tell me what to do")
+        usage()
         return
     host = argv[0]
     cmd = argv[1]
@@ -388,11 +448,20 @@ def call_ssh( argv ):
         csum( argv[1:] )
         return
 
-    s = ssh(host)
     if( cmd == "attach" ):
+        s = ssh(host)
         attach( s, moreargv )
     elif( cmd == "core" ):
-        core( s, moreargv )
+        s = ssh(host)
+        try:
+            core( s, moreargv )
+        except BrokenPipeError as e:
+            print("ssh connection failed: %s" % e )
+            print(s.read())
+        finally:
+            s.detach()
+    else:
+        print("%s is not a valid ssh subcommand" % cmd)
 
 def remove_ssh( ev ):
     set_ssh( None )
@@ -400,7 +469,7 @@ def remove_ssh( ev ):
 gdb.events.exited.connect( remove_ssh )
 
 class cmd_ssh (vdb.command.command):
-    """Shows a ssh of a specified memory range"""
+    """Type ssh to get the real help"""
 
     def __init__ (self):
         super (cmd_ssh, self).__init__ ("ssh", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)

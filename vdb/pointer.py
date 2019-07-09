@@ -134,19 +134,23 @@ def chain( ptr, archsize, maxlen = 8 ):
 #    print("chain(0x%x,…)" % ptr )
 #    print("type(ptr) = '%s'" % type(ptr) )
     ret,add,_,_ = color(ptr,archsize)
+    pure = True
 
     an = annotate( ptr )
     plen = archsize // 4
     plen += 4
     if( an ):
         ret += f" {an:<{plen}}"
+        pure = False
     s = as_tail(ptr)
     if( s is not None ):
         ret += f"{arrow_right.value}{s}"
-        return ret
+        pure = False
+        return (ret,pure)
     if( add is not None ):
         ascstring = add[1]
         ascstring = escape_spaces(ascstring)
+        pure = False
         ret += f"   {ascstring}"
     try:
         gptr = gdb.Value(ptr)
@@ -166,13 +170,14 @@ def chain( ptr, archsize, maxlen = 8 ):
             ret += arrow_infinity.value + color(gvalue,archsize)[0]
         else:
 #        print("gvalue = '%s'" % gvalue )
-            ret += arrow_right.value + chain(gvalue,archsize,maxlen-1)
+            ret += arrow_right.value + chain(gvalue,archsize,maxlen-1)[0]
+        pure = False
     except gdb.MemoryError as e:
 #        print("e = '%s'" % e )
         pass
     except:
         raise
-    return ret
+    return (ret,pure)
 
 
 

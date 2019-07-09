@@ -146,7 +146,7 @@ class Registers():
 #            print("name = '%s'" % name )
 
             if( chained ):
-                ret += vdb.pointer.chain(val,self.archsize)
+                ret += vdb.pointer.chain(val,self.archsize)[0]
             else:
                 ret += vdb.pointer.color(val,self.archsize)[0]
         except:

@@ -75,7 +75,7 @@ def get_symbols( addr, xlen ):
     xaddr = addr+xlen
 
     while xaddr > addr:
-        nm = get_gdb_sym(xaddr)
+#        nm = get_gdb_sym(xaddr)
         nm = gdb.parse_and_eval(f"(void*)({xaddr})")
         m=symre.match(str(nm))
         if( m ):
@@ -108,7 +108,7 @@ def get_annotation( xaddr, symtree ):
         xs = symtree[xaddr]
     return xs
 
-def hexdump( addr, xlen = -1 ):
+def hexdump( addr, xlen = -1, pointers = False ):
     if( xlen == -1):
         xlen = default_sizes.get(addr,default_len.value)
     symtree = get_symbols(addr,xlen)
@@ -140,6 +140,24 @@ def hexdump( addr, xlen = -1 ):
         l = ""
         t = ""
         s = ""
+        p0s = ""
+        p1s = ""
+        if( pointers ):
+            p0 = dc[0:8]
+            p1 = dc[8:]
+#        print("p0 = '%s'" % p0 )
+#        print("p1 = '%s'" % p1 )
+            # XXX get byteorder from global
+            p0 = int.from_bytes(p0,"little")
+            p1 = int.from_bytes(p1,"little")
+
+            p0s,pu = vdb.pointer.chain( p0, 64, 3 )
+            if( pu ):
+                p0s = ""
+            p1s,pu = vdb.pointer.chain( p1, 64, 3 )
+            if( pu ):
+                p1s = ""
+
         for d in dc:
 #            xs = symtree[xaddr+cnt]
             xs = get_annotation( xaddr + cnt, symtree )
@@ -194,7 +212,7 @@ def hexdump( addr, xlen = -1 ):
             print_header()
         line += 1
 #        print("len(t) = '%s'" % len(t) )
-        print(f"{p}: {l}{t} {s}")
+        print(f"{p}: {l}{t} {s}{p0s}{p1s}")
 #        print("dc = '%s'" % dc )
 #        print("len(dc) = '%s'" % len(dc) )
 #        print("data = '%s'" % data )
@@ -265,6 +283,10 @@ def call_hexdump( argv ):
     if( len(argv) == 0 ):
         print("You should at least tell me what to dump")
         return
+    pointers = False
+    if( argv[0] == "/p" ):
+        pointers = True
+        argv = argv[1:]
     if( argv[0] == "annotate" ):
         annotate( argv[1:] )
     else:
@@ -272,11 +294,11 @@ def call_hexdump( argv ):
         xlen = None
         if( len(argv) == 1 ):
             addr = vdb.util.gint(argv[0])
-            hexdump(addr)
+            hexdump(addr,pointers=pointers)
         elif( len(argv) == 2 ):
             addr = vdb.util.gint(argv[0])
             xlen = vdb.util.gint(argv[1])
-            hexdump(addr,xlen)
+            hexdump(addr,xlen,pointers=pointers)
         else:
             print("Usage: hexdump <addr> <len>")
     return

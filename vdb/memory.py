@@ -368,7 +368,7 @@ class memory_region:
         except:
             pass
         return ( self.can_read, self.can_write )
-        
+
 
     def __lt__(self, other):
         if( isinstance(other,int) ):
