@@ -151,10 +151,10 @@ def hexdump( addr, xlen = -1, pointers = False ):
             p0 = int.from_bytes(p0,"little")
             p1 = int.from_bytes(p1,"little")
 
-            p0s,pu = vdb.pointer.chain( p0, 64, 3 )
+            p0s,pu = vdb.pointer.chain( p0, 64, 3, test_for_ascii = False )
             if( pu ):
                 p0s = ""
-            p1s,pu = vdb.pointer.chain( p1, 64, 3 )
+            p1s,pu = vdb.pointer.chain( p1, 64, 3, test_for_ascii = False )
             if( pu ):
                 p1s = ""
 

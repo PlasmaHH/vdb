@@ -125,7 +125,7 @@ def escape_spaces( s ):
     s = s.replace("\f","\\f")
     return s
 
-def chain( ptr, archsize, maxlen = 8 ):
+def chain( ptr, archsize, maxlen = 8, test_for_ascii = True ):
     if( gdb_void == None ):
         update_types()
     if( maxlen == 0 ):
@@ -147,7 +147,7 @@ def chain( ptr, archsize, maxlen = 8 ):
         ret += f"{arrow_right.value}{s}"
         pure = False
         return (ret,pure)
-    if( add is not None ):
+    if( add is not None and test_for_ascii ):
         ascstring = add[1]
         ascstring = escape_spaces(ascstring)
         pure = False

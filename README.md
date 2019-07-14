@@ -37,6 +37,8 @@ This is work in progress and not yet ready for real world usage, it is more of a
 	* [hexdump](#hexdump)
 		* [Commands](#commands-3)
 			* [`hd`](#hd)
+			* [`hd/p`](#hdp)
+			* [`hd annotate`](#hd-annotate)
 	* [asm](#asm)
 		* [Commands](#commands-4)
 			* [`dis`](#dis)
@@ -62,19 +64,20 @@ This is work in progress and not yet ready for real world usage, it is more of a
 		* [TTYs](#ttys)
 		* [tmux panes](#tmux-panes)
 		* [Other commands](#other-commands)
+		* [Configuration](#configuration-1)
 	* [Hashtable statistics](#hashtable-statistics)
 		* [`hashtable`](#hashtable)
 	* [ssh](#ssh)
 		* [`attach` to process](#attach-to-process)
 		* [debug `core` file](#debug-core-file)
 		* [Remote csum cache](#remote-csum-cache)
-		* [configuration](#configuration-1)
+		* [configuration](#configuration-2)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
 	* [pointer (chaining)](#pointer-chaining)
 	* [memory layout](#memory-layout)
 	* [type layout](#type-layout)
-* [Configuration](#configuration-2)
+* [Configuration](#configuration-3)
 	* [gdb config](#gdb-config)
 	* [Color settings](#color-settings)
 		* [colorspec](#colorspec)
@@ -251,6 +254,31 @@ The setting
 vdb-hexdump-colors-header
 ```
 controls the colour of the header (the one that should make it a bit simpler to find certain bytes). 
+#### `hd/p`
+
+This version of the hexdump command tries to apply the same pointer dereferencing chain logic that is used to display
+registers for a hexdump. It is assumed that the whole displayed hexdump is an array of (aligned) pointers and then it is
+tried to interpret them. If they do not look in any way like a pointer however no additional output is generated. This
+is added to the standard annotation of symbols. This is added to the standard annotation of symbols.
+![](img/hd.pointer.png)
+
+#### `hd annotate`
+```
+Usage: hexdump annotate <addr> <len> <text> or <addr> <typename>
+```
+This command will add annotation to a specific range of memory. The first version adds a free manual text to a specific
+address and length. It will always be displayed as long as some of those bytes are being displayed in any hexdump.
+r
+The second version takes an address and a typename. It will then extract the same information as `pahole` does and then
+colour that specific memory always with these annotations. If then you use hexdump to dump a variable without a
+specified size, it will be able to automatically take that size and dumps only that object.
+
+![](img/hd.annotate.png)
+
+(The debug output will likely vanish in a future version)
+
+Note how in the places where there is a hole in the object only 'fd' is being displayed.
+
 ## asm
 This is a disassembler module
 
@@ -312,6 +340,7 @@ like setting the option `vdb-asm-tree-prefer-right` to make the arrows prefer be
 
 Sometimes the display gets a little bit complex:
 ![](img/dis.complex.png)
+
 There isn't too much you can do, but adding more colours sometimes helps to distinguish the arrows better.
 
 #### `dis/<context>`
@@ -602,6 +631,13 @@ will enable you to
 * `dashboard [no]cls` Enables or disables the option to clear screen before starting the output. Clearing the screen is
   done via ansi escape sequences.
 
+### Configuration
+The boolean config option
+```
+vdb-dash-show-stats
+```
+will make all dashboard outputs be preceded by some internal statistics. For now they are the time it took in the
+command to generate the output and the amount of output bytes. Later more might follow.
 
 ## Hashtable statistics
 
@@ -820,7 +856,7 @@ There are a lot of ideas and enhancements that are possible or need to be done. 
 * support for other architectures than x86_64 (maybe generic with all values from gdb, even with register autodetetion)
 * fully implement extra flexible .vdb search mechanism
 * hexdump for real objects, likely using a generic annotation mechanism. Can then also be used for annotating buffers to
-  be parsed.
+  be parsed. Add some API to make it easier for people to programatically create those annotations for buffers.
 * symbol position and size caching
 * clearing of caches on events that might have changed it.
 * generic mechanism for hashtable load images and calculations
@@ -838,3 +874,4 @@ There are a lot of ideas and enhancements that are possible or need to be done. 
   of them via "info types" takes minutes.
 * For the port output dashboards, maybe check if there is an easy way to find out what the connecting telnet is
   supporting
+* For dashboards maybe add a time of creation/call/display optionally to the status line?

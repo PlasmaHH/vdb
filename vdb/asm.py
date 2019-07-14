@@ -894,9 +894,12 @@ def parse_from_gdb( arg, fakedata = None ):
                     table = m.group(1)
                     cnt = 0
                     while True:
-                        jmpval = gdb.parse_and_eval(f"*((void**){table}+{cnt})")
+                        try:
+                            jmpval = gdb.parse_and_eval(f"*((void**){table}+{cnt})")
 #                        print("jmpval = '%s'" % jmpval )
-                        if( jmpval == 0 ):
+                            if( jmpval == 0 ):
+                                break
+                        except gdb.MemoryError:
                             break
                         if( cnt > last_cmp_immediate ):
                             break

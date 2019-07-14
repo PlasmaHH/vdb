@@ -373,6 +373,9 @@ representations
     def __init__ (self):
         super (cmd_registers, self).__init__ ("registers", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
+    def usage( self ):
+        print(self.__doc__)
+
     def do_invoke (self, argv ):
         try:
             r = Registers()
@@ -388,21 +391,24 @@ representations
                 if( argv[0] == "/s" ):
                     print(r.ints())
                     print(r.flags())
-                if( argv[0] == "/e" ):
+                elif( argv[0] == "/e" ):
                     print(r.ex_ints())
                     print(r.flags())
-                if( argv[0] == "/a" ):
+                elif( argv[0] == "/a" ):
                     print(r.ints())
                     print(r.flags())
                     print(r.floats())
                     print(r.vectors())
-                if( argv[0] == "/f" ):
+                elif( argv[0] == "/f" ):
                     print(r.ex_ints())
                     print(r.flags())
                     print(r.ex_floats())
                     print(r.ex_vectors())
+                else:
+                    self.usage()
             else:
                 print("Invalid argument(s) to registers: '%s'" % arg )
+                self.usage()
         except Exception as e:
             traceback.print_exc()
 

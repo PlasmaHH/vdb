@@ -121,7 +121,7 @@ class ssh_connection:
 
     def running( self ):
         pr = self.pipe.returncode
-        print("pr = '%s'" % pr )
+#        print("pr = '%s'" % pr )
         return ( pr is None )
 
     def detach( self ):
@@ -266,7 +266,6 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
             return
         s.fill(csum_timeout.fvalue)
         xcsum=s.read().split()
-        csum = xcsum[0]
         if( not s.running() ):
             print("BARK")
             print("s.running() = '%s'" % s.running() )
@@ -274,6 +273,10 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
             print(" ".join(xcsum))
             s.check(True)
             return
+        if( len(xcsum) == 0 ):
+            print("Timed out getting checksum. If the file is huge or the system slow, try increasing vdb-ssh-checksum-timeout")
+            return
+        csum = xcsum[0]
 
     tmpf=tmpfile.value
     if( target is not None ):

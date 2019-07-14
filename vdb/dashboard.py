@@ -5,6 +5,7 @@
 import vdb.command
 import vdb.event
 import vdb.cache
+import vdb.config
 
 import gdb
 
@@ -21,6 +22,7 @@ import re
 """
 tmux new-session\; select-pane -T "disassembler" \; split-window -v\; select-pane -T "hexdump" \; split-window -h \; select-pane -T "registers"
 """
+show_stat = vdb.config.parameter("vdb-dash-show-stats",False)
 class target:
     def __init__( self ):
         super().__init__()
@@ -175,6 +177,11 @@ class dashboard:
 #        print("cout = '%s'" % cout )
         if( self.cls ):
             self.output.write("\033[2J\033[H")
+        if( show_stat.value ):
+            sw.stop()
+            sofar = sw.get()
+            bts = len(cout)
+            self.output.write(f"{sofar:.7}s, {bts}B\n")
         self.output.write(cout)
         self.output.flush()
         sw.stop()
