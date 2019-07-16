@@ -333,6 +333,8 @@ The order is fixed and the showspec entries mean the following:
 * `p` Shows the parameters to the mnemonic
 * `r` Shows a reference, this is mostly arbitrary text that the disassembler gave us (or text that we failed to parse properly)
 * `t` or `T` Shows for jump and call targets the target name, run through the standard shorten and colour mechanism
+* `j` shows a reconstructed possible history for the origin of the flow path
+* `h` or `H` shows a listing of the history of executed instructions when instruction recording was enabled.
 
 
 The following settings control the colours
