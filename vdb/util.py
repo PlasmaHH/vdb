@@ -184,12 +184,17 @@ def format_table( tbl, padbefore = " ", padafter = " " ):
 #        print("line = '%s'" % line )
         cnt = 0
         for cell in line:
+            if( cell is None ):
+                cell=""
 #            print("cnt = '%s'" % cnt )
             if isinstance(cell,tuple):
                 maxsz[cnt] = max(maxsz.get(cnt,0),cell[1])
             else:
                 maxsz[cnt] = max(maxsz.get(cnt,0),len(str(cell)))
             cnt += 1
+#    for x,y in maxsz.items():
+#        print("x = '%s'" % x )
+#        print("y = '%s'" % y )
     for line in tbl:
         ret += format_line(line,maxsz,padbefore,padafter)
         ret += "\n"

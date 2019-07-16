@@ -514,6 +514,7 @@ ascii mockup:
                 line.append( i.bt )
 
             if( any((c in showspec) for c in "hH" ) ):
+#                line.append("H")
                 if( i.history is not None ):
                     if( "h" in showspec ):
                         line.append( i.history[0] )
@@ -601,7 +602,7 @@ ascii mockup:
 
 
 #        print("ret = '%s'" % ret )
-        ret = vdb.util.format_table(ret)
+        ret = vdb.util.format_table(ret,padbefore=" ",padafter="")
         return f"Instructions in range 0x{self.start:x} - 0x{self.end:x} of {hf}\n" + ret
 #        return "\n".join(ret)
 
