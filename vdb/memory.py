@@ -4,6 +4,7 @@
 import vdb.config
 import vdb.color
 import vdb.util
+import vdb.arch
 import vdb
 
 import gdb
@@ -393,7 +394,7 @@ def thread_print( thr ):
 class memory_map:
 
     def __init__( self ):
-        self.archsize = 64 # XXX init properly
+        self.archsize = vdb.arch.pointer_size
         self.regions = intervaltree.IntervalTree()
         self.parsed_version = 0
         self.needed_version = 1

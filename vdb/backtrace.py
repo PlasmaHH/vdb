@@ -5,6 +5,7 @@
 import vdb.config
 import vdb.shorten
 import vdb.command
+import vdb.arch
 
 import re
 import gdb
@@ -356,7 +357,7 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
         return ret
 
     def color_address( self, ptr = None ):
-        plen = 64//4 # get from global state
+        plen = vdb.arch.pointer_size // 4
         if( ptr is None ):
             ptr = int(self.address(True))
         addr = f"0x{ptr:0{plen}x}"

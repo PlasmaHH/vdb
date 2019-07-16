@@ -9,6 +9,7 @@ import vdb.util
 import vdb.shorten
 import vdb.command
 import vdb.layout
+import vdb.arch
 
 
 import gdb
@@ -23,12 +24,15 @@ color_head       = vdb.config.parameter("vdb-hexdump-colors-header",            
 
 default_len   = vdb.config.parameter("vdb-hexdump-default-len",8*16)
 repeat_header = vdb.config.parameter("vdb-hexdump-repeat-header",42)
+default_chaindepth = vdb.config.parameter("vdb-hexdump-default-chaindepth",3)
+
+pc_separator = vdb.config.parameter("vdb-hexdump-pointer-chain-separator","|")
 
 
 color_list = vdb.config.parameter("vdb-hexdump-colors-symbols", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,on_set  = vdb.config.split_colors)
 
 def print_header( ):
-    plen = 64//4
+    plen = vdb.arch.pointer_size // 4
     print(vdb.color.color(f'  {" "*plen}  0  1  2  3   4  5  6  7    8  9  A  B   C  D  E  F   01234567 89ABCDEF',color_head.value))
 
 
@@ -108,12 +112,14 @@ def get_annotation( xaddr, symtree ):
         xs = symtree[xaddr]
     return xs
 
-def hexdump( addr, xlen = -1, pointers = False ):
+def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1 ):
+    if( chaindepth < 0 ):
+        chaindepth = default_chaindepth.value
     if( xlen == -1):
         xlen = default_sizes.get(addr,default_len.value)
     symtree = get_symbols(addr,xlen)
     olen = xlen
-    plen = 64//4
+
     data = vdb.memory.read(addr,xlen)
     if( data is None ):
         data = vdb.memory.read(addr,1)
@@ -126,7 +132,7 @@ def hexdump( addr, xlen = -1, pointers = False ):
         print(f"Can not access memory at 0x{addr:x}")
         return
     xaddr = addr
-    p,add,col,mm = vdb.pointer.color(addr,64)
+    p,add,col,mm = vdb.pointer.color(addr,vdb.arch.pointer_size)
 #    nm = gdb.parse_and_eval(f"(void*)({addr})")
     current_symbol = None
     next_color = -1
@@ -135,28 +141,26 @@ def hexdump( addr, xlen = -1, pointers = False ):
     while(len(data) > 0 ):
         dc = data[:16]
         data = data[16:]
-        p,_,_,_ = vdb.pointer.color(xaddr,64)
+        p,_,_,_ = vdb.pointer.color(xaddr,vdb.arch.pointer_size)
         cnt = 0
         l = ""
         t = ""
         s = ""
-        p0s = ""
-        p1s = ""
+        pointer_string=""
+        parr = []
+        step = vdb.arch.pointer_size // 8
         if( pointers ):
-            p0 = dc[0:8]
-            p1 = dc[8:]
-#        print("p0 = '%s'" % p0 )
-#        print("p1 = '%s'" % p1 )
-            # XXX get byteorder from global
-            p0 = int.from_bytes(p0,"little")
-            p1 = int.from_bytes(p1,"little")
-
-            p0s,pu = vdb.pointer.chain( p0, 64, 3, test_for_ascii = False )
-            if( pu ):
-                p0s = ""
-            p1s,pu = vdb.pointer.chain( p1, 64, 3, test_for_ascii = False )
-            if( pu ):
-                p1s = ""
+            for poffset in range(0,16,step):
+#                print("poffset = '%s'" % poffset )
+#                print("step = '%s'" % step )
+                pbytes = dc[poffset:poffset+step]
+                # XXX get byteorder from global
+                pint = int.from_bytes(pbytes,"little")
+#                print("pint = '%s'" % pint )
+                ps,pu = vdb.pointer.chain( pint, vdb.arch.pointer_size, chaindepth, test_for_ascii = False )
+                if( not pu ):
+                    pointer_string += ps
+                    pointer_string += pc_separator.value
 
         for d in dc:
 #            xs = symtree[xaddr+cnt]
@@ -212,7 +216,7 @@ def hexdump( addr, xlen = -1, pointers = False ):
             print_header()
         line += 1
 #        print("len(t) = '%s'" % len(t) )
-        print(f"{p}: {l}{t} {s}{p0s}{p1s}")
+        print(f"{p}: {l}{t} {s}{pointer_string}")
 #        print("dc = '%s'" % dc )
 #        print("len(dc) = '%s'" % len(dc) )
 #        print("data = '%s'" % data )
@@ -284,8 +288,13 @@ def call_hexdump( argv ):
         print("You should at least tell me what to dump")
         return
     pointers = False
-    if( argv[0] == "/p" ):
+    chainlen = -1
+    if( argv[0].startswith("/p") ):
         pointers = True
+        try:
+            chainlen = int(argv[0][2:])
+        except:
+            pass
         argv = argv[1:]
     if( argv[0] == "annotate" ):
         annotate( argv[1:] )
@@ -294,11 +303,11 @@ def call_hexdump( argv ):
         xlen = None
         if( len(argv) == 1 ):
             addr = vdb.util.gint(argv[0])
-            hexdump(addr,pointers=pointers)
+            hexdump(addr,pointers=pointers,chaindepth=chainlen)
         elif( len(argv) == 2 ):
             addr = vdb.util.gint(argv[0])
             xlen = vdb.util.gint(argv[1])
-            hexdump(addr,xlen,pointers=pointers)
+            hexdump(addr,xlen,pointers=pointers,chaindepth=chainlen)
         else:
             print("Usage: hexdump <addr> <len>")
     return

@@ -91,6 +91,7 @@ def as_tail( ptr ):
 
 def color( ptr, archsize ):
     """Colorize the pointer according to the currently known memory situation"""
+
     ptr=vdb.util.xint(ptr)
     plen = archsize // 4
 #    t,additional = get_type(ptr,archsize)
@@ -111,7 +112,9 @@ def color( ptr, archsize ):
                 ps0 += p
         ret = vdb.color.color("0x" + ps0,col) + ps1
     else:
-#        print("ptr %x of type %s" % (ptr,t))
+#        print("ptr = '%s'" % ptr )
+#        print("plen = '%s'" % plen )
+#        print("type(ptr) = '%s'" % type(ptr) )
         ret = vdb.color.color(f"0x{ptr:0{plen}x}",col)
 #    return ( ret, additional )
     return ( ret, additional, col, mm )

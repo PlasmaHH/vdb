@@ -6,6 +6,7 @@ import vdb.color
 import vdb.pointer
 import vdb.dot
 import vdb.command
+import vdb.arch
 
 import gdb
 
@@ -157,13 +158,13 @@ class listing( ):
         self.bt_q = []
 
     def color_address( self, addr, marked ):
-        mlen = 64//4
+        mlen = vdb.arch.pointer_size // 4
         if( next_mark_ptr and marked ):
             return vdb.color.colorl(f"0x{addr:0{mlen}x}",color_marker.value)
         elif( len(color_addr.value) > 0 ):
             return vdb.color.colorl(f"0x{addr:0{mlen}x}",color_addr.value)
         else:
-            return ( vdb.pointer.color(addr,64)[0], mlen+2)
+            return ( vdb.pointer.color(addr,vdb.arch.pointer_size)[0], mlen+2)
 
     # XXX generic enough for utils?
     def color_relist( self, s, l ):
@@ -624,7 +625,7 @@ ascii mockup:
         tr["align"] = "left"
         node.table.add(tr)
 
-        plen = 64//4
+        plen = vdb.arch.pointer_size // 4
 
         if( "m" in showspec ):
             if( i.marked ):
@@ -747,9 +748,13 @@ x86_return_mnemonics = set (["ret","retq","iret"])
 x86_call_mnemonics = set(["call","callq","int"])
 x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd" ])
 
+pc_list = [ "rip", "eip", "ip", "pc" ]
+last_working_pc = ""
+
 def fix_marker( ls ):
 #    print("fixing makers...")
-    mark = vdb.util.gint("$rip")
+#    mark = vdb.util.gint("$rip")
+    mark = vdb.util.gint(f"${last_working_pc}")
 
     for i in ls.instructions:
         if( i.address == mark ):
@@ -772,7 +777,16 @@ def parse_from_gdb( arg, fakedata = None ):
             return listing()
 
 #        gdb.execute(f"p $rip")
-        key = gdb.execute(f"info symbol $rip",False,True)
+        global last_working_pc
+        for pc in [ last_working_pc ] + pc_list:
+            try:
+#                key = gdb.execute(f"info symbol $rip",False,True)
+                key = gdb.execute(f"info symbol ${pc}",False,True)
+                last_working_pc = pc
+#                print("pc = '%s'" % pc )
+                break
+            except:
+                pass
 #        print("key = '%s'" % key )
         key = re.sub(r" \+ [0-9]+","",key)
 

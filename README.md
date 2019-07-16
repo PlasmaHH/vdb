@@ -30,6 +30,7 @@ This is work in progress and not yet ready for real world usage, it is more of a
 	* [register](#register)
 		* [Commands](#commands-2)
 			* [`reg`](#reg)
+			* [`reg/<showspec>`](#regshowspec)
 			* [`reg/s` (short)](#regs-short)
 			* [`reg/e` (expanded)](#rege-expanded)
 			* [`reg/a` (all)](#rega-all)
@@ -37,7 +38,7 @@ This is work in progress and not yet ready for real world usage, it is more of a
 	* [hexdump](#hexdump)
 		* [Commands](#commands-3)
 			* [`hd`](#hd)
-			* [`hd/p`](#hdp)
+			* [`hd/p[#]`](#hdp)
 			* [`hd annotate`](#hd-annotate)
 	* [asm](#asm)
 		* [Commands](#commands-4)
@@ -225,13 +226,36 @@ registers or an existed version of all registers. Just a hex value overview, or 
 colouors the pointer according to where they point to (see the legend of the command). It tries to detect when a pointer
 value is invalid, but contains an ascii string instead (hints to it being read from re-used memory). It has the
 following variants (and defaults to what is configured in `vdb-register-default`, which itself defaults to `/e`):
+
+#### `reg/<showspec>`
+When the parameter isn't one of the special variants below, it will be interpreted as a showspec. Lower case letters
+denote the standard (usually smaller) version, whereas uppercase letters denote the expanded version with more details.
+Sometimes there is no difference, but to always provide an uppercase version we accept that too, and maybe in the future
+we might add information at that point. `.` is always ignored, in which way you can work around ambiguities with the
+below shortcuts.
+
+* `iI` show all the integer and general purpose registers, just like `info reg` does.
+* `vV` show all the vector registers and try to make sense of them, tries to take the biggest version of registers that
+  are overlayed. The mxcsr flags are shown too.
+* `fF` show all the float registers and flags.
+* `xX` shows the integer register [e]flags
+* `pP` Shows the prefix/segment registers.
+* `mM` shows the SSE MXCSR register.
+
 #### `reg/s` (short)
+Same as `reg/ipx`.
+
 ![](img/reg.s.png)
 #### `reg/e` (expanded)
+Same as `reg/Ipx`.
+
 ![](img/reg.e.png)
 #### `reg/a` (all)
+Same as `reg/ixfv`.
+
 ![](img/reg.a.png)
 #### `reg/f` (full)
+Same as `reg/IxFV`.
 (not yet implemented)
 
 ## hexdump
@@ -254,12 +278,15 @@ The setting
 vdb-hexdump-colors-header
 ```
 controls the colour of the header (the one that should make it a bit simpler to find certain bytes). 
-#### `hd/p`
+#### `hd/p[#]`
 
 This version of the hexdump command tries to apply the same pointer dereferencing chain logic that is used to display
 registers for a hexdump. It is assumed that the whole displayed hexdump is an array of (aligned) pointers and then it is
 tried to interpret them. If they do not look in any way like a pointer however no additional output is generated. This
-is added to the standard annotation of symbols. This is added to the standard annotation of symbols.
+is added to the standard annotation of symbols. This is added to the standard annotation of symbols. An optional number
+after this is interpreted as the maximum chain length for the pointer chains. It can also be set via the config option
+`vdb-hexdump-default-chaindepth`. Furthermore the single chains are separated by `vdb-hexdump-pointer-chain-separator`.
+
 ![](img/hd.pointer.png)
 
 #### `hd annotate`

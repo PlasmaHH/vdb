@@ -24,9 +24,13 @@ def ifset( s, p ):
     return ""
 
 def gint( s ):
-    val = gdb.parse_and_eval(s)
-    r = int(val)
-    return r
+    try:
+        val = gdb.parse_and_eval(s)
+        r = int(val)
+        return r
+    except:
+        print("Errenous value %s" % (s,))
+        raise
 
 def xint( s ):
     try:
@@ -145,7 +149,7 @@ def next_id( name ):
     id_store[name] = nid+1
     return nid
 
-def format_line( line, maxsz, padbefore = " ", padafter = " "  ):
+def format_line( line, maxsz, padbefore, padafter ):
     ret = ""
     cnt = 0
     for cell in line:
@@ -169,7 +173,7 @@ def format_line( line, maxsz, padbefore = " ", padafter = " "  ):
         cnt += 1
     return ret
 
-def format_table( tbl ):
+def format_table( tbl, padbefore = " ", padafter = " " ):
     ret = ""
     if( len(tbl) == 0 ):
         return ret
@@ -187,7 +191,7 @@ def format_table( tbl ):
                 maxsz[cnt] = max(maxsz.get(cnt,0),len(str(cell)))
             cnt += 1
     for line in tbl:
-        ret += format_line(line,maxsz)
+        ret += format_line(line,maxsz,padbefore,padafter)
         ret += "\n"
     return ret
 

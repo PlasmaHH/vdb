@@ -19,6 +19,8 @@ def stop( *darg ):
 def before_prompt( *darg ):
     return on_event( gdb.events.before_prompt, darg )
 
+def new_objfile( *darg ):
+    return on_event( gdb.events.new_objfile, darg )
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

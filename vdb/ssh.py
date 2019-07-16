@@ -265,7 +265,10 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
         if( s.check(True) is not None ):
             return
         s.fill(csum_timeout.fvalue)
-        xcsum=s.read().split()
+        ocsum=s.read()
+        xcsum = ocsum.replace(src,"")
+#        print("xcsum = '%s'" % xcsum )
+        xcsum=xcsum.split()
         if( not s.running() ):
             print("BARK")
             print("s.running() = '%s'" % s.running() )
@@ -276,6 +279,10 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
         if( len(xcsum) == 0 ):
             print("Timed out getting checksum. If the file is huge or the system slow, try increasing vdb-ssh-checksum-timeout")
             return
+        if( len(xcsum) != 1 ):
+            print(f"Format error, expected checksum, got:\n{ocsum}")
+            return
+#        print("xcsum = '%s'" % xcsum )
         csum = xcsum[0]
 
     tmpf=tmpfile.value
