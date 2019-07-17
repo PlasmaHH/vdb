@@ -294,12 +294,26 @@ default_region_prefixes = [
 
 def read( ptr, count = 1 ):
     result = None
-    addr=ptr
+    if( isinstance(ptr,str) ):
+        addr=vdb.util.gint(ptr)
+    else:
+        addr=ptr
     try:
         result = gdb.selected_inferior().read_memory(addr, count)
     except gdb.error:
         pass
     return result
+
+def write( ptr, buf ):
+    if( isinstance(ptr,str) ):
+        addr=vdb.util.gint(ptr)
+    else:
+        addr=ptr
+    try:
+        gdb.selected_inferior().write_memory( addr, buf )
+    except gdb.error:
+        pass
+
 
 
 

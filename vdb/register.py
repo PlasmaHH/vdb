@@ -374,7 +374,32 @@ class Registers():
     def ex_floats( self ):
         print("NOT YET IMPLEMENTED")
 
+    def arch_prctl( self, code ):
+        ret = vdb.memory.read("$rsp",8)
+
+        if( ret is not None ):
+            try:
+                gdb.execute( f"call (int)arch_prctl({code},$rsp)", False, True )
+                ap_ret = vdb.memory.read("$rsp",8)
+                return ap_ret
+            except:
+                pass
+            finally:
+                vdb.memory.write("$rsp",ret)
+#            gdb.execute( "set *(void**)($rsp) = $__vdb_save_value" )
+#            gdb.execute( "p *(void**)($rsp)" )
+
     def ex_prefixes( self ):
+        try:
+            fs_base = self.arch_prctl(0x1003)
+            fs_base = int.from_bytes(fs_base,"little")
+            self.segs["fs"] = ( fs_base, None )
+            gs_base = self.arch_prctl(0x1004)
+            gs_base = int.from_bytes(gs_base,"little")
+            self.segs["gs"] = ( gs_base, None )
+        except:
+            traceback.print_exc()
+            pass
         return self.prefixes()
 
 

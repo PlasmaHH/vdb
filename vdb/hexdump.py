@@ -302,10 +302,10 @@ def call_hexdump( argv ):
         addr = None
         xlen = None
         if( len(argv) == 1 ):
-            addr = vdb.util.gint(argv[0])
+            addr = vdb.util.gint("(void*)" + argv[0])
             hexdump(addr,pointers=pointers,chaindepth=chainlen)
         elif( len(argv) == 2 ):
-            addr = vdb.util.gint(argv[0])
+            addr = vdb.util.gint("(void*)" + argv[0])
             xlen = vdb.util.gint(argv[1])
             hexdump(addr,xlen,pointers=pointers,chaindepth=chainlen)
         else:
