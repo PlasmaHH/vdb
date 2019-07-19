@@ -22,6 +22,8 @@ import re
 tmpfile = vdb.config.parameter("vdb-ssh-tempfile-name","vdb.tmpfile.{tag}.{csum}")
 #csum_cmd = vdb.config.parameter("vdb-ssh-checksum-command", "sha512sum")
 csum_cmd = vdb.config.parameter("vdb-ssh-checksum-command", "md5sum")
+scp_cmd = vdb.config.parameter("vdb-ssh-scp-command", "scp")
+gdbserver_cmd = vdb.config.parameter("vdb-ssh-gdbserver-command", "gdbserver")
 
 csum_timeout = vdb.config.parameter("vdb-ssh-checksum-timeout",10.1)
 valid_ports = vdb.config.parameter("vdb-ssh-valid-ports","5000:6000,8000:10000", on_set  = vdb.config.set_array_elements )
@@ -204,7 +206,7 @@ def gdbserver( s, argv ):
     gs = ssh_connection(s.host,[ "-L" f"{gport}:localhost:{gport}" ] )
     argv = [ f"localhost:{gport}" ] + argv
 #    print("gdbserver " + " ".join(argv))
-    gs.call("gdbserver " + " ".join(argv) )
+    gs.call(f"{gdbserver_cmd.value} " + " ".join(argv) )
     gs.fill(0.5)
     r=gs.read()
     print("r = '%s'" % r )
@@ -294,7 +296,7 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
         scpopt=""
         if( scp_compression.value ):
             scpopt += "-C"
-        os.system(f"scp {scpopt} {s.host}:{src} {fn}")
+        os.system(f"{scp_cmd.value} {scpopt} {s.host}:{src} {fn}")
     else:
         print(f"Using {fn} for {src} from cache")
     if( symlink is not None and os.path.isfile(fn) ):
