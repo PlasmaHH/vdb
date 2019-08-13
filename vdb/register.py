@@ -17,6 +17,7 @@ from collections.abc import Iterable
 color_names = vdb.config.parameter("vdb-register-colors-names", "#4c0", gdb_type = vdb.config.PARAM_COLOUR)
 reg_default = vdb.config.parameter("vdb-register-default","/e")
 flag_colour = vdb.config.parameter("vdb-register-colors-flags", "#adad00", gdb_type = vdb.config.PARAM_COLOUR)
+int_int = vdb.config.parameter("vdb-register-int-as-int",True)
 
 
 flag_bits = [
@@ -203,7 +204,7 @@ class Registers():
         except:
             return None
 
-    def format_register( self,name, val,t, chained = False ):
+    def format_register( self,name, val,t, chained = False, int_as_int = False ):
         if( vdb.arch.gdb_uintptr_t is not None ):
             val=int( val.cast(vdb.arch.gdb_uintptr_t) )
         else:
@@ -211,6 +212,12 @@ class Registers():
 
         try:
             ret = vdb.color.color(f" {name:<6}",color_names.value)
+
+            if( int_as_int ):
+                if( self.archsize == 32 ):
+                    ret += f" {int(val):>9} "
+                else:
+                    ret += f" {int(val):>19} "
 
             if( chained ):
                 ret += vdb.pointer.chain(val,self.archsize)[0]
@@ -267,7 +274,14 @@ class Registers():
             hexdump = False
             if( f.name.find("int8") != -1 ):
                 hexdump = True
-            elements = f.type.range()[1] + 1
+#            print("f.type = '%s'" % f.type )
+#            print("f.type.tag = '%s'" % f.type.tag )
+#            print("f.type.code = '%s'" % vdb.util.gdb_type_code(f.type.code) )
+            if( f.type.code == gdb.TYPE_CODE_ARRAY ):
+                elements = f.type.range()[1] + 1
+            else:
+                elements = 0
+                valmatrix[(1,idx)] = str(val[f.name])
             columns = max(1,elements // 4)
             
             row = 0
@@ -392,11 +406,13 @@ class Registers():
     def ex_prefixes( self ):
         try:
             fs_base = self.arch_prctl(0x1003)
-            fs_base = int.from_bytes(fs_base,"little")
-            self.segs["fs"] = ( fs_base, None )
+            if( fs_base is not None ):
+                fs_base = int.from_bytes(fs_base,"little")
+                self.segs["fs"] = ( fs_base, None )
             gs_base = self.arch_prctl(0x1004)
-            gs_base = int.from_bytes(gs_base,"little")
-            self.segs["gs"] = ( gs_base, None )
+            if( gs_base is not None ):
+                gs_base = int.from_bytes(gs_base,"little")
+                self.segs["gs"] = ( gs_base, None )
         except:
             traceback.print_exc()
             pass
@@ -415,7 +431,7 @@ class Registers():
         for name,valt in self.regs.items():
             val,t =valt
             cnt += 1
-            ret += self.format_register(name,val,t,extended)
+            ret += self.format_register(name,val,t,extended, int_int.value )
             if( cnt % wrapat == 0 ):
                 ret += "\n"
 
