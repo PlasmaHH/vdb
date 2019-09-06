@@ -4,7 +4,8 @@ A set of python visual enhancements for gdb.
 ---
 
 **NOTE**
-This is work in progress and not yet ready for real world usage, it is more of an experiment of what is possible
+This is work in progress and not yet ready for real world usage, it is more of an experiment of what is possible.
+Although I am using it in my daily C++ work, it will likely be unintentionally strict and only work on my setup.
 
 ---
 
