@@ -220,7 +220,7 @@ def gdbserver( s, argv ):
     return gs
 
 
-def ssh( host, ex = None ):
+def ssh( host, ex = []):
     s = ssh_connection(host, ex )
     return s
 
