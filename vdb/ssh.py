@@ -23,6 +23,7 @@ tmpfile = vdb.config.parameter("vdb-ssh-tempfile-name","vdb.tmpfile.{tag}.{csum}
 #csum_cmd = vdb.config.parameter("vdb-ssh-checksum-command", "sha512sum")
 csum_cmd = vdb.config.parameter("vdb-ssh-checksum-command", "md5sum")
 scp_cmd = vdb.config.parameter("vdb-ssh-scp-command", "scp")
+scp_opts = vdb.config.parameter("vdb-ssh-scp-options", "")
 gdbserver_cmd = vdb.config.parameter("vdb-ssh-gdbserver-command", "gdbserver")
 
 csum_timeout = vdb.config.parameter("vdb-ssh-checksum-timeout",10.1)
@@ -32,10 +33,10 @@ prompt_text = vdb.config.parameter("vdb-ssh-prompt-text","vdb[{host}]> " )
 scp_compression = vdb.config.parameter("vdb-ssh-scp-compression",False)
 
 #pid_cmd = vdb.config.parameter("vdb-ssh-pid-cmd","/sbin/pidof %s")
-pid_cmd = vdb.config.parameter("vdb-ssh-pid-cmd","pgrep %s")
+pid_cmd = vdb.config.parameter("vdb-ssh-pid-cmd","pgrep -f %s")
 
 """
-Plan: 
+Plan:
     have an ssh command (and later possibly a serial command and then seperate out the common parts) that will login via
     ssh to another machine, setup all the port forwardings necessary there and attach to a gdbserver running there.
 
@@ -90,6 +91,7 @@ class ssh_connection:
         self.timeout = 0.123456
         self.stdout_buffer = b""
         self.host = host
+        self.exlist = exlist
 
         self.check()
 
@@ -218,8 +220,8 @@ def gdbserver( s, argv ):
     return gs
 
 
-def ssh( host ):
-    s = ssh_connection(host)
+def ssh( host, ex = None ):
+    s = ssh_connection(host, ex )
     return s
 
 active_ssh = None
@@ -249,7 +251,7 @@ def csum( argv ):
     if( key.find(":") == -1 ):
         raise gdb.error("ssh csum <key> <csum> : the key parameter must have the form host:file but we found no ':'")
     global csum_cache
-    csum_cache[key] = cs
+    csum_cache[key] = (cs,None)
 
 def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
     if( s.check(True) is not None ):
@@ -259,7 +261,14 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
     src = fname.replace("{pid}",str(pid))
 
     cachekey = f"{s.host}:{fname}"
-    csum = csum_cache.get(cachekey,None)
+    csum,fsize = csum_cache.get(cachekey,(None,None))
+    if( fsize is None ):
+        s.call("stat -L -c %s " + src)
+        if( s.check(True) is not None ):
+            return
+        s.fill(csum_timeout.fvalue)
+        fsize=int(s.read())
+        print("fsize = '%s'" % fsize )
     if( csum is None ):
 #        print("src = '%s'" % src )
         s.call(csum_cmd.value + " " + src )
@@ -291,11 +300,18 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
     if( target is not None ):
         tmpf=target
     fn = tmpf.replace("{csum}",csum).replace("{tag}",tag)
-    if( not os.path.isfile(fn) ):
+    if( not os.path.isfile(fn) or (os.path.getsize(fn) != fsize) ):
         print(f"Copying {src} to {fn} into cache")
         scpopt=""
         if( scp_compression.value ):
             scpopt += "-C"
+        print("s.exlist = '%s'" % s.exlist )
+        if( len(s.exlist) != 0 ):
+            scpopt += " ".join(s.exlist)
+        elif( scp_opts.value ):
+            scpopt += " " + scp_opts.value
+#        print("scpopt = '%s'" % scpopt )
+        print(f"{scp_cmd.value} {scpopt} {s.host}:{src} {fn}")
         os.system(f"{scp_cmd.value} {scpopt} {s.host}:{src} {fn}")
     else:
         print(f"Using {fn} for {src} from cache")
@@ -317,15 +333,23 @@ def attach( s, argv ):
     except:
         print(f"Resolving pid for {pid_or_name} … ",end="")
 
-        s.call( pid_cmd.value % pid_or_name)
-        s.fill(0.5)
-        res = s.read()
+        res=""
+        try:
+            s.call( pid_cmd.value % pid_or_name)
+            s.fill(0.5)
+            res = s.read()
+        except:
+            pass
         res = res.split()
         if( len(res) > 1 ):
-            print("Found multiple PIDs, please chose one yourself: %s" % res )
+            if( res[0].isdecimal() ):
+                print("Found multiple PIDs, please chose one yourself: %s" % res )
+            else:
+                print("Failed to resolve PID: %s" % " ".join(res) )
             return
         if( len(res) == 0 ):
             print(f"Unable to find pid via '{pid_cmd.value}'" % pid_or_name)
+#            print("s.running() = '%s'" % s.running() )
             return
 #        print("res = '%s'" % res )
         pid = res[0]
@@ -435,12 +459,19 @@ def core( s, argv ):
 
 def usage( ):
     print("""Usage:
-  ssh [user@]host <subcommand> <parameter>
+  ssh [user@]host [ssh options] <subcommand> <parameter>
 
   Available subcommands are:
 
   - core        Loads the specified core file and tries to copy over all dependencies
   - attach      Attaches to the specified process (either by name or pid)
+
+  The [ssh options] are being used for issuing ssh commands to the specified host, the most common use probably being to
+  specify a jumphost via -o proxyjump=somehost
+
+  All (automatic) scp commands will also use this parameter. If you however set the scp-options option to something,
+  then this will be used instead. Note that due to the ssh connection to the host still being open, this might still
+  work without the jumphost parameter when you use master sockets.
     """)
 
 def call_ssh( argv ):
@@ -452,6 +483,15 @@ def call_ssh( argv ):
     host = argv[0]
     cmd = argv[1]
     moreargv = argv[2:]
+
+    extrassh = []
+
+    while( cmd not in ["attach","core" ] ):
+        extrassh.append(cmd)
+        argv = argv[1:]
+        cmd = argv[1]
+        moreargv = argv[2:]
+#    print("extrassh = '%s'" % extrassh )
 #    print("host = '%s'" % host )
 #    print("cmd = '%s'" % cmd )
 #    print("moreargv = '%s'" % moreargv )
@@ -461,7 +501,7 @@ def call_ssh( argv ):
         return
 
     if( cmd == "attach" ):
-        s = ssh(host)
+        s = ssh(host, extrassh)
         attach( s, moreargv )
     elif( cmd == "core" ):
         s = ssh(host)
