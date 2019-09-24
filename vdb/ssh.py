@@ -26,7 +26,7 @@ scp_cmd = vdb.config.parameter("vdb-ssh-scp-command", "scp")
 scp_opts = vdb.config.parameter("vdb-ssh-scp-options", "")
 gdbserver_cmd = vdb.config.parameter("vdb-ssh-gdbserver-command", "gdbserver")
 
-csum_timeout = vdb.config.parameter("vdb-ssh-checksum-timeout",10.1)
+csum_timeout = vdb.config.parameter("vdb-ssh-checksum-timeout-factor",4e-9)
 valid_ports = vdb.config.parameter("vdb-ssh-valid-ports","5000:6000,8000:10000", on_set  = vdb.config.set_array_elements )
 prompt_color = vdb.config.parameter( "vdb-ssh-colors-prompt","#ffff4f", gdb_type = vdb.config.PARAM_COLOUR )
 prompt_text = vdb.config.parameter("vdb-ssh-prompt-text","vdb[{host}]> " )
@@ -266,16 +266,21 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
         s.call("stat -L -c %s " + src)
         if( s.check(True) is not None ):
             return
-        s.fill(csum_timeout.fvalue)
+        s.fill(5)
         fsize=int(s.read())
         print("fsize = '%s'" % fsize )
     if( csum is None ):
+#        sw=vdb.cache.stopwatch()
+#        sw.start()
 #        print("src = '%s'" % src )
         s.call(csum_cmd.value + " " + src )
         print(f"Checking if {src} is already locally cached…")
         if( s.check(True) is not None ):
             return
-        s.fill(csum_timeout.fvalue)
+        s.fill(csum_timeout.fvalue * fsize)
+#        sw.stop()
+#        print("sw.get() = '%s'" % sw.get() )
+#        return
         ocsum=s.read()
         xcsum = ocsum.replace(src,"")
 #        print("xcsum = '%s'" % xcsum )
