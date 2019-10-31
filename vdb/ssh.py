@@ -509,7 +509,7 @@ def call_ssh( argv ):
         s = ssh(host, extrassh)
         attach( s, moreargv )
     elif( cmd == "core" ):
-        s = ssh(host)
+        s = ssh(host, extrassh)
         try:
             core( s, moreargv )
         except BrokenPipeError as e:

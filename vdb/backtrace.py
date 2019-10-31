@@ -508,10 +508,14 @@ def do_backtrace( argv ):
 
 
 class cmd_bt (vdb.command.command):
-    """Run the backtrace without filters"""
+    """A backtrace version that runs colouring and other filters. You additionally have the following variants:
+bt/r        Just shows the unfiltered raw gdb output
+bt/f        Additionally use the full output of gdb backtrace to show variable names and contents etc.
+backtrace   This is the plain built in gdb command which will run the decorator (some colours etc) but not the filter.
+    """
 
     def __init__ (self):
-        super (cmd_bt, self).__init__ ("bt", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        super (cmd_bt, self).__init__ ("bt", gdb.COMMAND_STACK, gdb.COMPLETE_EXPRESSION)
         self.dont_repeat()
 
     def do_invoke (self, argv ):
