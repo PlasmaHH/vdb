@@ -215,9 +215,9 @@ class Registers():
 
             if( int_as_int ):
                 if( self.archsize == 32 ):
-                    ret += f" {int(val):>9} "
+                    ret += f" {int(val):>10} "
                 else:
-                    ret += f" {int(val):>19} "
+                    ret += f" {int(val):>20} "
 
             if( chained ):
                 ret += vdb.pointer.chain(val,self.archsize)[0]

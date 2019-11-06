@@ -408,7 +408,6 @@ def thread_print( thr ):
 class memory_map:
 
     def __init__( self ):
-        self.archsize = vdb.arch.pointer_size
         self.regions = intervaltree.IntervalTree()
         self.parsed_version = 0
         self.needed_version = 1
@@ -478,7 +477,7 @@ class memory_map:
 
         aptr = addr
         ascii=True
-        plen = self.archsize // 4
+        plen = vdb.arch.pointer_size // 4
         ba = bytearray()
         for i in range(0,plen//2):
             bi = aptr & 0xFF
@@ -567,7 +566,7 @@ class memory_map:
         self.lazy_parse()
         if( s is None ):
             s = str(addr)
-            plen = self.archsize // 4
+            plen = vdb.arch.pointer_size // 4
             s = f"0x{addr:0{plen}x}"
         if( mm is None ):
             mm = self.find(addr)

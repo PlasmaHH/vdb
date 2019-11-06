@@ -372,8 +372,11 @@ def copy_libraries( s, libset, libdir, cwd ):
         os.makedirs(dn,exist_ok=True)
 #        os.makedirs(ddn,exist_ok=True)
 
-        find_file(s,lib,"lib",symlink=f"{libdir}/{lib}",target=f"{cwd}/{libdir}/lib.{{csum}}.so")
-        find_file(s,"/usr/lib/debug/"+lib+".debug","lib",symlink=f"{libdir}/{lib}.debug",target=f"{cwd}/{libdir}/lib.{{csum}}.so.debug")
+        try:
+            find_file(s,lib,"lib",symlink=f"{libdir}/{lib}",target=f"{cwd}/{libdir}/lib.{{csum}}.so")
+            find_file(s,"/usr/lib/debug/"+lib+".debug","lib",symlink=f"{libdir}/{lib}.debug",target=f"{cwd}/{libdir}/lib.{{csum}}.so.debug")
+        except Exception as e:
+            print("e = '%s'" % e )
 
 
 def core( s, argv ):
