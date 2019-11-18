@@ -348,7 +348,7 @@ class memory_region:
 
     def __str__( self ):
         s = ""
-        plen = mmap.archsize // 4
+        plen = vdb.arch.pointer_size // 4
         sz,suf = vdb.util.num_suffix( self.size )
         s += f"memory_region from 0x{self.start:0{plen}x} to 0x{self.end:0{plen}x} ({sz:.3f}{suf}Bytes):\n"
         s += vdb.util.ifset("Section '{}'\n",self.section)
