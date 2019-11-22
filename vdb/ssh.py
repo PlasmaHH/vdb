@@ -477,6 +477,7 @@ def usage( ):
 
   - core        Loads the specified core file and tries to copy over all dependencies
   - attach      Attaches to the specified process (either by name or pid)
+  - run         Starts a program within gdbservers control on the remote
 
   The [ssh options] are being used for issuing ssh commands to the specified host, the most common use probably being to
   specify a jumphost via -o proxyjump=somehost
