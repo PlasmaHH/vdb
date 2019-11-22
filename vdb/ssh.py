@@ -331,6 +331,10 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
 #    print("sw.get() = '%s'" % sw.get() )
     return fn
 
+def run( s, argv ):
+    gs = gdbserver(s,argv)
+    set_ssh( (s,gs) )
+
 def attach( s, argv ):
     pid_or_name = argv[0]
     try:
@@ -494,7 +498,7 @@ def call_ssh( argv ):
 
     extrassh = []
 
-    while( cmd not in ["attach","core" ] ):
+    while( cmd not in ["attach","core","run" ] ):
         extrassh.append(cmd)
         argv = argv[1:]
         cmd = argv[1]
@@ -511,6 +515,9 @@ def call_ssh( argv ):
     if( cmd == "attach" ):
         s = ssh(host, extrassh)
         attach( s, moreargv )
+    elif( cmd == "run" ):
+        s = ssh(host, extrassh)
+        run( s, moreargv )
     elif( cmd == "core" ):
         s = ssh(host, extrassh)
         try:
