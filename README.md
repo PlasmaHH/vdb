@@ -71,6 +71,7 @@ Although I am using it in my daily C++ work, it will likely be unintentionally s
 		* [`hashtable`](#hashtable)
 	* [ssh](#ssh)
 		* [`attach` to process](#attach-to-process)
+		* [`run` a process](#run-a-process)
 		* [debug `core` file](#debug-core-file)
 		* [Remote csum cache](#remote-csum-cache)
 		* [configuration](#configuration-2)
@@ -744,6 +745,12 @@ gdbserver.
 
 When the prompt module is active, this will also change the prompt to make it clear that you are attached to a remote
 process.
+
+### `run` a process
+
+Similarily to the attach, using run will try to run the given command as if it was on the command line. Be aware that
+since it starts the process in the gdbserver in a very early state before main, a lot of shared objects may not be
+resolved, thus you might need to issue a `vmmap refresh`.
 
 ### debug `core` file
 
