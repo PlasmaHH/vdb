@@ -86,6 +86,8 @@ Although I am using it in my daily C++ work, it will likely be unintentionally s
 		* [colorspec](#colorspec)
 * [Plugins](#plugins)
 * [Themes](#themes)
+* [Troubleshooting](#troubleshooting)
+	* [Python encoding errors](#python-encoding-errors)
 * [TODO](#todo)
 
 <!-- vim-markdown-toc -->
@@ -902,7 +904,24 @@ vdb-theme
 
 to the name of the theme/python module to load from the directory `$HOME/.vdb/themes`. You don't specify the `.py`
 ending, but the file must have it. Themes will be loaded when you do `vdb start` (most likely in your `.gdbinit`).
+# Troubleshooting
 
+## Python encoding errors
+
+Sometimes when starting gdb with vdb enabled, you may be faced with the following (or similar) error message:
+
+```
+UnicodeEncodeError: 'ascii' codec can't encode character '\u2192' in position 1: ordinal not in range(128)
+```
+
+This is caused by the python within gdb starting up with ascii instead of utf-8 as the default encoding. Setting
+`LC_ALL` to a utf8 value will usually fix this, if in doubt which to chose (especially when not set)
+
+```
+export LC_ALL=C.UTF-8
+```
+
+is usually a safe bet.
 # TODO
 There are a lot of ideas and enhancements that are possible or need to be done. Among them are:
 
