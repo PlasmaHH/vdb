@@ -111,9 +111,12 @@ possible_registers = [
         ( "rdi", "edi", "di"),
 		( "rbp", "ebp", "bp"),
         ( "rsp", "esp", "sp"),
-		( "rip", "eip", "ip"),
+		( "rip", "eip", "ip", "pc"),
+        "r0","r1","r2","r3","r4","r5","r6","r7",
 		"r8" , "r9" , "r10", "r11",
 		"r12", "r13", "r14", "r15",
+		"r16", "r17", "r18",
+        "lr","cpsr","fpscr"
 		]
 
 possible_prefixes = [
@@ -121,8 +124,12 @@ possible_prefixes = [
 		]
 
 possible_fpu = [
-	"st0", "st1", "st2", "st3", "st4", "st5", "st6", "st7",
-	"fctrl", "fstat", "ftag", "fiseg", "fioff", "foseg", "fooff", "fop",
+	"st0", "st1", "st2", "st3", "st4","", "st5", "st6", "st7","",
+	"fctrl", "fstat", "ftag", "fiseg", "", "fioff", "foseg", "fooff", "fop",
+    "d0","d1","d2","d3","d4","","d5","d6","d7","d8","","d9",
+    "d10","d11","d12","","d13","d14","d15","d16","","d17","d18","d19","",
+    "s0","s1","s2","s3","s4","","s5","s6","s7","s8","","s9",
+    "s10","s11","s12","","s13","s14","s15","s16","","s17","s18","s19",
 		]
 
 #possible_vectors = [
@@ -178,7 +185,7 @@ class Registers():
             if( v is not None ):
                 t = v.type
                 self.vecs[reg] = ( v, t )
-        self.eflags = frame.read_register("eflags")
+        self.eflags = self.read(frame,"eflags")
 
         for reg in possible_fpu:
             self.parse_register(frame,reg,self.fpus)
@@ -192,6 +199,9 @@ class Registers():
             return None
 
     def parse_register( self,frame,reg,regs):
+        if( len(reg) == 0 ):
+            regs[reg] = (None,None)
+            return
         try:
             v = frame.read_register(reg)
 #			print("reg = '%s'" % reg )
@@ -387,19 +397,20 @@ class Registers():
 
     def ex_floats( self ):
         print("NOT YET IMPLEMENTED")
+        return self.floats()
 
     def arch_prctl( self, code ):
-        ret = vdb.memory.read("$rsp",8)
+        ret = vdb.memory.read("$sp",8)
 
         if( ret is not None ):
             try:
-                gdb.execute( f"call (int)arch_prctl({code},$rsp)", False, True )
-                ap_ret = vdb.memory.read("$rsp",8)
+                gdb.execute( f"call (int)arch_prctl({code},$sp)", False, True )
+                ap_ret = vdb.memory.read("$sp",8)
                 return ap_ret
             except:
                 pass
             finally:
-                vdb.memory.write("$rsp",ret)
+                vdb.memory.write("$sp",ret)
 #            gdb.execute( "set *(void**)($rsp) = $__vdb_save_value" )
 #            gdb.execute( "p *(void**)($rsp)" )
 
@@ -453,15 +464,18 @@ class Registers():
 
     def floats( self ):
         ret = ""
-        cnt=0
-        for name,valt in self.fpus.items():
-            val,t =valt
-            cnt += 1
-            ret += self.format_float(name,val,t)
-            if( cnt % 6 == 0 ):
-                ret += "\n"
-            if( cnt % 8 == 0 ):
-                ret += "\n"
+        for reg in possible_fpu:
+#        for name,valt in self.fpus.items():
+            name=reg
+            valt = self.fpus.get(reg,None)
+            if( valt is None):
+                continue
+            val,t = valt
+            if( val is None ):
+                if( len(ret) > 0 and ret[-1] != "\n" ):
+                    ret += "\n"
+            else:
+                ret += self.format_float(name,val,t)
 
         if( not ret.endswith("\n") ):
             ret += "\n"
@@ -649,26 +663,31 @@ class Registers():
         return ret
 
     def ex_flags( self ):
-        return self.format_flags( "eflags", int(self.eflags), 21, flag_descriptions )
+        if( self.eflags is not None ):
+            return self.format_flags( "eflags", int(self.eflags), 21, flag_descriptions )
+        return ""
 
     def flags( self ):
         ret=""
 
-        eflags = int(self.eflags)
-        ret += vdb.color.color(f" eflags ",color_names.value)+f"0x{eflags:016x}"
-        ret += "\n"
+        if( self.eflags is not None ):
+            eflags = int(self.eflags)
+            ret += vdb.color.color(f" eflags ",color_names.value)+f"0x{eflags:016x}"
+            ret += "\n"
 
-        ret += " "
-        for flag,bit in flag_bits:
-            ex = eflags >> bit
-            if( flag == "IOPL" ):
-                ex &= 3
-            else:
-                ex &= 1
-            if( ex == 0 ):
-                ret += f"{flag}[{ex}] "
-            else:
-                ret += vdb.color.color(f"{flag}[{ex}] ",flag_colour.value)
+            ret += " "
+            for flag,bit in flag_bits:
+                ex = eflags >> bit
+                if( flag == "IOPL" ):
+                    ex &= 3
+                else:
+                    ex &= 1
+                if( ex == 0 ):
+                    ret += f"{flag}[{ex}] "
+                else:
+                    ret += vdb.color.color(f"{flag}[{ex}] ",flag_colour.value)
+        else:
+            ret += "NO SUPPORTED FLAGS FOUND\n"
 
 #
 #		ret += "OF[{}] ""DF[{}] ""IF[{}] ""TF[{}]".format( ((eflags >> 0xB) & 1 ), ((eflags >> 0xA) & 1 ),  ((eflags >> 9) & 1), ((eflags >> 8) & 1 ))

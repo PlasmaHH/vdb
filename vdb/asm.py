@@ -17,6 +17,7 @@ import os
 
 asm_colors = [
         ( "j.*", "#f0f" ),
+        ( "b.*", "#f0f" ),
         ( "mov.*", "#0ff" ),
         ( "cmp.*|test.*", "#f99" ),
         ( "call.*", "#6666ff" ),
@@ -25,6 +26,7 @@ asm_colors = [
 
 asm_colors_dot = [
         ( "j.*", "#f000f0" ),
+        ( "b.*", "#f000f0" ),
         ( "mov.*", "#007f7f" ),
         ( "cmp.*|test.*", "#f09090" ),
         ( "call.*", "#6666ff" ),
@@ -767,6 +769,7 @@ def fix_marker( ls ):
 
 parse_cache = {}
 def parse_from_gdb( arg, fakedata = None ):
+#    print("fakedata = '%s'" % fakedata )
 #    print("arg = '%s'" % arg )
 #    print("len(arg) = '%s'" % len(arg) )
     global parse_cache
@@ -784,6 +787,8 @@ def parse_from_gdb( arg, fakedata = None ):
 #                key = gdb.execute(f"info symbol $rip",False,True)
                 key = gdb.execute(f"info symbol ${pc}",False,True)
                 last_working_pc = pc
+                if( key.startswith("No symbol matches") ):
+                    continue
 #                print("pc = '%s'" % pc )
                 break
             except:
@@ -823,6 +828,7 @@ def parse_from_gdb( arg, fakedata = None ):
     last_cmp_immediate = 1
 #    print("dis = '%s'" % dis )
     for line in dis.splitlines():
+#        print("line = '%s'" % line )
         ins = instruction()
         fm=re.search(funcre,line)
         if( fm ):
@@ -852,6 +858,18 @@ def parse_from_gdb( arg, fakedata = None ):
                     tokens[1] += tokens[2]
 #                    print("tokens[1] = '%s'" % tokens[1] )
                     del tokens[2]
+
+            xtokens = []
+#            print("tokens = '%s'" % tokens )
+            while len(tokens) > 0:
+                tok = tokens[0]
+                if( len(xtokens) > 0 and xtokens[-1].endswith(",") ):
+                    xtokens[-1] += tok
+                else:
+                    xtokens.append(tok)
+                tokens = tokens[1:]
+#            print("xtokens = '%s'" % xtokens )
+            tokens = xtokens
 
             ins.address = vdb.util.xint(tokens[0])
             if( ret.start == 0 ):
@@ -901,7 +919,11 @@ def parse_from_gdb( arg, fakedata = None ):
                 else:
                     if( ins.mnemonic not in unconditional_jump_mnemonics ):
                         ins.conditional_jump = True
-                    ins.targets.add(vdb.util.xint(tokens[tpos-1]))
+#                    print("TARGET ADD %s",tokens[tpos-1])
+                    try:
+                        ins.targets.add(vdb.util.xint(tokens[tpos-1]))
+                    except:
+                        pass
                     ins.target_name = " ".join(tokens[tpos:])
             elif( ins.mnemonic in unconditional_jump_mnemonics ):
                 m = re.search(jmpre,ins.args)
@@ -944,7 +966,7 @@ def parse_from_gdb( arg, fakedata = None ):
 #    print(f"Returning for {key}")
     return ret
 
-def parse_from( arg ):
+def parse_from( arg, fakedata = None ):
     rng = arg.split(",")
     if( len(rng) == 2 ):
         try:
@@ -961,7 +983,7 @@ def parse_from( arg ):
             pass
     # other disssembler options go here
     try:
-        ret = parse_from_gdb(arg)
+        ret = parse_from_gdb(arg,fakedata)
     except gdb.error as e:
         if( str(e) == "No function contains specified address." ):
             return parse_from(arg+","+str(nonfunc_bytes.value))
@@ -977,6 +999,7 @@ def parse_from( arg ):
 def disassemble( argv ):
     dotty = False
     context = None
+    fakedata = None
 
     if( len(argv) > 0 ):
         if( argv[0][0] == "/" and argv[0][1:].isdigit() ):
@@ -985,13 +1008,17 @@ def disassemble( argv ):
         elif( argv[0] == "/d" ):
             dotty = True
             argv=argv[1:]
+        elif( argv[0] == "/f" ):
+            with open (argv[1], 'r') as fakefile:
+                fakedata = fakefile.read()
+            argv=["fake"]
         elif( argv[0] == "/r" ):
             argv=argv[1:]
             gdb.execute("disassemble " + " ".join(argv))
             return
 
 
-    listing = parse_from(" ".join(argv))
+    listing = parse_from(" ".join(argv),fakedata)
     listing.print(asm_showspec.value, context)
     if( dotty ):
         g = listing.to_dot(asm_showspec_dot.value)
