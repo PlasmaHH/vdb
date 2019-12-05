@@ -11,3 +11,6 @@ mock.txt
 m.txt
 gdb.txt
 Session.vim
+build/
+dist/
+*.egg-info/
