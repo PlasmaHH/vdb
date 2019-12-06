@@ -772,6 +772,9 @@ Additionally we try to find and copy debug files and shared objects that have be
 isn't perfect, but you can always manually copy the debug files into the lib directory, just name them the same as the
 `.so` file but add `.debug` to the filename.
 
+In case the binary that has created the corefile was overwritten you can give the name of a binary as a parameter after
+the core file name to override automatic detection of which file created the core file.
+
 ### Remote csum cache
 Instead of calculating the checksum for a remote file, the copy functionality can also take the checksum from a cache.
 The only way to add to the cache is via the command `ssh csum <host>:<file> <csum>` which will be mostly useful for when
