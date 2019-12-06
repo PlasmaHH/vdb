@@ -386,6 +386,9 @@ def copy_libraries( s, libset, libdir, cwd ):
 def core( s, argv ):
 #    print("argv = '%s'" % argv )
     corefile=argv[0]
+    binary=None
+    if( len(argv) > 1 ):
+        binary=argv[1]
     if( s.check(True) is not None ):
         return
 
@@ -399,10 +402,13 @@ def core( s, argv ):
         s.detach()
         return
 
-    psargs=subprocess.check_output(["sh","-c",f"eu-readelf -n {cf} | grep psargs"]).decode("utf-8")
+    if( binary is None ):
+        psargs=subprocess.check_output(["sh","-c",f"eu-readelf -n {cf} | grep psargs"]).decode("utf-8")
 
-    binary=psargs.split("psargs:")[1].split()[0]
-    print(f"Binary {binary} created corefile, trying to get it…")
+        binary=psargs.split("psargs:")[1].split()[0]
+        print(f"Binary {binary} created corefile, trying to get it…")
+    else:
+        print(f"Binary {binary} overrides the one from the corefile")
 
     bf=find_file(s,binary,"binary")
 
