@@ -253,12 +253,26 @@ def csum( argv ):
     global csum_cache
     csum_cache[key] = (cs,None)
 
-def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
+def find_file( s, fname, tag, pid = 0, symlink=None, target = None, use_which = False ):
     if( s.check(True) is not None ):
         return
 #    sw=vdb.cache.stopwatch()
 #    sw.start()
     src = fname.replace("{pid}",str(pid))
+    if( use_which ):
+#        src = "$(which %s)" % src
+        wsrc = "$(which %s)" % src
+        s.call("ls " + wsrc)
+        if( s.check(True) is not None ):
+            return
+        s.fill(5)
+        xsrc = s.read()
+#        print("wsrc = '%s'" % wsrc )
+#        print("xsrc = '%s'" % xsrc )
+        if( len(xsrc) > 0 ):
+            src = xsrc.split()[0]
+        else:
+            print("Warning: Could not resolve file via which: %s leads to %s" % (src,xsrx) )
 
     cachekey = f"{s.host}:{fname}"
     csum,fsize = csum_cache.get(cachekey,(None,None))
@@ -268,7 +282,7 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
             return
         s.fill(5)
         fsize=int(s.read())
-        print("fsize = '%s'" % fsize )
+#        print("fsize = '%s'" % fsize )
     if( csum is None ):
 #        sw=vdb.cache.stopwatch()
 #        sw.start()
@@ -283,6 +297,8 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
 #        return
         ocsum=s.read()
         xcsum = ocsum.replace(src,"")
+#        print("src = '%s'" % src )
+#        print("ocsum = '%s'" % ocsum )
 #        print("xcsum = '%s'" % xcsum )
         xcsum=xcsum.split()
         if( not s.running() ):
@@ -293,11 +309,11 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None ):
             s.check(True)
             return
         if( len(xcsum) == 0 ):
-            print("Timed out getting checksum. If the file is huge or the system slow, try increasing vdb-ssh-checksum-timeout")
+            print("Timed out getting checksum. If the file is huge or the system slow, try increasing vdb-ssh-checksum-timeout-factor")
             return
-        if( len(xcsum) != 1 ):
-            print(f"Format error, expected checksum, got:\n{ocsum}")
-            return
+#        if( len(xcsum) > 1 ):
+#            print(f"Format error, expected checksum, got:\n{ocsum}")
+#            return
 #        print("xcsum = '%s'" % xcsum )
         csum = xcsum[0]
 
@@ -410,7 +426,7 @@ def core( s, argv ):
     else:
         print(f"Binary {binary} overrides the one from the corefile")
 
-    bf=find_file(s,binary,"binary")
+    bf=find_file(s,binary,"binary",use_which = True)
 
     if( bf is None ):
         print("Failed to find the binary, core file would be useless without it")
@@ -418,17 +434,20 @@ def core( s, argv ):
 
     print("Checking which shared objects were loaded…")
     # method 1, get eu-readelf to output whats in the corefile
-    libnotes=subprocess.check_output(["sh","-c",f"eu-readelf -n {cf} | grep / | grep -v '(deleted)' "])
-    notere=re.compile("[0-9a-fA-F]*-[0-9a-fA-F]*\s*[0-9a-fA-F]*\s*[0-9]*\s*(.*)")
     libset=set()
-    for note in libnotes.decode().splitlines():
+    try:
+        libnotes=subprocess.check_output(["sh","-c",f"eu-readelf -n {cf} | grep / | grep -v '(deleted)' "])
+        notere=re.compile("[0-9a-fA-F]*-[0-9a-fA-F]*\s*[0-9a-fA-F]*\s*[0-9]*\s*(.*)")
+        for note in libnotes.decode().splitlines():
 #        print("note = '%s'" % note )
-        m = notere.search(note)
+            m = notere.search(note)
 #        print("m = '%s'" % m )
-        if( m is not None ):
-            libset.add(m.group(1))
+            if( m is not None ):
+                libset.add(m.group(1))
 #            print("note = '%s'" % note )
 #            print("m.group(1) = '%s'" % m.group(1) )
+    except subprocess.CalledProcessError as e:
+        pass
 
     if( len(libset) == 0 ):
         print("Core file did not contain that information, trying to guess")
@@ -468,8 +487,10 @@ def core( s, argv ):
     for slib in slibs:
         slib=slib.split()
         if( slib[0] == "No" ):
-            print("Still missing library " + slib[1])
-            xlibset.add(slib[1])
+            if( len(slib) > 1 and slib[1] != "shared" ):
+                print("Still missing library " + slib[1])
+                xlibset.add(slib[1])
+#    print("xlibset = '%s'" % xlibset )
     if( len(xlibset) > 0 ):
         copy_libraries(s,xlibset,libdir,cwd)
         gdb.execute("set solib-search-path .")

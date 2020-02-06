@@ -675,7 +675,7 @@ will enable you to
 
 * `dashboard enable/disable` Disables a dashboard. It will still be in the list, but not executed upon events. This may
   mean that something like an open port is still there.
-* `dashboard erase` Completely remove the dashbaord, destroying all associated objects, usually closing listening ports
+* `dashboard delete` Completely remove the dashbaord, destroying all associated objects, usually closing listening ports
   etc.
 * `dashboard [no]cls` Enables or disables the option to clear screen before starting the output. Clearing the screen is
   done via ansi escape sequences.
@@ -696,7 +696,7 @@ hashtables with a lot of collisions where there do not need to be some. A hashfu
 numbers, and thus from this we can calculate for a given hashtable size and load factor, how much collisions would be
 acceptable. 
 
-For now there is basic support for some `std::` and some `boost::instrusive`` hashtables, once we get things settles we
+For now there is basic support for some `std::` and some `boost::instrusive` hashtables, once we get things settles we
 might be able to figure out a nice way to add custom support.
 
 ### `hashtable`
