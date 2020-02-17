@@ -19,7 +19,7 @@ prompt_color = 10*[None]
 prompt_text = 10*[None]
 
 
-prompt_base = vdb.config.parameter( "vdb-prompt-base","{start}{0}{1}{2}{3}{4}{git}{5}{6}{7}{8}{9}{end}", on_set = defer_set_prompt )
+prompt_base = vdb.config.parameter( "vdb-prompt-base","{start}{0}{1}{2}{3}{4}{git}{5}{6}{7}{8}{9}{[:host:]}{end}", on_set = defer_set_prompt )
 
 for i in range(0,10):
     prompt_color[i] = vdb.config.parameter( "vdb-prompt-colors-%s" % i, "#ffff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
@@ -36,6 +36,7 @@ prompt_color_git    = vdb.config.parameter( "vdb-prompt-colors-text-git",    "#9
 prompt_color_thread = vdb.config.parameter( "vdb-prompt-colors-text-thread", "#9999ff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
 prompt_color_time   = vdb.config.parameter( "vdb-prompt-colors-text-time",   "#ffffff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
 prompt_color_frame  = vdb.config.parameter( "vdb-prompt-colors-text-frame",  "#9999ff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
+prompt_color_host  = vdb.config.parameter( "vdb-prompt-colors-text-host",  "#ffff4f", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
 
 # TODO introduce hooks to dynamically insert information, use format string like substitutions for them.
 # Possible information includes (maybe we can colour code something too?)
@@ -119,7 +120,14 @@ def prompt_replace( prompt, fmt, txt, col ):
     prompt = re.sub(re_fmt,re_txt,prompt)
     return prompt
 
+host = None
+def set_host( nh ):
+    global host
+    host = nh
+    reset_prompt()
 
+def get_host( ):
+    return host
 
 @vdb.event.before_prompt()
 def refresh_prompt( ):
@@ -136,6 +144,8 @@ def refresh_prompt( ):
         prompt = prompt_replace(prompt,"thread",get_thread(),prompt_color_thread.value )
     if( has_key["frame"] ):
         prompt = prompt_replace(prompt,"frame",get_frame(),prompt_color_frame.value )
+    if( has_key["host"] ):
+        prompt = prompt_replace(prompt,"host",get_host(),prompt_color_host.value )
     set_prompt(prompt)
 
 def check_format( fmt ):
@@ -155,6 +165,7 @@ def reset_prompt( ):
     check_format("time")
     check_format("frame")
     check_format("thread")
+    check_format("host")
 
     if( prompt_git.value is False ):
         has_key["{git}"] = False
