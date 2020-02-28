@@ -754,17 +754,24 @@ x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd" ])
 pc_list = [ "rip", "eip", "ip", "pc" ]
 last_working_pc = ""
 
-def fix_marker( ls ):
+def fix_marker( ls, alt = None ):
 #    print("fixing makers...")
 #    mark = vdb.util.gint("$rip")
-    mark = vdb.util.gint(f"${last_working_pc}")
+    try:
+        mark = vdb.util.gint(f"${last_working_pc}")
+    except:
+        try:
+            mark = vdb.util.gint(alt)
+        except:
+            mark = None
 
-    for i in ls.instructions:
-        if( i.address == mark ):
-            i.marked = True
-        else:
-            i.marked = False
-    ls.do_backtrack()
+        for i in ls.instructions:
+#            print("%s == %s ? %s " % (i.address,mark,(i.address == mark)))
+            if( i.address == mark ):
+                i.marked = True
+            else:
+                i.marked = False
+        ls.do_backtrack()
     return ls
 
 parse_cache = {}
@@ -803,7 +810,7 @@ def parse_from_gdb( arg, fakedata = None ):
     ret = parse_cache.get(key,None)
 #    print("ret = '%s'" % ret )
     if( ret is not None and fakedata is None ):
-        return fix_marker(ret)
+        return fix_marker(ret,arg)
     ret = listing()
 
 
@@ -826,6 +833,8 @@ def parse_from_gdb( arg, fakedata = None ):
     cmpre  = re.compile("^\$(0x[0-9a-fA-F]*),.*")
     current_function=""
     last_cmp_immediate = 1
+
+    markers = 0
 #    print("dis = '%s'" % dis )
     for line in dis.splitlines():
 #        print("line = '%s'" % line )
@@ -847,6 +856,7 @@ def parse_from_gdb( arg, fakedata = None ):
             marker = m.group(1)
             if( marker is not None ):
                 ins.marked = True
+                markers += 1
                 tokens = tokens[1:]
 #            print("tokens = '%s'" % tokens )
             # the dissamble version without <line+>
@@ -963,6 +973,8 @@ def parse_from_gdb( arg, fakedata = None ):
 #			print("m = '%s'" % m )
     if( fakedata is None ):
         parse_cache[key] = ret
+    if( markers == 0 ):
+        ret = fix_marker(ret,arg)
 #    print(f"Returning for {key}")
     return ret
 
@@ -983,6 +995,8 @@ def parse_from( arg, fakedata = None ):
             pass
     # other disssembler options go here
     try:
+#        print("arg = '%s'" % arg )
+#        print("fakedata = '%s'" % fakedata )
         ret = parse_from_gdb(arg,fakedata)
     except gdb.error as e:
         if( str(e) == "No function contains specified address." ):

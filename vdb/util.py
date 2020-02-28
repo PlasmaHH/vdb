@@ -29,7 +29,7 @@ def gint( s ):
         r = int(val)
         return r
     except:
-        print("Errenous value %s" % (s,))
+#        print("Errenous value %s" % (s,))
         raise
 
 def xint( s ):

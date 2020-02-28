@@ -17,6 +17,14 @@ def color( s, cs ):
 def colorl( s, cs ):
     return ( color(s,cs),len(s))
 
+# readline safe (?) colouring
+def color_rl( s, cs ):
+    # these special characters will make libreadline handle searches better
+    s = "\x02" + s + "\x01" # STX + s + SOH
+    s = color(s,cs)
+    s = "\x01" + s + "\x02" # SOH + s + STX
+    return s
+
 def scolor( s, cs ):
     try:
         return color(s,cs)

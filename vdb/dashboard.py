@@ -250,6 +250,15 @@ def add_board( tgt, argv ):
     delist = dash_events.setdefault("before_prompt",[])
     delist.append(db)
 
+def del_board( id ):
+    id = int(id)
+    global dash_events
+    for on,evl in dash_events.items():
+        for db in evl:
+            if( db.id == id ):
+                evl.remove(db)
+#                db.enabled = to
+                return
 
 def call_dashboard( argv ):
     # type: tmux,port,tty
@@ -257,30 +266,32 @@ def call_dashboard( argv ):
     if( len(argv) == 0 ):
         raise gdb.error("You need to give at least some parameter")
 #    print("argv = '%s'" % argv )
-    if( argv[0] == "tty" ):
+    if( "tty".startswith(argv[0]) ):
         if( len(argv) < 3 ):
             raise gdb.error("dashboard tty, need at least 2 parameters")
         tgt = tty(argv[1])
         add_board(tgt,argv[2:])
-    elif( argv[0] == "tmux" ):
+    elif( "tmux".startswith(argv[0]) ):
         if( len(argv) < 3 ):
             raise gdb.error("dashboard tmux, need at least 2 parameters")
         tgt = tmux(argv[1])
         add_board(tgt,argv[2:])
-    elif( argv[0] == "port" ):
+    elif( "port".startswith(argv[0]) ):
         if( len(argv) < 3 ):
             raise gdb.error("dashboard port, need at least 2 parameters")
         tgt = port(argv[1])
         add_board(tgt,argv[2:])
-    elif( argv[0] == "show" ):
+    elif( "delete".startswith(argv[0]) ):
+        del_board(argv[1])
+    elif( "show".startswith(argv[0]) ):
         show_dashboard()
-    elif( argv[0] == "enable" ):
+    elif( "enable".startswith(argv[0]) ):
         trigger_dashboard(argv[1],True)
-    elif( argv[0] == "disable" ):
+    elif( "disable".startswith(argv[0]) ):
         trigger_dashboard(argv[1],False)
-    elif( argv[0] == "cls" ):
+    elif( "cls".startswith(argv[0]) ):
         trigger_cls(argv[1],True)
-    elif( argv[0] == "nocls" ):
+    elif( "nocls".startswith(argv[0]) ):
         trigger_cls(argv[1],False)
     else:
         print("%s? What do you mean?" % argv[0])
