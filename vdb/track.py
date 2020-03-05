@@ -25,7 +25,8 @@ bptypes = {
         gdb.BP_BREAKPOINT : "breakpoint",
         gdb.BP_HARDWARE_WATCHPOINT : "hw watchpoint",
         gdb.BP_READ_WATCHPOINT : "read watchpoint",
-        gdb.BP_ACCESS_WATCHPOINT : "access watchpoint",
+        gdb.BP_ACCESS_WATCHPOINT : "acc watchpoint",
+        gdb.BP_WATCHPOINT : "watchpoint"
         }
 
 def bp_type( no ):
@@ -158,27 +159,34 @@ def do_del( argv ):
 def show( ):
     bps = gdb.breakpoints()
     ftbl = []
-    ftbl.append( [ "Num","Type","Disp","Enb","Address","Where","TrackNo","TrackExpr" ] )
+    ftbl.append( [ "Num","Type","Disp","Enb","Address","What","TrackNo","TrackExpr" ] )
 
     if( len(bps) == 0 ):
         print("No breakpoints or watchpoints.")
         return None
 
     for bp in bps:
+        locs = []
+        what = None
 #        print("bp = '%s'" % bp )
-        unparsed,locs = gdb.decode_line(bp.location)
-        if( len(locs) == 1 ):
-            addr = locs[0]
-            addr = ptr_color(addr.pc)
+        if( bp.location is not None ):
+            what = bp.location
+            unparsed,locs = gdb.decode_line(bp.location)
+            if( len(locs) == 1 ):
+                addr = locs[0]
+                addr = ptr_color(addr.pc)
+            else:
+                addr = "<MULTIPLE>"
         else:
-            addr = "<MULTIPLE>"
-        ftbl.append( [ bp.number, bp_type(bp.type), bp_disp(bp.temporary), bp_enabled(bp.enabled), addr, bp.location ] )
+            addr = None
+            what = bp.expression
+        ftbl.append( [ bp.number, bp_type(bp.type), bp_disp(bp.temporary), bp_enabled(bp.enabled), addr, what ] )
 #        print("locs = '%s'" % (locs,) )
         if( len(locs) > 1 ):
             cnt = 0
             for loc in locs:
                 cnt += 1
-                ftbl.append( [f"{bp.number}.{cnt}",None,None,None,ptr_color(loc.pc)] )
+                ftbl.append( [f"{bp.number}.{cnt}",None,None,bp_enabled(bp.enabled),ptr_color(loc.pc)] )
         tracks = trackings.get(bp.number,None)
         if( tracks is not None ):
             for track in tracks:
