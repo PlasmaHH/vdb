@@ -77,7 +77,7 @@ Although I am using it in my daily C++ work, it will likely be unintentionally s
 		* [configuration](#configuration-2)
 	* [track](#track)
 		* [`track show`](#track-show)
-		* [`track <num> <expression>`](#track-num-expression)
+		* [`track <num|location> <expression>`](#track-numlocation-expression)
 		* [`track data`](#track-data)
 		* [`track del`](#track-del)
 		* [`track clear`](#track-clear)
@@ -845,7 +845,7 @@ information.
 
 ![](img/track.0.png)
 
-### `track <num> <expression>`
+### `track <num|location> <expression>`
 This will  use gdbs existing breakpoint no `num` and will execute `expression` each time, recording the resulting string
 along with a timestamp.
 

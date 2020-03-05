@@ -252,7 +252,7 @@ class cmd_track (vdb.command.command):
             elif( len(argv) > 1 ):
                 track(argv)
             else:
-                print("Usage: track [show] or track <num> <expression>")
+                print("Usage: track [show] or track <num|location> <expression>")
         except:
             traceback.print_exc()
             raise
