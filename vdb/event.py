@@ -6,7 +6,15 @@ import gdb
 def on_event( gdbreg, darg ):
     def decorator( func ):
         def wrapper(*arg):
-            func(*darg)
+#            print("type(arg) = '%s'" % type(arg) )
+#            print("type(darg) = '%s'" % type(darg) )
+#            print("arg = '%s'" % (arg,) )
+#            print("darg = '%s'" % (darg,) )
+            try:
+                func(*(arg+darg) )
+            except Exception as a:
+#                print("a = '%s'" % a )
+                func(*darg)
 
         gdbreg.connect(wrapper)
         return func
