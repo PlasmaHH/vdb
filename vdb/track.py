@@ -111,17 +111,22 @@ def track( argv ):
     try:
         bpnum = int(argv[0])
     except ValueError as e:
-        print(f"Attempting to set breakpoint for '{argv[0]}'")
-        gdb.execute(f"break {argv[0]}")
-        n_bp = set()
-
-        bps = gdb.breakpoints()
         for bp in bps:
-            n_bp.add(bp.number)
-        nbp = n_bp - ex_bp
-#        print("nbp = '%s'" % nbp )
-        bpnum = nbp.pop()
-        ex_bp = n_bp
+            if( bp.location == argv[0] ):
+                print("Already have breakpoint with that expression, reusing it")
+                bpnum = bp.number
+                break
+        else:
+            print(f"Attempting to set breakpoint for '{argv[0]}'")
+            gdb.execute(f"break {argv[0]}")
+            n_bp = set()
+
+            bps = gdb.breakpoints()
+            for bp in bps:
+                n_bp.add(bp.number)
+            nbp = n_bp - ex_bp
+            bpnum = nbp.pop()
+            ex_bp = n_bp
 
     expr = argv[1:]
 

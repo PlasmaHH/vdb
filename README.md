@@ -848,7 +848,10 @@ This will  use gdbs existing breakpoint no `num` and will execute `expression` e
 along with a timestamp.
 
 Instead of giving a number in `num` you can also provide an expression that will then be given to gdb to create a new
-breakpoint. This breakpoint however will remain active even after the trackpoint has been deleted.
+breakpoint. This breakpoint however will remain active even after the trackpoint has been deleted. Be careful though
+that you may end up with multiple breakpoints for the same address which may incur a performance hit. We try to filter
+out by the location string you passed, but what gdb gives us may not always be the same you passed, thus we can not
+distinguish.
 
 ### `track data`
 This shows a table with all the collected data. In (default) relative mode, all timestamps are relative to the first
