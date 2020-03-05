@@ -82,10 +82,16 @@ def stop( bpev ):
 
 tracking_data = {}
 
+
+
 class track_item:
+
+    next_number = 1
 
     def __init__( self, expr ):
         self.expression = " ".join(expr)
+        self.number = track_item.next_number
+        track_item.next_number += 1
 
     def execute( self, now ):
         try:
@@ -96,17 +102,58 @@ class track_item:
             pass
 
 def track( argv ):
-    bpnum = int(argv[0])
+    ex_bp = set()
+
+    bps = gdb.breakpoints()
+    for bp in bps:
+        ex_bp.add(bp.number)
+
+    try:
+        bpnum = int(argv[0])
+    except ValueError as e:
+        print(f"Attempting to set breakpoint for '{argv[0]}'")
+        gdb.execute(f"break {argv[0]}")
+        n_bp = set()
+
+        bps = gdb.breakpoints()
+        for bp in bps:
+            n_bp.add(bp.number)
+        nbp = n_bp - ex_bp
+#        print("nbp = '%s'" % nbp )
+        bpnum = nbp.pop()
+        ex_bp = n_bp
+
     expr = argv[1:]
+
+    if( bpnum not in ex_bp ):
+        print(f"Unknown breakpoint {bpnum}, refusing to attack track to nothing")
+        return
 
     global trackings
     trackings.setdefault(bpnum,[]).append(track_item( expr ))
 
 
+def do_del( argv ):
+    for arg in argv:
+        num = int(arg)
+        found = False
+        for bpnum,tracking in trackings.items():
+            for track in tracking:
+                if( track.number == num ):
+                    print(f"Deleted tracking {num}")
+                    found = True
+                    tracking.remove(track)
+                    break
+            if( found ):
+                break
+        if( not found ):
+            print(f"Tracking {num} not found")
+
+
 def show( ):
     bps = gdb.breakpoints()
     ftbl = []
-    ftbl.append( [ "Num","Type","Disp","Enb","Address","What" ] )
+    ftbl.append( [ "Num","Type","Disp","Enb","Address","Where","TrackNo","TrackExpr" ] )
 
     if( len(bps) == 0 ):
         print("No breakpoints or watchpoints.")
@@ -127,11 +174,22 @@ def show( ):
             for loc in locs:
                 cnt += 1
                 ftbl.append( [f"{bp.number}.{cnt}",None,None,None,ptr_color(loc.pc)] )
+        tracks = trackings.get(bp.number,None)
+        if( tracks is not None ):
+            for track in tracks:
+                ftbl.append( [None] * 6 + [track.number,track.expression] )
 
 #        print("gdb.decode_line(bp.location) = '%s'" % (gdb.decode_line(bp.location),) )
 #        bp.__dict__["stop"] = stop
     ftbl = vdb.util.format_table(ftbl,""," ")
     print(ftbl)
+
+
+def clear( ):
+    global tracking_data
+    tracking_data = {}
+    print("Cleared all tracking data")
+
 
 def data( ):
     first = 0
@@ -182,6 +240,10 @@ class cmd_track (vdb.command.command):
                 show()
             elif( argv[0] == "data" ):
                 data()
+            elif( argv[0] == "del" ):
+                do_del(argv[1:])
+            elif( argv[0] == "clear" ):
+               clear()
             elif( len(argv) > 1 ):
                 track(argv)
             else:
