@@ -842,6 +842,7 @@ task.
 
 Shows the currently known breakpoints (similar to `info break`) along with the information about registered tracking
 information.
+![](img/track.0.png)
 
 ### `track <num> <expression>`
 This will  use gdbs existing breakpoint no `num` and will execute `expression` each time, recording the resulting string
@@ -863,8 +864,10 @@ small outputs.
 If at a specific breakpoint an expression did not yield any output (or caused an exception) this field will remain
 empty.
 
+![](img/track.1.png)
 ### `track del`
-This deletes a track entry by the number shown in `track show`, just like `del` does for breakpoints.
+This deletes a track entry by the number shown in `track show`, just like `del` does for breakpoints. You can specify
+multiple trackpoints.
 
 
 ### `track clear`
