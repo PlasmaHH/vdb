@@ -842,6 +842,7 @@ task.
 
 Shows the currently known breakpoints (similar to `info break`) along with the information about registered tracking
 information.
+
 ![](img/track.0.png)
 
 ### `track <num> <expression>`
