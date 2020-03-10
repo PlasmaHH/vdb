@@ -19,6 +19,7 @@ import datetime
 
 
 rel_time = vdb.config.parameter("vdb-track-time-relative",True)
+clear_at_start = vdb.config.parameter("vdb-track-clear-at-start",True)
 
 
 bptypes = { 
@@ -202,6 +203,12 @@ def clear( ):
     global tracking_data
     tracking_data = {}
     print("Cleared all tracking data")
+
+@vdb.event.run()
+@vdb.event.start()
+def auto_clear( ):
+    if( clear_at_start.value is True ):
+        clear()
 
 
 def data( ):

@@ -546,7 +546,7 @@ could be displayed as
 The ftree command expects a pointer to an object. It will create a dot file based on the filename configured in
 `vdb-ftree-filebase`. The string there will be fed through strftime and then `.dot` will be appended to it. The default
 is `ftree` so it will always overwrite the last one. Using `ftree.%s` will be the most trivial way to create a file for
-each invocation.
+each invocation. The default depth limit for the tree is at 70, you can specify another limit as the second parameter.
 
 After the dot file is created, the generated filename will be fed to the string format in `vdb-ftree-dot-command` and
 the created command will be executed, usually to display the generated file directly.
@@ -861,6 +861,9 @@ recording. You can set `vdb-track-time-relative` to disable this and use local t
 running programs where the breakpoint is only hit occasionally). Note that this will display the string from the
 expression per table entry without any further formatting, as such it is most wise to use expressions only that have
 small outputs.
+
+Setting `vdb-track-clear-at-start` to off will disable the automated clearing of tracking data when (re)starting a
+process.
 
 If at a specific breakpoint an expression did not yield any output (or caused an exception) this field will remain
 empty.
