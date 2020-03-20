@@ -111,12 +111,26 @@ First clone the repo
 ```
 git clone https://github.com/PlasmaHH/vdb.git
 ```
+### Installation
+#### Manually
 Install dependencies from the `requirements.txt` or install as a package.
 Then add this to your `~/.gdbinit`
 ```
 source ~/git/vdb/vdb.py
 vdb start
 ```
+#### Python Setup
+Using python setuptools one can simply run
+```
+sudo python ./setup.py install
+```
+and then edit `~/.gdbinit`
+```
+source /usr/bin/vdb.py
+vdb start
+```
+
+---
 In case a dependency is not available, the module needing it will not load, but all others should. In practice this
 means screens full of error messages and a limited feature set, but for a lot of modules plain pyhton is enough. The
 most notable exception though is the ansicolor module which of course  is necessary since basically all features are
