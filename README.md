@@ -75,6 +75,12 @@ Although I am using it in my daily C++ work, it will likely be unintentionally s
 		* [debug `core` file](#debug-core-file)
 		* [Remote csum cache](#remote-csum-cache)
 		* [configuration](#configuration-2)
+	* [track](#track)
+		* [`track show`](#track-show)
+		* [`track <num|location> <expression>`](#track-numlocation-expression)
+		* [`track data`](#track-data)
+		* [`track del`](#track-del)
+		* [`track clear`](#track-clear)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
 	* [pointer (chaining)](#pointer-chaining)
@@ -111,9 +117,9 @@ Then add this to your `~/.gdbinit`
 source ~/git/vdb/vdb.py
 vdb start
 ```
-In case a depdendency is not available, the module needing it will not load, but all others should. In practice this
+In case a dependency is not available, the module needing it will not load, but all others should. In practice this
 means screens full of error messages and a limited feature set, but for a lot of modules plain pyhton is enough. The
-most noteable exception though is the ansicolor module which of course  is necessary since basically all features are
+most notable exception though is the ansicolor module which of course  is necessary since basically all features are
 about colours.
 ## Disabling modules
 There is one boolean gdb option per module. Setting those to off before `vdb
@@ -167,7 +173,7 @@ is inlined or some information about signals and crashes.
   possible in recovering it, gdb outputs warnings. They are usually suppressed and just a small string displayed in this
   colour.
 
-Addresses (in the address column) is some special biest. Since the gdb decoration mechanism only allows us to return
+Addresses (in the address column) is some special beast. Since the gdb decoration mechanism only allows us to return
 integers/pointers, we are forced to hack around this by putting the strings elsewhere. There are situations  where this
 can look funny. You can use the following setting to disable the colouring then. 
 ```
@@ -227,7 +233,7 @@ As one of the parameters it accepts a colorspec, the other is an address. If the
 #### `reg`
 This command is like `info register` just with a bit more information and options. It can display the most basic
 registers or an existed version of all registers. Just a hex value overview, or a detailed dereference chain. It
-colouors the pointer according to where they point to (see the legend of the command). It tries to detect when a pointer
+colours the pointer according to where they point to (see the legend of the command). It tries to detect when a pointer
 value is invalid, but contains an ascii string instead (hints to it being read from re-used memory). It has the
 following variants (and defaults to what is configured in `vdb-register-default`, which itself defaults to `/e`):
 
@@ -244,7 +250,7 @@ If you want to show the integer value alongside the hex value of each register s
     ![](img/reg.iI.png)
 
 * `vV` show all the vector registers and try to make sense of them, tries to take the biggest version of registers that
-  are overlayed. The mxcsr flags are shown too.
+  are overlaid. The mxcsr flags are shown too.
 
     ![](img/reg.vV.png)
 * `fF` show all the float registers and flags.
@@ -374,7 +380,7 @@ vdb-asm-colors-args
 Additionally `vdb-asm-colors-jumps` is a semicolon separated list of colours to use for the jump tree view.
 
 If you set the addr colour to `None` (default) it will use the standard pointer colouring. If you set the mnemonic
-colouring to `None` (default) it will use a list of regexes to check for which colouor to chose for which mnemonic. Same
+colouring to `None` (default) it will use a list of regexes to check for which colour to chose for which mnemonic. Same
 for the prefix.
 
 You have a little more control over the way offset is formatted by using the setting `vdb-asm-offset-format` which
@@ -540,10 +546,10 @@ could be displayed as
 The ftree command expects a pointer to an object. It will create a dot file based on the filename configured in
 `vdb-ftree-filebase`. The string there will be fed through strftime and then `.dot` will be appended to it. The default
 is `ftree` so it will always overwrite the last one. Using `ftree.%s` will be the most trivial way to create a file for
-each invocation.
+each invocation. The default depth limit for the tree is at 70, you can specify another limit as the second parameter.
 
 After the dot file is created, the generated filename will be fed to the string format in `vdb-ftree-dot-command` and
-the created command will be excuted, usually to display the generated file directly.
+the created command will be executed, usually to display the generated file directly.
 
 Pointers will be displayed with their value, and a dot edge drawn to the object it points to. Cells will be colored
 according to the following settings:
@@ -587,7 +593,7 @@ Functions to call
 * `{add,set}_node_downcast_filter` add a regex and a callable object. When the type matches, the callable will be called
   with the regex match object, gdb.Value and object path. The result is either None or a gdb.Type that the node pointer
   will be caste to before a new node will be extracted from it.
-* `{add,set}_member_cast_filter` This is basially the same, but for members of a node. The resulting type therefore is
+* `{add,set}_member_cast_filter` This is basically the same, but for members of a node. The resulting type therefore is
   not a pointer type.
 
 #### Pretty print filters
@@ -614,7 +620,7 @@ For types like `std::vector` there is usually internally a pointer to the object
 no idea that it is pointing to an array, not a single object. Similar to the hidden type thing we have a regex mechanism
 that can be used to access other members that then can be used to determine the amount of elements.
 
-The setting `vdb-ftree-array-elements` is a comma seperated list of python like element indices, that is when they are
+The setting `vdb-ftree-array-elements` is a comma separated list of python like element indices, that is when they are
 negative they are counted from the back of the array. Since arrays can be very long, this limits the amount of things
 displayed. Per default its the first and last four items.
 
@@ -665,13 +671,13 @@ will enable you to
 
 * `dashboard show` Shows a list of all dashboards. The meaning of the columns is as follows:
     * __EN__ Y/N for being enable or not. 
-    * __CLS__ Y/N for clearing the scren before outputting anything. The default. Disable this if you want to send two
+    * __CLS__ Y/N for clearing the screen before outputting anything. The default. Disable this if you want to send two
       dashboards to one output.
     * __ID__ The numerical ID by which this entry is identified in any of the commands that need one.
     * __Type__ the type this was created as (tmux/tty/port)
     * __Target__ the type specific description of the target
     * __Event__ the (gdb) event on which this dashboards output is triggered. before_prompt is the default.
-    * __Command__ the gdb command to execute. Its complete output will be redirected, no pagining available.
+    * __Command__ the gdb command to execute. Its complete output will be redirected, no paging available.
 
 * `dashboard enable/disable` Disables a dashboard. It will still be in the list, but not executed upon events. This may
   mean that something like an open port is still there.
@@ -729,7 +735,7 @@ is an example output of a hashtable where an attacker managed to get hash values
 We provide some "remote debugging" features that are based around logging into another host via ssh and debugging
 something there (a live process or some core file). 
 
-Note: currently only non-interactive authentification is supported since we intercept all terminal i/o of ssh.
+Note: currently only non-interactive authentication is supported since we intercept all terminal i/o of ssh.
 
 ### `attach` to process
 
@@ -750,7 +756,7 @@ process.
 
 ### `run` a process
 
-Similarily to the attach, using run will try to run the given command as if it was on the command line. Be aware that
+Similarly to the attach, using run will try to run the given command as if it was on the command line. Be aware that
 since it starts the process in the gdbserver in a very early state before main, a lot of shared objects may not be
 resolved, thus you might need to issue a `vmmap refresh`.
 
@@ -779,7 +785,7 @@ the core file name to override automatic detection of which file created the cor
 Instead of calculating the checksum for a remote file, the copy functionality can also take the checksum from a cache.
 The only way to add to the cache is via the command `ssh csum <host>:<file> <csum>` which will be mostly useful for when
 the core and/or binary file has already been copied over but is so huge that even calculating the checksum takes too
-long to be useful. Ususally this is then put into a project specific configuration file.
+long to be useful. Usually this is then put into a project specific configuration file.
 
 ### configuration
 
@@ -792,7 +798,7 @@ vdb-ssh-pid-cmd
 ```
 
 All copying commands do checksumming  on the remote to see if they have to copy it over. This tells which command to
-use. Since all commands have timeouts on the ssh connection, and checksumming can somtimes take a long time on slow
+use. Since all commands have timeouts on the ssh connection, and checksumming can sometimes take a long time on slow
 systems which huge core files, we offer a way to give a float in seconds of the timeout for that specific checksum
 command.
 ```
@@ -812,7 +818,7 @@ vdb-ssh-tempfile-name
 
 Since this plugin will open an ssh tunnel for the gdb tcp connection to go over, we have to chose a port. We check if
 its available on the remote as well as the local system. This allows you to chose the range we can chose from. You can
-set it to a sngle port too.
+set it to a single port too.
 
 ```
 vdb-ssh-valid-ports
@@ -825,7 +831,51 @@ module is active, we change the prompt. These options let you customize the prom
 vdb-ssh-colors-prompt
 vdb-ssh-prompt-text
 ```
+## track
 
+The `track` command allows you to track the data of gdb expressions on hitting breakpoints. While this module is active,
+whenever a breakpoint is hit an internal callback will be called, this may be a performance issue for some. All
+breakpoints that have a trackpoint attached will automatically continue when hit, making data collection an automated
+task.
+
+### `track show`
+
+Shows the currently known breakpoints (similar to `info break`) along with the information about registered tracking
+information.
+
+![](img/track.0.png)
+
+### `track <num|location> <expression>`
+This will  use gdbs existing breakpoint no `num` and will execute `expression` each time, recording the resulting string
+along with a timestamp.
+
+Instead of giving a number in `num` you can also provide an expression that will then be given to gdb to create a new
+breakpoint. This breakpoint however will remain active even after the trackpoint has been deleted. Be careful though
+that you may end up with multiple breakpoints for the same address which may incur a performance hit. We try to filter
+out by the location string you passed, but what gdb gives us may not always be the same you passed, thus we can not
+distinguish.
+
+### `track data`
+This shows a table with all the collected data. In (default) relative mode, all timestamps are relative to the first
+recording. You can set `vdb-track-time-relative` to disable this and use local timestamps instead (useful for long
+running programs where the breakpoint is only hit occasionally). Note that this will display the string from the
+expression per table entry without any further formatting, as such it is most wise to use expressions only that have
+small outputs.
+
+Setting `vdb-track-clear-at-start` to off will disable the automated clearing of tracking data when (re)starting a
+process.
+
+If at a specific breakpoint an expression did not yield any output (or caused an exception) this field will remain
+empty.
+
+![](img/track.1.png)
+### `track del`
+This deletes a track entry by the number shown in `track show`, just like `del` does for breakpoints. You can specify
+multiple trackpoints.
+
+
+### `track clear`
+Clears the data cache displayed by `track data`.
 
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
@@ -868,14 +918,14 @@ vdb-<modulename>-color-<elementname>
 ```
 to control the colour of their elements. You can use anything that the python ansicolors module can understand, that is
 colours as css style (`#f0f` or `#ff00ff`) or named colours. Per default the colour is the foreground colour, but the
-colour can also be a comma seperated list of foreground,background and style. As a style you can chose the standard ansi
+colour can also be a comma separated list of foreground,background and style. As a style you can chose the standard ansi
 style specifications like _underline_. Setting it to `None` will disable any ansi colouring for that element.
 
 Alternatively the upcoming themes mechanism will provide a way to easily bundle all colour information into one python
 file
 ### colorspec
 The colorspec is a string made out of any of the following letters. It determines which mechanism will color a pointer.
-The first matchin mechanism to return a color stops the search, if none is found, no coloring is done.
+The first matching mechanism to return a color stops the search, if none is found, no coloring is done.
 
 * `A` colours the pointer in case it is detected that the *pointer value itself* is a valid ascii (utf8) string. The
   heuristic for this isn't perfect but often good enough to easily detect that some pointer dereference got wrong.
@@ -928,10 +978,10 @@ is usually a safe bet.
 # TODO
 There are a lot of ideas and enhancements that are possible or need to be done. Among them are:
 
-* support for other architectures than x86_64 (maybe generic with all values from gdb, even with register autodetetion)
+* support for other architectures than x86_64 (maybe generic with all values from gdb, even with register autodetection)
 * fully implement extra flexible .vdb search mechanism
 * hexdump for real objects, likely using a generic annotation mechanism. Can then also be used for annotating buffers to
-  be parsed. Add some API to make it easier for people to programatically create those annotations for buffers.
+  be parsed. Add some API to make it easier for people to programmatically create those annotations for buffers.
 * symbol position and size caching
 * clearing of caches on events that might have changed it.
 * generic mechanism for hashtable load images and calculations
