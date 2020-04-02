@@ -15,7 +15,11 @@ Although I am using it in my daily C++ work, it will likely be unintentionally s
 * [VDB](#vdb)
 	* [Overview](#overview)
 	* [Quickstart](#quickstart)
+		* [Installation](#installation)
+			* [Manually](#manually)
+			* [Python Setup](#python-setup)
 	* [Disabling modules](#disabling-modules)
+	* [Caveats](#caveats)
 * [Modules](#modules)
 	* [prompt](#prompt)
 		* [Configuration](#configuration)
@@ -155,6 +159,13 @@ available which will not only allow for a more concise way to disable modules, i
 they are loaded. Must be set before a vdb start and contains a comma separated list.
 
 The drawback however is that you will miss out new modules when updating, as they are not in the list.
+
+## Caveats
+
+Due to the somewhat incomplete nature of gdb events and scripting API we are forced to use gdb script command hooks for
+some of our functionality. Since they do not chain on their own, it might be that it interferes with other plugins, so
+either their hooks or our hooks do not work. This is especially true for the track module.
+
 # Modules
 ## prompt
 This module allows you to configure the prompt to display more information.
