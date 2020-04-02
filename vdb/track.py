@@ -73,8 +73,8 @@ def stop( bpev ):
 #            print("bp.number = '%s'" % bp.number )
             tr = trackings.get(bp.number,None)
             if( tr is not None ):
-                cont = True
                 for t in tr:
+                    cont = True
                     t.execute(now)
     except Exception as e:
         print("e = '%s'" % e )
