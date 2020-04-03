@@ -15,7 +15,6 @@ except ModuleNotFoundError:
     directory       = path.expanduser(directory)
     directory       = path.abspath(directory)
     sys.path.append(directory)
-    sys.path.append(path.join(directory, "vdb"))
 
     import vdb
 
