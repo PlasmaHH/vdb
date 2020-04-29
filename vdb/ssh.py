@@ -53,7 +53,7 @@ Plan:
 
 
 
-    
+
     - ssh host attach 4857
       to the pid 4857, error out when not found
 
@@ -270,7 +270,7 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None, use_which = 
         if( len(xsrc) > 0 ):
             src = xsrc.split()[0]
         else:
-            print("Warning: Could not resolve file via which: %s leads to %s" % (src,xsrx) )
+            print("Warning: Could not resolve file via which: %s leads to %s" % (src,xsrc) )
 
     cachekey = f"{s.host}:{fname}"
     csum,fsize = csum_cache.get(cachekey,(None,None))
@@ -492,7 +492,7 @@ def core( s, argv ):
     if( len(xlibset) > 0 ):
         copy_libraries(s,xlibset,libdir,cwd)
         gdb.execute("set solib-search-path .")
-        
+
 
 def usage( ):
     print("""Usage:
