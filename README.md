@@ -44,6 +44,7 @@ Although I am using it in my daily C++ work, it will likely be unintentionally s
 		* [Commands](#commands-3)
 			* [`hd`](#hd)
 			* [`hd/p[#]`](#hdp)
+			* [`hd/v`](#hdv)
 			* [`hd annotate`](#hd-annotate)
 	* [asm](#asm)
 		* [Commands](#commands-4)
@@ -328,7 +329,10 @@ The setting
 ```
 vdb-hexdump-colors-header
 ```
-controls the colour of the header (the one that should make it a bit simpler to find certain bytes). 
+controls the colour of the header (the one that should make it a bit simpler to find certain bytes).
+
+The option ```vdb-hexdump-row-format``` determines how a row looks like, you can reorder certain elements here.
+
 #### `hd/p[#]`
 
 This version of the hexdump command tries to apply the same pointer dereferencing chain logic that is used to display
@@ -340,9 +344,14 @@ after this is interpreted as the maximum chain length for the pointer chains. It
 
 ![](img/hd.pointer.png)
 
+#### `hd/v`
+
+Value or verbose, whatever you like more. It will try to print a representation for known types at annotated parts of a
+hexdump.
+
 #### `hd annotate`
 ```
-Usage: hexdump annotate <addr> <len> <text> or <addr> <typename>
+Usage: hexdump annotate <addr> <len> <text> or <addr> <typename> or <varname>
 ```
 This command will add annotation to a specific range of memory. The first version adds a free manual text to a specific
 address and length. It will always be displayed as long as some of those bytes are being displayed in any hexdump.
@@ -350,6 +359,9 @@ r
 The second version takes an address and a typename. It will then extract the same information as `pahole` does and then
 colour that specific memory always with these annotations. If then you use hexdump to dump a variable without a
 specified size, it will be able to automatically take that size and dumps only that object.
+
+The third version will take just the varname and tries to annotate that. The special varname frame can be used to try to
+include all variables in the current frame.
 
 ![](img/hd.annotate.png)
 

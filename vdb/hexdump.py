@@ -27,13 +27,24 @@ repeat_header = vdb.config.parameter("vdb-hexdump-repeat-header",42)
 default_chaindepth = vdb.config.parameter("vdb-hexdump-default-chaindepth",3)
 
 pc_separator = vdb.config.parameter("vdb-hexdump-pointer-chain-separator","|")
+row_format = vdb.config.parameter("vdb-hexdump-row-format", "{p}: {l}{t} {s}{pointer_string}{value_string}")
 
 
 color_list = vdb.config.parameter("vdb-hexdump-colors-symbols", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,on_set  = vdb.config.split_colors)
 
 def print_header( ):
     plen = vdb.arch.pointer_size // 4
-    print(vdb.color.color(f'  {" "*plen}  0  1  2  3   4  5  6  7    8  9  A  B   C  D  E  F   01234567 89ABCDEF',color_head.value))
+    rowf = row_format.value
+    rowf = rowf.replace(":"," ")
+    p = f'  {" "*plen}'
+    l = "0  1  2  3   4  5  6  7    8  9  A  B   C  D  E  F "
+    t = "  01234567 89ABCDEF"
+    s = "VARIABLES "
+    pointer_string = "POINTERS "
+    value_string = "VALUES "
+    rowh = rowf.format(**locals())
+    print(vdb.color.color(rowh,color_head.value))
+#    print(vdb.color.color(f'  {" "*plen}  0  1  2  3   4  5  6  7    8  9  A  B   C  D  E  F   01234567 89ABCDEF',color_head.value))
 
 
 class sym_location:
@@ -112,7 +123,7 @@ def get_annotation( xaddr, symtree ):
         xs = symtree[xaddr]
     return xs
 
-def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1 ):
+def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False ):
     if( chaindepth < 0 ):
         chaindepth = default_chaindepth.value
     if( xlen == -1):
@@ -138,6 +149,8 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1 ):
     next_color = -1
     sym_color = None
     line = 0
+
+    rowf = row_format.value
     while(len(data) > 0 ):
         dc = data[:16]
         data = data[16:]
@@ -147,6 +160,7 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1 ):
         t = ""
         s = ""
         pointer_string=""
+        value_string=""
         parr = []
         step = vdb.arch.pointer_size // 8
         if( pointers ):
@@ -167,6 +181,9 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1 ):
             xs = get_annotation( xaddr + cnt, symtree )
             nsym = None
             for x in xs:
+#                print("x[0] = '%s'" % x[0] )
+#                print("x[1] = '%s'" % x[1] )
+#                print("xaddr = '%s'" % xaddr )
                 nsym = x[2]
                 break
 
@@ -186,6 +203,20 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1 ):
                         sym_color = color_list.elements[next_color]
                         s += vdb.color.color(nsym,sym_color)
                         s += " "
+                        if( values ):
+#                            print("nsym = '%s'" % nsym )
+#                            value = gdb.execute(f"p {nsym}",False,True)
+                            try:
+                                value = gdb.parse_and_eval(f"{nsym}")
+                            except:
+                                value = ""
+                            value = str(value)
+#                            print("value = '%s'" % value )
+                            if( len(value) > 0 and value[-1] == "\n" ):
+                                value = value[:-1]
+                            if( len(value) > 0 and value.find("\n") == -1 ):
+                                value_string += vdb.color.color(value,sym_color)
+                                value_string += " "
                     else:
                         sym_color = None
                     current_symbol = nsym
@@ -216,7 +247,7 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1 ):
             print_header()
         line += 1
 #        print("len(t) = '%s'" % len(t) )
-        print(f"{p}: {l}{t} {s}{pointer_string}")
+        print(rowf.format(**locals()))
 #        print("dc = '%s'" % dc )
 #        print("len(dc) = '%s'" % len(dc) )
 #        print("data = '%s'" % data )
@@ -230,7 +261,7 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1 ):
     if( olen != xlen ):
         print(f"Could only access {xlen} of {olen} requested bytes")
 
-def annotate_var( addr,gval, gtype ):
+def annotate_var( addr,gval, gtype, name ):
 #        print("gtype = '%s'" % gtype )
 #        print("gval = '%s'" % gval )
     ol = vdb.layout.object_layout( gtype, gval )
@@ -246,6 +277,14 @@ def annotate_var( addr,gval, gtype ):
             if( len(ent) > 2 and ent.startswith("::") ):
                 ent = ent[2:]
             ent = vdb.shorten.symbol(ent)
+            dotpos = ent.find(".")
+            if( dotpos != -1 and name is not None ):
+                ent = name + ent[dotpos:]
+
+            addr = int(addr)
+#            print("bd.object.size = '%s'" % bd.object.size )
+#            print("(addr+bd.object.byte_offset) = '%s'" % (addr+bd.object.byte_offset) )
+#            print("(addr+bd.object.byte_offset+bd.object.size) = '%s'" % (addr+bd.object.byte_offset+bd.object.size) )
             annotation_tree[addr+bd.object.byte_offset:addr+bd.object.byte_offset+bd.object.size] = ent
 #        print("annotation_tree = '%s'" % annotation_tree )
 
@@ -268,48 +307,80 @@ def annotate( argv ):
     elif( len(argv) == 1 and argv[0] == "frame" ):
         fr = gdb.selected_frame()
         for i in fr.block():
-            print("i.name = '%s'" % i.name )
-            v = gdb.selected_frame().read_var(i.name)
-            print("v = '%s'" % v )
-            print("v.address = '%s'" % v.address )
-            print("v.type = '%s'" % v.type )
-            annotate_var( v.address,v, v.type )
+            try:
+                print("i.name = '%s'" % i.name )
+                v = gdb.selected_frame().read_var(i.name)
+                print("v.address = '%s'" % v.address )
+                print("v.type = '%s'" % v.type )
+                print("v = '%s'" % v )
+                if( v.address is not None ):
+                        annotate_var( v.address,v, v.type, i.name )
+            except:
+                pass
 #            break
         print("annotation_tree = '%s'" % annotation_tree )
+    elif( len(argv) == 1 ):
+        print("Automatically annotating variable %s" % argv[0] )
+        varname = argv[0]
+        var = gdb.parse_and_eval(varname)
+        print("var = '%s'" % var )
+        annotate_var( var.address,var, var.type, varname )
+
+
+
 
     else:
         print("Usage: hexdump annotate <addr> <len> <text> or <addr> <typename>")
     print("Annotated {}".format(argv))
 
+def print_usage( ):
+    print("Usage: hexdump[/p#|v] <addr> [<len>]")
+    print("       hexdump annotate <varname>")
+    print("       hexdump annotate <addres> <type>")
+    print("       hexdump annotate <addres> <length> <text>")
+
 def call_hexdump( argv ):
 #    argv = gdb.string_to_argv(arg)
     colorspec = "sma"
     if( len(argv) == 0 ):
-        print("You should at least tell me what to dump")
+        print_usage()
         return
     pointers = False
+    values = False
     chainlen = -1
-    if( argv[0].startswith("/p") ):
-        pointers = True
-        try:
-            chainlen = int(argv[0][2:])
-        except:
-            pass
+    if( argv[0].startswith("/") ):
+        argv[0] = argv[0][1:]
+        m = re.search("p[0-9]*",argv[0])
+        if( m is not None ):
+            pointers = True
+            try:
+                chainlen = int(argv[0][2:])
+            except:
+                pass
+            argv[0] = argv[0].replace(m.group(0),"")
+
+        if( argv[0].find("v") != -1 ):
+            values = True
+            argv[0] = argv[0].replace("v","")
+
+        if( len(argv[0]) > 0 ):
+            print("Unknown argument %s" % argv[0])
+            return
         argv = argv[1:]
-    if( argv[0] == "annotate" ):
+    if( len(argv) > 0 and argv[0] == "annotate" ):
         annotate( argv[1:] )
     else:
         addr = None
         xlen = None
         if( len(argv) == 1 ):
             addr = vdb.util.gint("(void*)" + argv[0])
-            hexdump(addr,pointers=pointers,chaindepth=chainlen)
+            hexdump(addr,pointers=pointers,chaindepth=chainlen,values=values)
         elif( len(argv) == 2 ):
             addr = vdb.util.gint("(void*)" + argv[0])
             xlen = vdb.util.gint(argv[1])
-            hexdump(addr,xlen,pointers=pointers,chaindepth=chainlen)
+            hexdump(addr,xlen,pointers=pointers,chaindepth=chainlen,values=values)
         else:
-            print("Usage: hexdump <addr> <len>")
+            print_usage()
     return
 
 

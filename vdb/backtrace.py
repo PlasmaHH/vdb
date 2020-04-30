@@ -348,8 +348,6 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
 #			print("a.symbol() = '%s'" % a.symbol() )
             if( "P" in showspec.value ):
                 ret.append( ArgVal( a.symbol(), a.value() ) )
-#                ret.append( ArgVal( a.symbol(), "A" ) )
-#                ret.append( ArgVal( a.symbol(), "TEST") )
             else:
                 ret.append( ArgVal( a.symbol(), "") )
 #		gdb.execute("set logging redirect off")

@@ -997,7 +997,10 @@ def parse_from( arg, fakedata = None ):
     try:
 #        print("arg = '%s'" % arg )
 #        print("fakedata = '%s'" % fakedata )
-        ret = parse_from_gdb(arg,fakedata)
+        if( arg.startswith("000000") ): # really do some regex for a hex value and check that it starts with a digit
+            ret = parse_from_gdb("0x" + arg,fakedata)
+        else:
+            ret = parse_from_gdb(arg,fakedata)
     except gdb.error as e:
         if( str(e) == "No function contains specified address." ):
             return parse_from(arg+","+str(nonfunc_bytes.value))
