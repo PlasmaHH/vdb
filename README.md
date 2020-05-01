@@ -22,7 +22,6 @@ Although I am using it in my daily C++ work, it will likely be unintentionally s
 	* [Caveats](#caveats)
 * [Modules](#modules)
 	* [prompt](#prompt)
-		* [Configuration](#configuration)
 	* [backtrace](#backtrace)
 		* [Commands](#commands)
 			* [`bt`](#bt)
@@ -71,7 +70,7 @@ Although I am using it in my daily C++ work, it will likely be unintentionally s
 		* [TTYs](#ttys)
 		* [tmux panes](#tmux-panes)
 		* [Other commands](#other-commands)
-		* [Configuration](#configuration-1)
+		* [Configuration](#configuration)
 	* [Hashtable statistics](#hashtable-statistics)
 		* [`hashtable`](#hashtable)
 	* [ssh](#ssh)
@@ -79,7 +78,7 @@ Although I am using it in my daily C++ work, it will likely be unintentionally s
 		* [`run` a process](#run-a-process)
 		* [debug `core` file](#debug-core-file)
 		* [Remote csum cache](#remote-csum-cache)
-		* [configuration](#configuration-2)
+		* [configuration](#configuration-1)
 	* [track](#track)
 		* [`track show`](#track-show)
 		* [`track <num|location> <expression>`](#track-numlocation-expression)
@@ -91,7 +90,7 @@ Although I am using it in my daily C++ work, it will likely be unintentionally s
 	* [pointer (chaining)](#pointer-chaining)
 	* [memory layout](#memory-layout)
 	* [type layout](#type-layout)
-* [Configuration](#configuration-3)
+* [Configuration](#configuration-2)
 	* [gdb config](#gdb-config)
 	* [Color settings](#color-settings)
 		* [colorspec](#colorspec)
@@ -169,18 +168,10 @@ either their hooks or our hooks do not work. This is especially true for the tra
 
 # Modules
 ## prompt
-This module allows you to configure the prompt to display more information.
+This module allows you to configure the prompt to display more information. Some modules will use it to display some additional information. Per default you will get the time, and a little bit extra when a file is loaded, also a bit of git information when available.
+![](img/prompt.0.png)
 
-For now this only sets the prompt to `vdb> ` in a certain colour. In the future we will add more information about the
-currently running program or core file, maybe we can hack together a good multiline or airline prompt.
-
-XXX Maybe as a first one the thread that is selected, as for breakpoints or other things this changes unintuitively.
-Maybe also add a feature to autoselect a thread or a frame (given by some complex path?)
-### Configuration
-
-* `vdb-prompt-colors-text` The colour of the whole standard prompt
-* `vdb-prompt-text` The text of the prompt, defaults to `vdb> `
-
+[You can find detailed information about this module here](PROMPT.md)
 ## backtrace
 We provide a backtrace decorator with various colouring options. It will also show some information about whether something
 is inlined or some information about signals and crashes.

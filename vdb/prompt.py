@@ -28,16 +28,17 @@ for i in range(0,10):
 prompt_text_start = vdb.config.parameter( "vdb-prompt-text-start", "vdb", on_set = defer_set_prompt )
 prompt_text_end = vdb.config.parameter( "vdb-prompt-text-end",     "> ",  on_set = defer_set_prompt )
 
-prompt_color_start = vdb.config.parameter( "vdb-prompt-colors-text-start", "#ffff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
-prompt_color_end = vdb.config.parameter( "vdb-prompt-colors-text-end",     "#ffffff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
+prompt_color_start = vdb.config.parameter( "vdb-prompt-colors-start", "#ffff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
+prompt_color_end = vdb.config.parameter( "vdb-prompt-colors-end",     "#ffffff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
 
 prompt_git          = vdb.config.parameter( "vdb-prompt-git",                False,      on_set = defer_set_prompt )
-prompt_color_git    = vdb.config.parameter( "vdb-prompt-colors-text-git",    "#99ff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
-prompt_color_thread = vdb.config.parameter( "vdb-prompt-colors-text-thread", "#9999ff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
-prompt_color_time   = vdb.config.parameter( "vdb-prompt-colors-text-time",   "#ffffff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
-prompt_color_frame  = vdb.config.parameter( "vdb-prompt-colors-text-frame",  "#9999ff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
-prompt_color_host  = vdb.config.parameter( "vdb-prompt-colors-text-host",  "#ffff4f", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
+prompt_color_git    = vdb.config.parameter( "vdb-prompt-colors-git",    "#99ff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
+prompt_color_thread = vdb.config.parameter( "vdb-prompt-colors-thread", "#9999ff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
+prompt_color_time   = vdb.config.parameter( "vdb-prompt-colors-time",   "#ffffff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
+prompt_color_frame  = vdb.config.parameter( "vdb-prompt-colors-frame",  "#9999ff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
+prompt_color_host  = vdb.config.parameter( "vdb-prompt-colors-host",  "#ffff4f", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
 
+prompt_text_time = vdb.config.parameter( "vdb-prompt-text-time",     " %H:%M:%S" )
 # TODO introduce hooks to dynamically insert information, use format string like substitutions for them.
 # Possible information includes (maybe we can colour code something too?)
 # Program state
@@ -139,7 +140,8 @@ def refresh_prompt( ):
     if( has_key["git"] ):
         prompt = prompt_replace(prompt,"git", get_git_prompt(), prompt_color_git.value )
     if( has_key["time"] ):
-        prompt = prompt_replace(prompt,"time",time.strftime( " %H:%M:%S", time.localtime() ),prompt_color_time.value )
+#        prompt = prompt_replace(prompt,"time",time.strftime( " %H:%M:%S", time.localtime() ),prompt_color_time.value )
+        prompt = prompt_replace(prompt,"time",time.strftime( prompt_text_time.value, time.localtime() ),prompt_color_time.value )
     if( has_key["thread"] ):
         prompt = prompt_replace(prompt,"thread",get_thread(),prompt_color_thread.value )
     if( has_key["frame"] ):
