@@ -24,10 +24,8 @@ Although I am using it in my daily C++ work, it will likely be unintentionally s
 	* [prompt](#prompt)
 	* [backtrace](#backtrace)
 	* [vmmap](#vmmap)
-		* [Commands](#commands)
-			* [`vmmap`](#vmmap-1)
 	* [register](#register)
-		* [Commands](#commands-1)
+		* [Commands](#commands)
 			* [`reg`](#reg)
 			* [`reg/<showspec>`](#regshowspec)
 			* [`reg/s` (short)](#regs-short)
@@ -35,25 +33,25 @@ Although I am using it in my daily C++ work, it will likely be unintentionally s
 			* [`reg/a` (all)](#rega-all)
 			* [`reg/f` (full)](#regf-full)
 	* [hexdump](#hexdump)
-		* [Commands](#commands-2)
+		* [Commands](#commands-1)
 			* [`hd`](#hd)
 			* [`hd/p[#]`](#hdp)
 			* [`hd/v`](#hdv)
 			* [`hd annotate`](#hd-annotate)
 	* [asm](#asm)
-		* [Commands](#commands-3)
+		* [Commands](#commands-2)
 			* [`dis`](#dis)
 			* [`dis/<context>`](#discontext)
 			* [`dis/d`](#disd)
 			* [`dis/r`](#disr)
 	* [grep](#grep)
 	* [pahole](#pahole)
-		* [Commands](#commands-4)
+		* [Commands](#commands-3)
 			* [`pahole`](#pahole-1)
 			* [`pahole/c`](#paholec)
 			* [`pahole/e`](#paholee)
 	* [ftree](#ftree)
-		* [Commands](#commands-5)
+		* [Commands](#commands-4)
 			* [`ftree`](#ftree-1)
 		* [Special Filter Functionality](#special-filter-functionality)
 			* [Downcasting to hidden types](#downcasting-to-hidden-types)
@@ -175,18 +173,14 @@ displayed for more concise displays.
 ![](img/bt.png)
 
 [You can find detailed information about this module here](BACKTRACE.md)
+
 ## vmmap
 A module that allows access to the internal information of memory maps. It ties together information from the sources of
 * `info files`
 * `maint info sections`
 * `info proc mapping`
-### Commands
-#### `vmmap`
-Without parameters it shows a list of memory ranges and colours their addresses according to the memory types. The ranges can overlap. Additionally it shows section names and source files.
 
-Different components of gdb provide different section names, if there is an alternative name it will be shown in []. Also the file information can differ, as some show the file name that was used to load, others dereference all symlinks.
-
-As one of the parameters it accepts a colorspec, the other is an address. If the address lies within overlapping sections it will show the smallest matching section.
+[You can find detailed information about this module here](VMMAP.md)
 ## register
 
 ### Commands

@@ -46,15 +46,15 @@ You can also change the marker for the selected frame, this may be useful if you
 ```
 vdb-bt-selected-frame-marker
 ```
-### Commands
+## Commands
 We provide the following commands
-#### `bt`
+### `bt`
 This should be your default. It will do all the filtering and sometimes write some additional data.
-#### `bt/r`
+### `bt/r`
 This is like `bt` but disables the filter aka. raw. You should not see additional data, but the unfiltered plain gdb output.
-#### `bt/f`
+### `bt/f`
 This is like `bt` but also passes the `full` parameter to backtrace to show all local variables per stackframe. These are not currently filtered.
-#### `backtrace`
+### `backtrace`
 This is an unmodified gdb version, that is running the decorator, but not additional filters and outputs. It may be overridden by additional gdb plugins that you have. This has the added disadvantage that the `n` showspec doesn't have any effect, as well as the RTTI warning filter not working.
 
 
