@@ -492,7 +492,7 @@ ascii mockup:
 
         marked_line = None
         cnt = 0
-        context_strt = None
+        context_start = None
         context_end = None
 
         otbl = []
@@ -505,8 +505,17 @@ ascii mockup:
                     line.append( ( vdb.color.color(next_marker.value,color_marker.value), len(next_marker.value) ) )
                     marked_line = cnt
                     if( context is not None ):
-                        context_start = marked_line - context + 1
-                        context_end = marked_line + context + 2
+                        if( context[0] is not None and context[1] is not None ):
+                            # old behaviour
+                            context_start = marked_line - context[0]
+                            context_end = marked_line + context[1] + 1
+                        elif( context[0] is not None ):
+                            context_start = marked_line - context[0]
+                            context_end = marked_line + 1
+                        elif( context[1] is not None ):
+                            context_start = marked_line 
+                            context_end = marked_line + context[1] + 1
+
                 else:
                     line.append( "" )
             if( "a" in showspec ):
@@ -1019,20 +1028,33 @@ def disassemble( argv ):
     fakedata = None
 
     if( len(argv) > 0 ):
-        if( argv[0][0] == "/" and argv[0][1:].isdigit() ):
-            context = int(argv[0][1:])
-            argv=argv[1:]
-        elif( argv[0] == "/d" ):
-            dotty = True
-            argv=argv[1:]
-        elif( argv[0] == "/f" ):
-            with open (argv[1], 'r') as fakefile:
-                fakedata = fakefile.read()
-            argv=["fake"]
-        elif( argv[0] == "/r" ):
-            argv=argv[1:]
-            gdb.execute("disassemble " + " ".join(argv))
-            return
+
+        if( argv[0][0] == "/" ):
+            if( argv[0][1] == "+" and argv[0][2:].isdigit() ):
+                context = ( None, int(argv[0][2:]) )
+                argv=argv[1:]
+            elif( argv[0][1] == "-" and argv[0][2:].isdigit() ):
+                context = ( int(argv[0][2:]), None )
+                argv=argv[1:]
+            elif( argv[0][1:].isdigit() ):
+                context = int(argv[0][1:])
+                context = ( context, context )
+                argv=argv[1:]
+            elif( argv[0].find(",") != -1 ):
+                context = argv[0][1:].split(",")
+                context = ( int(context[0]), int(context[1]) )
+                argv=argv[1:]
+            elif( argv[0] == "/d" ):
+                dotty = True
+                argv=argv[1:]
+            elif( argv[0] == "/f" ):
+                with open (argv[1], 'r') as fakefile:
+                    fakedata = fakefile.read()
+                argv=["fake"]
+            elif( argv[0] == "/r" ):
+                argv=argv[1:]
+                gdb.execute("disassemble " + " ".join(argv))
+                return
 
 
     listing = parse_from(" ".join(argv),fakedata)
