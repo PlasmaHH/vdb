@@ -1,4 +1,4 @@
-
+# asm module
 This is a disassembler module. It allows a bit better control over the disassembled output, adds a bit of colour and can
 optionally try to create a basic block flow graph, even in a lot of cases being able to figure out jump tables.
 
@@ -6,7 +6,10 @@ optionally try to create a basic block flow graph, even in a lot of cases being 
 
 ### `dis`
 This is a "plain" disassembly. It expects a gdb expression as a parameter that would be accepted by gdbs `disassemble`
-command.
+command. Additionally you can specify a range of bytes to disassemble. Unlike the gdb builtin disassembler it will
+per default accept any address that is not in a known function. You can use `vdb-asm-nonfunction-bytes` to chose how
+many bytes per default are being displayed (gdb cannot know, since its not within a function, it has no idea when it
+ends)
 
 The displayed data can be controlled by the following showspec setting
 
@@ -27,7 +30,7 @@ The order is fixed and the showspec entries mean the following:
 * `r` Shows a reference, this is mostly arbitrary text that the disassembler gave us (or text that we failed to parse properly)
 * `t` or `T` Shows for jump and call targets the target name, run through the standard shorten and colour mechanism
 * `j` shows a reconstructed possible history for the origin of the flow path
-* `h` or `H` shows a listing of the history of executed instructions when instruction recording was enabled.
+* `h` or `H` shows a listing of the history of executed instructions when instruction recording was enabled. Using `vdb-asm-history-limit` you can chose the number of histories printed for each instruction
 
 
 The following settings control the colours
@@ -46,7 +49,9 @@ vdb-asm-colors-args
 
 Additionally `vdb-asm-colors-jumps` is a semicolon separated list of colours to use for the jump tree view.
 
-If you set the addr colour to `None` (default) it will use the standard pointer colouring. If you set the mnemonic
+If you set the addr colour to `None` (default) it will use the standard pointer colouring. 
+If you have `vdb-asm-next-mark-pointer` set then the address at the marker is written in the marker colour.
+If you set the mnemonic
 colouring to `None` (default) it will use a list of regexes to check for which colour to chose for which mnemonic. Same
 for the prefix.
 
@@ -100,4 +105,15 @@ therefore we offer the following ways to influence things in the graph (besides 
 ### `dis/r`
 
 This calls the gdb disassembler without any formatting
+
+## TODO
+
+* document a few missing settings
+* enhance computed jump detection to be reliable
+* gather more information about branches in single stepping and display them
+* integrate a different disassembler
+* allow search for specific instructions, first figure out what would be most useful here
+* remove from a context the jump lines that are not intresting
+* generally support for more than x86_64
+* add a better way to colour the mnemonics, best in a way that we can have nicer themes
 
