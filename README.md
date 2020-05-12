@@ -255,6 +255,13 @@ there be no such marker, this has no special effect. Note that the whole disasse
 rendered (at least partially), just the output of the other lines suppressed, so if you want this for speedup, this
 isn't for you. The benefit however is that the jump tree view will be completely fine.
 
+Context can be chosen as follows (of course if there is not enough context available it will be cut of)
+
+* `N` adds N lines of context before and after the marker
+* `N,M` adds N lines before and M lines after the marker
+* `+N` adds N lines after the marker
+* `-N` adds N lines before the marker
+
 #### `dis/d`
 Outputs the disassembler just like the plain format, additionally creates a `dis.dot` file that will contain a dotty
 representation of what we think might be basic blocks and (conditional) jump instructions. It will also try to start
