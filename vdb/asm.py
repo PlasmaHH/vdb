@@ -764,7 +764,6 @@ pc_list = [ "rip", "eip", "ip", "pc" ]
 last_working_pc = ""
 
 def fix_marker( ls, alt = None ):
-#    print("fixing makers...")
 #    mark = vdb.util.gint("$rip")
     try:
         mark = vdb.util.gint(f"${last_working_pc}")
@@ -774,13 +773,13 @@ def fix_marker( ls, alt = None ):
         except:
             mark = None
 
-        for i in ls.instructions:
+    for i in ls.instructions:
 #            print("%s == %s ? %s " % (i.address,mark,(i.address == mark)))
-            if( i.address == mark ):
-                i.marked = True
-            else:
-                i.marked = False
-        ls.do_backtrack()
+        if( i.address == mark ):
+            i.marked = True
+        else:
+            i.marked = False
+    ls.do_backtrack()
     return ls
 
 parse_cache = {}
