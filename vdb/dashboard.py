@@ -23,6 +23,8 @@ import re
 tmux new-session\; select-pane -T "disassembler" \; split-window -v\; select-pane -T "hexdump" \; split-window -h \; select-pane -T "registers"
 """
 show_stat = vdb.config.parameter("vdb-dash-show-stats",False)
+auto_time = vdb.config.parameter("vdb-dash-auto-disable-time", 10.0 )
+
 class target:
     def __init__( self ):
         super().__init__()
@@ -162,6 +164,23 @@ class dashboard:
         self.cls = True
         self.last_time = 0
 
+    def set_state( self, to , reason = None ):
+        if( self.enabled != to ):
+            if( self.output is not None ):
+                nst = "Disabled"
+                if( to is True ):
+                    nst = "Enabled"
+
+                self.output.write(f"{nst} dashboard {self.id}, reason: {reason}" )
+                self.output.flush()
+        self.enabled = to
+
+    def enable( self, reason ):
+        self.set_state(True,reason)
+
+    def disable( self, reason ):
+        self.set_state(False,reason)
+
     def do_output( self ):
         sw = vdb.cache.stopwatch()
         sw.start()
@@ -186,6 +205,9 @@ class dashboard:
         self.output.flush()
         sw.stop()
         self.last_time = sw.get()
+        if( self.last_time > auto_time.fvalue ):
+            self.disable("Execution time exceeded: %s" % auto_time.value )
+
 
 
     def on_event( self ):
@@ -228,7 +250,7 @@ def trigger_dashboard( id, to ):
     for on,evl in dash_events.items():
         for db in evl:
             if( db.id == id ):
-                db.enabled = to
+                db.set_state( to )
                 return
 
 def trigger_cls( id, to ):

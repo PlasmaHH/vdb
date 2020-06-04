@@ -453,6 +453,13 @@ vdb-dash-show-stats
 will make all dashboard outputs be preceded by some internal statistics. For now they are the time it took in the
 command to generate the output and the amount of output bytes. Later more might follow.
 
+```
+vdb-dash-auto-disable-time
+```
+when a command is detected to take longer than this much seconds, it will be disabled (Unfortunately currently there
+does not seem to be a way to interrupt a running command, so we need to let it run for a while, and then disable it).
+The default is 10 seconds.
+
 ## Hashtable statistics
 
 One of the most common datastructures for quick dictionary lookups are hashtables. One of the most common problems with
