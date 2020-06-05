@@ -23,6 +23,7 @@ import re
 tmux new-session\; select-pane -T "disassembler" \; split-window -v\; select-pane -T "hexdump" \; split-window -h \; select-pane -T "registers"
 """
 show_stat = vdb.config.parameter("vdb-dash-show-stats",False)
+disable_silent = vdb.config.parameter("vdb-dash-disable-silent",False)
 auto_time = vdb.config.parameter("vdb-dash-auto-disable-time", 10.0 )
 
 class target:
@@ -171,8 +172,9 @@ class dashboard:
                 if( to is True ):
                     nst = "Enabled"
 
-                self.output.write(f"{nst} dashboard {self.id}, reason: {reason}" )
-                self.output.flush()
+                if( disable_silent.value is not True ):
+                    self.output.write(f"{nst} dashboard {self.id}, reason: {reason}" )
+                    self.output.flush()
         self.enabled = to
 
     def enable( self, reason ):
