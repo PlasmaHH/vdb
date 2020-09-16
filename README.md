@@ -30,26 +30,15 @@ Although I am using it in my daily C++ work, it will likely be unintentionally s
 	* [grep](#grep)
 	* [pahole](#pahole)
 	* [ftree](#ftree)
-	* [Hashtable statistics](#hashtable-statistics)
-		* [`hashtable`](#hashtable)
+* [hashtable](#hashtable)
 	* [ssh](#ssh)
-		* [`attach` to process](#attach-to-process)
-		* [`run` a process](#run-a-process)
-		* [debug `core` file](#debug-core-file)
-		* [Remote csum cache](#remote-csum-cache)
-		* [configuration](#configuration)
 	* [track](#track)
-		* [`track show`](#track-show)
-		* [`track <num|location> <expression>`](#track-numlocation-expression)
-		* [`track data`](#track-data)
-		* [`track del`](#track-del)
-		* [`track clear`](#track-clear)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
 	* [pointer (chaining)](#pointer-chaining)
 	* [memory layout](#memory-layout)
 	* [type layout](#type-layout)
-* [Configuration](#configuration-1)
+* [Configuration](#configuration)
 	* [gdb config](#gdb-config)
 	* [Color settings](#color-settings)
 		* [colorspec](#colorspec)
@@ -186,143 +175,23 @@ The ftree module allows for creation of dotty files that create a tree (or direc
 ![](img/ftree.0.png)
 [You can find detailed information about this module here](FTREE.md)
 
-## Hashtable statistics
-
+# hashtable
 One of the most common datastructures for quick dictionary lookups are hashtables. One of the most common problems with
 them is bad hashfunctions, or data structured just in the wrong way for the chosen hashfunction. You end up with
-hashtables with a lot of collisions where there do not need to be some. A hashfunction should ideally behave like random
-numbers, and thus from this we can calculate for a given hashtable size and load factor, how much collisions would be
-acceptable. 
-
-For now there is basic support for some `std::` and some `boost::instrusive` hashtables, once we get things settles we
-might be able to figure out a nice way to add custom support.
-
-### `hashtable`
-
-This command expects a gdb parseable expression that evaluates into some object that is one of the supported hashtables.
-It will calculate the statistics of expected collisions (chain lengths) as well as create a nice image that shows for
-each bucket in the table how long the chain in there is.
-
-Black pixels are empty buckets, and starting with white, over yellow,orange,red and pink it is ever longer. Ideally for
-load factors under 1 you shouldn't see pink pixels. You also should not see any patterns.
-
-For a nice comparison I have here two images, one good and one bad for a hashtable with a load of 0.6
+hashtables with a lot of collisions where there do not need to be some. This module allows you to visualize the data and
+gain more insight about it.
 
 ![](img/hashtable.good.png)
 ![](img/hashtable.bad.png)
 
-In the linux kernel for a while a lot of DoS attacks had at its heart the ability to manipulate a hashtable into having
-long chains, thus massively increasing the lookup time and lowering the ability to handle more data. The following table
-is an example output of a hashtable where an attacker managed to get hash values to collide and build up a huge chain.
-
-```
- Chainlen  Bucket%  Num   Ideal   Ideal%
-  0        61.12%   3928  2952.4  45.938%
-  1        38.85%   2497  2295.9  35.723%
-  2        0.02%    1     892.5   13.887%
-  2500     0.02%    1     0.0     0.000%
-```
+[You can find detailed information about this module here](HASHTABLE.md)
 
 ## ssh
 We provide some "remote debugging" features that are based around logging into another host via ssh and debugging
 something there (a live process or some core file). 
 
-Note: currently only non-interactive authentication is supported since we intercept all terminal i/o of ssh.
+[You can find detailed information about this module here](SSH.md)
 
-### `attach` to process
-
-While in classical gdb/gdbserver you have to setup a communication path yourself, the attach mechanism will try to take
-care of all of that, so you have to do only the following command:
-
-```
-ssh <hostname> attach <pid-or-name>
-```
-
-which will login to the given host, try to figure out what pid the name is referring to (see configuration for options
-to control that), copy over the binary (shared objects can be accessed through gdbserver, the executable not) and attach
-to the process via gdbserver. So the only thing that has to be available on the other host is a somewhat recent
-gdbserver.
-
-When the prompt module is active, this will also change the prompt to make it clear that you are attached to a remote
-process.
-
-### `run` a process
-
-Similarly to the attach, using run will try to run the given command as if it was on the command line. Be aware that
-since it starts the process in the gdbserver in a very early state before main, a lot of shared objects may not be
-resolved, thus you might need to issue a `vmmap refresh`.
-
-### debug `core` file
-
-For cases where on the remote system there is a core file, the `core` subcommand is useful. You don't need anything on
-the remote host, as everything is copied locally (gdbserver can't read corefiles anyways). For example the command
-
-```
-ssh <hostname> core core.ftree_30563_1556640000_6_1001_101
-```
-
-Will initiate a complex chain of events that will try to find the core files generating binary, then the shared objects
-that are loaded, copies it all over and instructs gdb to only ever use these shared objects instead of local ones. The
-files are cached so that for a future invocation you will not have to do the copying again. Since we don't know when you
-are done, you have to clean them up yourself. You also have some control over these files
-
-Additionally we try to find and copy debug files and shared objects that have been loaded via `dlopen()`. The mechanism
-isn't perfect, but you can always manually copy the debug files into the lib directory, just name them the same as the
-`.so` file but add `.debug` to the filename.
-
-In case the binary that has created the corefile was overwritten you can give the name of a binary as a parameter after
-the core file name to override automatic detection of which file created the core file.
-
-### Remote csum cache
-Instead of calculating the checksum for a remote file, the copy functionality can also take the checksum from a cache.
-The only way to add to the cache is via the command `ssh csum <host>:<file> <csum>` which will be mostly useful for when
-the core and/or binary file has already been copied over but is so huge that even calculating the checksum takes too
-long to be useful. Usually this is then put into a project specific configuration file.
-
-### configuration
-
-For the attach command you can change the way it tries to get the pid of the process name you supply. The most versatile
-tool here is pgrep, but in case its not available you should probably configure `/sbin/pidof` (yeah, full path, a lot of
-systems don't have `/sbin` in their `PATH`). The `%s` in it will be replaced by the parameter you pass to the command.
-
-```
-vdb-ssh-pid-cmd
-```
-
-All copying commands do checksumming  on the remote to see if they have to copy it over. This tells which command to
-use. Since all commands have timeouts on the ssh connection, and checksumming can sometimes take a long time on slow
-systems which huge core files, we offer a way to give a float in seconds of the timeout for that specific checksum
-command.
-```
-vdb-ssh-checksum-command
-vdb-ssh-checksum-timeout
-```
-
-You can tell scp to use compression (be careful, when you use ssh master sockets this is overridden by the first opened
-ssh connection), though it only helps if you debug over the internet. The temporary files used in the cache will be
-stored under the given name, you can change it if you e.g. want to store them all at one place to have it easier to wipe
-them all. You always have to put `{tag}` and `{csum}` in there, otherwise you will have files overwriting each other.
-
-```
-vdb-ssh-scp-compression
-vdb-ssh-tempfile-name
-```
-
-Since this plugin will open an ssh tunnel for the gdb tcp connection to go over, we have to chose a port. We check if
-its available on the remote as well as the local system. This allows you to chose the range we can chose from. You can
-set it to a single port too.
-
-```
-vdb-ssh-valid-ports
-```
-
-In some circumstances we want to make you aware of that we are on a remote system all the time, so when the prompt
-module is active, we change the prompt. These options let you customize the prompt for this.
-
-```
-vdb-ssh-colors-prompt
-vdb-ssh-prompt-text
-```
 ## track
 
 The `track` command allows you to track the data of gdb expressions on hitting breakpoints. While this module is active,
@@ -330,44 +199,10 @@ whenever a breakpoint is hit an internal callback will be called, this may be a 
 breakpoints that have a trackpoint attached will automatically continue when hit, making data collection an automated
 task.
 
-### `track show`
-
-Shows the currently known breakpoints (similar to `info break`) along with the information about registered tracking
-information.
-
 ![](img/track.0.png)
-
-### `track <num|location> <expression>`
-This will  use gdbs existing breakpoint no `num` and will execute `expression` each time, recording the resulting string
-along with a timestamp.
-
-Instead of giving a number in `num` you can also provide an expression that will then be given to gdb to create a new
-breakpoint. This breakpoint however will remain active even after the trackpoint has been deleted. Be careful though
-that you may end up with multiple breakpoints for the same address which may incur a performance hit. We try to filter
-out by the location string you passed, but what gdb gives us may not always be the same you passed, thus we can not
-distinguish.
-
-### `track data`
-This shows a table with all the collected data. In (default) relative mode, all timestamps are relative to the first
-recording. You can set `vdb-track-time-relative` to disable this and use local timestamps instead (useful for long
-running programs where the breakpoint is only hit occasionally). Note that this will display the string from the
-expression per table entry without any further formatting, as such it is most wise to use expressions only that have
-small outputs.
-
-Setting `vdb-track-clear-at-start` to off will disable the automated clearing of tracking data when (re)starting a
-process.
-
-If at a specific breakpoint an expression did not yield any output (or caused an exception) this field will remain
-empty.
-
 ![](img/track.1.png)
-### `track del`
-This deletes a track entry by the number shown in `track show`, just like `del` does for breakpoints. You can specify
-multiple trackpoints.
 
-
-### `track clear`
-Clears the data cache displayed by `track data`.
+[You can find detailed information about this module here](TRACK.md)
 
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
