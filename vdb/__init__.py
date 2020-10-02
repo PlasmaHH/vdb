@@ -160,9 +160,10 @@ enable_ftree     = vdb.config.parameter( "vdb-enable-ftree",True)
 enable_dashboard = vdb.config.parameter( "vdb-enable-dashboard",True)
 enable_hashtable = vdb.config.parameter( "vdb-enable-hashtable",True)
 enable_ssh       = vdb.config.parameter( "vdb-enable-ssh",True)
-enable_trac      = vdb.config.parameter( "vdb-enable-track",True)
+enable_track     = vdb.config.parameter( "vdb-enable-track",True)
+enable_graph     = vdb.config.parameter( "vdb-enable-graph",True)
 
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard,hashtable,ssh,track" )
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard,hashtable,ssh,track,graph" )
 
 home_first  = vdb.config.parameter( "vdb-plugin-home-first",True)
 search_down = vdb.config.parameter( "vdb-plugin-search-down",True)
