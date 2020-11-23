@@ -51,13 +51,16 @@ def plot_data( plotlines, tvar, xfirst, xlast, time = False ):
         plotdata += f"$data using 1:{tvidx} with {graph_with.value} title \"{tv}\", "
 
 
-#    plotdata += "\n"
+    plotdata += "\n"
     plotdata += "pause mouse close\n"
 
-    gnuplot = subprocess.Popen( [ "gnuplot", "-p", ] , stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = False )
+#    print("plotdata = '%s'" % plotdata )
+
+    gnuplot = subprocess.Popen( [ "gnuplot" ] , stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = False )
     gnuplot.stdin.write(plotdata.encode())
     gnuplot.stdin.flush()
-    print("gnuplot.pid = '%s'" % gnuplot.pid )
+    gnuplot.stdin.close()
+#    print("gnuplot.pid = '%s'" % gnuplot.pid )
 
     try:
         gnuplot.wait(1)
@@ -66,12 +69,9 @@ def plot_data( plotlines, tvar, xfirst, xlast, time = False ):
 
     if( gnuplot.poll() is not None ):
         out = gnuplot.stderr.read()
-        print("out = '%s'" % out )
-    out = gnuplot.stderr.read()
-    print("out = '%s'" % out )
+        print("Gnuplot ERR Output: '%s'" % out )
 
     print("gnuplot.returncode = '%s'" % gnuplot.returncode )
-#    print("plotdata = '%s'" % plotdata )
 
 
 
@@ -135,15 +135,15 @@ def extract_track( tvar ):
                 plotline += f" {point} "
                 points += 1
         plotlines += plotline + "\n"
-        print("plotline = '%s'" % plotline )
+#        print("plotline = '%s'" % plotline )
     if( points == 0 ):
         print("Could not find any points to plot from %s" % tvar )
         return
 
     plot_data( plotlines, tvar, first, last, time = True )
 
-    print("tvar = '%s'" % tvar )
-    print("td = '%s'" % td )
+#    print("tvar = '%s'" % tvar )
+#    print("td = '%s'" % td )
 
 """
 
