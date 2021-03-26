@@ -394,7 +394,9 @@ def fix_autoload( f, l, lib ):
     rlib = os.path.realpath(lib)
 #    print("fix_autoload(%s,%s,%s) => %s" % (f,l,lib,rlib) )
 #    dd = gdb.parameter("data-directory")
-    dd = "/usr/share/gdb"
+#    dd = "/usr/share/gdb"
+    # bug in gdb means this is empty
+    dd = gdb.execute("show data-directory",False,True).split()[-1].split('"')[1]
     dpd = dd + "/auto-load/" + rlib
     dpdf = dpd + "-gdb.py"
 #    print("dpdf = '%s'" % dpdf )
