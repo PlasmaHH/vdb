@@ -99,3 +99,10 @@ vdb-ssh-colors-prompt
 vdb-ssh-prompt-text
 ```
 
+When copying over core files via the ssh mechanism we need to setup our own environment. Unfortunately this means that
+gdb is unable to match things like auto load python files for pretty printing. This option (defaults to True) tries to
+symlink known files so they are picked up. You can disable it if it makes stupid things.
+```
+vdb-ssh-fix-autoload
+```
+

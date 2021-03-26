@@ -30,6 +30,8 @@ csum_timeout = vdb.config.parameter("vdb-ssh-checksum-timeout-factor",4e-9)
 valid_ports = vdb.config.parameter("vdb-ssh-valid-ports","5000:6000,8000:10000", on_set  = vdb.config.set_array_elements )
 scp_compression = vdb.config.parameter("vdb-ssh-scp-compression",False)
 
+cfg_fix_autoload = vdb.config.parameter("vdb-ssh-fix-autoload",True)
+
 #pid_cmd = vdb.config.parameter("vdb-ssh-pid-cmd","/sbin/pidof %s")
 pid_cmd = vdb.config.parameter("vdb-ssh-pid-cmd","pgrep -f %s")
 
@@ -134,6 +136,7 @@ class ssh_connection:
             self.pipe.kill()
 
     def call( self, cmd ):
+#        print("cmd = '%s'" % cmd )
         if( cmd[-1] != "\n"):
             self.write(cmd+"\n")
         else:
@@ -252,8 +255,9 @@ def csum( argv ):
     csum_cache[key] = (cs,None)
 
 def find_file( s, fname, tag, pid = 0, symlink=None, target = None, use_which = False ):
+#    print("find_file('%s')" % fname )
     if( s.check(True) is not None ):
-        return
+        return (None,None)
 #    sw=vdb.cache.stopwatch()
 #    sw.start()
     src = fname.replace("{pid}",str(pid))
@@ -262,7 +266,7 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None, use_which = 
         wsrc = "$(which %s)" % src
         s.call("ls " + wsrc)
         if( s.check(True) is not None ):
-            return
+            return (None,None)
         s.fill(5)
         xsrc = s.read()
         print("wsrc = '%s'" % wsrc )
@@ -277,7 +281,7 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None, use_which = 
     if( fsize is None ):
         s.call("stat -L -c %s " + src)
         if( s.check(True) is not None ):
-            return
+            return (None,None)
         s.fill(5)
         fsize=int(s.read())
 #        print("fsize = '%s'" % fsize )
@@ -288,7 +292,7 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None, use_which = 
         s.call(csum_cmd.value + " " + src )
         print(f"Checking if {src} is already locally cached…")
         if( s.check(True) is not None ):
-            return
+            return (None,None)
         s.fill(csum_timeout.fvalue * fsize)
 #        sw.stop()
 #        print("sw.get() = '%s'" % sw.get() )
@@ -305,10 +309,10 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None, use_which = 
             print("s.pipe.returncode = '%s'" % s.pipe.returncode )
             print(" ".join(xcsum))
             s.check(True)
-            return
+            return (None,None)
         if( len(xcsum) == 0 ):
             print("Timed out getting checksum. If the file is huge or the system slow, try increasing vdb-ssh-checksum-timeout-factor")
-            return
+            return (None,None)
 #        if( len(xcsum) > 1 ):
 #            print(f"Format error, expected checksum, got:\n{ocsum}")
 #            return
@@ -340,10 +344,11 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None, use_which = 
         except:
             pass
         os.symlink(fn,symlink)
+#        os.link(fn,symlink)
 
 #    sw.stop()
 #    print("sw.get() = '%s'" % sw.get() )
-    return fn
+    return (fn,symlink)
 
 def run( s, argv ):
     gs = gdbserver(s,argv)
@@ -377,11 +382,25 @@ def attach( s, argv ):
 #        print("res = '%s'" % res )
         pid = res[0]
         print(f"using pid {pid}")
-    tfile=find_file(s,"/proc/{pid}/exe","binary",pid)
+    tfile,_=find_file(s,"/proc/{pid}/exe","binary",pid)
     print("tfile = '%s'" % tfile )
     gdb.execute(f"file {tfile}")
     gs = gdbserver(s,["--attach",str(pid)])
     set_ssh( (s,gs) )
+
+def fix_autoload( f, l, lib ):
+    if( not cfg_fix_autoload.value ):
+        return
+    rlib = os.path.realpath(lib)
+#    print("fix_autoload(%s,%s,%s) => %s" % (f,l,lib,rlib) )
+#    dd = gdb.parameter("data-directory")
+    dd = "/usr/share/gdb"
+    dpd = dd + "/auto-load/" + rlib
+    dpdf = dpd + "-gdb.py"
+#    print("dpdf = '%s'" % dpdf )
+    symtgt = f + "-gdb.py"
+    if( os.path.isfile(dpdf) ):
+        os.symlink(dpdf,symtgt)
 
 def copy_libraries( s, libset, libdir, cwd ):
     for lib in libset :
@@ -391,11 +410,27 @@ def copy_libraries( s, libset, libdir, cwd ):
 #        os.makedirs(ddn,exist_ok=True)
 
         try:
-            find_file(s,lib,"lib",symlink=f"{libdir}/{lib}",target=f"{cwd}/{libdir}/lib.{{csum}}.so")
-            find_file(s,"/usr/lib/debug/"+lib+".debug","lib",symlink=f"{libdir}/{lib}.debug",target=f"{cwd}/{libdir}/lib.{{csum}}.so.debug")
-        except Exception as e:
-            print("e = '%s'" % e )
+            (f,l) = find_file(s,lib,"lib",symlink=f"{libdir}/{lib}",target=f"{cwd}/{libdir}/lib.{{csum}}.so")
+            fix_autoload(f,l,lib)
+#            print("f = '%s'" % f )
+#            print("l = '%s'" % l )
+#            print("lib = '%s'" % lib )
 
+
+            debuglink=subprocess.check_output(["sh","-c",f"eu-readelf -p.gnu_debuglink {f} | grep \" 0]\""]).decode("utf-8")
+            debuglink = debuglink.split()
+#            print("debuglink = '%s'" % debuglink )
+            debuglink = debuglink[-1]
+#            print("debuglink = '%s'" % debuglink )
+
+            dlibdir = os.path.dirname(lib)
+            if( dlibdir.startswith("/") ):
+                dlibdir = dlibdir[1:]
+
+            (f,l) = find_file(s,os.path.join("/usr/lib/debug/",dlibdir,debuglink),"lib",symlink=os.path.join(libdir,dlibdir,debuglink),target=f"{cwd}/{libdir}/lib.{{csum}}.so.debug")
+
+        except Exception as e:
+            print("copy_libraries exception: '%s'" % e )
 
 def core( s, argv ):
 #    print("argv = '%s'" % argv )
@@ -410,7 +445,7 @@ def core( s, argv ):
 #    cf="/home/core/core.25211_ftree_1556626851_11_1000_100"
 #    cf="vdb.tmpfile.core.359f81f00f853a554163d133e4bff4ed"
     print(f"Searching for corefile {corefile} on host {s.host}…")
-    cf=find_file(s,corefile,"core")
+    cf,_=find_file(s,corefile,"core")
     if( cf is None ):
         print(f"Could not find corefile {corefile} on remote host")
         s.detach()
@@ -424,7 +459,7 @@ def core( s, argv ):
     else:
         print(f"Binary {binary} overrides the one from the corefile")
 
-    bf=find_file(s,binary,"binary",use_which = True)
+    bf,_=find_file(s,binary,"binary",use_which = True)
 
     if( bf is None ):
         print("Failed to find the binary, core file would be useless without it")
@@ -477,6 +512,11 @@ def core( s, argv ):
     print("Telling gdb to search for libraries only in our cache…")
     gdb.execute(f"add-auto-load-safe-path {cwd}/{libdir}")
     gdb.execute(f"set solib-absolute-prefix {cwd}/{libdir}")
+    gdb.execute(f"add-auto-load-scripts-directory {cwd}/{libdir}")
+#    dfd = gdb.parameter("debug-file-directory")
+#    dfd = f"{cwd}/{libdir}:{dfd}"
+#    gdb.execute(f"set debug-file-directory {dfd}")
+#    gdb.execute(f"set debug-file-directory /tmp")
     print("Loading binary and core file…")
     gdb.execute(f"file {bf}")
     gdb.execute(f"core {cf}")
