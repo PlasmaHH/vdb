@@ -65,6 +65,8 @@ def do_continue( ):
 @vdb.event.stop()
 def stop( bpev ):
     cont = False
+    if( len(trackings) == 0 ):
+        return
     try:
         bps = bpev.breakpoints
         now = time.time()

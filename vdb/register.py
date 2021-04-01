@@ -13,6 +13,7 @@ import gdb
 import re
 import traceback
 from collections.abc import Iterable
+import sys
 
 color_names = vdb.config.parameter("vdb-register-colors-names", "#4c0", gdb_type = vdb.config.PARAM_COLOUR)
 reg_default = vdb.config.parameter("vdb-register-default","/e")
@@ -20,36 +21,36 @@ flag_colour = vdb.config.parameter("vdb-register-colors-flags", "#adad00", gdb_t
 int_int = vdb.config.parameter("vdb-register-int-as-int",True)
 
 
-flag_bits = [
-( "ID", 0x15 ),
-( "VIP", 0x14 ),
-( "VIF", 0x13 ),
-( "AC", 0x12 ),
-( "VM", 0x11 ),
-( "RF", 0x10 ),
-( "NT", 0xe ),
-( "IOPL", 0xc ),
-( "OF", 0xb ),
-( "DF", 0xa ),
-( "IF", 0x9 ),
-( "TF", 0x8 ),
-( "SF", 0x7 ),
-( "ZF", 0x6 ),
-( "AF", 0x4 ),
-( "PF", 0x2 ),
-( "CF", 0x0 ),
-		]
+#flag_bits = [
+#( "ID", 0x15 ),
+#( "VIP", 0x14 ),
+#( "VIF", 0x13 ),
+#( "AC", 0x12 ),
+#( "VM", 0x11 ),
+#( "RF", 0x10 ),
+#( "NT", 0xe ),
+#( "IOPL", 0xc ),
+#( "OF", 0xb ),
+#( "DF", 0xa ),
+#( "IF", 0x9 ),
+#( "TF", 0x8 ),
+#( "SF", 0x7 ),
+#( "ZF", 0x6 ),
+#( "AF", 0x4 ),
+#( "PF", 0x2 ),
+#( "CF", 0x0 ),
+#		]
 
 flag_descriptions = {
-        0 : ( 1, "CF",  "Carry",             { 1 : "CY(Carry)",           0 : "NC(No Carry)" } ),
-        2 : ( 1, "PF",  "Parity",            { 1 : "PE(Parity Even)",     0 : "PO(Parity Odd)" } ),
-        4 : ( 1, "AF",  "Adjust",            { 1 : "AC(Auxiliary Carry)", 0 : "NA(No Auxiliary Carry" } ),
-        6 : ( 1, "ZF",  "Zero",              { 1 : "ZR(Zero)",            0 : "NZ(Not Zero)" } ),
-        7 : ( 1, "SF",  "Sign",              { 1 : "NG(Negative)",        0 : "PL(Positive)" } ),
+        0 : ( 1, "CF",  "Carry",             { 1 : ("CY","(Carry)"),           0 : ("NC","(No Carry)") } ),
+        2 : ( 1, "PF",  "Parity",            { 1 : ("PE","(Parity Even)"),     0 : ("PO","(Parity Odd)") } ),
+        4 : ( 1, "AF",  "Adjust",            { 1 : ("AC","(Auxiliary Carry)"), 0 : ("NA","(No Auxiliary Carry)") } ),
+        6 : ( 1, "ZF",  "Zero",              { 1 : ("ZR","(Zero)"),            0 : ("NZ","(Not Zero)") } ),
+        7 : ( 1, "SF",  "Sign",              { 1 : ("NG","(Negative)"),        0 : ("PL","(Positive)") } ),
         8 : ( 1, "TF",  "Trap",              None ),
-        9 : ( 1, "IF",  "Interrupt enable",  { 1 : "EI(Enabled)",         0 : "DI(Disabled)" } ),
-        10: ( 1, "DF",  "Direction",         { 1 : "DN(Down)",            0 : "UP(Up)" } ),
-        11: ( 1, "OF",  "Overflow",          { 1 : "OV(Overflow)",        0 : "NV(Not Overflow)" } ),
+        9 : ( 1, "IF",  "Interrupt enable",  { 1 : ("EI","(Enabled)"),         0 : ("DI","(Disabled)") } ),
+        10: ( 1, "DF",  "Direction",         { 1 : ("DN","(Down)"),            0 : ("UP","(Up)") } ),
+        11: ( 1, "OF",  "Overflow",          { 1 : ("OV","(Overflow)"),        0 : ("NV","(Not Overflow)") } ),
         12: ( 2, "IOPL","I/O Priv level",    None ),
         14: ( 1, "NT",  "Nested Task",       None ),
         16: ( 1, "RF",  "Resume",            None ),
@@ -60,28 +61,28 @@ flag_descriptions = {
         21: ( 1, "ID",  "CPUID available",   None ),
         }
 
-mxcsr_bits = [
-( "FZ", 0xf ),
-( "R+", 0xe ),
-( "R-", 0xd ),
-
-( "RZ", 13 ),
-( "RN", 13 ),
-
-( "PM", 0xc ),
-( "UM", 0xb ),
-( "OM", 0xa ),
-( "ZM", 0x9 ),
-( "DM", 0x8 ),
-( "IM", 0x7 ),
-( "DAZ", 0x6 ),
-( "PE", 0x5 ),
-( "UE", 0x4 ),
-( "OE", 0x3 ),
-( "ZE", 0x2 ),
-( "DE", 0x1 ),
-( "IE", 0x0 ),
-		]
+#mxcsr_bits = [
+#( "FZ", 0xf ),
+#( "R+", 0xe ),
+#( "R-", 0xd ),
+#
+#( "RZ", 13 ),
+#( "RN", 13 ),
+#
+#( "PM", 0xc ),
+#( "UM", 0xb ),
+#( "OM", 0xa ),
+#( "ZM", 0x9 ),
+#( "DM", 0x8 ),
+#( "IM", 0x7 ),
+#( "DAZ", 0x6 ),
+#( "PE", 0x5 ),
+#( "UE", 0x4 ),
+#( "OE", 0x3 ),
+#( "ZE", 0x2 ),
+#( "DE", 0x1 ),
+#( "IE", 0x0 ),
+#		]
 
 mxcsr_descriptions = {
         0 : ( 1, "IE", "EF: Invalid operation", None ),
@@ -97,10 +98,19 @@ mxcsr_descriptions = {
         10 : ( 1, "OM", "MASK: Overflow", None ),
         11 : ( 1, "UM", "MASK: Underflow", None ),
         12 : ( 1, "PM", "MASK: Precision", None ),
-        13 : ( 2, "R[ZN+-]", "Rounding", { 0: "RN(Round To Nearest)", 3 : "RZ(Round to Zero)", 1 : "R-(Round Negative)", 2: "R+(Round Positive)" }),
+        13 : ( 2, "R[ZN+-]", "Rounding", { 
+                                            0 : ("RN","(Round To Nearest)"),
+                                            1 : ("R-","(Round Negative)"),
+                                            2 : ("R+","(Round Positive)"),
+                                            3 : ("RZ","(Round to Zero)"),
+                                            }),
         15 : ( 1, "FZ", "Flush to Zero", None ),
         }
 
+flag_info = {
+            "eflags" : ( 21, flag_descriptions ),
+            "mxcsr"  : ( 15, mxcsr_descriptions )
+            }
 
 possible_registers = [
 		( "rax", "eax", "ax"),
@@ -147,9 +157,12 @@ class Registers():
         self.segs = {}
         self.vecs = {}
         self.fpus = {}
+        self.rflags = {}
         self.thread = 0
+        self.all = {}
         self.type_indices = {}
         self.next_type_index = 1
+        self.eflags = None
         try:
             frame=gdb.selected_frame()
         except:
@@ -159,38 +172,93 @@ class Registers():
         self.thread = thread.num
         self.archsize = vdb.arch.pointer_size
 
-        for reg in possible_registers:
-            if( isinstance(reg,Iterable) and not isinstance(reg,str) ):
-                for oreg in reg:
-                    if( self.parse_register(frame,oreg,self.regs) is not None ):
-                        break
-            else:
-                self.parse_register(frame,reg,self.regs)
+        self.collect_registers()
+#        return
 
-        for reg in possible_prefixes:
-            self.parse_register(frame,reg,self.segs)
+#        for reg in possible_registers:
+#            if( isinstance(reg,Iterable) and not isinstance(reg,str) ):
+#                for oreg in reg:
+#                    if( self.parse_register(frame,oreg,self.regs) is not None ):
+#                        break
+#            else:
+#                self.parse_register(frame,reg,self.regs)
 
-        for i in range(0,32):
-            v = None
-            for rt in [ "z", "y", "x", "" ]:
-                reg=f"{rt}mm{i}"
-                try:
-                    #					print("type(v)")
+#        for reg in possible_prefixes:
+#            self.parse_register(frame,reg,self.segs)
+
+#        for i in range(0,32):
+#            v = None
+#            for rt in [ "z", "y", "x", "" ]:
+#                reg=f"{rt}mm{i}"
+#                try:
+#                    					print("type(v)")
 #					print("reg = '%s'" % reg )
-                    v = frame.read_register(reg)
+#                    v = frame.read_register(reg)
 #					print("v = '%s'" % v )
-                    break
-                except:
-                    continue
-            if( v is not None ):
-                t = v.type
-                self.vecs[reg] = ( v, t )
+#                    break
+#                except:
+#                    continue
+#            if( v is not None ):
+#                t = v.type
+#                self.vecs[reg] = ( v, t )
+
         self.eflags = self.read(frame,"eflags")
 
-        for reg in possible_fpu:
-            self.parse_register(frame,reg,self.fpus)
+#        for reg in possible_fpu:
+#            self.parse_register(frame,reg,self.fpus)
 
         self.mxcsr = self.read(frame,"mxcsr")
+
+    def get( self, name ):
+        return self.all.get(name,None)
+
+    def collect_registers( self ):
+        frame=gdb.selected_frame()
+#        print(f"registers we don't know where to put them yet (archsize {self.archsize}):")
+        for reg in frame.architecture().registers():
+            self.all[reg.name] = reg
+            v = frame.read_register(reg)
+            # try to figure out which register type this is by first sorting according to its type
+            if( v.type.code == gdb.TYPE_CODE_UNION ):
+                self.vecs[reg] = ( v, v.type )
+            elif( v.type.code == gdb.TYPE_CODE_FLT ):
+                self.fpus[reg] = ( v, v.type )
+                if( reg.name not in possible_fpu ):
+                    possible_fpu.append(reg.name)
+            elif( v.type.code == gdb.TYPE_CODE_FLAGS ):
+                self.rflags[reg] = ( v, v.type )
+            else:
+                # Could not sort them in according to their types, lets check if we have them in some candidate lists
+                if( reg.name in possible_fpu ):
+                    self.fpus[reg] = ( v, v.type )
+                elif( v.type.sizeof*8 != self.archsize and v.type.code == gdb.TYPE_CODE_INT ): # assume non archsize integers are prefixes
+                    self.segs[reg] = ( v, v.type )
+                else:
+                    self.regs[reg] = ( v, v.type )
+#                    print(f"{reg} '{reg.name}' {v} {v.type}@{v.type.sizeof} ({v.type.tag}){vdb.util.gdb_type_code(v.type.code)}")
+
+
+
+    def _dump( self ):
+        print("self.regs:")
+        for r,v in self.regs.items():
+            print(f"{r} : {v[0]} ({v[1]})")
+        print("self.segs:")
+        for r,v in self.segs.items():
+            print(f"{r} : {v[0]} ({v[1]})")
+        print("self.vecs:")
+        for r,v in self.vecs.items():
+            print(f"{r} : VALUE ({v[1]})")
+        print("self.fpus:")
+        for r,v in self.fpus.items():
+            print(f"{r} : {v[0]} ({v[1]})")
+        print("self.thread = '%s'" % self.thread )
+        print("self.type_indices = '%s'" % self.type_indices )
+        print("self.next_type_index = '%s'" % self.next_type_index )
+        print("self.archsize = '%s'" % self.archsize )
+        print("self.eflags = '%s'" % self.eflags )
+        print("self.mxcsr = '%s'" % self.mxcsr )
+
 
     def read( self, frame, reg ):
         try:
@@ -214,14 +282,14 @@ class Registers():
         except:
             return None
 
-    def format_register( self,name, val,t, chained = False, int_as_int = False ):
+    def format_register( self, regdesc, val,t, chained = False, int_as_int = False ):
         if( vdb.arch.gdb_uintptr_t is not None ):
             val=int( val.cast(vdb.arch.gdb_uintptr_t) )
         else:
             val=int( val.cast(gdb_uint64_t) )
 
         try:
-            ret = vdb.color.color(f" {name:<6}",color_names.value)
+            ret = vdb.color.color(f" {regdesc.name:<6}",color_names.value)
 
             if( int_as_int ):
                 if( self.archsize == 32 ):
@@ -234,7 +302,7 @@ class Registers():
             else:
                 ret += vdb.pointer.color(val,self.archsize)[0]
         except:
-            ret = "ERR " + name + " : " + str(val)
+            ret = "ERR " + regdesc.name + " : " + str(val)
             raise
         return ret
 
@@ -251,10 +319,10 @@ class Registers():
         return ret
 
 
-    def format_prefix( self,name, val, t ):
+    def format_prefix( self,regdesc, val, t ):
         val=int(val)
         try:
-            ret = vdb.color.color(f" {name:<3}",color_names.value)+f"0x{val:08x}"
+            ret = vdb.color.color(f" {regdesc.name:<3}",color_names.value)+f"0x{val:08x}"
         except:
             ret = str(val)
         return ret
@@ -267,7 +335,7 @@ class Registers():
             self.type_indices[type_name] = ti
         return ti
 
-    def format_vector_extended( self, name, val, t ):
+    def format_vector_extended( self, regdesc, val, t ):
         empty = [ None ] * ( 1 + max( len(t.fields()), self.next_type_index ) )
         tbl = []
         valmatrix = { }
@@ -275,7 +343,7 @@ class Registers():
         maxval = 0
         import copy
         header = copy.deepcopy(empty)
-        header[0] = ( vdb.color.color(f"{name:<6}",color_names.value), 6 )
+        header[0] = ( vdb.color.color(f"{regdesc.name:<6}",color_names.value), 6 )
         tbl.append(header)
         for f in t.fields() :
             cnt = 1
@@ -336,14 +404,14 @@ class Registers():
         return tbl
 
     def format_vector( self, xvec ):
-        name,amnt = xvec[0]
+        regdesc,amnt = xvec[0]
         amnt = len(amnt)
         ret = ""
 #		print("xvec = '%s'" % xvec )
         for i in range(0,amnt):
-            for name,vals in xvec:
+            for regdesc,vals in xvec:
                 if( i == 0 ):
-                    ret += vdb.color.color(f" {name:<6}",color_names.value)
+                    ret += vdb.color.color(f" {regdesc.name:<6}",color_names.value)
                 else:
                     ret += f"       "
                 try:
@@ -419,11 +487,11 @@ class Registers():
             fs_base = self.arch_prctl(0x1003)
             if( fs_base is not None ):
                 fs_base = int.from_bytes(fs_base,"little")
-                self.segs["fs"] = ( fs_base, None )
+                self.segs[self.get("fs")] = ( fs_base, None )
             gs_base = self.arch_prctl(0x1004)
             if( gs_base is not None ):
                 gs_base = int.from_bytes(gs_base,"little")
-                self.segs["gs"] = ( gs_base, None )
+                self.segs[self.get("gs")] = ( gs_base, None )
         except:
             traceback.print_exc()
             pass
@@ -453,10 +521,10 @@ class Registers():
     def prefixes( self ):
         ret = ""
         cnt=0
-        for name,valt in self.segs.items():
+        for regdesc,valt in self.segs.items():
             val,t =valt
             cnt += 1
-            ret += self.format_prefix(name,val,t)
+            ret += self.format_prefix(regdesc,val,t)
             if( cnt % 6 == 0 ):
                 ret += "\n"
         return ret
@@ -464,10 +532,13 @@ class Registers():
 
     def floats( self ):
         ret = ""
-        for reg in possible_fpu:
+        for name in possible_fpu:
 #        for name,valt in self.fpus.items():
-            name=reg
-            valt = self.fpus.get(reg,None)
+#            valt = self.fpus.get(reg,None)
+            if( len(name) == 0 ):
+                valt = (None,None) # newline
+            else:
+                valt = self.fpus.get(self.get(name),None)
             if( valt is None):
                 continue
             val,t = valt
@@ -540,46 +611,47 @@ class Registers():
         if( self.mxcsr is not None ):
             val = int(self.mxcsr)
 
+            ret += vdb.color.color(f" mxcsr ",color_names.value)+f"0x{val:08x} {self.mxcsr}"
+            ret += "\n"
+            ret += "\n"
             if( extended ):
-                ret += vdb.color.color(f" mxcsr ",color_names.value)+f"0x{val:08x}"
-                ret += "\n"
-                ret += "\n"
-                ret += self.format_flags( "mxcsr", int(self.mxcsr), 15, mxcsr_descriptions )
+#                ret += self.format_flags( "mxcsr", int(self.mxcsr), 15, mxcsr_descriptions )
+                ret += self.format_flags( "mxcsr" )
             else:
-
                 ret += " "
-                short = " [ "
-                for flag,bit in mxcsr_bits:
-                    ex = val >> bit
-                    if( flag == "RZ" ):
-                        ex &= 3
-                        if( ex == 3 ):
-                            ex = "X"
-                        elif( ex == 0 ):
-                            ex = "_"
-                        else:
-                            ex = "?"
-                    elif( flag == "RN" ):
-                        ex &= 3
-                        if( ex == 3 ):
-                            ex = "_"
-                        elif( ex == 0 ):
-                            ex = "X"
-                        else:
-                            ex = "?"
-                    else:
-                        ex &= 1
-                    col = ( ex != 0 )
-                    if( col ):
-                        ret += vdb.color.color(f"{flag}[{ex}] ","#adad00")
-                        short += flag + " "
-                    else:
-                        ret += f"{flag}[{ex}] "
-                ret += "\n"
-                ret += short  + "]\n"
-                ret += "\n"
-                ret += vdb.color.color(f" mxcsr ",color_names.value)+f"0x{val:016x}"
-                ret += "\n"
+#                short = " [ "
+#                for flag,bit in mxcsr_bits:
+#                    ex = val >> bit
+#                    if( flag == "RZ" ):
+#                        ex &= 3
+#                        if( ex == 3 ):
+#                            ex = "X"
+#                        elif( ex == 0 ):
+#                            ex = "_"
+#                        else:
+#                            ex = "?"
+#                    elif( flag == "RN" ):
+#                        ex &= 3
+#                        if( ex == 3 ):
+#                            ex = "_"
+#                        elif( ex == 0 ):
+#                            ex = "X"
+#                        else:
+#                            ex = "?"
+#                    else:
+#                        ex &= 1
+#                    col = ( ex != 0 )
+#                    if( col ):
+#                        ret += vdb.color.color(f"{flag}[{ex}] ","#adad00")
+#                        short += flag + " "
+#                    else:
+#                        ret += f"{flag}[{ex}] "
+#                ret += "\n"
+#                ret += short  + "]\n"
+#                ret += "\n"
+                ret += self.format_flags_short("mxcsr",True)
+#                ret += vdb.color.color(f" mxcsr ",color_names.value)+f"0x{val:016x}"
+#                ret += "\n"
         return ret
 
 
@@ -591,7 +663,7 @@ class Registers():
         xvec = []
 
         rtbl = []
-        for name,valt in self.vecs.items():
+        for regdesc,valt in self.vecs.items():
             val,t =valt
             cnt += 1
 
@@ -604,9 +676,9 @@ class Registers():
 #                print("f.name = '%s'" % f.name )
 
             if( extended ):
-                rtbl += ( self.format_vector_extended( name, val, t ) )
+                rtbl += ( self.format_vector_extended(regdesc , val, t ) )
             else:
-                xvec.append( (name, self.extract_vector(name,val,t)) )
+                xvec.append( (regdesc, self.extract_vector(regdesc,val,t)) )
                 if( cnt % 4 == 0 ):
                     ret += self.format_vector(xvec)
                     xvec = []
@@ -615,9 +687,69 @@ class Registers():
             ret += vdb.util.format_table(rtbl,padbefore=" ", padafter="")
         return ret
 
-    def format_flags( self, name, flags, count, descriptions ):
+    def format_flags_short( self, name, abbrval ):
+        count,descriptions = flag_info.get(name)
+        regdesc = self.get(name)
+        flags,valtype = self.rflags.get(regdesc)
+
+        iflags = int(flags)
         ret = ""
-        ret += vdb.color.color(f" {name} ",color_names.value)+f"0x{flags:016x}"
+
+        bit = 0
+
+        while bit <= count:
+            mask = 1 << bit
+            ex = iflags >> bit
+            ex &= 1
+
+            short = ""
+            text = "Reserved"
+            meaning = None
+
+            tbit = f"{bit:02x}"
+            desc = descriptions.get(bit,None)
+            if( desc is not None ):
+                dshort = desc[1]
+                text = desc[2]
+                mp = desc[3]
+                sz = desc[0]
+                if( sz > 1 ):
+                    tbit = f"{bit:02x}-{bit+sz-1:02x}"
+                    bit += (sz-1)
+                    omask = mask
+                    for mb in range(0,sz):
+                        mask |= omask
+                        omask = omask << 1
+                    ex = (iflags >> bit) & ((1 << sz)-1)
+                short = f"{dshort}[{ex}]"
+                if( abbrval ):
+                    if( mp is not None ):
+                        ms,ml = mp.get(ex,(None,None))
+                        if( ms is not None ):
+                            short = f"{dshort}[{ms},{ex}]"
+
+                if( ex != 0 ):
+                    short = vdb.color.color(short,flag_colour.value)
+
+            mask = f"0x{mask:04x}"
+            # bit order
+            if( len(short) > 0 ):
+                ret = str(short) + " " + ret
+            bit += 1
+
+        return ret
+
+    def format_flags( self, name ):
+        count,descriptions = flag_info.get(name)
+        regdesc = self.get(name)
+        flags,valtype = self.rflags.get(regdesc)
+#        val = int(val)
+#        return self.format_flags( name, val, count, desc )
+
+#    def format_flags( self, name, flags, count, descriptions ):
+        iflags = int(flags)
+        ret = ""
+        ret += vdb.color.color(f" {name} ",color_names.value)+f"0x{iflags:016x} {flags}"
         ret += "\n"
         ftbl = []
         ftbl.append( ["Bit","Mask","Abrv","Description","Val","Meaning"] )
@@ -626,7 +758,7 @@ class Registers():
 #        for bit in range(0,count):
         while bit <= count:
             mask = 1 << bit
-            ex = flags >> bit
+            ex = iflags >> bit
             ex &= 1
 
             short = ""
@@ -647,11 +779,12 @@ class Registers():
                     for mb in range(0,sz):
                         mask |= omask
                         omask = omask << 1
-                    ex = (flags >> bit) & ((1 << sz)-1)
+                    ex = (iflags >> bit) & ((1 << sz)-1)
                 if( ex != 0 ):
                     short = ( vdb.color.color(short,flag_colour.value), len(short))
                 if( mp is not None ):
-                    meaning = mp.get(ex,"??")
+                    ms,ml= mp.get(ex,("","??"))
+                    meaning = ms+ml
 
             mask = f"0x{mask:04x}"
 
@@ -663,29 +796,35 @@ class Registers():
         return ret
 
     def ex_flags( self ):
-        if( self.eflags is not None ):
-            return self.format_flags( "eflags", int(self.eflags), 21, flag_descriptions )
-        return ""
+        return self.flags(True)
+#        if( self.eflags is not None ):
+#            return self.format_flags( "eflags", int(self.eflags), 21, flag_descriptions )
+#        return ""
 
-    def flags( self ):
+    def flags( self, extended = False ):
         ret=""
 
         if( self.eflags is not None ):
-            eflags = int(self.eflags)
-            ret += vdb.color.color(f" eflags ",color_names.value)+f"0x{eflags:016x}"
+            ieflags = int(self.eflags)
+            ret += vdb.color.color(f" eflags ",color_names.value)+f"0x{ieflags:016x} {self.eflags}"
             ret += "\n"
-
-            ret += " "
-            for flag,bit in flag_bits:
-                ex = eflags >> bit
-                if( flag == "IOPL" ):
-                    ex &= 3
-                else:
-                    ex &= 1
-                if( ex == 0 ):
-                    ret += f"{flag}[{ex}] "
-                else:
-                    ret += vdb.color.color(f"{flag}[{ex}] ",flag_colour.value)
+            ret += "\n"
+            if( extended ):
+                ret += self.format_flags( "eflags" )
+            else:
+                ret += " "
+#                for flag,bit in flag_bits:
+#                    ex = ieflags >> bit
+#                    if( flag == "IOPL" ):
+#                        ex &= 3
+#                    else:
+#                        ex &= 1
+#                    if( ex == 0 ):
+#                        ret += f"{flag}[{ex}] "
+#                    else:
+#                        ret += vdb.color.color(f"{flag}[{ex}] ",flag_colour.value)
+#                ret += "\n"
+                ret += self.format_flags_short("eflags",False)
         else:
             ret += "NO SUPPORTED FLAGS FOUND\n"
 
@@ -697,13 +836,11 @@ class Registers():
 
 
         ret += "\n"
-        ret += " "
-        ret += str(self.eflags) + "\n"
-
-
+#        ret += " "
+#        ret += str(self.eflags) + "\n"
 
         return ret
-    
+
     def print( self, showspec ):
         for s in showspec:
             if( s == "i" ):
@@ -737,6 +874,13 @@ class Registers():
             else:
                 print("Invalid showspec '%s'" % s )
 
+registers = None
+
+@vdb.event.new_objfile()
+def reset( self ):
+#    print("Resetting global register object")
+    global registers
+    registers = None
 
 class cmd_registers(vdb.command.command):
     """Show the registers nicely (default is expanded)
@@ -753,10 +897,34 @@ representations
     def usage( self ):
         print(self.__doc__)
 
-    def do_invoke (self, argv ):
+    def update( self ):
+#        print("Updating registers...",file=sys.stderr)
+        with open("register.log","a") as f:
+            traceback.print_stack(file=f)
         try:
-            r = Registers()
-            if( r.thread == 0 ):
+            nrr = Registers()
+            global registers
+            registers = nrr
+        except Exception as e:
+            print("When trying to make sense out of registers, we encountered an exception: %s" % e )
+            traceback.print_exc()
+
+    def maybe_update( self ):
+        global registers
+#        print("registers = '%s'" % registers )
+#        if( registers is not None ):
+#            print("registers.thread = '%s'" % registers.thread )
+#        if( registers is None or registers.thread == 0 ):
+#            print("Need to call update")
+        self.update()
+
+    def do_invoke (self, argv ):
+#        print("do_invoke()")
+        global registers
+        try:
+            self.maybe_update()
+
+            if( registers is None or registers.thread == 0 ):
                 print("No running thread to read registers from")
                 return
 
@@ -767,15 +935,17 @@ representations
             if( len(argv) == 1 ):
                 if( argv[0].startswith("/") ):
                     if( argv[0] == "/s" ):
-                        r.print("ipx")
+                        registers.print("ipx")
                     elif( argv[0] == "/e" ):
-                        r.print("Ipx")
+                        registers.print("Ipx")
                     elif( argv[0] == "/a" ):
-                        r.print("ixfpmv")
+                        registers.print("ixfpmv")
                     elif( argv[0] == "/f" ):
-                        r.print("IXFPMV")
+                        registers.print("IXFPMV")
+                    elif( argv[0] == "/_d" ):
+                        registers._dump()
                     else:
-                        r.print(argv[0][1:])
+                        registers.print(argv[0][1:])
                 else:
                     self.usage()
             else:
@@ -783,6 +953,11 @@ representations
                 self.usage()
         except Exception as e:
             traceback.print_exc()
+
+        # Identify the cases where we can re-use the information gathered. Maybe refactor Registers() to always read
+        # values on demand?
+
+        registers = None
 
 cmd_registers()
 

@@ -15,6 +15,7 @@ import colors
 import re
 import bisect
 from enum import Enum,auto
+import time
 
 
 vdb.enabled_modules.append("memory")
@@ -751,5 +752,27 @@ class memory_map:
 #            print("r.mtype = '%s'" % r.mtype )
 
 mmap = memory_map()
+
+last_refresh_at = 0
+last_run_start = 0
+
+@vdb.event.start()
+@vdb.event.run()
+def run_start():
+    global last_run_start
+    last_run_start += 1
+
+# might be a bottleneck for some situations
+@vdb.event.stop()
+def maybe_refresh( ):
+    global mmap
+    global last_refresh_at
+    if( last_refresh_at == last_run_start ):
+        return
+    t0 = time.time()
+    mmap.parse()
+    t1 = time.time()
+    print("Automatically refreshed memory map in %.4fs" % (t1-t0) )
+    last_refresh_at = last_run_start
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

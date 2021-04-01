@@ -67,6 +67,9 @@ def new_objfile( *darg ):
 def new_inferior( *darg ):
     return on_event( gdb.events.new_inferior, darg )
 
+def new_thread( *darg ):
+    return on_event( gdb.events.new_thread, darg )
+
 def run( *darg ):
     return on_hook( events.run, darg )
 
