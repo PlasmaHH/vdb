@@ -354,7 +354,7 @@ def call_hexdump( argv ):
         if( m is not None ):
             pointers = True
             try:
-                chainlen = int(argv[0][2:])
+                chainlen = int(argv[0][1:])
             except:
                 pass
             argv[0] = argv[0].replace(m.group(0),"")
