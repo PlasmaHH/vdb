@@ -120,6 +120,10 @@ possible_fpu = [
     "s10","s11","s12","","s13","s14","s15","s16","","s17","s18","s19",
 		]
 
+possible_specials = [
+        "pkru"
+        ]
+
 gdb_uint64_t = gdb.lookup_type("unsigned long long")
 gdb_uint8_t = gdb.lookup_type("unsigned char")
 
@@ -171,6 +175,8 @@ class Registers():
             # try to figure out which register type this is by first sorting according to its type
             if( reg.name in possible_flags ):
                 self.rflags[reg] = ( v, v.type )
+            elif( reg.name in possible_specials ):
+                self.others[reg] = ( v, v.type )
             elif( self.in_group(reg.name,"vector") or v.type.code == gdb.TYPE_CODE_UNION ):
                 self.vecs[reg] = ( v, v.type )
             elif( v.type.code == gdb.TYPE_CODE_FLT ):
@@ -211,7 +217,9 @@ class Registers():
 #        print("self.mxcsr = '%s'" % self.mxcsr )
 
 
-    def read( self, frame, reg ):
+    def read( self, reg, frame = None ):
+        if( frame is None ):
+            frame = gdb.selected_frame()
         try:
             return frame.read_register(reg)
         except ValueError:
@@ -461,7 +469,36 @@ class Registers():
 
     def format_special( self, name ):
         if( name == "pkru" ):
-            return "PKRU"
+            ret = ""
+#            pkru = self.get(name)
+            pkru = self.read(name)
+            ival = int(pkru)
+            ret += vdb.color.color(f" {name} ",color_names.value)+f"0x{ival:08x}"
+            ret += "\n"
+            ptbl = []
+            mask = 1
+            k = ["Key"]
+            a = ["A"]
+            w = ["W"]
+            for i in range(0,16):
+                k.insert(1,i )
+                if( ival & mask == 0 ):
+                    a.insert(1,"" )
+                else:
+                    a.insert(1,"X")
+                mask *= 2
+                if( ival & mask == 0 ):
+                    w.insert(1,"" )
+                else:
+                    w.insert(1,"X")
+                mask *= 2
+
+            ptbl.append(k)
+            ptbl.append(a)
+            ptbl.append(w)
+            ret += vdb.util.format_table( ptbl )
+            ret += "\n"
+            return ret
         return None
 
     def format_ints( self, regs, extended = False, wrapat = None ):
