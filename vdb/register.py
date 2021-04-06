@@ -107,11 +107,30 @@ mxcsr_descriptions = {
         15 : ( 1, "FZ", "Flush to Zero", None ),
         }
 
-flag_info = {
-            "eflags" : ( 21, flag_descriptions ),
-            "mxcsr"  : ( 15, mxcsr_descriptions )
-            }
+bndcfgu_descriptions = {
+        0 : ( 1, "EN", "Enabled", None ),
+        1 : ( 1, "PRV","Preserved", None ),
+        12: ( 52, "BASE", "Base", None )
+        }
 
+bndstatus_descriptions = {
+        0 : ( 2, "ERR", "Error", None ),
+        2 : ( 62,"BDE", "BDE Address", None ),
+        }
+
+flag_info = {
+            "eflags" : ( 21, flag_descriptions, None ),
+            "mxcsr"  : ( 15, mxcsr_descriptions, None ),
+            "bndcfgu" : ( 4, bndcfgu_descriptions, ( "raw", "config" ) ),
+            "bndstatus" : ( 4, bndstatus_descriptions, ( "raw", "status" ) )
+            }
+possible_flags = [
+        "eflags", "flags", "mxcsr", "bndcfgu", "bndstatus"
+        ]
+
+abbrflags = [ 
+        "mxcsr"
+        ]
 possible_registers = [
 		( "rax", "eax", "ax"),
         ( "rbx", "ebx", "bx"),
@@ -219,7 +238,9 @@ class Registers():
             self.all[reg.name] = reg
             v = frame.read_register(reg)
             # try to figure out which register type this is by first sorting according to its type
-            if( v.type.code == gdb.TYPE_CODE_UNION ):
+            if( reg.name in possible_flags ):
+                self.rflags[reg] = ( v, v.type )
+            elif( v.type.code == gdb.TYPE_CODE_UNION ):
                 self.vecs[reg] = ( v, v.type )
             elif( v.type.code == gdb.TYPE_CODE_FLT ):
                 self.fpus[reg] = ( v, v.type )
@@ -282,14 +303,25 @@ class Registers():
         except:
             return None
 
-    def format_register( self, regdesc, val,t, chained = False, int_as_int = False ):
+    def format_register( self, regdesc, val,t, chained = False, int_as_int = False,suffix = None ):
+
+#        print("regdesc = '%s'" % regdesc )
+#        print("regdesc.name = '%s'" % regdesc.name )
+#        print("val = '%s'" % val )
+#        print("val.type = '%s'" % val.type )
+#        print("val.type.tag = '%s'" % val.type.tag )
+#        print("val.type.code = '%s'" % vdb.util.gdb_type_code(val.type.code) )
+#        print("vdb.arch.gdb_uintptr_t = '%s'" % vdb.arch.gdb_uintptr_t )
         if( vdb.arch.gdb_uintptr_t is not None ):
             val=int( val.cast(vdb.arch.gdb_uintptr_t) )
         else:
             val=int( val.cast(gdb_uint64_t) )
 
         try:
-            ret = vdb.color.color(f" {regdesc.name:<6}",color_names.value)
+            name = regdesc.name
+            if suffix is not None:
+                name += "." + suffix
+            ret = vdb.color.color(f" {name:<6}",color_names.value)
 
             if( int_as_int ):
                 if( self.archsize == 32 ):
@@ -425,6 +457,7 @@ class Registers():
 
     def extract_vector( self,name, val, t ):
         ret = []
+#        print("name = '%s'" % name )
 #        print("val.type.name = '%s'" % val.type.name )
 #        print("val.type.sizeof = '%s'" % val.type.sizeof )
 
@@ -507,10 +540,16 @@ class Registers():
     def ints( self, extended = False, wrapat = 6 ):
         ret = ""
         cnt=0
-        for name,valt in self.regs.items():
+        for regdesc,valt in self.regs.items():
             val,t =valt
-            cnt += 1
-            ret += self.format_register(name,val,t,extended, int_int.value )
+            if( val.type.code == gdb.TYPE_CODE_STRUCT ):
+                for f in val.type.fields():
+                    fv = val[f]
+                    cnt += 1
+                    ret += self.format_register(regdesc,fv,t,extended, int_int.value, suffix = f.name )
+            else:
+                cnt += 1
+                ret += self.format_register(regdesc,val,t,extended, int_int.value )
             if( cnt % wrapat == 0 ):
                 ret += "\n"
 
@@ -576,7 +615,7 @@ class Registers():
                 else:
                     others.append(v)
             else:
-                raise Exception("Unsupported code %s for vector member" % (vdb.util.gdb_type_code(v.type.code) ) )
+                raise Exception("Unsupported code %s for vector member %s" % (vdb.util.gdb_type_code(v.type.code), v.name ) )
         if( len(others) > 0 ):
             vector = others
         else:
@@ -619,36 +658,7 @@ class Registers():
                 ret += self.format_flags( "mxcsr" )
             else:
                 ret += " "
-#                short = " [ "
-#                for flag,bit in mxcsr_bits:
-#                    ex = val >> bit
-#                    if( flag == "RZ" ):
-#                        ex &= 3
-#                        if( ex == 3 ):
-#                            ex = "X"
-#                        elif( ex == 0 ):
-#                            ex = "_"
-#                        else:
-#                            ex = "?"
-#                    elif( flag == "RN" ):
-#                        ex &= 3
-#                        if( ex == 3 ):
-#                            ex = "_"
-#                        elif( ex == 0 ):
-#                            ex = "X"
-#                        else:
-#                            ex = "?"
-#                    else:
-#                        ex &= 1
-#                    col = ( ex != 0 )
-#                    if( col ):
-#                        ret += vdb.color.color(f"{flag}[{ex}] ","#adad00")
-#                        short += flag + " "
-#                    else:
-#                        ret += f"{flag}[{ex}] "
-#                ret += "\n"
-#                ret += short  + "]\n"
-#                ret += "\n"
+
                 ret += self.format_flags_short("mxcsr",True)
 #                ret += vdb.color.color(f" mxcsr ",color_names.value)+f"0x{val:016x}"
 #                ret += "\n"
@@ -687,12 +697,29 @@ class Registers():
             ret += vdb.util.format_table(rtbl,padbefore=" ", padafter="")
         return ret
 
+    def format_flags_mini( self, name, val ):
+        count,descriptions,rawname = flag_info.get(name)
+
+        if( rawname is None ):
+            return str(val)
+
+        ret = " "
+        for f in val[rawname[1]].type.fields():
+            sv = val[rawname[1]][f]
+            ret += f"{f.name}[{sv}] "
+
+
+        return "[" + ret + "]"
+
     def format_flags_short( self, name, abbrval ):
-        count,descriptions = flag_info.get(name)
+        count,descriptions,rawname = flag_info.get(name)
         regdesc = self.get(name)
         flags,valtype = self.rflags.get(regdesc)
 
-        iflags = int(flags)
+        if( rawname is not None ):
+            iflags = int(flags[rawname[0]])
+        else:
+            iflags = int(flags)
         ret = ""
 
         bit = 0
@@ -740,17 +767,19 @@ class Registers():
         return ret
 
     def format_flags( self, name ):
-        count,descriptions = flag_info.get(name)
+        count,descriptions,rawname = flag_info.get(name)
         regdesc = self.get(name)
         flags,valtype = self.rflags.get(regdesc)
 #        val = int(val)
 #        return self.format_flags( name, val, count, desc )
 
 #    def format_flags( self, name, flags, count, descriptions ):
-        iflags = int(flags)
-        ret = ""
-        ret += vdb.color.color(f" {name} ",color_names.value)+f"0x{iflags:016x} {flags}"
-        ret += "\n"
+
+        if( rawname is not None ):
+            iflags = int(flags[rawname[0]])
+        else:
+            iflags = int(flags)
+
         ftbl = []
         ftbl.append( ["Bit","Mask","Abrv","Description","Val","Meaning"] )
 
@@ -804,40 +833,42 @@ class Registers():
     def flags( self, extended = False ):
         ret=""
 
-        if( self.eflags is not None ):
-            ieflags = int(self.eflags)
-            ret += vdb.color.color(f" eflags ",color_names.value)+f"0x{ieflags:016x} {self.eflags}"
+#        if( self.eflags is not None ):
+#            if( extended ):
+#                ret += self.format_flags( "eflags" )
+#            else:
+#                ret += " "
+#                ret += self.format_flags_short("eflags",False)
+#        else:
+#            ret += "NO SUPPORTED FLAGS FOUND\n"
+
+#        ret += "\n"
+#        ret += self._mxcsr( extended )
+
+        for fr,v in self.rflags.items():
             ret += "\n"
+            fv,ft = v
+            abbr = False
+            if( fr.name in abbrflags ):
+                abbr = True
+
+            _,_,rawfield = flag_info.get(fr.name,(None,None,None))
+            
+            if( rawfield is not None ):
+                ival = int(fv[rawfield[0]])
+            else:
+                ival = int(fv)
+
+            fvm = self.format_flags_mini( fr.name, fv )
+            ret += vdb.color.color(f" {fr.name} ",color_names.value)+f"0x{ival:016x} {fvm}"
             ret += "\n"
+
             if( extended ):
-                ret += self.format_flags( "eflags" )
+                ret += self.format_flags(fr.name)
             else:
                 ret += " "
-#                for flag,bit in flag_bits:
-#                    ex = ieflags >> bit
-#                    if( flag == "IOPL" ):
-#                        ex &= 3
-#                    else:
-#                        ex &= 1
-#                    if( ex == 0 ):
-#                        ret += f"{flag}[{ex}] "
-#                    else:
-#                        ret += vdb.color.color(f"{flag}[{ex}] ",flag_colour.value)
-#                ret += "\n"
-                ret += self.format_flags_short("eflags",False)
-        else:
-            ret += "NO SUPPORTED FLAGS FOUND\n"
-
-#
-#		ret += "OF[{}] ""DF[{}] ""IF[{}] ""TF[{}]".format( ((eflags >> 0xB) & 1 ), ((eflags >> 0xA) & 1 ),  ((eflags >> 9) & 1), ((eflags >> 8) & 1 ))
-#		ret += "SF[{}] ""ZF[{}] ""AF[{}] ""PF[{}] ""CF[{}] ".format( ((eflags >> 7) & 1 ), ((eflags >> 6) & 1 ), ((eflags >> 4) & 1 ), ((eflags >> 2) & 1 ), (eflags & 1))
-#		ret += "ID[{}] ""VIP[{}] ""VIF[{}] ""AC[{}]".format( ((eflags >> 0x15) & 1 ), ((eflags >> 0x14) & 1 ),  ((eflags >> 0x13) & 1 ), ((eflags >> 0x12) & 1 ))
-#		ret += "VM[{}] ""RF[{}] ""NT[{}] ""IOPL[{}]".format( ((eflags >> 0x11) & 1 ), ((eflags >> 0x10) & 1 ), ((eflags >> 0xE) & 1 ), ((eflags >> 0xC) & 3 ))
-
-
-        ret += "\n"
-#        ret += " "
-#        ret += str(self.eflags) + "\n"
+                ret += self.format_flags_short(fr.name,abbr)
+            ret += "\n"
 
         return ret
 

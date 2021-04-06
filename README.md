@@ -217,7 +217,13 @@ There is a configurable way to shorten type names. We will have
 ## pointer (chaining)
 The submodule for pointer colouring supports chaining them as well, which will lead to a string of dereferenced pointers
 until a determined length is reached or something useful is found. You can find examples in the register commands. It
-uses internally the memory layout module
+uses internally the memory layout module. 
+
+You can change the left and right arrows, an ellipsis and an infinity arrow (for things pointing to itself) via the
+`vdb-pointer-` configs for `arrow-right`, `arrow-left`, `ellipss` and `arrow-infinity`.
+
+For the auto detection of ascii in pointer values, you can set the least amount of characters necessarys with
+`vdb-pointer-min-ascii` (default is 4)
 
 ## memory layout
 Provides information about the memory layout gathered from various sources. Primary source of information for the vmmap
