@@ -21,26 +21,6 @@ flag_colour = vdb.config.parameter("vdb-register-colors-flags", "#adad00", gdb_t
 int_int = vdb.config.parameter("vdb-register-int-as-int",True)
 
 
-#flag_bits = [
-#( "ID", 0x15 ),
-#( "VIP", 0x14 ),
-#( "VIF", 0x13 ),
-#( "AC", 0x12 ),
-#( "VM", 0x11 ),
-#( "RF", 0x10 ),
-#( "NT", 0xe ),
-#( "IOPL", 0xc ),
-#( "OF", 0xb ),
-#( "DF", 0xa ),
-#( "IF", 0x9 ),
-#( "TF", 0x8 ),
-#( "SF", 0x7 ),
-#( "ZF", 0x6 ),
-#( "AF", 0x4 ),
-#( "PF", 0x2 ),
-#( "CF", 0x0 ),
-#		]
-
 flag_descriptions = {
         0 : ( 1, "CF",  "Carry",             { 1 : ("CY","(Carry)"),           0 : ("NC","(No Carry)") } ),
         2 : ( 1, "PF",  "Parity",            { 1 : ("PE","(Parity Even)"),     0 : ("PO","(Parity Odd)") } ),
@@ -60,29 +40,6 @@ flag_descriptions = {
         20: ( 1, "VIP", "Virt intr pending", None ),
         21: ( 1, "ID",  "CPUID available",   None ),
         }
-
-#mxcsr_bits = [
-#( "FZ", 0xf ),
-#( "R+", 0xe ),
-#( "R-", 0xd ),
-#
-#( "RZ", 13 ),
-#( "RN", 13 ),
-#
-#( "PM", 0xc ),
-#( "UM", 0xb ),
-#( "OM", 0xa ),
-#( "ZM", 0x9 ),
-#( "DM", 0x8 ),
-#( "IM", 0x7 ),
-#( "DAZ", 0x6 ),
-#( "PE", 0x5 ),
-#( "UE", 0x4 ),
-#( "OE", 0x3 ),
-#( "ZE", 0x2 ),
-#( "DE", 0x1 ),
-#( "IE", 0x0 ),
-#		]
 
 mxcsr_descriptions = {
         0 : ( 1, "IE", "EF: Invalid operation", None ),
@@ -161,11 +118,6 @@ possible_fpu = [
     "s10","s11","s12","","s13","s14","s15","s16","","s17","s18","s19",
 		]
 
-#possible_vectors = [
-#"xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7","xmm8","xmm9","xmm10","xmm11","xmm12","xmm13","xmm14","xmm15",
-#"ymm0","ymm1","ymm2","ymm3","ymm4","ymm5","ymm6","ymm7","ymm8","ymm9","ymm10","ymm11","ymm12","ymm13","ymm14","ymm15"
-#		]
-
 gdb_uint64_t = gdb.lookup_type("unsigned long long")
 gdb_uint8_t = gdb.lookup_type("unsigned char")
 
@@ -181,7 +133,7 @@ class Registers():
         self.all = {}
         self.type_indices = {}
         self.next_type_index = 1
-        self.eflags = None
+#        self.eflags = None
         try:
             frame=gdb.selected_frame()
         except:
@@ -192,41 +144,14 @@ class Registers():
         self.archsize = vdb.arch.pointer_size
 
         self.collect_registers()
-#        return
 
-#        for reg in possible_registers:
-#            if( isinstance(reg,Iterable) and not isinstance(reg,str) ):
-#                for oreg in reg:
-#                    if( self.parse_register(frame,oreg,self.regs) is not None ):
-#                        break
-#            else:
-#                self.parse_register(frame,reg,self.regs)
 
-#        for reg in possible_prefixes:
-#            self.parse_register(frame,reg,self.segs)
-
-#        for i in range(0,32):
-#            v = None
-#            for rt in [ "z", "y", "x", "" ]:
-#                reg=f"{rt}mm{i}"
-#                try:
-#                    					print("type(v)")
-#					print("reg = '%s'" % reg )
-#                    v = frame.read_register(reg)
-#					print("v = '%s'" % v )
-#                    break
-#                except:
-#                    continue
-#            if( v is not None ):
-#                t = v.type
-#                self.vecs[reg] = ( v, t )
-
-        self.eflags = self.read(frame,"eflags")
+#        self.eflags = self.read(frame,"eflags")
 
 #        for reg in possible_fpu:
 #            self.parse_register(frame,reg,self.fpus)
 
-        self.mxcsr = self.read(frame,"mxcsr")
+#        self.mxcsr = self.read(frame,"mxcsr")
 
     def get( self, name ):
         return self.all.get(name,None)
@@ -277,8 +202,8 @@ class Registers():
         print("self.type_indices = '%s'" % self.type_indices )
         print("self.next_type_index = '%s'" % self.next_type_index )
         print("self.archsize = '%s'" % self.archsize )
-        print("self.eflags = '%s'" % self.eflags )
-        print("self.mxcsr = '%s'" % self.mxcsr )
+#        print("self.eflags = '%s'" % self.eflags )
+#        print("self.mxcsr = '%s'" % self.mxcsr )
 
 
     def read( self, frame, reg ):
@@ -642,31 +567,6 @@ class Registers():
 
         return vector[0]
 
-    def ex_mxcsr( self ):
-        return self._mxcsr(True)
-    
-    def _mxcsr( self, extended = False ):
-        ret=""
-        if( self.mxcsr is not None ):
-            val = int(self.mxcsr)
-
-            ret += vdb.color.color(f" mxcsr ",color_names.value)+f"0x{val:08x} {self.mxcsr}"
-            ret += "\n"
-            ret += "\n"
-            if( extended ):
-#                ret += self.format_flags( "mxcsr", int(self.mxcsr), 15, mxcsr_descriptions )
-                ret += self.format_flags( "mxcsr" )
-            else:
-                ret += " "
-
-                ret += self.format_flags_short("mxcsr",True)
-#                ret += vdb.color.color(f" mxcsr ",color_names.value)+f"0x{val:016x}"
-#                ret += "\n"
-        return ret
-
-
-
-
     def vectors( self, extended = False ):
         ret=""
         cnt=0
@@ -894,10 +794,6 @@ class Registers():
                 print(self.prefixes())
             elif( s == "P" ):
                 print(self.ex_prefixes())
-            elif( s == "m" ):
-                print(self._mxcsr())
-            elif( s == "M" ):
-                print(self.ex_mxcsr())
             elif( s == "." ):
                 pass
             elif( s == "?" ):
