@@ -459,6 +459,10 @@ class Registers():
             pass
         return self.prefixes()
 
+    def format_special( self, name ):
+        if( name == "pkru" ):
+            return "PKRU"
+        return None
 
     def format_ints( self, regs, extended = False, wrapat = None ):
         if( wrapat is None ):
@@ -466,15 +470,22 @@ class Registers():
         ret = ""
         cnt=0
         for regdesc,valt in regs.items():
-            val,t =valt
-            if( val.type.code == gdb.TYPE_CODE_STRUCT ):
-                for f in val.type.fields():
-                    fv = val[f]
-                    cnt += 1
-                    ret += self.format_register(regdesc,fv,t,extended, int_int.value, suffix = f.name )
-            else:
+            special = self.format_special(regdesc.name)
+            if( special is not None ):
                 cnt += 1
-                ret += self.format_register(regdesc,val,t,extended, int_int.value )
+                ret += special
+            else:
+                val,t =valt
+                if( val.type.code == gdb.TYPE_CODE_STRUCT ):
+                    for f in val.type.fields():
+                        fv = val[f]
+                        if( cnt % wrapat == 0 ):
+                            ret += "\n"
+                        cnt += 1
+                        ret += self.format_register(regdesc,fv,t,extended, int_int.value, suffix = f.name )
+                else:
+                    cnt += 1
+                    ret += self.format_register(regdesc,val,t,extended, int_int.value )
             if( cnt % wrapat == 0 ):
                 ret += "\n"
 
