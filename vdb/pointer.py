@@ -17,9 +17,11 @@ vdb.enabled_modules.append("pointer")
 
 arrow_right = vdb.config.parameter("vdb-pointer-arrow-right", " → " )
 arrow_left = vdb.config.parameter("vdb-pointer-arrow-left", " ←  " )
-arrow_infinity = vdb.config.parameter("vdb-pointer-arrow-left", " ↔ " )
+arrow_infinity = vdb.config.parameter("vdb-pointer-arrow-infinity", " ↔ " )
 
 ellipsis = vdb.config.parameter("vdb-pointer-ellipsis", "…" )
+
+min_acsii = vdb.config.parameter("vdb-pointer-min-ascii", 4 )
 
 
 gdb_void     = None
@@ -80,7 +82,8 @@ def annotate( ptr ):
 def as_tail( ptr ):
     s = as_c_str(ptr)
     if( s is not None ):
-        return f"[{len(s)}]'{s}'"
+        if( len(s) >= min_acsii.value ):
+            return f"[{len(s)}]'{s}'"
 
     at = vdb.memory.mmap.get_atype( ptr )
 #    print("at = '%s'" % at )
