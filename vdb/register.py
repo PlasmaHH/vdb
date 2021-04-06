@@ -389,13 +389,18 @@ class Registers():
 #		print("xvec = '%s'" % xvec )
         for i in range(0,amnt):
             for regdesc,vals in xvec:
+#                print("self.read(regdesc.name).type.sizeof = '%s'" % self.read(regdesc.name).type.sizeof )
                 if( i == 0 ):
                     ret += vdb.color.color(f" {regdesc.name:<6}",color_names.value)
                 else:
                     ret += f"       "
                 try:
                     val=int(vals[i])
-                    ret += f"0x{val:032x}"
+
+                    if( self.read(regdesc.name).type.sizeof >= 16 ):
+                        ret += f"0x{val:032x}"
+                    else:
+                        ret += f"0x{val:016x}"
                 except:
                     val=vals[i]
                     ret += f"{val:32s}"
@@ -428,7 +433,13 @@ class Registers():
             try:
                 xval.append(int(val[tname][i].cast(gdb_uint64_t)))
             except:
-                xval.append("INVALID")
+                try:
+                    xval.append(int(val[tname].cast(gdb_uint64_t)))
+                except:
+                    xval.append("INVALID")
+                    print("tname = '%s'" % (tname,) )
+                    print("i = '%s'" % (i,) )
+                    traceback.print_exc()
 
         yval=[]
 #        print("len(xval) = '%s'" % len(xval) )
