@@ -143,7 +143,7 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False 
         print(f"Can not access memory at 0x{addr:x}")
         return
     xaddr = addr
-    p,add,col,mm = vdb.pointer.color(addr,vdb.arch.pointer_size)
+#    p,add,col,mm,_ = vdb.pointer.color(addr,vdb.arch.pointer_size)
 #    nm = gdb.parse_and_eval(f"(void*)({addr})")
     current_symbol = None
     next_color = -1
@@ -154,7 +154,7 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False 
     while(len(data) > 0 ):
         dc = data[:16]
         data = data[16:]
-        p,_,_,_ = vdb.pointer.color(xaddr,vdb.arch.pointer_size)
+        p,_,_,_,_ = vdb.pointer.color(xaddr,vdb.arch.pointer_size)
         cnt = 0
         l = ""
         t = ""

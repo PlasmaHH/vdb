@@ -104,7 +104,8 @@ possible_registers = [
 		"r8" , "r9" , "r10", "r11",
 		"r12", "r13", "r14", "r15",
 		"r16", "r17", "r18",
-        "lr","cpsr","fpscr"
+        "lr","cpsr","fpscr",
+        "sp","pc"
 		]
 
 possible_prefixes = [
@@ -258,22 +259,31 @@ class Registers():
             name = regdesc.name
             if suffix is not None:
                 name += "." + suffix
-            ret = vdb.color.color(f" {name:<6}",color_names.value)
+            retn = vdb.color.color(f"{name}",color_names.value)
+            retnl = len(name)
 
+            retv = ""
+            retvl = 0
             if( int_as_int ):
                 if( self.archsize == 32 ):
-                    ret += f" {int(val):>10} "
+                    retv  = f"{int(val):>10} "
+                    retvl = 11
                 else:
-                    ret += f" {int(val):>20} "
+                    retv  = f"{int(val):>20} "
+                    retvl = 21
 
             if( chained ):
-                ret += vdb.pointer.chain(val,self.archsize)[0]
+                retv += vdb.pointer.chain(val,self.archsize)[0]
+                # We need a nice way to adjust retl here, probably need to modify pointer.chain()
             else:
-                ret += vdb.pointer.color(val,self.archsize)[0]
+                r,_,_,_,rl = vdb.pointer.color(val,self.archsize)
+                retv += r
+                retvl += rl
         except:
-            ret = "ERR " + regdesc.name + " : " + str(val)
+            retv = "ERR " + regdesc.name + " : " + str(val)
+            retvl = len(retv)
             raise
-        return ret
+        return ( retn, retnl, retv, retvl )
 
     def format_float( self,name, val,t ):
         try:
@@ -506,6 +516,9 @@ class Registers():
             wrapat = short_columns.value
         ret = ""
         cnt=0
+
+        rtbl = []
+        rtline = []
         for regdesc,valt in regs.items():
             special = self.format_special(regdesc.name)
             if( special is not None ):
@@ -517,14 +530,33 @@ class Registers():
                     for f in val.type.fields():
                         fv = val[f]
                         if( cnt % wrapat == 0 ):
-                            ret += "\n"
+                            rtbl.append(rtline)
+                            rtline = []
+#                            ret += "\n"
                         cnt += 1
-                        ret += self.format_register(regdesc,fv,t,extended, int_int.value, suffix = f.name )
+                        rnv,rnl,rvv,rvl = self.format_register(regdesc,fv,t,extended, int_int.value, suffix = f.name )
+#                        ret += rnv + rvv
+                        rtline.append( (rnv,rnl) )
+                        rtline.append( (rvv,rvl) )
                 else:
                     cnt += 1
-                    ret += self.format_register(regdesc,val,t,extended, int_int.value )
+                    rnv,rnl,rvv,rvl = self.format_register(regdesc,val,t,extended, int_int.value )
+#                    ret += rnv + rvv
+#                    print("rv = '%s'" % (rv,) )
+#                    print("rl = '%s'" % (rl,) )
+                    rtline.append( (rnv,rnl) )
+                    rtline.append( (rvv,rvl) )
             if( cnt % wrapat == 0 ):
-                ret += "\n"
+                rtbl.append(rtline)
+                rtline = []
+#                ret += "\n"
+
+
+        if( len(rtline) > 0 ):
+            rtbl.append(rtline)
+
+#        ret += "\nTABLE\n"
+        ret += vdb.util.format_table(rtbl,padbefore=" ", padafter="")
 
         if( not ret.endswith("\n") ):
             ret += "\n"
@@ -854,7 +886,7 @@ class Registers():
             elif( s == "o" ):
                 print(self.other(extended=False))
             elif( s == "O" ):
-                print(self.other(extended=True))
+                print(self.other(extended=True,wrapat=1))
             elif( s == "p" ):
                 print(self.prefixes())
             elif( s == "P" ):

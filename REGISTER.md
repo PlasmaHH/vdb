@@ -33,15 +33,15 @@ If you want to show the integer value alongside the hex value of each register s
     ![](img/reg.fF.png)
 
     (Note how you have to use `f.` to distinguish it from the "full" shortcut.
-* `xX` shows the integer register [e]flags
+* `xX` shows the known flags registers (like eflags and mxcsr)
 
     ![](img/reg.xX.png)
 * `pP` Shows the prefix/segment registers.
 
     ![](img/reg.pP.png)
-* `mM` shows the SSE MXCSR register.
+* `oO` Shows the remaining registers that did not fit into any of these groups (usually integers)
 
-    ![](img/reg.mM.png)
+    ![](img/reg.oO.png)
 
 ### `reg/s` (short)
 Same as `reg/ipx`.

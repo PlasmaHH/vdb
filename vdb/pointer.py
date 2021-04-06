@@ -113,14 +113,16 @@ def color( ptr, archsize ):
                 rest = True
             else:
                 ps0 += p
-        ret = vdb.color.color("0x" + ps0,col) + ps1
+        ret,rl = vdb.color.colorl("0x" + ps0,col)
+        ret += ps1
+        rl += len(ps1)
     else:
 #        print("ptr = '%s'" % ptr )
 #        print("plen = '%s'" % plen )
 #        print("type(ptr) = '%s'" % type(ptr) )
-        ret = vdb.color.color(f"0x{ptr:0{plen}x}",col)
+        ret,rl = vdb.color.colorl(f"0x{ptr:0{plen}x}",col)
 #    return ( ret, additional )
-    return ( ret, additional, col, mm )
+    return ( ret, additional, col, mm, rl )
 
 def escape_spaces( s ):
     s = s.replace("\\","\\\\")
@@ -135,11 +137,11 @@ def chain( ptr, archsize, maxlen = 8, test_for_ascii = True ):
     if( gdb_void == None ):
         update_types()
     if( maxlen == 0 ):
-        return ellipsis.value
+        return (ellipsis.value,True)
 
 #    print("chain(0x%x,…)" % ptr )
 #    print("type(ptr) = '%s'" % type(ptr) )
-    ret,add,_,_ = color(ptr,archsize)
+    ret,add,_,_,_ = color(ptr,archsize)
     pure = True
 
     an = annotate( ptr )
