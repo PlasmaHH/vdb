@@ -19,6 +19,7 @@ color_names = vdb.config.parameter("vdb-register-colors-names", "#4c0", gdb_type
 reg_default = vdb.config.parameter("vdb-register-default","/e")
 flag_colour = vdb.config.parameter("vdb-register-colors-flags", "#adad00", gdb_type = vdb.config.PARAM_COLOUR)
 int_int = vdb.config.parameter("vdb-register-int-as-int",True)
+short_columns = vdb.config.parameter("vdb-register-short-columns",6)
 
 
 flag_descriptions = {
@@ -78,7 +79,7 @@ bndstatus_descriptions = {
 flag_info = {
             "eflags" : ( 21, flag_descriptions, None ),
             "mxcsr"  : ( 15, mxcsr_descriptions, None ),
-            "bndcfgu" : ( 4, bndcfgu_descriptions, ( "raw", "config" ) ),
+            "bndcfgu" : ( 12, bndcfgu_descriptions, ( "raw", "config" ) ),
             "bndstatus" : ( 4, bndstatus_descriptions, ( "raw", "status" ) )
             }
 possible_flags = [
@@ -88,6 +89,7 @@ possible_flags = [
 abbrflags = [ 
         "mxcsr"
         ]
+
 possible_registers = [
 		( "rax", "eax", "ax"),
         ( "rbx", "ebx", "bx"),
@@ -129,35 +131,39 @@ class Registers():
         self.vecs = {}
         self.fpus = {}
         self.rflags = {}
+        self.groups = {}
         self.thread = 0
         self.all = {}
+        self.others = {}
         self.type_indices = {}
         self.next_type_index = 1
-#        self.eflags = None
+
         try:
             frame=gdb.selected_frame()
         except:
             return
-#        self.frame = 22
         thread=gdb.selected_thread()
         self.thread = thread.num
         self.archsize = vdb.arch.pointer_size
 
         self.collect_registers()
 
-
-#        self.eflags = self.read(frame,"eflags")
-
-#        for reg in possible_fpu:
-#            self.parse_register(frame,reg,self.fpus)
-
-#        self.mxcsr = self.read(frame,"mxcsr")
-
     def get( self, name ):
         return self.all.get(name,None)
 
+    def in_group( self, name, group ):
+        groups = self.groups.get(name,None)
+        if( groups is not None ):
+            return group in groups
+        return False
+
     def collect_registers( self ):
         frame=gdb.selected_frame()
+        for grp in frame.architecture().register_groups():
+#            print("grp = '%s'" % (grp,) )
+            for reg in frame.architecture().registers(grp.name):
+                self.groups.setdefault(reg.name,set()).add( grp.name )
+#                print(f"{grp} : {reg}")
 #        print(f"registers we don't know where to put them yet (archsize {self.archsize}):")
         for reg in frame.architecture().registers():
             self.all[reg.name] = reg
@@ -165,7 +171,7 @@ class Registers():
             # try to figure out which register type this is by first sorting according to its type
             if( reg.name in possible_flags ):
                 self.rflags[reg] = ( v, v.type )
-            elif( v.type.code == gdb.TYPE_CODE_UNION ):
+            elif( self.in_group(reg.name,"vector") or v.type.code == gdb.TYPE_CODE_UNION ):
                 self.vecs[reg] = ( v, v.type )
             elif( v.type.code == gdb.TYPE_CODE_FLT ):
                 self.fpus[reg] = ( v, v.type )
@@ -173,15 +179,14 @@ class Registers():
                     possible_fpu.append(reg.name)
             elif( v.type.code == gdb.TYPE_CODE_FLAGS ):
                 self.rflags[reg] = ( v, v.type )
+            elif( reg.name in possible_fpu ):
+                self.fpus[reg] = ( v, v.type )
+            elif( v.type.sizeof*8 != self.archsize and v.type.code == gdb.TYPE_CODE_INT ): # assume non archsize integers are prefixes
+                self.segs[reg] = ( v, v.type )
+            elif( self.in_group(reg.name,"general") or reg.name in possible_registers ):
+                self.regs[reg] = ( v, v.type )
             else:
-                # Could not sort them in according to their types, lets check if we have them in some candidate lists
-                if( reg.name in possible_fpu ):
-                    self.fpus[reg] = ( v, v.type )
-                elif( v.type.sizeof*8 != self.archsize and v.type.code == gdb.TYPE_CODE_INT ): # assume non archsize integers are prefixes
-                    self.segs[reg] = ( v, v.type )
-                else:
-                    self.regs[reg] = ( v, v.type )
-#                    print(f"{reg} '{reg.name}' {v} {v.type}@{v.type.sizeof} ({v.type.tag}){vdb.util.gdb_type_code(v.type.code)}")
+                self.others[reg] = ( v, v.type )
 
 
 
@@ -229,7 +234,6 @@ class Registers():
             return None
 
     def format_register( self, regdesc, val,t, chained = False, int_as_int = False,suffix = None ):
-
 #        print("regdesc = '%s'" % regdesc )
 #        print("regdesc.name = '%s'" % regdesc.name )
 #        print("val = '%s'" % val )
@@ -456,16 +460,12 @@ class Registers():
         return self.prefixes()
 
 
-    def ex_vectors( self ):
-        return self.vectors( extended = True )
-
-    def ex_ints( self ):
-        return self.ints(True,1)
-
-    def ints( self, extended = False, wrapat = 6 ):
+    def format_ints( self, regs, extended = False, wrapat = None ):
+        if( wrapat is None ):
+            wrapat = short_columns.value
         ret = ""
         cnt=0
-        for regdesc,valt in self.regs.items():
+        for regdesc,valt in regs.items():
             val,t =valt
             if( val.type.code == gdb.TYPE_CODE_STRUCT ):
                 for f in val.type.fields():
@@ -481,6 +481,12 @@ class Registers():
         if( not ret.endswith("\n") ):
             ret += "\n"
         return ret
+
+    def ints( self, extended = False, wrapat = None ):
+        return self.format_ints( self.regs, extended, wrapat )
+
+    def other( self, extended = False, wrapat = None ):
+        return self.format_ints( self.others, extended, wrapat )
 
     def prefixes( self ):
         ret = ""
@@ -630,14 +636,12 @@ class Registers():
             ex &= 1
 
             short = ""
-            text = "Reserved"
-            meaning = None
 
             tbit = f"{bit:02x}"
             desc = descriptions.get(bit,None)
             if( desc is not None ):
                 dshort = desc[1]
-                text = desc[2]
+#                text = desc[2]
                 mp = desc[3]
                 sz = desc[0]
                 if( sz > 1 ):
@@ -670,10 +674,6 @@ class Registers():
         count,descriptions,rawname = flag_info.get(name)
         regdesc = self.get(name)
         flags,valtype = self.rflags.get(regdesc)
-#        val = int(val)
-#        return self.format_flags( name, val, count, desc )
-
-#    def format_flags( self, name, flags, count, descriptions ):
 
         if( rawname is not None ):
             iflags = int(flags[rawname[0]])
@@ -684,6 +684,9 @@ class Registers():
         ftbl.append( ["Bit","Mask","Abrv","Description","Val","Meaning"] )
 
         bit = 0
+        con_start = 0
+        con_end = 0
+        con_mask = 0
 #        for bit in range(0,count):
         while bit <= count:
             mask = 1 << bit
@@ -697,6 +700,15 @@ class Registers():
             tbit = f"{bit:02x}"
             desc = descriptions.get(bit,None)
             if( desc is not None ):
+                if( con_mask != 0 ):
+                    if( con_start == con_end ):
+                        con_tbit = f"{con_start:02x}"
+                    else:
+                        con_tbit = f"{con_start:02x}-{con_end:02x}"
+                    scon_mask = f"0x{con_mask:04x}"
+                    ftbl.append( [ con_tbit, scon_mask, short, text, "", meaning ] )
+                    con_mask = 0
+
                 short = desc[1]
                 text = desc[2]
                 mp = desc[3]
@@ -715,20 +727,21 @@ class Registers():
                     ms,ml= mp.get(ex,("","??"))
                     meaning = ms+ml
 
-            mask = f"0x{mask:04x}"
+                mask = f"0x{mask:04x}"
+                ftbl.append( [ tbit, mask, short, text, ex, meaning ] )
+            else:
+                if( con_mask == 0 ):
+                    con_mask = mask
+                    con_start = bit
+                    con_end = bit
+                else:
+                    con_end += 1
+                    con_mask |= mask
 
-
-            ftbl.append( [ tbit, mask, short, text, ex, meaning ] )
             bit += 1
 
         ret = vdb.util.format_table( ftbl )
         return ret
-
-    def ex_flags( self ):
-        return self.flags(True)
-#        if( self.eflags is not None ):
-#            return self.format_flags( "eflags", int(self.eflags), 21, flag_descriptions )
-#        return ""
 
     def flags( self, extended = False ):
         ret=""
@@ -775,21 +788,25 @@ class Registers():
     def print( self, showspec ):
         for s in showspec:
             if( s == "i" ):
-                print(self.ints())
+                print(self.ints(extended=False))
             elif( s == "I" ):
-                print(self.ex_ints())
+                print(self.ints(extended=True,wrapat=1))
             elif( s == "v" ):
-                print(self.vectors())
+                print(self.vectors(extended=False))
             elif( s == "V" ):
-                print(self.ex_vectors())
+                print(self.vectors(extended=True))
             elif( s == "f" ):
                 print(self.floats())
             elif( s == "F" ):
                 print(self.ex_floats())
             elif( s == "x" ):
-                print(self.flags())
+                print(self.flags(extended=False))
             elif( s == "X" ):
-                print(self.ex_flags())
+                print(self.flags(extended=True))
+            elif( s == "o" ):
+                print(self.other(extended=False))
+            elif( s == "O" ):
+                print(self.other(extended=True))
             elif( s == "p" ):
                 print(self.prefixes())
             elif( s == "P" ):

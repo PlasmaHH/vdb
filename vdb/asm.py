@@ -827,6 +827,7 @@ def parse_from_gdb( arg, fakedata = None ):
     return_mnemonics = x86_return_mnemonics
     call_mnemonics = x86_call_mnemonics
 
+#    print("arg = '%s'" % (arg,) )
     if( fakedata is None ):
         dis = gdb.execute(f'disassemble/r {arg}',False,True)
     else:
