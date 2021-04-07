@@ -90,4 +90,11 @@ define hook-start
     python vdb.event.start_hook()
 end
 """)
+
+#@new_objfile()
+#@new_inferior()
+#@new_thread()
+#def debug_event( *arg ):
+#    print("DEBUG EVENT")
+#    print("arg = '%s'" % (arg,) )
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

@@ -103,7 +103,10 @@ possible_registers = [
         "r0","r1","r2","r3","r4","r5","r6","r7",
 		"r8" , "r9" , "r10", "r11",
 		"r12", "r13", "r14", "r15",
-		"r16", "r17", "r18",
+		"r16", "r17", "r18", "r19",
+        "r20", "r21", "r22", "r23",
+        "r24", "r25", "r26", "r27",
+        "r28", "r29", "r30", "r31",
         "lr","cpsr","fpscr",
         "sp","pc"
 		]
@@ -189,6 +192,8 @@ class Registers():
             elif( reg.name in possible_fpu ):
                 self.fpus[reg] = ( v, v.type )
             elif( v.type.sizeof*8 != self.archsize and v.type.code == gdb.TYPE_CODE_INT ): # assume non archsize integers are prefixes
+                print("v.type.sizeof*8 = '%s'" % (v.type.sizeof*8,) )
+                print("self.archsize = '%s'" % (self.archsize,) )
                 self.segs[reg] = ( v, v.type )
             elif( self.in_group(reg.name,"general") or reg.name in possible_registers ):
                 self.regs[reg] = ( v, v.type )
@@ -210,6 +215,9 @@ class Registers():
         print("self.fpus:")
         for r,v in self.fpus.items():
             print(f"{r} : {v[0]} ({v[1]})")
+        print("self.groups:")
+        for r,g in self.groups.items():
+            print(f"{r} : {g}")
         print("self.thread = '%s'" % self.thread )
         print("self.type_indices = '%s'" % self.type_indices )
         print("self.next_type_index = '%s'" % self.next_type_index )
