@@ -50,10 +50,10 @@ next_mark_ptr     = vdb.config.parameter("vdb-asm-next-mark-pointer", True )
 shorten_header    = vdb.config.parameter("vdb-asm-shorten-header", False )
 prefer_linear_dot = vdb.config.parameter("vdb-asm-prefer-linear-dot",False)
 
-offset_fmt = vdb.config.parameter("vdb-asm-offset-format", "<+{offset:<{maxlen}}>:" )
-offset_txt_fmt = vdb.config.parameter("vdb-asm-text-offset-format", "<{offset:<{maxlen}}>:" )
-offset_fmt_dot = vdb.config.parameter("vdb-asm-offset-format-dot", " <+{offset:<{maxlen}}>" )
-offset_txt_fmt_dot = vdb.config.parameter("vdb-asm-text-offset-format-dot", " <{offset:<{maxlen}}>" )
+offset_fmt = vdb.config.parameter("vdb-asm-offset-format", "<{offset:<+{maxlen}}>:" )
+offset_txt_fmt = vdb.config.parameter("vdb-asm-text-offset-format", "<+{offset:<{maxlen}}>:" )
+offset_fmt_dot = vdb.config.parameter("vdb-asm-offset-format-dot", " <{offset:<+{maxlen}}>" )
+offset_txt_fmt_dot = vdb.config.parameter("vdb-asm-text-offset-format-dot", " <+{offset:<{maxlen}}>" )
 
 color_ns       = vdb.config.parameter("vdb-asm-colors-namespace",   "#ddf", gdb_type = vdb.config.PARAM_COLOUR)
 color_function = vdb.config.parameter("vdb-asm-colors-function",    "#99f", gdb_type = vdb.config.PARAM_COLOUR)
@@ -537,7 +537,7 @@ ascii mockup:
             if( "o" in showspec ):
                 try:
                     io = vdb.util.xint(i.offset)
-                    line.append( vdb.color.color(offset_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value))
+                    line.append( vdb.color.color(offset_fmt.value.format(offset = io, maxlen = self.maxoffset ),color_offset.value))
                 except:
                     line.append( vdb.color.color(offset_txt_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value))
 
