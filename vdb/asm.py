@@ -650,7 +650,11 @@ ascii mockup:
             tr.td_raw(vdb.dot.color(f"0x{i.address:0{plen}x}",color_addr_dot.value))["port"] = str(i.address)
 
         if( "o" in showspec ):
-            tr.td_raw(vdb.dot.color(offset_fmt_dot.value.format(offset = i.offset, maxlen = self.maxoffset),color_offset_dot.value))
+            try:
+                io = int(i.offset)
+                tr.td_raw(vdb.dot.color(offset_fmt_dot.value.format(offset = io, maxlen = self.maxoffset),color_offset_dot.value))
+            except:
+                tr.td_raw(vdb.dot.color(offset_txt_fmt_dot.value.format(offset = i.offset, maxlen = self.maxoffset),color_offset_dot.value))
 
         if( "b" in showspec ):
             tr.td_raw(vdb.dot.color(' '.join(i.bytes),color_bytes_dot.value))
