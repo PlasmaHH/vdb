@@ -56,7 +56,7 @@ colouring to `None` (default) it will use a list of regexes to check for which c
 for the prefix.
 
 You have a little more control over the way offset is formatted by using the setting `vdb-asm-offset-format` which
-defaults to `<+{offset:<{maxlen}}>:` where `offset` is the offset value and `maxlen` is the maximum width of an integer
+defaults to `<{offset:<+{maxlen}}>:` where `offset` is the offset value and `maxlen` is the maximum width of an integer
 encountered while parsing the current listing.
 
 ![](img/disassemble.png)
