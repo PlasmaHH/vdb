@@ -483,13 +483,19 @@ class Registers():
 
     def ex_prefixes( self ):
         try:
-            fs_base = self.arch_prctl(0x1003)
+            fs_base = self.read("fs_base")
+            if( fs_base is None ):
+                fs_base = self.arch_prctl(0x1003)
+                if( fs_base is not None ):
+                    fs_base = int.from_bytes(fs_base,"little")
             if( fs_base is not None ):
-                fs_base = int.from_bytes(fs_base,"little")
                 self.segs[self.get("fs")] = ( fs_base, None )
-            gs_base = self.arch_prctl(0x1004)
+            gs_base = self.read("gs_base")
+            if( gs_base is None ):
+                gs_base = self.arch_prctl(0x1004)
+                if( gs_base is not None ):
+                    gs_base = int.from_bytes(gs_base,"little")
             if( gs_base is not None ):
-                gs_base = int.from_bytes(gs_base,"little")
                 self.segs[self.get("gs")] = ( gs_base, None )
         except:
             traceback.print_exc()
