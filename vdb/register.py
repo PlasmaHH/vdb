@@ -108,7 +108,7 @@ possible_registers = [
         "r24", "r25", "r26", "r27",
         "r28", "r29", "r30", "r31",
         "lr","cpsr","fpscr",
-        "sp","pc"
+        "sp","pc", "ctr"
 		]
 
 possible_prefixes = [
@@ -191,9 +191,9 @@ class Registers():
                 self.rflags[reg] = ( v, v.type )
             elif( reg.name in possible_fpu ):
                 self.fpus[reg] = ( v, v.type )
-            elif( v.type.sizeof*8 != self.archsize and v.type.code == gdb.TYPE_CODE_INT ): # assume non archsize integers are prefixes
-                print("v.type.sizeof*8 = '%s'" % (v.type.sizeof*8,) )
-                print("self.archsize = '%s'" % (self.archsize,) )
+            elif( v.type.sizeof*8 < self.archsize and v.type.code == gdb.TYPE_CODE_INT ): # assume non archsize integers are prefixes
+#                print("v.type.sizeof*8 = '%s'" % (v.type.sizeof*8,) )
+#                print("self.archsize = '%s'" % (self.archsize,) )
                 self.segs[reg] = ( v, v.type )
             elif( self.in_group(reg.name,"general") or reg.name in possible_registers ):
                 self.regs[reg] = ( v, v.type )

@@ -755,10 +755,30 @@ ascii mockup:
         # "up" jumping part of the target_of, the "down" jumping part is done in finish()
         self.add_target(ins)
 
-x86_unconditional_jump_mnemonics = set([ "jmp", "jmpq" ] )
+x86_conditional_jump_mnemonics = set([ "jmp", "jmpq" ] )
+x86_unconditional_jump_mnemonics = set([ "jo", "jno", "js", "jns", "je", "jz", "jne", "jnz", "jb", "jnae", "jc", "jnb","jae","jnc","jbe","jna","ja","jnbe","jl","jng","jge","jnl","jle","jng","jg","jnle","jp","jnle","jp","jpe","jnp","jpo","jcxz","jecxz" ])
 x86_return_mnemonics = set (["ret","retq","iret"])
 x86_call_mnemonics = set(["call","callq","int"])
 x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd" ])
+
+arm_conditional_suffixes = [ "eq","ne","cs","hs","cc","lo","mi","pl","vs","vc","hi","ls","ge","lt","gt","le" ]
+arm_unconditional_jump_mnemonics = set([ "b", "bl", "blx" ] )
+arm_conditional_jump_mnemonics = set()
+for uj in arm_unconditional_jump_mnemonics:
+    for csuf in arm_conditional_suffixes:
+        arm_conditional_jump_mnemonics.add(uj+csuf)
+
+#print("arm_conditional_jump_mnemonics = '%s'" % (arm_conditional_jump_mnemonics,) )
+
+arm_return_mnemonics = set ([])
+arm_call_mnemonics = set([])
+arm_prefixes = set([ ])
+
+mnemonics = {
+        "i386:x86-64" : ( x86_prefixes , x86_conditional_jump_mnemonics, x86_unconditional_jump_mnemonics , x86_return_mnemonics , x86_call_mnemonics ),
+        "arm" : ( arm_prefixes , arm_conditional_jump_mnemonics, arm_unconditional_jump_mnemonics , arm_return_mnemonics , arm_call_mnemonics ),
+
+        }
 
 pc_list = [ "rip", "eip", "ip", "pc" ]
 last_working_pc = ""
@@ -823,9 +843,17 @@ def parse_from_gdb( arg, fakedata = None ):
 
 
     prefixes = x86_prefixes
+    conditional_jump_mnemonics = x86_conditional_jump_mnemonics
     unconditional_jump_mnemonics = x86_unconditional_jump_mnemonics
     return_mnemonics = x86_return_mnemonics
     call_mnemonics = x86_call_mnemonics
+
+    try:
+        archname = gdb.selected_frame().architecture().name()
+        prefixes, conditional_jump_mnemonics, unconditional_jump_mnemonics, return_mnemonics, call_mnemonics = mnemonics[archname]
+    except KeyError as e:
+        print("Not configured for architecture %s, falling back to x86" % archname )
+        pass
 
 #    print("arg = '%s'" % (arg,) )
     if( fakedata is None ):
@@ -931,6 +959,7 @@ def parse_from_gdb( arg, fakedata = None ):
                     last_cmp_immediate = vdb.util.xint(cmparg)
 
             if( len(tokens) > tpos ):
+#                print("tokens = '%s'" % (tokens,) )
 #                print("tokens[tpos] = '%s'" % tokens[tpos] )
                 if( tokens[tpos] == "#" ):
                     ins.reference = " ".join(tokens[tpos+1:])
@@ -938,13 +967,20 @@ def parse_from_gdb( arg, fakedata = None ):
                 else:
                     if( ins.mnemonic not in unconditional_jump_mnemonics ):
                         ins.conditional_jump = True
-#                    print("TARGET ADD %s",tokens[tpos-1])
+#                    print("TARGET ADD '%s'" % tokens[tpos-1])
                     try:
                         ins.targets.add(vdb.util.xint(tokens[tpos-1]))
                     except:
                         pass
                     ins.target_name = " ".join(tokens[tpos:])
+            elif( ins.mnemonic in conditional_jump_mnemonics ):
+#                print("CONDITIONAL JUMP? %s %s" % (ins.mnemonic, tokens ) )
+                try:
+                    ins.targets.add(vdb.util.xint(tokens[tpos-1]))
+                except:
+                    pass
             elif( ins.mnemonic in unconditional_jump_mnemonics ):
+#                print("UNCONDITIONAL JUMP? %s %s" % (ins.mnemonic, tokens ) )
                 m = re.search(jmpre,ins.args)
                 if( m is not None ):
                     table = m.group(1)
@@ -967,6 +1003,11 @@ def parse_from_gdb( arg, fakedata = None ):
 #                    print("m = '%s'" % m )
 #                    print("m.group(1) = '%s'" % m.group(1) )
 #                    print("ins = '%s'" % ins )
+                else:
+                    try:
+                        ins.targets.add(vdb.util.xint(tokens[tpos-1]))
+                    except:
+                        pass
 
             if( ins.mnemonic in call_mnemonics ):
                 ins.call = True
@@ -1014,7 +1055,7 @@ def parse_from( arg, fakedata = None ):
         if( str(e) == "No function contains specified address." ):
             return parse_from(arg+","+str(nonfunc_bytes.value))
         elif( str(e) == "No function contains program counter for selected frame." ):
-            return parse_from("$rip,"+str(nonfunc_bytes.value))
+            return parse_from("$pc,"+str(nonfunc_bytes.value))
         else:
             print("e = '%s'" % e )
             traceback.print_exc()
