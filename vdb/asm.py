@@ -536,7 +536,8 @@ ascii mockup:
 
             if( "o" in showspec ):
                 try:
-                    io = vdb.util.xint(i.offset)
+#                    io = vdb.util.xint(i.offset)
+                    io = int(i.offset)
                     line.append( vdb.color.color(offset_fmt.value.format(offset = io, maxlen = self.maxoffset ),color_offset.value))
                 except:
                     line.append( vdb.color.color(offset_txt_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value))
@@ -755,8 +756,8 @@ ascii mockup:
         # "up" jumping part of the target_of, the "down" jumping part is done in finish()
         self.add_target(ins)
 
-x86_conditional_jump_mnemonics = set([ "jmp", "jmpq" ] )
-x86_unconditional_jump_mnemonics = set([ "jo", "jno", "js", "jns", "je", "jz", "jne", "jnz", "jb", "jnae", "jc", "jnb","jae","jnc","jbe","jna","ja","jnbe","jl","jng","jge","jnl","jle","jng","jg","jnle","jp","jnle","jp","jpe","jnp","jpo","jcxz","jecxz" ])
+x86_conditional_jump_mnemonics = set([ "jo", "jno", "js", "jns", "je", "jz", "jne", "jnz", "jb", "jnae", "jc", "jnb","jae","jnc","jbe","jna","ja","jnbe","jl","jng","jge","jnl","jle","jng","jg","jnle","jp","jnle","jp","jpe","jnp","jpo","jcxz","jecxz" ])
+x86_unconditional_jump_mnemonics = set([ "jmp", "jmpq" ] )
 x86_return_mnemonics = set (["ret","retq","iret"])
 x86_call_mnemonics = set(["call","callq","int"])
 x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd" ])
@@ -848,10 +849,11 @@ def parse_from_gdb( arg, fakedata = None ):
     return_mnemonics = x86_return_mnemonics
     call_mnemonics = x86_call_mnemonics
 
+    archname="x86"
     try:
         archname = gdb.selected_frame().architecture().name()
         prefixes, conditional_jump_mnemonics, unconditional_jump_mnemonics, return_mnemonics, call_mnemonics = mnemonics[archname]
-    except KeyError as e:
+    except:
         print("Not configured for architecture %s, falling back to x86" % archname )
         pass
 
@@ -921,6 +923,8 @@ def parse_from_gdb( arg, fakedata = None ):
             ins.address = vdb.util.xint(tokens[0])
             if( ret.start == 0 ):
                 ret.start = ins.address
+            else:
+                ret.start = min(ret.start,ins.address)
             ret.end = max(ret.end,ins.address)
 #            print("tokens[1] = '%s'" % tokens[1] )
             if( len(tokens[1]) < 2 or tokens[1][1] == "+" ):
