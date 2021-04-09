@@ -625,7 +625,7 @@ ascii mockup:
         for r,c in l:
             if( re.match(r,s) ):
                 return vdb.dot.color(s,c)
-        return s
+        return vdb.dot.dot_escape(s)
 
 
     def ins_to_dot( self, i, node, showspec ):

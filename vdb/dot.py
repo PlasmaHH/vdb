@@ -21,7 +21,7 @@ def write_attributes( f, attributes ):
 class td:
 
     def __init__( self, content = None ):
-        self.content = dot_escape(content)
+        self.content = content
         self.attributes = {}
 
     def set( self, nc ):
