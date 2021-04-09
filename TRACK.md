@@ -22,6 +22,12 @@ that you may end up with multiple breakpoints for the same address which may inc
 out by the location string you passed, but what gdb gives us may not always be the same you passed, thus we can not
 distinguish.
 
+### `track/[xXE]`
+
+Normally the expression is one that is evaluated by gdb to lead a gdb value. Passing `x` will instead execute the command
+given, while `X` will execute it and then return the result as gdb value (Basically just evaluating `$`). `E` will use
+python eval and return that as a value, which you can even use to call your own plugins.
+
 ### `track data`
 This shows a table with all the collected data. In (default) relative mode, all timestamps are relative to the first
 recording. You can set `vdb-track-time-relative` to disable this and use local timestamps instead (useful for long
