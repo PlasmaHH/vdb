@@ -64,11 +64,17 @@ def do_continue( ):
 
 @vdb.event.stop()
 def stop( bpev ):
+#    print("TRACK STOP")
     cont = False
     if( len(trackings) == 0 ):
         return
+    if( type(bpev) == gdb.StopEvent ):
+        return
+
     try:
         bps = bpev.breakpoints
+        bps = gdb.breakpoints()
+#        print("bps = '%s'" % (bps,) )
         now = time.time()
         for bp in bps:
 #            print("bp = '%s'" % bp )
@@ -92,20 +98,32 @@ class track_item:
 
     next_number = 1
 
-    def __init__( self, expr ):
+    def __init__( self, expr, ue, ea, pe ):
         self.expression = " ".join(expr)
         self.number = track_item.next_number
+        self.use_execute = ue
+        self.eval_after = ea
+        self.python_eval = pe
         track_item.next_number += 1
 
     def execute( self, now ):
         try:
-            val=gdb.parse_and_eval(self.expression)
+#            print("self.expression = '%s'" % self.expression )
+            if( self.python_eval ):
+                val=eval(self.expression)
+            elif( self.use_execute ):
+                val=gdb.execute(self.expression,False,True)
+                if( self.eval_after ):
+                    val = gdb.parse_and_eval("$")
+            else:
+                val=gdb.parse_and_eval(self.expression)
             td = tracking_data.setdefault(now,{})
             td[self.expression] = str(val)
-        except:
+        except Exception as e:
+            print("e = '%s'" % e )
             pass
 
-def track( argv ):
+def track( argv, execute, eval_after, do_eval ):
     ex_bp = set()
 
     bps = gdb.breakpoints()
@@ -129,17 +147,20 @@ def track( argv ):
             for bp in bps:
                 n_bp.add(bp.number)
             nbp = n_bp - ex_bp
+            if( len(nbp) == 0 ):
+                print(f"Failed to set breakpoint for {argv[0]}, cannot attach track either")
+                return
             bpnum = nbp.pop()
             ex_bp = n_bp
 
     expr = argv[1:]
 
     if( bpnum not in ex_bp ):
-        print(f"Unknown breakpoint {bpnum}, refusing to attack track to nothing")
+        print(f"Unknown breakpoint {bpnum}, refusing to attach track to nothing")
         return
 
     global trackings
-    trackings.setdefault(bpnum,[]).append(track_item( expr ))
+    trackings.setdefault(bpnum,[]).append(track_item( expr, execute, eval_after, do_eval ))
 
 
 def do_del( argv ):
@@ -256,6 +277,21 @@ class cmd_track (vdb.command.command):
 
     def do_invoke (self, argv ):
         try:
+            execute = False
+            eval_after_execute = False
+            python_eval = False
+            if( argv[0][0] == "/" ):
+                argv0 = argv[0]
+                argv = argv[1:]
+
+                if( argv0 == "E" ):
+                    python_eval = True
+                elif( argv0 == "x" ):
+                    execute = True
+                elif( argv0 == "X" ):
+                    execute = True
+                    eval_after_execute = True
+
             if( len(argv) == 0 ):
                 show()
             elif( argv[0] == "show" ):
@@ -267,7 +303,7 @@ class cmd_track (vdb.command.command):
             elif( argv[0] == "clear" ):
                clear()
             elif( len(argv) > 1 ):
-                track(argv)
+                track(argv,execute,eval_after_execute,python_eval)
             else:
                 print("Usage: track [show] or track <num|location> <expression>")
         except:
