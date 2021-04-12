@@ -11,6 +11,7 @@ import vdb.asm
 import gdb
 
 import string
+import re
 from enum import Enum,auto
 
 vdb.enabled_modules.append("pointer")
@@ -79,11 +80,18 @@ def annotate( ptr ):
         return mv
     return None
 
+# XXX move to util? pre-compile regex?
+def printable_str( s ):
+    ret = re.sub(f'[^{re.escape(string.printable)}]', '.', s)
+    ret = re.sub(f'[\t\n\r\v\f]', '.', ret)
+    return ret
+
 def as_tail( ptr ):
     s = as_c_str(ptr)
     if( s is not None ):
         if( len(s) >= min_acsii.value ):
-            return f"[{len(s)}]'{s}'"
+            s = printable_str(s)
+            return f"XXX[{len(s)}]'{s}'"
 
     at = vdb.memory.mmap.get_atype( ptr )
 #    print("at = '%s'" % at )
