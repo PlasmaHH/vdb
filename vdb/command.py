@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import vdb.command
+
 import gdb
 import traceback
 import sys
+
+profile_next = vdb.config.parameter("vdb-command-next-profile",False)
 
 class command(gdb.Command):
 
@@ -32,15 +36,23 @@ class command(gdb.Command):
 #            traceback.print_exc()
         self.do_invoke(argv)
 
+    def invoke_or_pipe( self, argv ):
+        if( sys.modules.get("vdb.pipe",None) != None ):
+            self.pipe(argv)
+        else:
+            self.do_invoke(argv)
 
     def invoke (self, arg, from_tty):
         try:
             argv = gdb.string_to_argv(arg)
-#            print("sys.modules = '%s'" % sys.modules )
-            if( sys.modules.get("vdb.pipe",None) != None ):
-                self.pipe(argv)
+
+            global profile_next
+            if( profile_next.value ):
+                profile_next.value = False
+                import cProfile
+                cProfile.runctx("self.invoke_or_pipe(argv)",globals(),locals())
             else:
-                self.do_invoke(argv)
+                self.invoke_or_pipe(argv)
         except:
             traceback.print_exc()
             raise
