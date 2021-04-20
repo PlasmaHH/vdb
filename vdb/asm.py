@@ -246,7 +246,7 @@ ascii mockup:
         global ix
         ix = -1
 
-        def acolor( s, idx ):
+        def acolor ( s, idx ):
             if( idx >= 0 ):
                 return vdb.color.color(s,color_list.elements[idx % len(color_list.elements) ] )
             else:
@@ -288,7 +288,7 @@ ascii mockup:
 
         def to_arrows( ins, cl, ignore_target = False  ):
 #            print("###################")
-            ret = ""
+            ret = []
             alen = 0
 #            print("ins.address = '%x'" % ins.address )
 
@@ -303,9 +303,9 @@ ascii mockup:
                 if( ar is None ):
                     # No vertical line expected here, lets see if we need some horizontal
                     if( leftarrow is not None ):
-                        ret += acolor("-",leftarrow.coloridx)
+                        ret.append( ("-",leftarrow.coloridx) )
                     else:
-                        ret += " "
+                        ret.append( (" ",-1) )
                 else: # c is not None here
                     if( ar.done ):
                         remove_indices.add(cidx)
@@ -314,44 +314,44 @@ ascii mockup:
                         # but what if there already was another?
                         if( leftarrow is not None ):
                             if( ar.merger ):
-                                ret += acolor("+",leftarrow.coloridx)
+                                ret.append( ("+",leftarrow.coloridx) )
                             else:
-                                ret += acolor("T",leftarrow.coloridx)
+                                ret.append( ("T",leftarrow.coloridx) )
                         else:
                             if( ar.merger ):
                                 if( ar.to == ar.fr ):
-                                    ret += acolor("^",ar.coloridx)
+                                    ret.append( ("^",ar.coloridx) )
                                 else:
-                                    ret += acolor("#",ar.coloridx)
+                                    ret.append( ("#",ar.coloridx) )
                             elif( ins.address in ins.targets ):
-                                ret += " "
+                                ret.append( (" ",-1) )
                             else:
-                                ret += acolor("v",ar.coloridx)
+                                ret.append( ("v",ar.coloridx) )
                             leftarrow = ar
                     else:
                         if( ar.done ):
                             if( leftarrow is not None ):
-                                ret += acolor("u",leftarrow.coloridx)
+                                ret.append( ("u",leftarrow.coloridx) )
                             else:
-                                ret += acolor("^",ar.coloridx)
+                                ret.append( ("^",ar.coloridx) )
                                 leftarrow = ar
                         else:
                             # arrow already had a start
                             if( ar.lines == 0 ):
-                                ret += acolor("|",ar.coloridx)
+                                ret.append( ("|",ar.coloridx) )
                             else:
-                                ret += acolor("|",ar.coloridx)
+                                ret.append( ("|",ar.coloridx) )
                         ar.lines += 1
                     ar.rows += 1
                 alen += 1
                 # back to the current_line loop from here
             if( leftarrow is not None ):
                 if( ins.address in ins.targets ):
-                    ret += acolor("Q",leftarrow.coloridx)
+                    ret.append( ("Q",leftarrow.coloridx) )
                 elif( leftarrow.to == ins.address ):
-                    ret += acolor(">",leftarrow.coloridx)
+                    ret.append( (">",leftarrow.coloridx) )
                 else:
-                    ret += acolor("<",leftarrow.coloridx)
+                    ret.append( ("<",leftarrow.coloridx) )
                 alen += 1
             for i in remove_indices:
                 cl[i] = None
@@ -399,7 +399,94 @@ ascii mockup:
                         ar = arrow(target,ins.address)
                         find_next( current_lines, ar )
             (ins.jumparrows,ins.arrowwidth) = to_arrows(ins,current_lines)
+
+        while( self.optimize_arrows() ):
+            pass
+
+        for ins in self.instructions:
+            nj = ""
+            for ja,jl in ins.jumparrows:
+                nj += acolor(ja,jl)
+            ins.jumparrows = nj
+
         self.maxarrows = len(current_lines)+1
+
+    def optimize_arrows( self ):
+        start = -1
+        col = 0
+        ecol = 5000
+        ret = False
+        for ii in range(0,len(self.instructions) ):
+            ins = self.instructions[ii]
+#            print("ins.address = '0x%x'" % (ins.address,) )
+#            print("ii = '%s'" % (ii,) )
+#            print("len(ins.jumparrows) = '%s'" % (len(ins.jumparrows),) )
+            for ji in range(col,len(ins.jumparrows)-1):
+#                print("ji = '%s'" % (ji,) )
+                ja,jl=ins.jumparrows[ji]
+                jan,jln=ins.jumparrows[ji+1]
+                if( jan != "-" and jan != " " ):
+#                    print("jan = '%s'" % (jan,) )
+                    start = -1
+                    col = 0
+                    continue
+
+                if( ja == "v" ):
+                    start = ii
+                    col = ji
+#                    print("=====================")
+#                    print("start = %s, ja = '%s'" % (start,ja,) )
+                    ecol = len(ins.jumparrows)+10
+                    break
+                elif( ja == "|" or ja == "#" ):
+#                    print("ja = '%s'" % (ja,) )
+#                    print("start = '%s'" % (start,) )
+                    break
+                elif( ja == "^" and start > 0 ):
+#                    print("col = '%s'" % (col,) )
+#                    print("ecol = '%s'" % (ecol,) )
+#                    print("start = '%s'" % (start,) )
+#                    print("ii = '%s'" % (ii,) )
+                    for ni in range(start,ii+1):
+                        mi = self.instructions[ni]
+                        ma,ml = mi.jumparrows[col]
+#                        print("ma = '%s'" % (ma,) )
+                        if( col == 0 ):
+                            for rc in range(col,ecol):
+                                ret = True
+                                mi.jumparrows[rc] = ( " ", -1 )
+                            mi.jumparrows[ecol] = (ma,ml)
+                        else:
+                            for rc in range(col,ecol):
+                                ret = True
+                                pja = mi.jumparrows[rc-1]
+                                pjn = mi.jumparrows[rc+1]
+                                if( pja[0] == "|" or pja[0] == " "):
+                                    mi.jumparrows[rc] = ( " ", -1 )
+                                else:
+                                    mi.jumparrows[rc] = pjn
+                            mi.jumparrows[ecol] = (ma,ml)
+                    break
+                else:
+#                    print("else ja = '%s'" % (ja,) )
+                    start = -1
+                    col = 0
+#            print("start = '%s'" % (start,) )
+            if( start >= 0 ):
+                xnc = 0
+                for nc in range(col+1,len(ins.jumparrows)):
+#                    print("nc = '%s'" % (nc,) )
+#                    print("ins.jumparrows[nc] = '%s'" % (ins.jumparrows[nc],) )
+                    if( ins.jumparrows[nc][0] == "-" or ins.jumparrows[nc][0] == " " ):
+                        xnc = max(nc,xnc)
+                    else:
+#                        ins.jumparrows[nc] = ("X",0)
+                        break
+                ecol = min(ecol,xnc)
+#                print("xnc = '%s'" % (xnc,) )
+#                print("ecol = '%s'" % (ecol,) )
+
+        return ret
 
     def lazy_finish( self ):
         if( self.finished ):
