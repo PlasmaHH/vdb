@@ -166,7 +166,8 @@ class listing( ):
         elif( len(color_addr.value) > 0 ):
             return vdb.color.colorl(f"0x{addr:0{mlen}x}",color_addr.value)
         else:
-            return ( vdb.pointer.color(addr,vdb.arch.pointer_size)[0], mlen+2)
+            pv,_,_,_,pl = vdb.pointer.color(addr,vdb.arch.pointer_size)
+            return ( pv, pl )
 
     # XXX generic enough for utils?
     def color_relist( self, s, l ):
