@@ -20,6 +20,7 @@ we might add information at that point. `.` is always ignored, in which way you 
 below shortcuts.
 
 If you want to show the integer value alongside the hex value of each register set `vdb-register-int-as-int` to true.
+This makes things wider, so you usually want to set `vdb-register-short-columns` to a lower values (default 6).
 
 * `iI` show all the integer and general purpose registers, just like `info reg` does.
     ![](img/reg.iI.png)
