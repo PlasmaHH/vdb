@@ -36,12 +36,13 @@ If you want to show the integer value alongside the hex value of each register s
 * `xX` shows the known flags registers (like eflags and mxcsr)
 
     ![](img/reg.xX.png)
-* `pP` Shows the prefix/segment registers.
+* `pP` Shows the prefix/segment registers. `P` uses `$fs_base` or similar as a source and can be more correct when using
+  TLS.
 
     ![](img/reg.pP.png)
 * `oO` Shows the remaining registers that did not fit into any of these groups (usually integers)
 
-    ![](img/reg.oO.png)
+    ![](img/reg.o.png)
 
 ### `reg/s` (short)
 Same as `reg/ipx`.
