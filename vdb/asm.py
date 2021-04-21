@@ -24,10 +24,10 @@ asm_colors = [
         ( "ret.*", "#8f9" ),
         ( "nop.*" ,"#338" ),
         ( "pxor.*|punpckl.*", "#aa6" ),
-        ( "sub.*|add.*|imul.*|mul.*|div.*|dec.*|inc.*", "#909" ),
+        ( "sub.*|add.*|imul.*|mul.*|div.*|dec.*|inc.*|neg.*", "#909" ),
         ( "xor.*|shr.*|and.*|or.*", "#da4" ),
         ( "push.*|pop.*|lea.*", "#080" ),
-        ( "hlt.*", "#a11" ),
+        ( "hlt.*|syscall.*|int.*", "#a11" ),
         ( "XXXX", "#904449" ),
         ]
 
