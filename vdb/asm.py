@@ -19,9 +19,16 @@ asm_colors = [
         ( "j.*", "#f0f" ),
         ( "b.*", "#f0f" ),
         ( "mov.*", "#0ff" ),
-        ( "cmp.*|test.*", "#f99" ),
+        ( "cmp.*|test.*|cmov.*", "#f99" ),
         ( "call.*", "#6666ff" ),
         ( "ret.*", "#8f9" ),
+        ( "nop.*" ,"#338" ),
+        ( "pxor.*|punpckl.*", "#aa6" ),
+        ( "sub.*|add.*|imul.*|mul.*|div.*|dec.*|inc.*", "#909" ),
+        ( "xor.*|shr.*|and.*|or.*", "#da4" ),
+        ( "push.*|pop.*|lea.*", "#080" ),
+        ( "hlt.*", "#a11" ),
+        ( "XXXX", "#904449" ),
         ]
 
 asm_colors_dot = [
@@ -31,6 +38,7 @@ asm_colors_dot = [
         ( "cmp.*|test.*", "#f09090" ),
         ( "call.*", "#6666ff" ),
         ( "ret.*", "#308020" ),
+        ( "nop.*" ,"#303080" ),
         ]
 
 pre_colors = [
