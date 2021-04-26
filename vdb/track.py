@@ -108,6 +108,9 @@ class track_item:
 
     def execute( self, now ):
         try:
+#            print("self.python_eval = '%s'" % self.python_eval )
+#            print("self.use_execute = '%s'" % self.use_execute )
+#            print("self.eval_after = '%s'" % self.eval_after )
 #            print("self.expression = '%s'" % self.expression )
             if( self.python_eval ):
                 val=eval(self.expression)
@@ -121,6 +124,7 @@ class track_item:
             td[self.expression] = str(val)
         except Exception as e:
             print("e = '%s'" % e )
+#            traceback.print_exc()
             pass
 
 def track( argv, execute, eval_after, do_eval ):
@@ -281,7 +285,7 @@ class cmd_track (vdb.command.command):
             eval_after_execute = False
             python_eval = False
             if( argv[0][0] == "/" ):
-                argv0 = argv[0]
+                argv0 = argv[0][1:]
                 argv = argv[1:]
 
                 if( argv0 == "E" ):
