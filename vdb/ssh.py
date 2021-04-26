@@ -180,15 +180,16 @@ class ssh_connection:
 
 def gdbserver( s, argv ):
     print("Searching for port to tunnel over ssh … ",end="")
-    s.call("netstat -naput | egrep \"VERBUNDEN|LISTEN\" | cut -d':' -f2")
+    s.call("netstat -naput | egrep \"VERBUNDEN|LISTEN|TIME_WAIT\" | awk '{ print $4}'")
     s.fill(0.5)
     ports = s.read()
     ports = ports.splitlines()
 
-    lports = subprocess.check_output(["sh","-c","netstat -npatu | egrep \"VERBUNDEN|LISTEN\" | cut -d':' -f2"])
+    lports = subprocess.check_output(["sh","-c","netstat -npatu | egrep \"VERBUNDEN|LISTEN|TIME_WAIT\" | awk '{print $4}'"])
     lports = lports.decode("utf-8")
     lports = lports.splitlines()
-#    print("lports = '%s'" % lports )
+
+
     ports += lports
 #    candports = set(range(6000,6020))
     candports = set(valid_ports.elements)
@@ -196,7 +197,7 @@ def gdbserver( s, argv ):
 #    print("ports = '%s'" % ports )
     for port in ports:
         try:
-            p = int(port.split()[0])
+            p = int(port.split(":")[-1])
 #            print("p = '%s'" % p )
             candports.remove(p)
         except:
