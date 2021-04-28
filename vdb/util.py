@@ -42,6 +42,16 @@ def xint( s ):
             raise Exception("%s can not be parsed as integer, neither base 10 or 16" % s )
     return r
 
+def mint( s ):
+    try:
+        r = int(s,16)
+    except:
+        try:
+            r = int(s)
+        except:
+            r = s
+    return r
+
 def unquote( s ):
     if( s.startswith('"')):
         s = s[1:]

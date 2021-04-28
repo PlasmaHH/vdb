@@ -48,19 +48,198 @@ bpdisp = {
 def bp_disp( d ):
     return bpdisp.get(d,d)
 
-def stop( bp ):
-    print("bp = '%s'" % bp )
-    return False
+#def stop( bp ):
+#    print("bp = '%s'" % bp )
+#    return False
 
 def ptr_color( addr ):
-    ret = vdb.pointer.color(addr,vdb.arch.pointer_size)
-#    print("ret = '%s'" % (ret,) )
-    return ( ret[0], vdb.arch.pointer_size // 4 + 2 )
+    try:
+        ret = vdb.pointer.color(addr,vdb.arch.pointer_size)
+        ret = ( ret[0], ret[4] )
+    except:
+        ret = addr
+    return ret
+
+class stoppoint:
+
+    def __init__( self ):
+        self.number = None
+        self.key = ( None, None )
+        self.type = None
+        self.address = None
+        self.location = None
+        self.expression = None
+        self.temporary = None
+        self.enabled = None
+        self.what = None
+        self.subpoints = {}
+        self.inferior = None
+
+    def get_type( self ):
+        return bp_type(self.type)
+
+    def get_temporary( self ):
+        return bp_disp(self.temporary)
+
+    def get_enabled( self ):
+        return bp_enabled(self.enabled)
+
+    def _dump( self ):
+        print("Dump SP")
+        print("self.number = '%s'" % self.number )
+        print("self.key = '%s'" % (self.key,) )
+        print("self.type = '%s'" % self.type )
+        print("self.address = '0x%x'" % self.address )
+        print("self.location = '%s'" % self.location )
+        print("self.expression = '%s'" % self.expression )
+        print("self.temporary = '%s'" % self.temporary )
+        print("self.enabled = '%s'" % self.enabled )
+        print("self.what = '%s'" % (self.what,) )
+        if( len(self.subpoints) > 0 ):
+            print("Dump Sub SP")
+            for sbk,sbp in self.subpoints.items():
+                print("sbk = '%s'" % sbk )
+                sbp._dump()
+        print("END SP")
+
+# XXX Check speed, we should cache it and react on certain events to refresh it, as potentially this is called with
+# every breakpoint
+def parse_breakpoints( ):
+    rawmib = gdb.execute( "maint info break", False, True ).split("\n")
+    foo = """
+Num     Type                  Disp Enb Address            What
+1       breakpoint            keep y   0x0000000000402233 in main(int, char const**) at vtrack.cxx:30 inf 1
+        breakpoint already hit 1 time
+1.1                                y   0x0000000000402233 in main(int, char const**) at vtrack.cxx:30 inf 1
+-1      shlib events          keep n   0x00007ffff7fd0101 <dl_main+7169> inf 1
+-1.1                               y   0x00007ffff7fd0101 <dl_main+7169> inf 1
+
+"""
+    mib = {}
+    for mi in rawmib:
+        mi = mi.split()
+#        print("mi = '%s'" % mi )
+        if( len(mi) == 0 or mi[0] == "Num" ):
+            continue
+        mk = mi[0].split(".")
+        if( not mk[0].isdigit() ):
+            continue
+        if( len(mk) == 1 ):
+            mk = (mk[0], None )
+        else:
+            mk = (mk[0], mk[1] )
+        mib[mk] = mi
+
+    ret = {}
+    import vdb
+    if( vdb.enabled("backtrace") ):
+        import vdb.backtrace
+
+    for mk,mi in mib.items():
+#        print("mk = '%s'" % (mk,) )
+#        print("mi = '%s'" % mi )
+        if( mk[0][0] == "-" ):
+            continue
+
+        sp = stoppoint()
+        sp.key = mk
+        sp.number = mi[0]
+
+        ixplus = 0
+        if( mk[1] is None ):
+            ixplus = 2
+        else:
+            ixplus = 0
+        sp.address = vdb.util.mint(mi[2+ixplus])
+        sp.enabled = (mi[1+ixplus] == "y")
+        sp.what = " ".join(mi[3+ixplus:])
+
+#        print("sp.what = '%s'" % sp.what )
+        m = re.match("in (.*) at (.*):([0-9]*) inf ([0-9]*)",sp.what)
+        if( m ):
+            plain = ""
+            color = ""
+
+            plain = "in "
+            plain += m.group(1)
+            plain += " at "
+            plain += m.group(2)
+            plain += ":"
+            plain += m.group(3)
+            sp.what = plain
+            if( vdb.enabled("backtrace") ):
+                color = "in "
+                color += vdb.color.color(m.group(1),vdb.backtrace.color_function.value)
+                color += " at "
+                color += vdb.color.color(m.group(2),vdb.backtrace.color_filename.value)
+                color += ":"
+                color += m.group(3)
+                sp.what = (color,len(plain))
+
+            sp.inferior = m.group(4)
+        else:
+            m = re.match(".*inf ([0-9]*)",sp.what)
+            if( m ):
+                sp.inferior = m.group(1)
+
+#        print("sp.number = '%s'" % sp.number )
+#        print("type(sp.number) = '%s'" % type(sp.number) )
+        ret[sp.number] = sp
+
+#    print("ret = '%s'" % ret )
+    bps = gdb.breakpoints()
+    for bp in bps:
+#        print("type(bp.number) = '%s'" % type(bp.number) )
+        sp = ret.get(str(bp.number))
+#        print("bp.number = '%s'" % bp.number )
+#        print("sp = '%s'" % sp )
+#        print("bp = '%s'" % bp )
+        sp.type = bp.type
+        sp.enabled = bp.enabled
+        sp.temporary = bp.temporary
+        sp.location = bp.location
+        sp.expression = bp.expression
+
+        if( sp.address is None ):
+            unparsed,locs = gdb.decode_line(bp.location)
+            if( len(locs) == 1 ):
+                addr = locs[0]
+                addr = addr.pc
+            else:
+                addr = "<MULTIPLE>"
+
+            sp.address = addr
+
+        for i in range(1,1000):
+            sk = "%s.%s" % ( sp.number , i )
+            esp = ret.get(sk,None)
+            if( esp is None ):
+                break
+            sp.subpoints[sk] = esp
+            del ret[sk]
+
+#    print("Dump RET")
+#    for k,r in ret.items():
+#        print("")
+#        r._dump()
+    return ret    
+
+
 
 trackings = { }
+do_sub_trackings = False
 
 def do_continue( ):
     gdb.execute("continue")
+
+def exec_tracking( number, now ):
+    cont = False
+    tr = trackings.get(str(number),None)
+    if( tr is not None ):
+        for t in tr:
+            cont = True
+            t.execute(now)
+    return cont        
 
 @vdb.event.stop()
 def stop( bpev ):
@@ -68,22 +247,34 @@ def stop( bpev ):
     cont = False
     if( len(trackings) == 0 ):
         return
-    if( type(bpev) == gdb.StopEvent ):
-        return
+
+    now = time.time()
+    try:
+        if( do_sub_trackings ):
+            pc = vdb.util.gint("$pc")
+
+            tbps = parse_breakpoints()
+            for tbp in tbps.values():
+                for sbp in tbp.subpoints.values():
+                    if( sbp.address == pc ):
+                        if( exec_tracking(sbp.number,now) ):
+                            cont = True
+    except Exception as e:
+        print("e = '%s'" % e )
+        pass
+
 
     try:
-        bps = bpev.breakpoints
-        bps = gdb.breakpoints()
-#        print("bps = '%s'" % (bps,) )
-        now = time.time()
-        for bp in bps:
-#            print("bp = '%s'" % bp )
-#            print("bp.number = '%s'" % bp.number )
-            tr = trackings.get(bp.number,None)
-            if( tr is not None ):
-                for t in tr:
+        if( type(bpev) == gdb.StopEvent ):
+            return
+        else:
+            bps = bpev.breakpoints
+#            print("bps = '%s'" % (bps,) )
+            for bp in bps:
+#                print("bp = '%s'" % bp )
+#                print("bp.number = '%s'" % bp.number )
+                if( exec_tracking(bp.number,now) ):
                     cont = True
-                    t.execute(now)
     except Exception as e:
         print("e = '%s'" % e )
         pass
@@ -130,32 +321,46 @@ class track_item:
 def track( argv, execute, eval_after, do_eval ):
     ex_bp = set()
 
-    bps = gdb.breakpoints()
-    for bp in bps:
+#    bps = gdb.breakpoints()
+    bps = parse_breakpoints()
+    for _,bp in bps.items():
         ex_bp.add(bp.number)
+        for _,sbp in bp.subpoints.items():
+            ex_bp.add(sbp.number)
 
-    try:
-        bpnum = int(argv[0])
-    except ValueError as e:
-        for bp in bps:
-            if( bp.location == argv[0] ):
-                print("Already have breakpoint with that expression, reusing it")
-                bpnum = bp.number
+#    print("argv[0] = '%s'" % argv[0] )
+    bpnum = None
+    for _,bp in bps.items():
+#        print("bp.number = '%s'" % bp.number )
+        if( bp.number == argv[0] ):
+            bpnum = bp.number
+            break
+        if( bp.location == argv[0] ):
+            print("Already have breakpoint with that expression, reusing it")
+            bpnum = bp.number
+            break
+        for _,sbp in bp.subpoints.items():
+#            print("sbp.number = '%s'" % sbp.number )
+            if( sbp.number == argv[0] ):
+                bpnum = sbp.number
                 break
-        else:
-            print(f"Attempting to set breakpoint for '{argv[0]}'")
-            gdb.execute(f"break {argv[0]}")
-            n_bp = set()
+        if( bpnum is not None ):
+            break
+    else:
+        print(f"Attempting to set breakpoint for '{argv[0]}'")
+        gdb.execute(f"break {argv[0]}")
+        n_bp = set()
 
-            bps = gdb.breakpoints()
-            for bp in bps:
-                n_bp.add(bp.number)
-            nbp = n_bp - ex_bp
-            if( len(nbp) == 0 ):
-                print(f"Failed to set breakpoint for {argv[0]}, cannot attach track either")
-                return
-            bpnum = nbp.pop()
-            ex_bp = n_bp
+        bps = gdb.breakpoints()
+        for bp in bps:
+            n_bp.add(bp.number)
+        nbp = n_bp - ex_bp
+        if( len(nbp) == 0 ):
+            print(f"Failed to set breakpoint for {argv[0]}, cannot attach track either")
+            return
+        ex_bp = n_bp
+        bpnum = nbp.pop()
+#    print("bpnum = '%s'" % bpnum )
 
     expr = argv[1:]
 
@@ -164,8 +369,24 @@ def track( argv, execute, eval_after, do_eval ):
         return
 
     global trackings
-    trackings.setdefault(bpnum,[]).append(track_item( expr, execute, eval_after, do_eval ))
+    trackings.setdefault(str(bpnum),[]).append(track_item( expr, execute, eval_after, do_eval ))
+    cleanup_trackings()
 
+def cleanup_trackings( ):
+    global trackings
+    newtrackings = {}
+    subcount = 0
+    for tk,tr in trackings.items():
+        if( not tk.isdigit() ):
+            subcount += 1
+        if( len(tr) > 0 ):
+            newtrackings[tk] = tr
+    trackings = newtrackings
+    global do_sub_trackings
+    if( subcount == 0 ):
+        do_sub_trackings = False
+    else:
+        do_sub_trackings = True
 
 def do_del( argv ):
     for arg in argv:
@@ -182,46 +403,33 @@ def do_del( argv ):
                 break
         if( not found ):
             print(f"Tracking {num} not found")
+    cleanup_trackings()
 
+def show_track( ftbl, number ):
+    tracks = trackings.get(str(number),None)
+    if( tracks is not None ):
+        for track in tracks:
+            ftbl.append( [None] * 7 + [track.number,track.expression] )
 
 def show( ):
-    bps = gdb.breakpoints()
+
+    parse_breakpoints()
+    bps = parse_breakpoints()
     ftbl = []
-    ftbl.append( [ "Num","Type","Disp","Enb","Address","What","TrackNo","TrackExpr" ] )
+    ftbl.append( [ "Num","Type","Disp","Enb","Address","What","Inferior","TrackNo","TrackExpr" ] )
 
     if( len(bps) == 0 ):
-        print("No breakpoints or watchpoints.")
+        print("No breakpoints, catchppoints or watchpoints.")
         return None
 
-    for bp in bps:
-        locs = []
-        what = None
-#        print("bp = '%s'" % bp )
-        if( bp.location is not None ):
-            what = bp.location
-            unparsed,locs = gdb.decode_line(bp.location)
-            if( len(locs) == 1 ):
-                addr = locs[0]
-                addr = ptr_color(addr.pc)
-            else:
-                addr = "<MULTIPLE>"
-        else:
-            addr = None
-            what = bp.expression
-        ftbl.append( [ bp.number, bp_type(bp.type), bp_disp(bp.temporary), bp_enabled(bp.enabled), addr, what ] )
-#        print("locs = '%s'" % (locs,) )
-        if( len(locs) > 1 ):
-            cnt = 0
-            for loc in locs:
-                cnt += 1
-                ftbl.append( [f"{bp.number}.{cnt}",None,None,bp_enabled(bp.enabled),ptr_color(loc.pc)] )
-        tracks = trackings.get(bp.number,None)
-        if( tracks is not None ):
-            for track in tracks:
-                ftbl.append( [None] * 6 + [track.number,track.expression] )
+    for _,bp in bps.items():
+        ftbl.append( [ bp.number, bp.get_type(), bp.get_temporary(), bp.get_enabled(), ptr_color(bp.address), bp.what, bp.inferior ] )
+        show_track(ftbl,bp.number)
 
-#        print("gdb.decode_line(bp.location) = '%s'" % (gdb.decode_line(bp.location),) )
-#        bp.__dict__["stop"] = stop
+        for _,sbp in bp.subpoints.items():
+            ftbl.append( [ sbp.number, None, None, sbp.get_enabled(), ptr_color(sbp.address), sbp.what, bp.inferior ] )
+            show_track(ftbl,sbp.number)
+
     ftbl = vdb.util.format_table(ftbl,""," ")
     print(ftbl)
 
