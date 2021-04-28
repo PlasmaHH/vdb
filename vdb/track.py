@@ -135,6 +135,7 @@ Num     Type                  Disp Enb Address            What
     if( vdb.enabled("backtrace") ):
         import vdb.backtrace
 
+    previous_type = None
     for mk,mi in mib.items():
 #        print("mk = '%s'" % (mk,) )
 #        print("mi = '%s'" % mi )
@@ -146,12 +147,33 @@ Num     Type                  Disp Enb Address            What
         sp.number = mi[0]
 
         ixplus = 0
+        address_there = True
         if( mk[1] is None ):
             ixplus = 2
+            sp.type = mi[1]
+            if( sp.type == "hw" ):
+                sp.type += " " + mi[2]
+                mi[1] += " " + mi[2]
+                del mi[2]
+                address_there = False
+
+            previous_type = sp.type
+            sp.temporary = mi[2]
         else:
             ixplus = 0
-        sp.address = vdb.util.mint(mi[2+ixplus])
         sp.enabled = (mi[1+ixplus] == "y")
+#        print("sp.type = '%s'" % sp.type )
+
+        if( sp.type == "catchpoint" or sp.type == "watchpoint" ):
+            address_there = False
+        if( previous_type == "watchpoint" ):
+            address_there = False
+
+        if( address_there ):
+            sp.address = vdb.util.mint(mi[2+ixplus])
+        else:
+            ixplus -= 1
+            sp.address = ""
         sp.what = " ".join(mi[3+ixplus:])
 
 #        print("sp.what = '%s'" % sp.what )
@@ -178,9 +200,10 @@ Num     Type                  Disp Enb Address            What
 
             sp.inferior = m.group(4)
         else:
-            m = re.match(".*inf ([0-9]*)",sp.what)
+            m = re.match("(.*) inf ([0-9]*)",sp.what)
             if( m ):
-                sp.inferior = m.group(1)
+                sp.what = m.group(1)
+                sp.inferior = m.group(2)
 
 #        print("sp.number = '%s'" % sp.number )
 #        print("type(sp.number) = '%s'" % type(sp.number) )
