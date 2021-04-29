@@ -266,7 +266,7 @@ def exec_tracking( number, now ):
 
 @vdb.event.stop()
 def stop( bpev ):
-#    print("TRACK STOP")
+
     cont = False
     if( len(trackings) == 0 ):
         return
