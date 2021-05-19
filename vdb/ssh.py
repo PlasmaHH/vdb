@@ -32,6 +32,8 @@ scp_compression = vdb.config.parameter("vdb-ssh-scp-compression",False)
 
 cfg_fix_autoload = vdb.config.parameter("vdb-ssh-fix-autoload",True)
 
+cmd_verbose = vdb.config.parameter("vdb-ssh-verbose",False)
+
 #pid_cmd = vdb.config.parameter("vdb-ssh-pid-cmd","/sbin/pidof %s")
 pid_cmd = vdb.config.parameter("vdb-ssh-pid-cmd","pgrep -f %s")
 
@@ -136,7 +138,8 @@ class ssh_connection:
             self.pipe.kill()
 
     def call( self, cmd ):
-#        print("cmd = '%s'" % cmd )
+        if( cmd_verbose.value ):
+            print("cmd = '%s'" % cmd )
         if( cmd[-1] != "\n"):
             self.write(cmd+"\n")
         else:
@@ -599,10 +602,12 @@ def call_ssh( argv ):
     else:
         print("%s is not a valid ssh subcommand" % cmd)
 
+@vdb.event.exited()
 def remove_ssh( ev ):
+#    print("remove_ssh0")
+#    traceback.print_stack()
+#    print("remove_ssh1")
     set_ssh( None )
-
-gdb.events.exited.connect( remove_ssh )
 
 class cmd_ssh (vdb.command.command):
     """Type ssh to get the real help"""
