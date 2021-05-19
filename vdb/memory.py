@@ -47,6 +47,8 @@ color_iv = vdb.config.parameter("vdb-memory-colors-invalid"     , "#16f", gdb_ty
 
 ignore_empty = vdb.config.parameter("vdb-memory-ignore-empty-sections", False, gdb_type = gdb.PARAM_BOOLEAN )
 
+test_write = vdb.config.parameter("vdb-memory-test-write-access", True )
+
 
 class access_type(Enum):
     ACCESS_RO = auto()
@@ -379,8 +381,9 @@ class memory_region:
         try:
             mem = gdb.selected_inferior().read_memory(self.start,1)
             self.can_read = True
-            gdb.selected_inferior().write_memory(self.start,mem,1)
-            self.can_write = True
+            if( test_write.value ):
+                gdb.selected_inferior().write_memory(self.start,mem,1)
+                self.can_write = True
         except:
             pass
         return ( self.can_read, self.can_write )
@@ -723,7 +726,11 @@ class memory_map:
             traceback.print_exc()
             pass
         finally:
-            selected_thread.switch()
+            try:
+                # may not run anymore
+                selected_thread.switch()
+            except:
+                pass
             selected_frame.select()
 
 
