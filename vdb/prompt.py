@@ -121,6 +121,21 @@ def prompt_replace( prompt, fmt, txt, col ):
     prompt = re.sub(re_fmt,re_txt,prompt)
     return prompt
 
+message_queue = []
+
+def queue_msg( msg ):
+    global message_queue
+    message_queue.append( msg )
+
+def output_messages( ):
+    global message_queue
+    lmq = message_queue
+    message_queue = []
+    for msg in lmq:
+        print(msg)
+        if( not msg.endswith("\n") ):
+            print("\n")
+
 host = None
 def set_host( nh ):
     global host
@@ -149,6 +164,7 @@ def refresh_prompt( ):
     if( has_key["host"] ):
         prompt = prompt_replace(prompt,"host",get_host(),prompt_color_host.value )
     set_prompt(prompt)
+    output_messages()
 
 def check_format( fmt ):
     global has_key

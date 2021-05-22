@@ -604,6 +604,7 @@ def call_ssh( argv ):
 
 @vdb.event.exited()
 def remove_ssh( ev ):
+    vdb.prompt.queue_msg("closed ssh connection due to exit event")
 #    print("remove_ssh0")
 #    traceback.print_stack()
 #    print("remove_ssh1")
