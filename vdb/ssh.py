@@ -233,6 +233,7 @@ active_ssh = None
 
 def set_ssh( s ):
     global active_ssh
+    ret = active_ssh
     if( active_ssh is not None ):
         active_ssh[1].detach()
         active_ssh[0].detach()
@@ -245,9 +246,9 @@ def set_ssh( s ):
             vdb.prompt.set_host( host )
         else:
             vdb.prompt.set_host(None)
+    return ret
 
 csum_cache = {
-        "statistics3:/var/collectd/rrd/core.9323" : "da4a39c3032d7e675e84e8727d919683"
         }
 
 def csum( argv ):
@@ -604,11 +605,12 @@ def call_ssh( argv ):
 
 @vdb.event.exited()
 def remove_ssh( ev ):
-    vdb.prompt.queue_msg("closed ssh connection due to exit event")
 #    print("remove_ssh0")
 #    traceback.print_stack()
 #    print("remove_ssh1")
-    set_ssh( None )
+    ret=set_ssh( None )
+    if( ret is not None ):
+        vdb.prompt.queue_msg("closed ssh connection due to exit event")
 
 class cmd_ssh (vdb.command.command):
     """Type ssh to get the real help"""
