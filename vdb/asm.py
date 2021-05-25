@@ -105,6 +105,13 @@ dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Sourc
 
 color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,on_set = vdb.config.split_colors)
 
+
+def get_syscall( nr ):
+    if( vdb.enabled("syscall") ):
+        return vdb.syscall.get(nr)
+    else:
+        return None
+
 ix = -1
 def next_index( ):
     global ix
@@ -135,6 +142,7 @@ class instruction( ):
         self.bt = None
         self.history = None
         self.bt_idx = None
+        self.extra = None
 
     def __str__( self ):
         ta = "None"
@@ -634,9 +642,9 @@ ascii mockup:
                 try:
 #                    io = vdb.util.xint(i.offset)
                     io = int(i.offset)
-                    line.append( vdb.color.color(offset_fmt.value.format(offset = io, maxlen = self.maxoffset ),color_offset.value))
+                    line.append( vdb.color.colorl(offset_fmt.value.format(offset = io, maxlen = self.maxoffset ),color_offset.value))
                 except:
-                    line.append( vdb.color.color(offset_txt_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value))
+                    line.append( vdb.color.colorl(offset_txt_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value))
 
             if( "d" in showspec ):
 #                mt=str.maketrans("v^-|<>+#Q~I","╭╰─│◄►┴├⥀◆↑" )
@@ -649,7 +657,7 @@ ascii mockup:
                     line.append( "" )
 
             if( "b" in showspec ):
-                line.append( ( vdb.color.color(f"{' '.join(i.bytes)}",color_bytes.value),len(i.bytes)*3) )
+                line.append( vdb.color.colorl(f"{' '.join(i.bytes)}",color_bytes.value) )
             aslen = 0
 #            xline = line + "123456789012345678901234567890"
 #            print(xline)
@@ -699,6 +707,14 @@ ascii mockup:
 
 #            ret.append(line)
             cnt += 1
+
+            if( i.extra is not None ):
+                for ex in i.extra:
+                    el = [None] * (len(line)-1)
+#                    el = ["m","a","h","H","o","d","BYTES" + str(len(line)-1)]
+                    el.append(ex)
+                    otbl.append(el)
+
             if( context is not None and context_end is not None and context_end <= cnt ):
                 break
 
@@ -974,6 +990,7 @@ def parse_from_gdb( arg, fakedata = None ):
     last_cmp_immediate = 1
 
     markers = 0
+    possible_registers = {}
 #    print("dis = '%s'" % dis )
     for line in dis.splitlines():
 #        print("line = '%s'" % line )
@@ -1054,6 +1071,39 @@ def parse_from_gdb( arg, fakedata = None ):
             if( len(tokens) > tpos ):
                 ins.args = tokens[tpos]
                 tpos += 1
+
+            if( ins.mnemonic == "mov" ):
+                args = ins.args.split(",")
+#                print("len(args) = '%s'" % (len(args),) )
+                # do we get into trouble with at&t and intel syntax here?
+                if( len(args) == 2 ):
+#                    print("args[0] = '%s'" % (args[0],) )
+#                    print("args[1] = '%s'" % (args[1],) )
+                    if( args[0][0] == "$" and args[1][0] == "%" ):
+                        regname = args[1][1:]
+                        regval = vdb.util.xint(args[0][1:])
+                        possible_registers[regname] = regval
+                        # little hack to have eax/rax be populated
+                        if( regname[0] == "e" ):
+                            possible_registers["r" + regname[1:]] = regval
+
+#                print("possible_registers = '%s'" % (possible_registers,) )
+#                print("ins.args = '%s'" % (ins.args,) )
+
+            if( ins.mnemonic == "syscall" ):
+#                print("possible_registers = '%s'" % (possible_registers,) )
+                rax = possible_registers.get("rax",None)
+                if( rax is not None ):
+                    sc = get_syscall( rax )
+                    print("rax = '%s'" % (rax,) )
+                    print("sc = '%s'" % (sc,) )
+                    if( sc is not None ):
+                        ins.extra = [(sc.to_str(possible_registers),1,1)]
+                    else:
+                        ins.extra = [ f"syscall[{rax}]()" ]
+
+            if( ins.mnemonic in set(["call","syscall","ret","jmp",]) ):
+                possible_registers = {}
 
             if( ins.mnemonic == "cmp" ):
                 m = re.search(cmpre,ins.args)

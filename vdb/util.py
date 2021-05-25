@@ -198,7 +198,11 @@ def format_table( tbl, padbefore = " ", padafter = " " ):
                 cell=""
 #            print("cnt = '%s'" % cnt )
             if isinstance(cell,tuple):
-                maxsz[cnt] = max(maxsz.get(cnt,0),cell[1])
+                if( len(cell) == 2 ):
+                    maxsz[cnt] = max(maxsz.get(cnt,0),cell[1])
+                else:
+                    # Ignore the size at that point
+                    maxsz[cnt] = max(maxsz.get(cnt,0),1)
             else:
                 maxsz[cnt] = max(maxsz.get(cnt,0),len(str(cell)))
             cnt += 1

@@ -165,8 +165,9 @@ enable_track     = vdb.config.parameter( "vdb-enable-track",True)
 enable_graph     = vdb.config.parameter( "vdb-enable-graph",True)
 enable_tee       = vdb.config.parameter( "vdb-enable-tee",True)
 enable_data      = vdb.config.parameter( "vdb-enable-data",True)
+enable_syscall   = vdb.config.parameter( "vdb-enable-syscall",True)
 
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard,hashtable,ssh,track,graph,tee,data" )
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard,hashtable,ssh,track,graph,tee,data,syscall" )
 
 home_first  = vdb.config.parameter( "vdb-plugin-home-first",True)
 search_down = vdb.config.parameter( "vdb-plugin-search-down",True)

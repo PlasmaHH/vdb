@@ -131,6 +131,15 @@ possible_specials = [
 gdb_uint64_t = gdb.lookup_type("unsigned long long")
 gdb_uint8_t = gdb.lookup_type("unsigned char")
 
+
+def read( reg, frame = None ):
+    if( frame is None ):
+        frame = gdb.selected_frame()
+    try:
+        return frame.read_register(reg)
+    except ValueError:
+        return None
+
 class Registers():
 
     def __init__(self):
@@ -225,14 +234,8 @@ class Registers():
 #        print("self.eflags = '%s'" % self.eflags )
 #        print("self.mxcsr = '%s'" % self.mxcsr )
 
-
     def read( self, reg, frame = None ):
-        if( frame is None ):
-            frame = gdb.selected_frame()
-        try:
-            return frame.read_register(reg)
-        except ValueError:
-            return None
+        return read(reg,frame)
 
     def parse_register( self,frame,reg,regs):
         if( len(reg) == 0 ):
