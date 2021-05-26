@@ -112,6 +112,20 @@ def get_syscall( nr ):
     else:
         return None
 
+def reg_set( possible_registers, regname, regval ):
+    regval = vdb.util.xint(regval)
+    possible_registers[regname] = regval
+    # little hack to have eax/rax be populated
+    if( regname[0] == "e" ):
+        possible_registers["r" + regname[1:]] = regval
+    if( regname[0] == "r" and regname[-1] == "d" ):
+        possible_registers[regname[:-1]] = regval
+
+def reg_reg( possible_registers, regfrom, regto ):
+    oldval = possible_registers.get(regfrom,None)
+    if( oldval is not None ):
+        reg_set( possible_registers, regto, oldval )
+
 ix = -1
 def next_index( ):
     global ix
@@ -142,7 +156,10 @@ class instruction( ):
         self.bt = None
         self.history = None
         self.bt_idx = None
-        self.extra = None
+        self.extra = []
+
+    def add_extra( self, s ):
+        self.extra.append( (s,1,1) )
 
     def __str__( self ):
         ta = "None"
@@ -708,7 +725,7 @@ ascii mockup:
 #            ret.append(line)
             cnt += 1
 
-            if( i.extra is not None ):
+            if( len(i.extra) > 0 ):
                 for ex in i.extra:
                     el = [None] * (len(line)-1)
 #                    el = ["m","a","h","H","o","d","BYTES" + str(len(line)-1)]
@@ -1072,6 +1089,17 @@ def parse_from_gdb( arg, fakedata = None ):
                 ins.args = tokens[tpos]
                 tpos += 1
 
+            if( ins.mnemonic in conditional_jump_mnemonics ):
+                ins.conditional_jump = True
+
+            if( ins.mnemonic == "xor" ):
+                args = ins.args.split(",")
+                if( len(args) == 2 ):
+                    # xor zeroeing out a register
+                    if( args[0] == args[1] and args[0][0] == "%" ):
+                        regname = args[0][1:]
+                        reg_set( possible_registers,regname,0)
+
             if( ins.mnemonic == "mov" ):
                 args = ins.args.split(",")
 #                print("len(args) = '%s'" % (len(args),) )
@@ -1082,10 +1110,11 @@ def parse_from_gdb( arg, fakedata = None ):
                     if( args[0][0] == "$" and args[1][0] == "%" ):
                         regname = args[1][1:]
                         regval = vdb.util.xint(args[0][1:])
-                        possible_registers[regname] = regval
-                        # little hack to have eax/rax be populated
-                        if( regname[0] == "e" ):
-                            possible_registers["r" + regname[1:]] = regval
+                        reg_set(possible_registers,regname,regval)
+                    elif( args[0][0] == "%" and args[1][0] == "%" ):
+                        regfrom = args[0][1:]
+                        regto   = args[1][1:]
+                        reg_reg( possible_registers, regfrom, regto )
 
 #                print("possible_registers = '%s'" % (possible_registers,) )
 #                print("ins.args = '%s'" % (ins.args,) )
@@ -1095,15 +1124,18 @@ def parse_from_gdb( arg, fakedata = None ):
                 rax = possible_registers.get("rax",None)
                 if( rax is not None ):
                     sc = get_syscall( rax )
-                    print("rax = '%s'" % (rax,) )
-                    print("sc = '%s'" % (sc,) )
+#                    print("rax = '%s'" % (rax,) )
+#                    print("sc = '%s'" % (sc,) )
                     if( sc is not None ):
-                        ins.extra = [(sc.to_str(possible_registers),1,1)]
+                        ins.add_extra( sc.to_str(possible_registers) )
                     else:
-                        ins.extra = [ f"syscall[{rax}]()" ]
+                        ins.add_extra(f"syscall[{rax}]()")
+#                    ins.add_extra(f"{possible_registers}")
 
-            if( ins.mnemonic in set(["call","syscall","ret","jmp",]) ):
+            # make sure to do this after syscall is handled
+            if( ins.mnemonic in set(["call","syscall","ret","jmp",]) or ins.conditional_jump ):
                 possible_registers = {}
+#                ins.add_extra("DELETED PR")
 
             if( ins.mnemonic == "cmp" ):
                 m = re.search(cmpre,ins.args)
@@ -1127,7 +1159,8 @@ def parse_from_gdb( arg, fakedata = None ):
                     except:
                         pass
                     ins.target_name = " ".join(tokens[tpos:])
-            elif( ins.mnemonic in conditional_jump_mnemonics ):
+#            elif( ins.mnemonic in conditional_jump_mnemonics ):
+            elif( ins.conditional_jump ):
 #                print("CONDITIONAL JUMP? %s %s" % (ins.mnemonic, tokens ) )
                 try:
                     ins.targets.add(vdb.util.xint(tokens[tpos-1]))
