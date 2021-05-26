@@ -702,6 +702,7 @@ ascii mockup:
                     line.append( jumparrows )
                 else:
                     line.append( "" )
+                    postarrows = ""
 
             if( "b" in showspec ):
                 postjump += 1
@@ -759,6 +760,8 @@ ascii mockup:
             cnt += 1
 
             if( len(i.extra) > 0 ):
+#                print("prejump = '%s'" % (prejump,) )
+#                print("postjump = '%s'" % (postjump,) )
                 for ex in i.extra:
                     pre = prejump * [None]
                     post = (postjump-1) * [None]
