@@ -22,6 +22,8 @@ color_filename = vdb.config.parameter("vdb-bt-colors-filename",                 
 color_objfile  = vdb.config.parameter("vdb-bt-colors-object-file",              "#ffbbbb", gdb_type = vdb.config.PARAM_COLOUR)
 color_defobj   = vdb.config.parameter("vdb-bt-colors-default-object",           "#ffbbff", gdb_type = vdb.config.PARAM_COLOUR)
 color_rtti     = vdb.config.parameter("vdb-bt-colors-rtti-warning",             "#c00",    gdb_type = vdb.config.PARAM_COLOUR)
+color_argument = vdb.config.parameter("vdb-bt-colors-argument",                 "#008844", gdb_type = vdb.config.PARAM_COLOUR)
+color_argvalue = vdb.config.parameter("vdb-bt-colors-argvalue",                 None,    gdb_type = vdb.config.PARAM_COLOUR)
 #color_ = vdb.config.parameter( "vdb-bt-colors-","#")
 
 color_addr     = vdb.config.parameter("vdb-bt-color-addresses", True )
@@ -335,8 +337,9 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
         args = super(BacktraceDecorator,self).frame_args()
         if( args is None ):
             return args
-        if( not any((c in showspec.value) for c in "pP" ) ):
+        if( not any((c in showspec.value) for c in "pPE" ) ):
             return None
+        frame = self.fobj.inferior_frame()
 #		print("args = '%s'" % args )
         ret = [ ]
 #		gdb.execute("set logging file /dev/null")
@@ -345,11 +348,23 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
         for a in args:
             if( str(a.symbol()) == "__in_chrg" ):
                 continue
+            # We must have messed up somewhere and get called twice, detect that and append the already processed ArgVal
+
+            if( type(a) == ArgVal ):
+                ret.append( a )
+                continue
 #			print("a.symbol() = '%s'" % a.symbol() )
+            symbol = a.symbol()
+            symbol = str(symbol)
+            symbol = vdb.color.color(symbol,color_argument.value)
             if( "P" in showspec.value ):
+                val = frame.read_var(a.symbol())
+                val = vdb.color.color(val,color_argvalue.value)
+                ret.append( ArgVal( symbol, val) )
+            elif( "E" in showspec.value ):
                 ret.append( ArgVal( a.symbol(), a.value() ) )
             else:
-                ret.append( ArgVal( a.symbol(), "") )
+                ret.append( ArgVal( symbol, "") )
 #		gdb.execute("set logging redirect off")
 #		gdb.execute("set logging off")
         return ret
@@ -475,26 +490,34 @@ def do_backtrace( argv ):
     # We need to do that first because if we don't we change the currently selected frame midways and that isn't something gdb likes
     vdb.memory.mmap.lazy_parse()
     try:
+        oldshowspec = showspec.value
 
         full=""
         if( len(argv) > 0 and argv[0] == "/r" ):
             bf.enabled = False
             argv = argv[1:]
         elif( len(argv) > 0 and argv[0] == "/f" ):
-            full="full"
+            full="-full"
             argv = argv[1:]
         elif( color_addr.value ):
             vdb.memory.print_legend( addr_colorspec.value )
-        if( len(argv) > 1 ):
-            print("Too many arguments, expecting at most 1, ignoring all")
-        if( len(argv) == 1 ):
-            btoutput = gdb.execute("backtrace {} {}".format(full,argv[0]),False,True)
+        if( "p" not in showspec.value ):
+            frameargs="-frame-arguments all"
         else:
-            btoutput = gdb.execute("backtrace {}".format(full),False,True)
-        btoutput = re.sub( "warning: RTTI symbol not found for class '.*?'\n",vdb.color.color("RTTI",color_rtti.value),btoutput)
-        if( "n" not in showspec.value ):
-            btoutput = re.sub( "^(\s*)#[0-9]*", " ", btoutput, flags = re.MULTILINE )
-        print(btoutput)
+            frameargs="-frame-arguments scalar"
+
+        if( len(argv) > 0 and re.match("[nafFpPsE]",argv[0]) ):
+            showspec.value = argv[0]
+            argv = argv[1:]
+
+
+        btoutput = gdb.execute("backtrace {} {} {}".format(full,frameargs," ".join(argv)),False,bf.enabled)
+
+        if( btoutput is not None ):
+            btoutput = re.sub( "warning: RTTI symbol not found for class '.*?'\n",vdb.color.color("RTTI",color_rtti.value),btoutput)
+            if( "n" not in showspec.value ):
+                btoutput = re.sub( "^(\s*)#[0-9]*", " ", btoutput, flags = re.MULTILINE )
+            print(btoutput)
     except gdb.error as e:
         print(e)
         pass
@@ -503,14 +526,20 @@ def do_backtrace( argv ):
         pass
     finally:
         bf.enabled = True
+        showspec.value = oldshowspec
 
 
 class cmd_bt (vdb.command.command):
-    """A backtrace version that runs colouring and other filters. 
+    """A backtrace version that runs colouring and other filters.
+
+The main component is a decorator that will change the way the backtrace is output and formatted. Another is a filter that will try to filter out known distracting strings.
+
 You additionally have the following variants:
-bt/r        Just shows the unfiltered raw gdb output
-bt/f        Additionally use the full output of gdb backtrace to show variable names and contents etc.
+bt/r        Just shows the unfiltered raw gdb output (same as backtrace -no-filters probably)
+bt/f        Additionally use the full output of gdb backtrace to show variable names and contents etc. (can be messy for bigger structs)
 backtrace   This is the plain built in gdb command which will run the decorator (some colours etc) but not the filter.
+
+All standard backtrace arguments (help backtrace) can be used after ours
     """
 
     def __init__ (self):

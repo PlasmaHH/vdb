@@ -50,6 +50,10 @@ class command(gdb.Command):
         try:
             argv = gdb.string_to_argv(arg)
 
+            if( len(argv) == 1 and argv[0] == "/?" ):
+                self.usage()
+                return
+
             global profile_next
             if( profile_next.value ):
                 profile_next.value = False
@@ -61,5 +65,8 @@ class command(gdb.Command):
             traceback.print_exc()
             raise
             pass
+
+    def usage( self ):
+        print(self.__doc__)
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

@@ -40,6 +40,8 @@ tells what should be displayed in the backtrace. Missing items are suppressed. T
   name without any parameters or templates.
 * `p` or `P` shows the parameters of the function. For `p` we only show the names, for `P` we also try to get gdb to
   print some values for them
+* `E` instead of printing the parameters ourselves, we let gdb do it alone. This will also display the typical @entry
+  annotations that are not available with `pP`
 * `s` shows the source of that frame. Can be a source file (with line) or some object file name.
 
 You can also change the marker for the selected frame, this may be useful if your terminal does not support the default utf8 character.
@@ -56,5 +58,7 @@ This is like `bt` but disables the filter aka. raw. You should not see additiona
 This is like `bt` but also passes the `full` parameter to backtrace to show all local variables per stackframe. These are not currently filtered.
 ### `backtrace`
 This is an unmodified gdb version, that is running the decorator, but not additional filters and outputs. It may be overridden by additional gdb plugins that you have. This has the added disadvantage that the `n` showspec doesn't have any effect, as well as the RTTI warning filter not working.
+
+Additionally we accept a showspec as the first parameter as well as all backtrace parameters
 
 
