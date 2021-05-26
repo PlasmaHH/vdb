@@ -140,6 +140,14 @@ def read( reg, frame = None ):
     except ValueError:
         return None
 
+# for x86 eax/rax r10/r10d etc stuff where we want to just handle "whole" registers
+def altname( regname ):
+    if( regname[0] == "e" ):
+        return "r" + regname[1:]
+    if( regname[0] == "r" and regname[-1] == "d" ):
+        return regname[:-1]
+    return None
+
 class Registers():
 
     def __init__(self):

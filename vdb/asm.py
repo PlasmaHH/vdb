@@ -7,6 +7,7 @@ import vdb.pointer
 import vdb.dot
 import vdb.command
 import vdb.arch
+import vdb.register
 
 import gdb
 
@@ -116,10 +117,13 @@ def reg_set( possible_registers, regname, regval ):
     regval = vdb.util.xint(regval)
     possible_registers[regname] = regval
     # little hack to have eax/rax be populated
-    if( regname[0] == "e" ):
-        possible_registers["r" + regname[1:]] = regval
-    if( regname[0] == "r" and regname[-1] == "d" ):
-        possible_registers[regname[:-1]] = regval
+    altname = vdb.register.altname( regname )
+    if( altname is not None ):
+        possible_registers[altname] = regval
+#    if( regname[0] == "e" ):
+#        possible_registers["r" + regname[1:]] = regval
+#    if( regname[0] == "r" and regname[-1] == "d" ):
+#        possible_registers[regname[:-1]] = regval
 
 def reg_reg( possible_registers, regfrom, regto ):
     oldval = possible_registers.get(regfrom,None)
@@ -157,6 +161,14 @@ class instruction( ):
         self.history = None
         self.bt_idx = None
         self.extra = []
+        self.possible_register_sets = []
+        self.next = None
+        self.passes = 0
+
+    def _gen_extra( self ):
+#        print(f"gen_extra({self.mnemonic}) {self}")
+        for prs in self.possible_register_sets:
+            self.add_extra(f"REG {prs}")
 
     def add_extra( self, s ):
         self.extra.append( (s,1,1) )
@@ -171,7 +183,10 @@ class instruction( ):
         for target in self.target_of:
             to += f"0x{target:x}"
         to += ")"
-        ret = f"INS @{self.address:x} => {ta} <={to}"
+        a = self.address
+        if( a is None ):
+            a = 0
+        ret = f"INS @{a:x} => {ta} <={to}"
         return ret
 
 class listing( ):
@@ -621,7 +636,10 @@ ascii mockup:
         for i in self.instructions:
             line = []
             otbl.append(line)
+            prejump = 0
+            postjump = 0
             if( "m" in showspec ):
+                prejump += 1
                 if( i.marked ):
                     line.append( ( vdb.color.color(next_marker.value,color_marker.value), len(next_marker.value) ) )
                     marked_line = cnt
@@ -639,13 +657,17 @@ ascii mockup:
 
                 else:
                     line.append( "" )
+
             if( "a" in showspec ):
+                prejump += 1
                 line.append( self.color_address( i.address, i.marked ))
 
             if( "j" in showspec ):
+                prejump += 1
                 line.append( i.bt )
 
             if( any((c in showspec) for c in "hH" ) ):
+                prejump += 1
 #                line.append("H")
                 if( i.history is not None ):
                     if( "h" in showspec ):
@@ -656,6 +678,7 @@ ascii mockup:
                     line.append(None)
 
             if( "o" in showspec ):
+                prejump += 1
                 try:
 #                    io = vdb.util.xint(i.offset)
                     io = int(i.offset)
@@ -663,22 +686,31 @@ ascii mockup:
                 except:
                     line.append( vdb.color.colorl(offset_txt_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value))
 
+            jumparrows = None
+            postarrows = None
             if( "d" in showspec ):
 #                mt=str.maketrans("v^-|<>+#Q~I","╭╰─│◄►┴├⥀◆↑" )
                 mt=str.maketrans("v^-|<>u#Q~T+","╭╰─│◄►┴├⥀◆┬┼" )
+                pt=str.maketrans("v^-|<>u#Q~T+","|  |   |  ||" )
+                                    
                 if( len(i.jumparrows) ):
                     ja=i.jumparrows.translate(mt)
+                    pa=i.jumparrows.translate(pt).translate(mt)
                     fillup = " " * (self.maxarrows - i.arrowwidth)
-                    line.append( (f"{ja}{fillup}", self.maxarrows) )
+                    jumparrows = (f"{ja}{fillup}", self.maxarrows)
+                    postarrows = (f"{pa}{fillup}", self.maxarrows)
+                    line.append( jumparrows )
                 else:
                     line.append( "" )
 
             if( "b" in showspec ):
+                postjump += 1
                 line.append( vdb.color.colorl(f"{' '.join(i.bytes)}",color_bytes.value) )
             aslen = 0
 #            xline = line + "123456789012345678901234567890"
 #            print(xline)
             if( "n" in showspec ):
+                postjump += 1
                 pre = self.color_prefix(i.prefix)
                 mne = self.color_mnemonic(i.mnemonic)
                 mxe = pre + i.infix + mne
@@ -714,6 +746,7 @@ ascii mockup:
             if( "r" in showspec ):
                 if( i.reference is not None ):
                     line.append( vdb.shorten.symbol(i.reference) )
+
             if( any((c in showspec) for c in "tT" ) ):
 #                if( i.targets is not None ):
 #                    line.append( i.targets)
@@ -727,7 +760,12 @@ ascii mockup:
 
             if( len(i.extra) > 0 ):
                 for ex in i.extra:
-                    el = [None] * (len(line)-1)
+                    pre = prejump * [None]
+                    post = (postjump-1) * [None]
+                    if( postarrows is None ):
+                        el = pre + post
+                    else:
+                        el = pre + [postarrows] + post
 #                    el = ["m","a","h","H","o","d","BYTES" + str(len(line)-1)]
                     el.append(ex)
                     otbl.append(el)
@@ -1008,6 +1046,7 @@ def parse_from_gdb( arg, fakedata = None ):
 
     markers = 0
     possible_registers = {}
+    oldins = None
 #    print("dis = '%s'" % dis )
     for line in dis.splitlines():
 #        print("line = '%s'" % line )
@@ -1091,52 +1130,6 @@ def parse_from_gdb( arg, fakedata = None ):
 
             if( ins.mnemonic in conditional_jump_mnemonics ):
                 ins.conditional_jump = True
-
-            if( ins.mnemonic == "xor" ):
-                args = ins.args.split(",")
-                if( len(args) == 2 ):
-                    # xor zeroeing out a register
-                    if( args[0] == args[1] and args[0][0] == "%" ):
-                        regname = args[0][1:]
-                        reg_set( possible_registers,regname,0)
-
-            if( ins.mnemonic == "mov" ):
-                args = ins.args.split(",")
-#                print("len(args) = '%s'" % (len(args),) )
-                # do we get into trouble with at&t and intel syntax here?
-                if( len(args) == 2 ):
-#                    print("args[0] = '%s'" % (args[0],) )
-#                    print("args[1] = '%s'" % (args[1],) )
-                    if( args[0][0] == "$" and args[1][0] == "%" ):
-                        regname = args[1][1:]
-                        regval = vdb.util.xint(args[0][1:])
-                        reg_set(possible_registers,regname,regval)
-                    elif( args[0][0] == "%" and args[1][0] == "%" ):
-                        regfrom = args[0][1:]
-                        regto   = args[1][1:]
-                        reg_reg( possible_registers, regfrom, regto )
-
-#                print("possible_registers = '%s'" % (possible_registers,) )
-#                print("ins.args = '%s'" % (ins.args,) )
-
-            if( ins.mnemonic == "syscall" ):
-#                print("possible_registers = '%s'" % (possible_registers,) )
-                rax = possible_registers.get("rax",None)
-                if( rax is not None ):
-                    sc = get_syscall( rax )
-#                    print("rax = '%s'" % (rax,) )
-#                    print("sc = '%s'" % (sc,) )
-                    if( sc is not None ):
-                        ins.add_extra( sc.to_str(possible_registers) )
-                    else:
-                        ins.add_extra(f"syscall[{rax}]()")
-#                    ins.add_extra(f"{possible_registers}")
-
-            # make sure to do this after syscall is handled
-            if( ins.mnemonic in set(["call","syscall","ret","jmp",]) or ins.conditional_jump ):
-                possible_registers = {}
-#                ins.add_extra("DELETED PR")
-
             if( ins.mnemonic == "cmp" ):
                 m = re.search(cmpre,ins.args)
 #                print("m = '%s'" % m )
@@ -1201,6 +1194,10 @@ def parse_from_gdb( arg, fakedata = None ):
                 ins.conditional_jump = False
 #            print("tokens = '%s'" % tokens[tpos:] )
             ret.add(ins)
+
+            if( oldins is not None and oldins.mnemonic != "ret" ):
+                oldins.next = ins
+            oldins = ins
             continue
         if( line in set(["End of assembler dump."]) ):
             continue
@@ -1212,6 +1209,83 @@ def parse_from_gdb( arg, fakedata = None ):
         parse_cache[key] = ret
     if( markers == 0 ):
         ret = fix_marker(ret,arg)
+    # Try to follow execution path to figure out possible register values (and maybe later flags)
+    possible_registers = {}
+    ins = ret.instructions[0]
+#    for ins in ret.instructions:
+    flowstack = [None]
+
+    passlimit = 2
+    while ins is not None:
+        ins.passes += 1
+        if( ins.passes >= passlimit ):
+            next = None
+        else:
+            next = ins.next
+        if( len(ins.possible_register_sets) > 0 ):
+            possible_registers = ins.possible_register_sets[-1]
+
+        if( ins.mnemonic == "xor" ):
+            args = ins.args.split(",")
+            if( len(args) == 2 ):
+                # xor zeroeing out a register
+                if( args[0] == args[1] and args[0][0] == "%" ):
+                    regname = args[0][1:]
+                    reg_set( possible_registers,regname,0)
+                    ins.possible_register_sets.append(possible_registers)
+
+        elif( ins.mnemonic == "mov" ):
+            args = ins.args.split(",")
+#                print("len(args) = '%s'" % (len(args),) )
+            # do we get into trouble with at&t and intel syntax here?
+            if( len(args) == 2 ):
+#                    print("args[0] = '%s'" % (args[0],) )
+#                    print("args[1] = '%s'" % (args[1],) )
+                if( args[0][0] == "$" and args[1][0] == "%" ):
+                    regname = args[1][1:]
+                    regval = vdb.util.xint(args[0][1:])
+                    reg_set(possible_registers,regname,regval)
+                elif( args[0][0] == "%" and args[1][0] == "%" ):
+                    regfrom = args[0][1:]
+                    regto   = args[1][1:]
+                    reg_reg( possible_registers, regfrom, regto )
+                ins.possible_register_sets.append(possible_registers)
+        elif( ins.mnemonic == "syscall" ):
+#            print("possible_registers = '%s'" % (possible_registers,) )
+#            ins._gen_extra()
+            rax = possible_registers.get("rax",None)
+            if( rax is not None ):
+                sc = get_syscall( rax )
+#                    print("rax = '%s'" % (rax,) )
+#                    print("sc = '%s'" % (sc,) )
+                if( sc is not None ):
+                    ins.add_extra( sc.to_str(possible_registers) )
+                    possible_registers = sc.clobber(possible_registers)
+                else:
+                    ins.add_extra(f"syscall[{rax}]()")
+#                    ins.add_extra(f"{possible_registers}")
+        # make sure to do this after syscall is handled
+        if( ins.mnemonic in set(["call","ret"]) ):
+            possible_registers = {}
+#            ins.add_extra("DELETED PR")
+
+        elif( len(ins.targets) > 0 ):
+#            ins.add_extra(f"targets {ins.targets}")
+            if( not ins.conditional_jump ):
+                next = None
+            for tga in ins.targets:
+                tgt = ret.by_addr.get(tga,None)
+                if( tgt is not None ):
+                    flowstack.append(tgt)
+                    tgt.possible_register_sets.append(possible_registers)
+
+
+#        ins._gen_extra()
+        ins = next
+        if( ins is None ):
+            ins = flowstack.pop()
+
+
 #    print(f"Returning for {key}")
     return ret
 

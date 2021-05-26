@@ -8,11 +8,14 @@ import gdb
 syscalls = {
         "amd64" :
             {
-                "futex" : ( [( "uint32_t*","uaddr"),( "int", "futex_op"),("uint32_t","val") ], [ [("timespec*","timeout"),("uint32_t","val2")],("uint32_t*","uaddr2"),("uint32_t","val3") ] ),
+                "futex"         : ( [( "uint32_t*","uaddr"),( "int", "futex_op"),("uint32_t","val") ], 
+                                    [ [("timespec*","timeout"),("uint32_t","val2")],("uint32_t*","uaddr2"),("uint32_t","val3") ] ),
                 "rt_sigprocmask" : ([("int","how"),("kernel_sigset_t*","set"),("kernel_sigset_t*","oldset"),("size_t","sigsetsize")],[]),
-                "tgkill" : ([ ("pid_t","tgid"),("pid_t","tid"),("int","sig")],[]),
-                "writev" : ([("int","fd"),("iovec*","iov"),("int","iovcnt")],[]),
-                "openat" : ([("int","fd"),("char*","filename"),("int","flags"),("umode_t","mode")],[])
+                "tgkill"        : ([ ("pid_t","tgid"),("pid_t","tid"),("int","sig")],[]),
+                "writev"        : ([("int","fd"),("iovec*","iov"),("int","iovcnt")],[]),
+                "openat"        : ([("int","fd"),("char*","filename"),("int","flags"),("umode_t","mode")],[]),
+                "exit"          : ([("int","error_code")],[]),
+                "exit_group"    : ([("int","error_code")],[])
 
             }
         }
@@ -50,7 +53,8 @@ syscall_conventions = {
             "number" : "rax",
             "ret0" : "rax",
             "ret1" : "rdx",
-            "args" : [ "rdi", "rsi", "rdx", "r10", "r8", "r9" ]
+            "args" : [ "rdi", "rsi", "rdx", "r10", "r8", "r9" ],
+            "clobber" : [ "rax", "rcx" ]
             }
         }
 
@@ -103,6 +107,7 @@ class syscall:
         self.name = name
         self.parameters = []
         self.optional_paramters = []
+        self.clobbers = []
 
     def to_str( self, registers ):
 
@@ -123,6 +128,15 @@ class syscall:
             ret = ret[:-1]
 
         ret += ")"
+        return ret
+
+    def clobber( self, registers ):
+        ret = registers
+        for reg in self.clobbers:
+            ret.pop(reg,None)
+            alt = vdb.register.altname(reg)
+            if( alt is not None ):
+                ret.pop(alt,None)
         return ret
 
 def get( nr ):
@@ -174,6 +188,7 @@ def parse_xml( fn = None ):
         if( paramlist is not None ):
             sc.parameters = gather_params(sarch,paramlist)
             sc.optional_paramters = gather_params(sarch,optparamlist,len(sc.parameters))
+        sc.clobbers = syscall_conventions[sarch]["clobber"]
 #        print(f"{nr} => {sc.name}")
         syscall_db[int(nr)] = sc
 
