@@ -8,14 +8,17 @@ import gdb
 syscalls = {
         "amd64" :
             {
-                "futex"         : ( [( "uint32_t*","uaddr"),( "int", "futex_op"),("uint32_t","val") ], 
-                                    [ [("timespec*","timeout"),("uint32_t","val2")],("uint32_t*","uaddr2"),("uint32_t","val3") ] ),
+                "exit"           : ([("int","error_code")],[]),
+                "exit_group"     : ([("int","error_code")],[]),
+                "futex"          : ( [( "uint32_t*","uaddr"),( "int", "futex_op"),("uint32_t","val") ], 
+                                     [ [("timespec*","timeout"),("uint32_t","val2")],("uint32_t*","uaddr2"),("uint32_t","val3") ] ),
+                "openat"         : ([("int","fd"),("char*","filename"),("int","flags"),("umode_t","mode")],[]),
+                "read"           : ([("int","fd"),("char*","buf"),("size_t","count")],[]),
+                "readv"          : ([("int","fd"),("iovec*","iov"),("int","iovcnt")],[]),
                 "rt_sigprocmask" : ([("int","how"),("kernel_sigset_t*","set"),("kernel_sigset_t*","oldset"),("size_t","sigsetsize")],[]),
-                "tgkill"        : ([ ("pid_t","tgid"),("pid_t","tid"),("int","sig")],[]),
-                "writev"        : ([("int","fd"),("iovec*","iov"),("int","iovcnt")],[]),
-                "openat"        : ([("int","fd"),("char*","filename"),("int","flags"),("umode_t","mode")],[]),
-                "exit"          : ([("int","error_code")],[]),
-                "exit_group"    : ([("int","error_code")],[])
+                "tgkill"         : ([ ("pid_t","tgid"),("pid_t","tid"),("int","sig")],[]),
+                "write"          : ([("int","fd"),("char*","buf"),("size_t","count")],[]),
+                "writev"         : ([("int","fd"),("iovec*","iov"),("int","iovcnt")],[]),
 
             }
         }

@@ -8,6 +8,7 @@ import vdb.dot
 import vdb.command
 import vdb.arch
 import vdb.register
+import vdb.memory
 
 import gdb
 
@@ -126,7 +127,18 @@ def reg_set( possible_registers, regname, regval ):
 #        possible_registers[regname[:-1]] = regval
 
 def reg_reg( possible_registers, regfrom, regto ):
-    oldval = possible_registers.get(regfrom,None)
+#    print("regfrom = '%s'" % (regfrom,) )
+#    print("regto = '%s'" % (regto,) )
+    if( regfrom.startswith("fs:") ):
+        add = regfrom[3:]
+        oldmem = vdb.memory.read(f"$fs_base + {add}",vdb.arch.pointer_size//8)
+        oldmem = oldmem.cast("P")
+        oldval = oldmem[0]
+    else:
+        oldval = possible_registers.get(regfrom,None)
+        if( oldval is None ):
+            oldval = possible_registers.get(vdb.register.altname(regfrom),None)
+
     if( oldval is not None ):
         reg_set( possible_registers, regto, oldval )
 
