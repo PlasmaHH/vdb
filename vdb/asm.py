@@ -129,7 +129,7 @@ def reg_set( possible_registers, regname, regval ):
 def reg_reg( possible_registers, regfrom, regto ):
 #    print("regfrom = '%s'" % (regfrom,) )
 #    print("regto = '%s'" % (regto,) )
-    if( regfrom.startswith("fs:") ):
+    if( regfrom.startswith("fs:0") ):
         add = regfrom[3:]
         oldmem = vdb.memory.read(f"$fs_base + {add}",vdb.arch.pointer_size//8)
         oldmem = oldmem.cast("P")
