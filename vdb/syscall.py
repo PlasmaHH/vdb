@@ -10,7 +10,10 @@ syscalls = {
             {
                 "futex" : ( [( "uint32_t*","uaddr"),( "int", "futex_op"),("uint32_t","val") ], [ [("timespec*","timeout"),("uint32_t","val2")],("uint32_t*","uaddr2"),("uint32_t","val3") ] ),
                 "rt_sigprocmask" : ([("int","how"),("kernel_sigset_t*","set"),("kernel_sigset_t*","oldset"),("size_t","sigsetsize")],[]),
-                "tgkill" : ([ ("pid_t","tgid"),("pid_t","tid"),("int","sig")],[])
+                "tgkill" : ([ ("pid_t","tgid"),("pid_t","tid"),("int","sig")],[]),
+                "writev" : ([("int","fd"),("iovec*","iov"),("int","iovcnt")],[]),
+                "openat" : ([("int","fd"),("char*","filename"),("int","flags"),("umode_t","mode")],[])
+
             }
         }
 
@@ -31,9 +34,13 @@ enum_maps = {
 
                 256 : "FUTEX_CLOCK_REALTIME"
             },
-        "rt_sigprocmask:how" : 
+        "rt_sigprocmask:how" :
             {
                 0   : "SIG_BLOCK", 1 : "SIG_UNBLOCK", 2 : "SIG_SETMASK"
+            },
+        "openat:fd" :
+            {
+                -100: "AT_FDCWD"
             }
         }
 
@@ -59,24 +66,30 @@ def reg( r, rd ):
     ret = rd.get(r,None)
     q = False
     if( ret is None ):
-        ret = vdb.register.read(r)
+        try:
+            ret = vdb.register.read(r)
+        except:
+            return (None,True)
         q = True
 #    print(f"Register {r} not in {rd} ? {q}")
     return (str(ret),q)
 
 def param_str( syscall, val, ptype, pname, register, questionable ):
-    try:
-        val = gdb.parse_and_eval(f"({ptype})({val})")
-    except:
-        # assume the type is not known, we fall back to void* then
-        val = gdb.parse_and_eval(f"(void*)({val})")
+    if( val is not None ):
+        try:
+            val = gdb.parse_and_eval(f"({ptype})({val})")
+        except:
+            # assume the type is not known, we fall back to void* then
+            val = gdb.parse_and_eval(f"(void*)({val})")
 
-    emap = enum_maps.get(f"{syscall}:{pname}",None)
+        emap = enum_maps.get(f"{syscall}:{pname}",None)
 
-    if( emap is not None ):
-        ename = emap.get(vdb.util.mint(val),None)
-        if( ename is not None ):
-            val = f"{val}({ename})"
+        if( emap is not None ):
+            ename = emap.get(vdb.util.mint(val),None)
+            if( ename is not None ):
+                val = f"{val}({ename})"
+    else:
+        val = "???"
 
     ret = f"{pname}[{register}] = {val}"
     if( questionable ):
