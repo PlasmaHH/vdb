@@ -22,7 +22,7 @@ def show_region( addr ):
 
 
 class cmd_vmmap (vdb.command.command):
-    """Run the backtrace without filters"""
+    """Module holding information about memory mappings"""
 
     def __init__ (self):
         super (cmd_vmmap, self).__init__ ("vmmap", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)

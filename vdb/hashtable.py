@@ -204,7 +204,7 @@ def eval_hashtable( val ):
         os.system(cmd)
 
 class cmd_hashtable (vdb.command.command):
-    """ """
+    """Generate graphical information about the state of a hashtable (std:: and boost::)"""
 
     def __init__ (self):
         super (cmd_hashtable, self).__init__ ("hashtable", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)

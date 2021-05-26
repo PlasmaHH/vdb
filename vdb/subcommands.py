@@ -27,9 +27,14 @@ class subcommands:
             globals.show()
         else:
             if( isinstance(sc,subcommands) ):
+                if( len(rest) == 0 ):
+                    print(f"Subcommand {s} needs additional sub command parameter:")
+                    sc.show()
+                    return
                 sc.run_subcommand(rest)
             else:
                 sc(rest)
+
     def show( self, prefix = "" ):
         for k,s in self.subcommands.items():
             if( isinstance(s,subcommands) ):
@@ -45,7 +50,7 @@ def run_subcommand( args ):
 def add_subcommand( s, f ):
     globals.add_subcommand(s,f)
 
-def show( argv  ):
+def show( argv ):
     globals.show()
 
 add_subcommand( [ "show", "subcommands" ], show )

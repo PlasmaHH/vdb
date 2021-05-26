@@ -613,7 +613,7 @@ def remove_ssh( ev ):
         vdb.prompt.queue_msg("closed ssh connection due to exit event")
 
 class cmd_ssh (vdb.command.command):
-    """Type ssh to get the real help"""
+    """Tunnel gdbserver commands through ssh (copies files locally for core file support)"""
 
     def __init__ (self):
         super (cmd_ssh, self).__init__ ("ssh", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)

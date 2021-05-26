@@ -9,11 +9,15 @@ import sys
 
 profile_next = vdb.config.parameter("vdb-command-next-profile",False)
 
+command_registry = {}
+
 class command(gdb.Command):
 
     def __init__ (self,n,t,c):
         super (command, self).__init__ (n,t,c)
         self.name = n
+        global command_registry
+        command_registry[self.name] = self
 
     def pipe( self, argv ):
         import vdb.pipe

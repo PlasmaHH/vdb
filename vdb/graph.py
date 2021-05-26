@@ -161,7 +161,7 @@ Plan:
     Maybe we could even extract things in a loop and do 2d and 3d?
 """
 class cmd_graph (vdb.command.command):
-    """ """
+    """Graphically display data from arrays and track command (using gnuplot)"""
 
     def __init__ (self):
         gnuplot = shutil.which("gnuplot")

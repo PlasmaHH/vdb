@@ -52,10 +52,11 @@ look at (and load)
 
 
 class cmd_vdb (vdb.command.command):
-    """Show vdb status information"""
+    """Show vdb status information, start vdb and call subcommands"""
 
     def __init__ (self):
         super (cmd_vdb, self).__init__ ("vdb", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.dont_repeat()
 
     def do_invoke (self, argv ):
         if( len(argv) > 0 ):
@@ -64,7 +65,19 @@ class cmd_vdb (vdb.command.command):
                 return
             vdb.subcommands.run_subcommand(argv)
             return
-        print("vdb is loaded with the following configuration:")
+        print(f"vdb is loaded with the following modules: {enabled_modules}")
+        print("Available subcommands:")
+        vdb.subcommands.show([])
+        print("Available module commands:")
+        maxlen = 0
+        for n,c in vdb.command.command_registry.items():
+            maxlen = max(maxlen,len(n))
+
+        for n,c in vdb.command.command_registry.items():
+            ns = n.ljust(maxlen)
+            doc = c.__doc__
+            doc = doc.split("\n")[0]
+            print(f" {ns} : {doc}")
 
 cmd_vdb()
 

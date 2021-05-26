@@ -330,7 +330,7 @@ def dash_on(evname):
 
 
 class cmd_dashboard (vdb.command.command):
-    """Shows a dashboard of a specified memory range"""
+    """Automatically run commands to display information on various outputs to assemble dashboards"""
 
     def __init__ (self):
         super ().__init__ ("dashboard", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)

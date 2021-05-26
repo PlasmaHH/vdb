@@ -506,7 +506,8 @@ def do_backtrace( argv ):
 
 
 class cmd_bt (vdb.command.command):
-    """A backtrace version that runs colouring and other filters. You additionally have the following variants:
+    """A backtrace version that runs colouring and other filters. 
+You additionally have the following variants:
 bt/r        Just shows the unfiltered raw gdb output
 bt/f        Additionally use the full output of gdb backtrace to show variable names and contents etc.
 backtrace   This is the plain built in gdb command which will run the decorator (some colours etc) but not the filter.
