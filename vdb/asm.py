@@ -1397,7 +1397,24 @@ def get_single( bpos ):
     return ret
 
 class Dis (vdb.command.command):
-    """Disassemble with bells and whistels"""
+    """Disassemble with bells and whistels
+
+Parses the gdb disassembler output and reformats it to look nicer and be coloured. Adds arrows for jumps, can show
+record history and sometimes display some extra information (e.g. for syscalls)
+
+Displayed columns can be set using a showspec (see documentation)
+
+dis/r       - runs the plain gdb disassemble command (accepts all parameters so you can run dis/r /r to show bytes)
+dis/d       - instead of showing text output, this will generate a dotty graph, trying to recover basic blocks
+dis/<N>     - Have N instructions of context before and after the current marker (useful for dashboards)
+dis/+<N>    - Have N Instructions of context after the marker
+dis/-<N>    - Have N Instructions of context before the marker
+dis/<N>,<M> - Have N Instructions of context before and M after the Marker
+
+All further parameters are handled like for the built in disasemble command with the exception of addresses that are not
+part of a function, unlike the disassemble command those are right away disassembled vdb-asm-nonfunction-bytes (default
+16) bytes long
+"""
 
     def __init__ (self):
         super (Dis, self).__init__ ("dis", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)

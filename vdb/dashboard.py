@@ -288,7 +288,7 @@ def call_dashboard( argv ):
     # type: tmux,port,tty
     # subcommands: list,enable,disable,erase
     if( len(argv) == 0 ):
-        raise gdb.error("You need to give at least some parameter")
+        raise gdb.error(cmd_dashboard.__doc__)
 #    print("argv = '%s'" % argv )
     if( "tty".startswith(argv[0]) ):
         if( len(argv) < 3 ):
@@ -330,7 +330,27 @@ def dash_on(evname):
 
 
 class cmd_dashboard (vdb.command.command):
-    """Automatically run commands to display information on various outputs to assemble dashboards"""
+    """Automatically run commands to display information on various outputs to assemble dashboards
+
+dashboard <subcommand> [<parameters>]
+
+Available subcommands:
+
+tty <tty>   <command> - Output on the specified tty, /dev/ may be omitted
+tmux <pane> <command> - Searches for a tmux pane matching the regex <pane>
+port <port> <command> - opens a server at port <port> and outputs there
+
+delete <id>           - deletes board with the given <id>
+enable <id>           - enables the (previously disabled) board with <id>
+disable <id>          - disables the board with <id> (no longer outputs, but keeps connection)
+cls <id>              - Enables clearing screen (^L) before sending everything
+nocls <id>            - Don't cleare screen before sending
+show                  - Show an overview over the existing dashboards and their targets
+
+The command will be run before displaying a prompt and then output to the dashboard chosen
+
+Remember that you can use dash as short as long as no other command collides with it
+    """
 
     def __init__ (self):
         super ().__init__ ("dashboard", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)

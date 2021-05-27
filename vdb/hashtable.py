@@ -204,18 +204,27 @@ def eval_hashtable( val ):
         os.system(cmd)
 
 class cmd_hashtable (vdb.command.command):
-    """Generate graphical information about the state of a hashtable (std:: and boost::)"""
+    """Generate graphical information about the state of a hashtable (std:: and boost::)
+hashtable <expression>
+
+The expression must evaluate to a compatible object. Currently std::unordered and boost::instrusive::unordered are
+supported. You can add support by filling the right chain lists above here. Until we are settled on a proper way and do
+documentation you have to read the code on how to do that.
+
+The output will be a png image with one pixel per bucket, filled black for empty, and then white,yellow,orange,red  for
+chain lengths of 1,2,3,4 elements and pink for all bigger chains.
+
+Additionally a table tells you details about the amount of chain lengths and how a "perfect" hash would perform in comparison
+    """
 
     def __init__ (self):
         super (cmd_hashtable, self).__init__ ("hashtable", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.result = ""
         self.dont_repeat()
 
-    def invoke (self, arg, from_tty):
-        argv = gdb.string_to_argv(arg)
-#        print("argv = '%s'" % argv )
-        if len(argv) > 2:
-            raise gdb.GdbError('hashtable takes 1-2 arguments.')
+    def do_invoke (self, argv ):
+        if len(argv) > 1:
+            raise gdb.GdbError('hashtable takes 1 arguments.')
 
         a0 = gdb.parse_and_eval(argv[0])
 

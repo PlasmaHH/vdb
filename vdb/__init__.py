@@ -176,7 +176,6 @@ enable_hashtable = vdb.config.parameter( "vdb-enable-hashtable",True)
 enable_ssh       = vdb.config.parameter( "vdb-enable-ssh",True)
 enable_track     = vdb.config.parameter( "vdb-enable-track",True)
 enable_graph     = vdb.config.parameter( "vdb-enable-graph",True)
-enable_tee       = vdb.config.parameter( "vdb-enable-tee",True)
 enable_data      = vdb.config.parameter( "vdb-enable-data",True)
 enable_syscall   = vdb.config.parameter( "vdb-enable-syscall",True)
 

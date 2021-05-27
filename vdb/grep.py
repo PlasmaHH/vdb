@@ -9,7 +9,10 @@ import gdb
 import subprocess
 
 class cmd_grep (vdb.command.command):
-    """Executes a grep on some command"""
+    """Executes a grep on some command
+
+All vdb commands support piping to grep, which invokes the ordinary grep in your PATH on that commands stdout
+    """
 
     def __init__ (self):
         super (cmd_grep, self).__init__ ("grep", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)

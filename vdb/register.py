@@ -943,12 +943,19 @@ def reset( self ):
     registers = None
 
 class cmd_registers(vdb.command.command):
-    """Show the registers nicely (default is expanded)
-short    - Show just the important registers and flags with their hex values
-expanded - Show the important registers in a recursively expanded way, depending on their usual type maybe as integers
-all      - Show all registers in their short hex form
-full     - Show all registers in the expanded form if possible, for fpu and vector registers this may mean all possible
-representations
+    """Show the registers nicely (default is /e)
+
+The following shortcuts exist:
+
+registers/s  - Show just the important registers and flags with their hex values
+registers/e  - Show the important registers in a recursively expanded way, depending on their usual type maybe as integers or pointer chains
+registers/a  - Show all registers in their short hex form
+registers/E  - Show all registers in the expanded form if possible, for fpu and vector registers this may mean all possible representations
+
+You can also use registers/<showspec> to chose the components and their order yourself. Currently recognized showspec characters are iIvVfFxXpPoO.
+For more information and showspecs see the documentation.
+
+We recommend having an alias reg = registers in your .gdbinit
 """
 
     def __init__ (self):
@@ -1000,7 +1007,7 @@ representations
                         registers.print("Ipx")
                     elif( argv[0] == "/a" ):
                         registers.print("ixfpmv")
-                    elif( argv[0] == "/f" ):
+                    elif( argv[0] == "/E" ):
                         registers.print("IXFPMV")
                     elif( argv[0] == "/_d" ):
                         registers._dump()

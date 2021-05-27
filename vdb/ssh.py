@@ -541,29 +541,11 @@ def core( s, argv ):
         gdb.execute("set solib-search-path .")
 
 
-def usage( ):
-    print("""Usage:
-  ssh [user@]host [ssh options] <subcommand> <parameter>
-
-  Available subcommands are:
-
-  - core        Loads the specified core file and tries to copy over all dependencies
-  - attach      Attaches to the specified process (either by name or pid)
-  - run         Starts a program within gdbservers control on the remote
-
-  The [ssh options] are being used for issuing ssh commands to the specified host, the most common use probably being to
-  specify a jumphost via -o proxyjump=somehost
-
-  All (automatic) scp commands will also use this parameter. If you however set the scp-options option to something,
-  then this will be used instead. Note that due to the ssh connection to the host still being open, this might still
-  work without the jumphost parameter when you use master sockets.
-    """)
-
 def call_ssh( argv ):
 #    print("argv = '%s'" % argv )
 
     if( len(argv) == 0 ):
-        usage()
+        print(cmd_ssh.__doc__)
         return
     host = argv[0]
     cmd = argv[1]
@@ -613,28 +595,59 @@ def remove_ssh( ev ):
         vdb.prompt.queue_msg("closed ssh connection due to exit event")
 
 class cmd_ssh (vdb.command.command):
-    """Tunnel gdbserver commands through ssh (copies files locally for core file support)"""
+    """Tunnel gdbserver commands through ssh (copies files locally for core file support)
+
+  ssh [user@]host [ssh options] <subcommand> <parameter>
+
+  Available subcommands are:
+
+  core      - Loads the specified core file and tries to copy over all dependencies
+  attach    - Attaches to the specified process (either by name or pid). A further parameter is the binary in case we are unable to find it automatically
+  run       - Starts a program within gdbservers control on the remote
+
+  The [ssh options] are being used for issuing ssh commands to the specified host, the most common use probably being to
+  specify a jumphost via -o proxyjump=somehost
+
+  All (automatic) scp commands will also use this parameter. If you however set the scp-options option to something,
+  then this will be used instead. Note that due to the ssh connection to the host still being open, this might still
+  work without the jumphost parameter when you use master sockets.
+
+"""
 
     def __init__ (self):
-        super (cmd_ssh, self).__init__ ("ssh", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        super (cmd_ssh, self).__init__ ("ssh", gdb.COMMAND_RUNNING)
         self.dont_repeat()
 
     def do_invoke (self, argv):
         try:
-
-#            import cProfile
-#            cProfile.runctx("call_ssh(argv)",globals(),locals())
             call_ssh(argv)
         except:
             traceback.print_exc()
             raise
             pass
 
+    def complete( self, text, word ):
+        if( word is None ):
+            return []
+        subcommands = [ "run", "core", "attach" ]
+        # XXX maybe one day cache all hostnames ever used and help with that?
+        if( len(text) == 0 ):
+            self.message("user@host",text)
+            return []
+        argv=text.split()
+#        print("len(argv) = '%s'" % (len(argv),) )
+#        print("text = '%s'" % (text,) )
+#        print("word = '%s'" % (word,) )
+#        print("self.current_word(word,argv) = '%s'" % (self.current_word(word,argv),) )
+        if( self.current_word(word,argv) >1 ):
+            if( len( set(subcommands) & set(argv) ) == 0 ):
+                return self.matches(word,subcommands)
+        # next step: for each subcommand figure out possible parameters (likely by looking it up on the other host and
+        # caching things maybe for 10 seconds? also cache a connection and figure out a way to disable that after N
+        # seconds being unused )
+
+        return []
+
 cmd_ssh()
-
-
-
-
-#gdb.events.inferior_deleted.connect( evtest )
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

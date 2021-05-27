@@ -47,7 +47,7 @@ class cmd_data (vdb.command.command):
     """Take data and transform it into more useful views"""
 
     def __init__ (self):
-        super (cmd_data, self).__init__ ("data", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        super (cmd_data, self).__init__ ("vdata", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.dont_repeat()
 
     def do_invoke (self, argv ):

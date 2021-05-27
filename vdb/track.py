@@ -504,7 +504,30 @@ def data( ):
     print(dt)
 
 class cmd_track (vdb.command.command):
-    """Track one or more expressions per breakpoint"""
+    """Track one or more expressions per breakpoint
+
+track/[ExX] <id|location> <expression>
+
+track   - pass expression to parse_and_eval
+track/E - interpret expression as python code to evaluate
+track/x - execute expression and use resulting gdb value
+track/X - execute expression and then run parse_and_eval on the result ($)
+
+id           is the id of an existing breakpoint
+location    can be any location that gdb understands for breakpoints
+expression  is the expression expected by any of the above formats. Upon hitting the breakpoint, it will be evaluated and then automatically continued.
+
+If no breakpoint can be found with an existing location, we try to set one at that location, otherwise we try to re-use the same location
+Note: while it works ok for breakpoints and watchpoints, using catchpoints is somewhat difficult and often does not work
+
+Available subcommands:
+show     - show a list of trackpoints (similar to info break)
+data     - show the list of data collected so far
+clear    - clear all data collected so far 
+del <id> - delete the trackpoint with the given trackpoint id
+
+You should have a look at the data and graph modules, which can take the data from here and draw graphics and histograms
+"""
 
     def __init__ (self):
         super (cmd_track, self).__init__ ("track", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
@@ -515,7 +538,7 @@ class cmd_track (vdb.command.command):
             execute = False
             eval_after_execute = False
             python_eval = False
-            if( argv[0][0] == "/" ):
+            if( len(argv) > 0 and argv[0][0] == "/" ):
                 argv0 = argv[0][1:]
                 argv = argv[1:]
 
@@ -540,7 +563,7 @@ class cmd_track (vdb.command.command):
             elif( len(argv) > 1 ):
                 track(argv,execute,eval_after_execute,python_eval)
             else:
-                print("Usage: track [show] or track <num|location> <expression>")
+                print (self.__doc__)
         except:
             traceback.print_exc()
             raise

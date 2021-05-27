@@ -88,8 +88,12 @@ def print_pahole( layout, condense ):
 
 class cmd_pahole(vdb.command.command):
     """Show the holes in a structure.
-This command takes a single argument, a type name.
-It prints the type and displays comments showing where holes are."""
+
+Parameter can be a typename or a variable.
+
+pahole/c - condensed output showing each member on one line
+pahole/e - expanded output, showing each byte on one line (the default)
+"""
 
     def __init__ (self):
         super (cmd_pahole, self).__init__ ("pahole", gdb.COMMAND_DATA, gdb.COMPLETE_SYMBOL)

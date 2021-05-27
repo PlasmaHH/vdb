@@ -186,6 +186,20 @@ class SignalFrame():
 #		print("BARK5")
 		return None
 
+class XValue(gdb.Value):
+
+    def __init__( self, _ ):
+        pass
+#        self.val = val
+#        self.val = 99
+
+    def __str__( self ):
+        print("__str__")
+        return "STRING"
+
+    def format_string( self, _ ):
+        print("format_string")
+        return None
 
 class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
 
@@ -360,7 +374,9 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
             if( "P" in showspec.value ):
                 val = frame.read_var(a.symbol())
                 val = vdb.color.color(val,color_argvalue.value)
-                ret.append( ArgVal( symbol, val) )
+#                ret.append( ArgVal( symbol, val) )
+#                print(Value(val))
+                ret.append( ArgVal( symbol, XValue(42) ) )
             elif( "E" in showspec.value ):
                 ret.append( ArgVal( a.symbol(), a.value() ) )
             else:
@@ -539,7 +555,7 @@ bt/r        Just shows the unfiltered raw gdb output (same as backtrace -no-filt
 bt/f        Additionally use the full output of gdb backtrace to show variable names and contents etc. (can be messy for bigger structs)
 backtrace   This is the plain built in gdb command which will run the decorator (some colours etc) but not the filter.
 
-All standard backtrace arguments (help backtrace) can be used after ours
+All standard backtrace arguments (help backtrace) can be used after ours (mainly showspec, see documentation)
     """
 
     def __init__ (self):

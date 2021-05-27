@@ -333,17 +333,12 @@ def annotate( argv ):
         print("Usage: hexdump annotate <addr> <len> <text> or <addr> <typename>")
     print("Annotated {}".format(argv))
 
-def print_usage( ):
-    print("Usage: hexdump[/p#|v] <addr> [<len>]")
-    print("       hexdump annotate <varname>")
-    print("       hexdump annotate <addres> <type>")
-    print("       hexdump annotate <addres> <length> <text>")
 
 def call_hexdump( argv ):
 #    argv = gdb.string_to_argv(arg)
     colorspec = "sma"
     if( len(argv) == 0 ):
-        print_usage()
+        print(cmd_hexdump.__doc__)
         return
     pointers = False
     values = False
@@ -380,13 +375,29 @@ def call_hexdump( argv ):
             xlen = vdb.util.gint(argv[1])
             hexdump(addr,xlen,pointers=pointers,chaindepth=chainlen,values=values)
         else:
-            print_usage()
+            print(cmd_hexdump.__doc__)
     return
 
 
 
 class cmd_hexdump (vdb.command.command):
-    """Shows a hexdump of a specified memory range"""
+    """Shows a hexdump of a specified memory range
+
+The hexdump will output coloured pointer offsets according to the vmmap information as well as coloured bytes for when
+it has some known annotations (like static variables or previously registered annotations). You are encouraged for raw
+memory that you parse to write code to be able to annotate bytes yourself.
+
+hexdump[/p#|v] <addr> [<len>]               - shows a hexdump of <len> or vdb-hexdump-default-len bytes
+
+hexdump/p#                                  - In the annotation text, show pointer chains of (aligned) pointers with max length of #
+hexdump/v                                   - In case of annotated known variables, print their pretty printed values too
+
+hexdump annotate <varname>                  - annotates the variable <varname> according to the type information known to gdb
+hexdump annotate <addres> <type>            - annotates the given address like a variable of type <type>
+hexdump annotate <addres> <length> <text>   - arbitrary annotation of a length of bytes with a given text (to mark intresting memory locations)
+
+We recommend having an alias hd = hexdump in your .gdbinit
+"""
 
     def __init__ (self):
         super (cmd_hexdump, self).__init__ ("hexdump", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
@@ -394,9 +405,6 @@ class cmd_hexdump (vdb.command.command):
 
     def do_invoke (self, argv):
         try:
-
-#            import cProfile
-#            cProfile.runctx("call_hexdump(argv)",globals(),locals())
             call_hexdump(argv)
         except:
             traceback.print_exc()

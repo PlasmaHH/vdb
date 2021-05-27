@@ -165,6 +165,7 @@ def refresh_prompt( ):
         prompt = prompt_replace(prompt,"host",get_host(),prompt_color_host.value )
     set_prompt(prompt)
     output_messages()
+    return prompt
 
 def check_format( fmt ):
     global has_key

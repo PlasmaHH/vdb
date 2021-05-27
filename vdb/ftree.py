@@ -1098,8 +1098,10 @@ class ftree:
 
 
 class cmd_ftree (vdb.command.command):
-    """Show a tree representation of an object an the things it points to.
-    It takes a pointer to some object"""
+    """Show a graphviz tree representation of an object an the things it points to.
+
+ftree <pointer>|<variable> [<limit>]  - It takes a pointer to some object or a variable up to <limit> levels deep (default 70)
+"""
     # 
 
     def __init__ (self):

@@ -32,8 +32,6 @@ This makes things wider, so you usually want to set `vdb-register-short-columns`
 * `fF` show all the float registers and flags.
 
     ![](img/reg.fF.png)
-
-    (Note how you have to use `f.` to distinguish it from the "full" shortcut.
 * `xX` shows the known flags registers (like eflags and mxcsr)
 
     ![](img/reg.xX.png)
@@ -57,8 +55,6 @@ Same as `reg/Ipx`.
 Same as `reg/ixfpmv`.
 
 ![](img/reg.a.png)
-### `reg/f` (full)
+### `reg/E` (extended)
 Same as `reg/IXFPMV`.
-(not yet implemented)
-
 

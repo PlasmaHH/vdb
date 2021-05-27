@@ -165,10 +165,11 @@ to an externally called grep, as well as the parameters to grep.
 ![](img/grep.png)
 
 ## pahole
-![](img/pahole.f.c.png)
 This is an enhanced and redone version of the pahole python command that once came with gdb. It has support for virtual
 inheritance and a possibly more useful layout display.
 
+![](img/pahole.f.c.png)
+[You can find detailed information about this module here](PAHOLE.md)
 
 ## ftree
 The ftree module allows for creation of dotty files that create a tree (or directed graph) out of a datastructure.

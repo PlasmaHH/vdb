@@ -22,7 +22,12 @@ def show_region( addr ):
 
 
 class cmd_vmmap (vdb.command.command):
-    """Module holding information about memory mappings"""
+    """Module holding information about memory mappings
+
+vmmap         - show information about the known memory maps (of the memory module), colored by types
+vmmap refresh - re-read the information by triggering the memory module (happens at most stop events too)
+vmmap <expr>  - Checks the expression/address memory map and displays all details we know about it
+    """
 
     def __init__ (self):
         super (cmd_vmmap, self).__init__ ("vmmap", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
