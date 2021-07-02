@@ -51,7 +51,9 @@ under x86_64 Linux with gcc > 10.
 * [TODO](#todo)
 
 <!-- vim-markdown-toc -->
+
 </details>
+
 ## Overview
 vdb aims to display as much information as it can without cluttering the
 display. It can filter and colorize output, and when the terminal isn't enough
