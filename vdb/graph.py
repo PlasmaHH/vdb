@@ -111,24 +111,68 @@ def extract_graph( argv ):
 
     plot_data(plotlines, [name], first, last, time = False )
 
-def extract_track( tvar ):
+def extract_track( tvar, relative_ts ):
     if( len(tvar) == 0 ):
         print("Well, you should tell which track data variables to plot. Do `track show` or  `track data` to check what is available")
         return
     td = vdb.track.tracking_data
 
-    first = 0
+    ts_offset = 0
+    first = None
     last = 0
     points = 0
     plotlines = ""
+
+    ids = []
+    # extract all numbers from all the things we need
+    # check if its 
+    # - a track id
+    # - a breakpoint id
+    # - a breakpoint expression
+    for tv in tvar:
+        tvi = None
+        found = False
+        try:
+            tvi = int(tv)
+            ts = vdb.track.by_number( tvi )
+            if( len(ts) > 0 ):
+                ids.append(tvi)
+                found = True
+            else: # ok might still be a breakpoint id?
+                ts = vdb.track.by_id( str(tvi) )
+                for t in ts :
+                    ids.append( t.number )
+                    found = True
+        except: # its not even an integer
+            pass
+        if( not found ):
+            # ok, might be a 1.2 breakpoint ID ...
+            ts = vdb.track.by_id( str(tv) )
+            if( len(ts) > 0 ):
+                for t in ts :
+                    ids.append( t.number )
+            else:
+                # ok, is it maybe an expression?
+                for n,t in vdb.track.trackings_by_number.items():
+                    if( t.expression == tv ):
+                        ids.append(t.number)
+
+
     for ts in sorted(td.keys()):
-        if( first == 0 ):
+        kts = ts
+        ts = ts - ts_offset
+        if( first == None ):
+            if( relative_ts ):
+                ts_offset = ts
+                ts = 0
             first = ts
+
         last = ts
         plotline = f"{ts:0.11f} "
-        tdata = td[ts]
-        for tv in tvar:
-            point = tdata.get(tv,None)
+        tdata = td[kts]
+        for id in ids:
+            point = tdata.get(id,None)
+
             if( point is None ):
                 plotline += " - "
             else:
@@ -137,7 +181,7 @@ def extract_track( tvar ):
         plotlines += plotline + "\n"
 #        print("plotline = '%s'" % plotline )
     if( points == 0 ):
-        print("Could not find any points to plot from %s" % tvar )
+        print("Could not find any points to plot from %s (keys are %s)" % (tvar,vdb.track.trackings_by_number.keys() ) )
         return
 
     plot_data( plotlines, tvar, first, last, time = True )
@@ -163,9 +207,10 @@ Plan:
 class cmd_graph (vdb.command.command):
     """Graphically display data from arrays and track command (using gnuplot)
 
-graph   <var> - extract data from variable var and display in 2D with gnuplot
-graph/p <var> - extract data but output to a png
-graph/t <id>  - use the track id or expression as the data input
+graph    <var> - extract data from variable var and display in 2D with gnuplot
+graph/p  <var> - extract data but output to a png
+graph/t  <id>  - use the track id or expression as the data input
+graph/rt <id>  - use relative timestamps with the id
 """
 
     def __init__ (self):
@@ -184,11 +229,14 @@ graph/t <id>  - use the track id or expression as the data input
         try:
             if( argv[0][0] == "/" ):
                 to_png = False
+                relative_ts = False
                 if( argv[0].find("p") != -1 ):
                     to_png = True
+                if( argv[0].find("r") != -1 ):
+                    relative_ts = True
 
                 if( argv[0].find("t") != -1 ):
-                    extract_track(argv[1:])
+                    extract_track(argv[1:],relative_ts)
                 else:
                     extract_graph(argv[1:])
             else:

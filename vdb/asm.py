@@ -1274,7 +1274,10 @@ def parse_from_gdb( arg, fakedata = None ):
 #                    print("rax = '%s'" % (rax,) )
 #                    print("sc = '%s'" % (sc,) )
                 if( sc is not None ):
-                    ins.add_extra( sc.to_str(possible_registers) )
+                    qm = "?"
+                    if( ins.marked or (ins.next and ins.next.marked) ):
+                        qm="!"
+                    ins.add_extra( sc.to_str(possible_registers,qm) )
                     possible_registers = sc.clobber(possible_registers)
                 else:
                     ins.add_extra(f"syscall[{rax}]()")

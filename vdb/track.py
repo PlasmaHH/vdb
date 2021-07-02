@@ -248,27 +248,47 @@ Num     Type                  Disp Enb Address            What
     return ret    
 
 
-
-trackings = { }
+# the tracking.number integer
+trackings_by_number = { }
+# the bpid string ( maybe 1 or 1.1 or something )
+trackings_by_bpid = { }
 do_sub_trackings = False
 
 def do_continue( ):
     gdb.execute("continue")
 
-def exec_tracking( number, now ):
+def by_id( bpid ):
+    return trackings_by_bpid.get(bpid,[])
+
+def by_number( num ):
+    t = trackings_by_number.get(num,None)
+    if( t is None ):
+        return []
+    else:
+        return [t]
+
+def exec_tracking( tr , now ):
     cont = False
-    tr = trackings.get(str(number),None)
+
     if( tr is not None ):
         for t in tr:
             cont = True
             t.execute(now)
     return cont        
 
+def exec_tracking_id( bpid , now ):
+    tr = by_id(bpid)
+    return exec_tracking( tr, now)
+
+def exec_tracking_number( number, now ):
+    tr = by_number( number )
+    return exec_tracking( tr, now)
+
 @vdb.event.stop()
 def stop( bpev ):
 
     cont = False
-    if( len(trackings) == 0 ):
+    if( len(trackings_by_number) == 0 ):
         return
 
     now = time.time()
@@ -280,10 +300,11 @@ def stop( bpev ):
             for tbp in tbps.values():
                 for sbp in tbp.subpoints.values():
                     if( sbp.address == pc ):
-                        if( exec_tracking(sbp.number,now) ):
+                        if( exec_tracking_id(sbp.number,now) ):
                             cont = True
     except Exception as e:
         print("e = '%s'" % e )
+#        traceback.print_exc()
         pass
 
 
@@ -296,10 +317,11 @@ def stop( bpev ):
             for bp in bps:
 #                print("bp = '%s'" % bp )
 #                print("bp.number = '%s'" % bp.number )
-                if( exec_tracking(bp.number,now) ):
+                if( exec_tracking_id(str(bp.number),now) ):
                     cont = True
     except Exception as e:
         print("e = '%s'" % e )
+#        traceback.print_exc()
         pass
     if( cont ):
         gdb.post_event(do_continue)
@@ -327,7 +349,10 @@ class track_item:
 #            print("self.eval_after = '%s'" % self.eval_after )
 #            print("self.expression = '%s'" % self.expression )
             if( self.python_eval ):
-                val=eval(self.expression)
+                ex = self.expression
+                if( ex.find("$(") != -1 ):
+                    ex = ex.replace( "$(", "gdb.parse_and_eval(" )
+                val=eval(ex,globals())
             elif( self.use_execute ):
                 val=gdb.execute(self.expression,False,True)
                 if( self.eval_after ):
@@ -335,7 +360,8 @@ class track_item:
             else:
                 val=gdb.parse_and_eval(self.expression)
             td = tracking_data.setdefault(now,{})
-            td[self.expression] = str(val)
+#            td[self.expression] = str(val)
+            td[self.number] = str(val)
         except Exception as e:
             print("e = '%s'" % e )
 #            traceback.print_exc()
@@ -391,20 +417,25 @@ def track( argv, execute, eval_after, do_eval ):
         print(f"Unknown breakpoint {bpnum}, refusing to attach track to nothing")
         return
 
-    global trackings
-    trackings.setdefault(str(bpnum),[]).append(track_item( expr, execute, eval_after, do_eval ))
+    global trackings_by_bpid
+    global trackings_by_number
+
+    nti = track_item( expr, execute, eval_after, do_eval )
+#    trackings.setdefault(str(bpnum),[]).append(track_item( expr, execute, eval_after, do_eval ))
+    trackings_by_bpid.setdefault(str(bpnum),[]).append( nti )
+    trackings_by_number[nti.number] = nti
     cleanup_trackings()
 
 def cleanup_trackings( ):
-    global trackings
+    global trackings_by_bpid
     newtrackings = {}
     subcount = 0
-    for tk,tr in trackings.items():
+    for tk,tr in trackings_by_bpid.items():
         if( not tk.isdigit() ):
             subcount += 1
         if( len(tr) > 0 ):
             newtrackings[tk] = tr
-    trackings = newtrackings
+    trackings_by_bpid = newtrackings
     global do_sub_trackings
     if( subcount == 0 ):
         do_sub_trackings = False
@@ -415,7 +446,7 @@ def do_del( argv ):
     for arg in argv:
         num = int(arg)
         found = False
-        for bpnum,tracking in trackings.items():
+        for bpnum,tracking in trackings_by_bpid.items():
             for track in tracking:
                 if( track.number == num ):
                     print(f"Deleted tracking {num}")
@@ -426,10 +457,12 @@ def do_del( argv ):
                 break
         if( not found ):
             print(f"Tracking {num} not found")
+        else:
+            del trackings_by_number[num]
     cleanup_trackings()
 
 def show_track( ftbl, number ):
-    tracks = trackings.get(str(number),None)
+    tracks = trackings_by_bpid.get(str(number),None)
     if( tracks is not None ):
         for track in tracks:
             ftbl.append( [None] * 7 + [track.number,track.expression] )
@@ -472,12 +505,13 @@ def auto_clear( ):
 def data( ):
     first = 0
     datatable = []
-    datakeys = []
-    for tk in sorted(trackings.keys()):
-        for tracking in trackings[tk]:
-            datakeys.append( tracking.expression )
 
-    datatable.append( ["Time"] + datakeys )
+    dataexpressions = []
+    for tk in sorted(trackings_by_number.keys()):
+        for tracking in by_number(tk):
+            dataexpressions.append( tracking.expression )
+
+    datatable.append( ["Time"] + dataexpressions )
     datatable.append( [] )
     for ts in sorted(tracking_data.keys()):
         if( first == 0 ):
@@ -490,7 +524,9 @@ def data( ):
             showts = dt.strftime("%Y.%m.%d %H:%M:%S.%f")
         line = [ showts ]
         tdata = tracking_data[ts]
-        for dk in datakeys:
+#        print("tdata = '%s'" % (tdata,) )
+        for dk in trackings_by_number.keys():
+#            print("dk = '%s'" % (dk,) )
             td = tdata.get(dk,None)
             if( td is None ):
                 line.append(None)

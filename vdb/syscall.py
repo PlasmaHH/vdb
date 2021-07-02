@@ -50,6 +50,36 @@ enum_maps = {
             }
         }
 
+flag_maps = {
+        "openat:flags" : [
+            ("O_ACCMODE",0o00000003),
+            ("O_RDONLY",0o00000000),
+            ("O_WRONLY",0o00000001),
+            ("O_RDWR",0o00000002),
+            ("O_CREAT",0o00000100),
+            ("O_EXCL",0o00000200),
+            ("O_NOCTTY",0o00000400),
+            ("O_TRUNC",0o00001000),
+            ("O_APPEND",0o00002000),
+            ("O_NONBLOCK",0o00004000),
+            ("O_DSYNC",0o00010000),
+            ("FASYNC",0o00020000),
+            ("O_DIRECT",0o00040000),
+            ("O_LARGEFILE",0o00100000),
+            ("O_DIRECTORY",0o00200000),
+            ("O_NOFOLLOW",0o00400000),
+            ("O_NOATIME",0o01000000),
+            ("O_CLOEXEC",0o02000000),
+            ("__O_SYNC",0o04000000),
+            ("O_PATH",0o010000000),
+            ("__O_TMPFILE",0o020000000),
+            ]
+        }
+
+format_options = {
+        "openat:flags" : lambda x : oct(x).replace("o","")
+        }
+
 
 syscall_conventions = {
         "amd64" : {
@@ -69,15 +99,15 @@ class syscall_parameter:
         self.types = []
         self.register = None
 
-def reg( r, rd ):
+def reg( r, rd, qm = "?" ):
     ret = rd.get(r,None)
-    q = False
+    q = ""
     if( ret is None ):
         try:
             ret = vdb.register.read(r)
         except:
             return (None,True)
-        q = True
+        q = qm
 #    print(f"Register {r} not in {rd} ? {q}")
     return (str(ret),q)
 
@@ -90,17 +120,33 @@ def param_str( syscall, val, ptype, pname, register, questionable ):
             val = gdb.parse_and_eval(f"(void*)({val})")
 
         emap = enum_maps.get(f"{syscall}:{pname}",None)
+        fm = flag_maps.get(f"{syscall}:{pname}",None)
+        fo = format_options.get(f"{syscall}:{pname}",None)
 
         if( emap is not None ):
             ename = emap.get(vdb.util.mint(val),None)
             if( ename is not None ):
                 val = f"{val}({ename})"
+        elif( fm is not None ):
+            fs = ""
+            for f in fm:
+                val = int(val)
+                if( val & f[1] ):
+                    fs += f[0] + "|"
+            if( len(fs) > 0 ):
+                fs = fs[:-1]
+            if( fo is not None ):
+                val = fo(val)
+            val = f"{val}({fs})"
+        elif( fo is not None ):
+            val = fo(val)
     else:
         val = "???"
 
     ret = f"{pname}[{register}] = {val}"
-    if( questionable ):
-        ret += "?"
+    ret += questionable
+#    if( questionable ):
+#        ret += "?"
     return ret
 
 class syscall:
@@ -112,11 +158,11 @@ class syscall:
         self.optional_paramters = []
         self.clobbers = []
 
-    def to_str( self, registers ):
+    def to_str( self, registers, qm = "?" ):
 
         ret = f"{self.name}[{self.nr}]( "
         for p in self.parameters:
-            rval,q = reg(p.register,registers)
+            rval,q = reg(p.register,registers,qm)
             ret += param_str(self.name,rval,p.types[0],p.names[0],p.register, q)
             ret += ","
         ret = ret[:-1]
@@ -125,7 +171,7 @@ class syscall:
             if( len(self.parameters) > 0 ):
                 ret += ","
             for o in self.optional_paramters:
-                rval,q = reg(o.register,registers)
+                rval,q = reg(o.register,registers,qm)
                 ret += param_str(self.name,rval,o.types[0],o.names[0],o.register,q)
                 ret += ","
             ret = ret[:-1]
