@@ -121,17 +121,17 @@ either their hooks or our hooks do not work. This is especially true for the tra
 # Modules
 ## prompt
 This module allows you to configure the prompt to display more information. Some modules will use it to display some additional information. Per default you will get the time, and a little bit extra when a file is loaded, also a bit of git information when available.
-![](img/prompt.0.png)
+![](doc/img/prompt.0.png)
 
-[You can find detailed information about this module here](PROMPT.md)
+[You can find detailed information about this module here](doc/PROMPT.md)
 ## backtrace
 We provide a backtrace decorator with various colouring options. It will also show some information about whether something
 is inlined or some information about signals and crashes. You can configure which parts of the backtrace will be
 displayed for more concise displays.
 
-![](img/bt.png)
+![](doc/img/bt.png)
 
-[You can find detailed information about this module here](BACKTRACE.md)
+[You can find detailed information about this module here](doc/BACKTRACE.md)
 
 ## vmmap
 A module that allows access to the internal information of memory maps. It ties together information from the sources of
@@ -139,46 +139,46 @@ A module that allows access to the internal information of memory maps. It ties 
 * `maint info sections`
 * `info proc mapping`
 
-[You can find detailed information about this module here](VMMAP.md)
+[You can find detailed information about this module here](doc/VMMAP.md)
 ## register
 
 This is an `info reg` on steroids.
 
-![](img/reg.iI.png)
+![](doc/img/reg.iI.png)
 
-[You can find detailed information about this module here](REGISTER.md)
+[You can find detailed information about this module here](doc/REGISTER.md)
 ## hexdump
 
 This module provides a coloured hexdump of raw memory, possibly annotated in various ways.
 
-![](img/hd.png)
+![](doc/img/hd.png)
 
-[You can find detailed information about this module here](HEXDUMP.md)
+[You can find detailed information about this module here](doc/HEXDUMP.md)
 ## asm
 This is a disassembler module. It allows a bit better control over the disassembled output, adds a bit of colour and can
 optionally try to create a basic block flow graph, even in a lot of cases being able to figure out jump tables.
 
-![](img/disassemble.png)
-![](img/dis.dot.png)
-[You can find detailed information about this module here](ASM.md)
+![](doc/img/disassemble.png)
+![](doc/img/dis.dot.png)
+[You can find detailed information about this module here](doc/ASM.md)
 ## grep
 When loading this module, all our commands support a pipe like syntax to call grep on the output. The data will be piped
 to an externally called grep, as well as the parameters to grep.
 
-![](img/grep.png)
+![](doc/img/grep.png)
 
 ## pahole
 This is an enhanced and redone version of the pahole python command that once came with gdb. It has support for virtual
 inheritance and a possibly more useful layout display.
 
-![](img/pahole.f.c.png)
-[You can find detailed information about this module here](PAHOLE.md)
+![](doc/img/pahole.f.c.png)
+[You can find detailed information about this module here](doc/PAHOLE.md)
 
 ## ftree
 The ftree module allows for creation of dotty files that create a tree (or directed graph) out of a datastructure.
 
-![](img/ftree.0.png)
-[You can find detailed information about this module here](FTREE.md)
+![](doc/img/ftree.0.png)
+[You can find detailed information about this module here](doc/FTREE.md)
 
 # hashtable
 One of the most common datastructures for quick dictionary lookups are hashtables. One of the most common problems with
@@ -186,16 +186,16 @@ them is bad hashfunctions, or data structured just in the wrong way for the chos
 hashtables with a lot of collisions where there do not need to be some. This module allows you to visualize the data and
 gain more insight about it.
 
-![](img/hashtable.good.png)
-![](img/hashtable.bad.png)
+![](doc/img/hashtable.good.png)
+![](doc/img/hashtable.bad.png)
 
-[You can find detailed information about this module here](HASHTABLE.md)
+[You can find detailed information about this module here](doc/HASHTABLE.md)
 
 ## ssh
 We provide some "remote debugging" features that are based around logging into another host via ssh and debugging
 something there (a live process or some core file). 
 
-[You can find detailed information about this module here](SSH.md)
+[You can find detailed information about this module here](doc/SSH.md)
 
 ## track
 
@@ -204,10 +204,10 @@ whenever a breakpoint is hit an internal callback will be called, this may be a 
 breakpoints that have a trackpoint attached will automatically continue when hit, making data collection an automated
 task.
 
-![](img/track.0.png)
-![](img/track.1.png)
+![](doc/img/track.0.png)
+![](doc/img/track.1.png)
 
-[You can find detailed information about this module here](TRACK.md)
+[You can find detailed information about this module here](doc/TRACK.md)
 
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
