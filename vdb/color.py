@@ -20,9 +20,11 @@ def colorl( s, cs ):
 # readline safe (?) colouring
 def color_rl( s, cs ):
     # these special characters will make libreadline handle searches better
+    # https://wiki.hackzine.org/development/misc/readline-color-prompt.html
     s = "\x02" + s + "\x01" # STX + s + SOH
     s = color(s,cs)
     s = "\x01" + s + "\x02" # SOH + s + STX
+    # This way we should end up with \1<colorcode>\2<text>\1<colorcode>\2
     return s
 
 def scolor( s, cs ):
