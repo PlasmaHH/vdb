@@ -32,9 +32,10 @@ under x86_64 Linux with gcc > 10.
 	* [grep](#grep)
 	* [pahole](#pahole)
 	* [ftree](#ftree)
-* [hashtable](#hashtable)
+	* [hashtable](#hashtable)
 	* [ssh](#ssh)
 	* [track](#track)
+	* [types](#types)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
 	* [pointer (chaining)](#pointer-chaining)
@@ -180,7 +181,7 @@ The ftree module allows for creation of dotty files that create a tree (or direc
 ![](doc/img/ftree.0.png)
 [You can find detailed information about this module here](doc/FTREE.md)
 
-# hashtable
+## hashtable
 One of the most common datastructures for quick dictionary lookups are hashtables. One of the most common problems with
 them is bad hashfunctions, or data structured just in the wrong way for the chosen hashfunction. You end up with
 hashtables with a lot of collisions where there do not need to be some. This module allows you to visualize the data and
@@ -208,7 +209,11 @@ task.
 ![](doc/img/track.1.png)
 
 [You can find detailed information about this module here](doc/TRACK.md)
+## types
+The `types` module allows to load/create type information on the fly while debugging. Good for when you don't have debug
+information.
 
+[You can find detailed information about this module here](doc/TYPES.md)
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
 you suppress loading of the modules that load it.
