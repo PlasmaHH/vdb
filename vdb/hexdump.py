@@ -262,15 +262,26 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False 
         print(f"Could only access {xlen} of {olen} requested bytes")
 
 def annotate_var( addr,gval, gtype, name ):
-#        print("gtype = '%s'" % gtype )
+    print("annotate_var( %s, %20s, %s, %s )" % (addr,gval,gtype,name) )
+    print("gtype = '%s'" % gtype )
+    gtype = gtype.strip_typedefs()
+#    gval = gval.cast(gtype)
+    print("gtype = '%s'" % gtype )
 #        print("gval = '%s'" % gval )
     ol = vdb.layout.object_layout( gtype, gval )
+    print("ol.type = '%s'" % (ol.type,) )
     print("ol = '%s'" % ol )
     print("ol.object = '%s'" % ol.object )
         
     for bd in ol.descriptors:
         print("bd.object = '%s'" % bd.object )
+        print("bd.object.final = '%s'" % (bd.object.final,) )
+        print("bd.object.byte_offset = '%s'" % (bd.object.byte_offset,) )
+        print("bd.object.size = '%s'" % (bd.object.size,) )
+        print("bd.object.type = '%s'" % (bd.object.type,) )
+        print("bd.object.type.code = '%s'" % vdb.util.gdb_type_code(bd.object.type.code) )
         if( bd.object.final and bd.object.byte_offset >= 0 and bd.object.size > 0 ):
+            print("bd.prefix = '%s'" % (bd.prefix,) )
             if( bd.prefix is None ):
                 continue
             ent = bd.name()
@@ -287,6 +298,26 @@ def annotate_var( addr,gval, gtype, name ):
 #            print("(addr+bd.object.byte_offset+bd.object.size) = '%s'" % (addr+bd.object.byte_offset+bd.object.size) )
             annotation_tree[addr+bd.object.byte_offset:addr+bd.object.byte_offset+bd.object.size] = ent
 #        print("annotation_tree = '%s'" % annotation_tree )
+
+def annotate_block( block ):
+    if( block.is_static or block.is_global ):
+        return
+#    print("block.is_static = '%s'" % (block.is_static,) )
+#    print("block.is_global = '%s'" % (block.is_global,) )
+#    if( block.function is None ):
+#        return
+    print("block.function = '%s'" % (block.function,) )
+    print("block.superblock = '%s'" % (block.superblock,) )
+    for i in block:
+        try:
+            v = gdb.selected_frame().read_var(i.name)
+            if( v.address is not None ):
+                annotate_var( v.address,v, v.type, i.name )
+        except:
+            traceback.print_exc()
+            pass
+    if( block.superblock ):
+        annotate_block( block.superblock )
 
 def annotate( argv ):
     global annotation_tree
@@ -306,18 +337,7 @@ def annotate( argv ):
         annotation_tree[addr:addr+tlen] = txt
     elif( len(argv) == 1 and argv[0] == "frame" ):
         fr = gdb.selected_frame()
-        for i in fr.block():
-            try:
-                print("i.name = '%s'" % i.name )
-                v = gdb.selected_frame().read_var(i.name)
-                print("v.address = '%s'" % v.address )
-                print("v.type = '%s'" % v.type )
-                print("v = '%s'" % v )
-                if( v.address is not None ):
-                        annotate_var( v.address,v, v.type, i.name )
-            except:
-                pass
-#            break
+        annotate_block( fr.block() )
         print("annotation_tree = '%s'" % annotation_tree )
     elif( len(argv) == 1 ):
         print("Automatically annotating variable %s" % argv[0] )
@@ -325,10 +345,6 @@ def annotate( argv ):
         var = gdb.parse_and_eval(varname)
         print("var = '%s'" % var )
         annotate_var( var.address,var, var.type, varname )
-
-
-
-
     else:
         print("Usage: hexdump annotate <addr> <len> <text> or <addr> <typename>")
     print("Annotated {}".format(argv))
@@ -395,6 +411,7 @@ hexdump/v                                   - In case of annotated known variabl
 hexdump annotate <varname>                  - annotates the variable <varname> according to the type information known to gdb
 hexdump annotate <addres> <type>            - annotates the given address like a variable of type <type>
 hexdump annotate <addres> <length> <text>   - arbitrary annotation of a length of bytes with a given text (to mark intresting memory locations)
+hexdump annotate frame                      - Checks the current frame for known addresses of local variables and annotates those.
 
 We recommend having an alias hd = hexdump in your .gdbinit
 """

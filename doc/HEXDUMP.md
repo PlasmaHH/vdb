@@ -41,7 +41,7 @@ hexdump.
 
 ### `hexdump annotate`
 ```
-Usage: hexdump annotate <addr> <len> <text> or <addr> <typename> or <varname>
+Usage: hexdump annotate <addr> <len> <text> or <addr> <typename> or <varname> or frame
 ```
 This command will add annotation to a specific range of memory. The first version adds a free manual text to a specific
 address and length. It will always be displayed as long as some of those bytes are being displayed in any hexdump.
@@ -52,6 +52,8 @@ specified size, it will be able to automatically take that size and dumps only t
 
 The third version will take just the varname and tries to annotate that. The special varname frame can be used to try to
 include all variables in the current frame.
+
+Using the `frame` keyword, vdb will try to annotate all variables local to this frame.
 
 ![](img/hd.annotate.png)
 

@@ -165,7 +165,10 @@ def set_array_elements( cfg ):
     for i in elem:
         i=i.split(":")
         if( len(i) == 1 ):
-            cfg.elements.append(int(i[0]))
+            try:
+                cfg.elements.append(int(i[0]))
+            except:
+                cfg.elements.append(i[0])
         elif( len(i) == 2):
             s=int(i[0])
             e=int(i[1])

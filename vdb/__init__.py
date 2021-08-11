@@ -11,6 +11,8 @@ import sys
 import os
 import importlib
 import traceback
+import concurrent.futures
+import atexit
 """
 
 search order:
@@ -83,6 +85,7 @@ cmd_vdb()
 
 theme = vdb.config.parameter( "vdb-theme",None)
 
+
 def is_in_safe_path( pdir ):
     pdir = os.path.normpath(pdir) + "/"
 #    print("pdir = '%s'" % pdir )
@@ -92,14 +95,16 @@ def is_in_safe_path( pdir ):
 
     datadir = gdb.execute("show data-directory",False,True)
     datadir = datadir.split('"')[1]
-    vdb_dir = os.path.expanduser("~") + "/.vdb/"
-    vdb_dir = os.path.normpath(vdb_dir)
+
+    global vdb_dir
+
+    vdir = os.path.normpath(vdb_dir)
 
     sp=sp.replace("$datadir",datadir)
     sp=sp.replace("$debugdir",debugdir)
 
     sp = sp.split(":")
-    sp.append(vdb_dir)
+    sp.append(vdir)
 
     for p in sp:
         p = os.path.normpath(p) + "/"
@@ -178,18 +183,35 @@ enable_track     = vdb.config.parameter( "vdb-enable-track",True)
 enable_graph     = vdb.config.parameter( "vdb-enable-graph",True)
 enable_data      = vdb.config.parameter( "vdb-enable-data",True)
 enable_syscall   = vdb.config.parameter( "vdb-enable-syscall",True)
+enable_types     = vdb.config.parameter( "vdb-enable-types",True)
 
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard,hashtable,ssh,track,graph,tee,data,syscall" )
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard,hashtable,ssh,track,graph,tee,data,syscall,types" )
 
 home_first  = vdb.config.parameter( "vdb-plugin-home-first",True)
 search_down = vdb.config.parameter( "vdb-plugin-search-down",True)
 honor_sp    = vdb.config.parameter( "vdb-plugin-honor-safe-path",True)
-
+max_threads = vdb.config.parameter( "vdb-max-threads",4)
 
 
 enabled_modules = [ ]
-def start():
+vdb_dir = None
+texe = None
+keep_running = True
+
+def start( vdbd = None ):
     print("Starting vdb modules…")
+    
+    global texe
+    texe = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads.value,thread_name_prefix="vdb")
+
+    global vdb_dir
+
+    if( vdbd is not None ):
+        vdb_dir = os.path.expanduser(vdbd)
+    else:
+        vdb_dir = os.path.expanduser("~") + "/.vdb/"
+    vdb_dir = os.path.realpath(vdb_dir)
+
     available_modules = configured_modules.value.split(",")
     for mod in available_modules:
         try:
@@ -204,7 +226,6 @@ def start():
             print(f"Error loading module {mod}:")
             traceback.print_exc()
             pass
-    vdb_dir = os.path.expanduser("~") + "/.vdb/"
 
     plug_dirs = []
 
@@ -239,6 +260,13 @@ def enabled( mod ):
     if( mod in enabled_modules ):
         return True
     return False
+
+def exit( ):
+    print("Exiting vdb...")
+    global keep_running
+    keep_running = False
+
+atexit.register(exit)
 #pre_commands = """
 #set confirm off
 #set verbose off

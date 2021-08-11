@@ -175,8 +175,12 @@ object_cache = { }
 
 class object_layout:
     def __init__( self, otype = None, value = None ):
+        print("otype = '%s'" % (otype,) )
         if( otype is None ):
+            print("value.type = '%s'" % (value.type,) )
             otype = value.type
+        print("otype = '%s'" % (otype,) )
+        print("otype.sizeof = '%s'" % (otype.sizeof,) )
         self.type = otype
         self.value = value
 #        print("self.type = '%s'" % self.type )
@@ -198,11 +202,14 @@ class object_layout:
 #        print("self.type = '%s'" % self.type )
 #        print("self.value.dynamic_type = '%s'" % self.value.dynamic_type )
         if( self.value is not None ):
-            self.type = self.value.dynamic_type
+            self.type = self.value.dynamic_type # XXX why do I do this, the if later makes no sense with it
             self.vtype = vdb.util.guess_vptr_type( self.value.address ).type.target()
 
             if( self.type == self.value.dynamic_type and self.type != self.vtype ):
                 self.type = self.vtype
+        print("self.type.sizeof = '%s'" % (self.type.sizeof,) )
+        self.type = self.type.strip_typedefs()
+        print("self.type.sizeof = '%s'" % (self.type.sizeof,) )
         self.bytes = list(itertools.repeat(byte_descriptor(None,None,None),self.type.sizeof))
         self.descriptors = []
 #        print("self.vtype = '%s'" % self.vtype )

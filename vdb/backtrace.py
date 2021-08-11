@@ -374,9 +374,11 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
             if( "P" in showspec.value ):
                 val = frame.read_var(a.symbol())
                 val = vdb.color.color(val,color_argvalue.value)
-#                ret.append( ArgVal( symbol, val) )
+#                val = "\x1b[1D" + val
+                ret.append( ArgVal( symbol, val) )
+#                ret.append( ArgVal( symbol, XValue(val)) )
 #                print(Value(val))
-                ret.append( ArgVal( symbol, XValue(42) ) )
+#                ret.append( ArgVal( symbol, XValue(42) ) )
             elif( "E" in showspec.value ):
                 ret.append( ArgVal( a.symbol(), a.value() ) )
             else:
