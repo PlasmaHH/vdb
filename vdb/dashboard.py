@@ -4,7 +4,7 @@
 
 import vdb.command
 import vdb.event
-import vdb.cache
+import vdb.util
 import vdb.config
 
 import gdb
@@ -184,7 +184,7 @@ class dashboard:
         self.set_state(False,reason)
 
     def do_output( self ):
-        sw = vdb.cache.stopwatch()
+        sw = vdb.util.stopwatch()
         sw.start()
         cout=""
 #        print("some dashboard: %s" % self.command)

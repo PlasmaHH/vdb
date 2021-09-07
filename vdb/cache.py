@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import vdb
+import vdb.util
 
 import gdb
 
@@ -11,36 +12,6 @@ vdb.enabled_modules.append("cache")
 
 cumulative_time = { }
 
-class stopwatch:
-
-    def __init__( self ):
-        self.t_start = None
-        self.t_stop = None
-        self.accumulated = 0.0
-
-    def print( self, msg ):
-        dif = self.get()
-        print(msg.format(dif))
-
-    def start( self ):
-        self.t_start = time.time()
-
-    def stop( self ):
-        self.t_stop = time.time()
-
-    def pause( self ):
-        self.stop()
-        self.accumulated += self.lap()
-
-    def cont( self ):
-        self.start()
-
-    def lap( self ):
-        dif = self.t_stop - self.t_start
-        return dif
-
-    def get( self ):
-        return self.lap() + self.accumulated
 
 def add_time( t, n ):
     global cumulative_time
@@ -89,7 +60,7 @@ class execute_cache:
 type_cache = cache_entry()
 
 def lookup_type( name ):
-    sw = stopwatch()
+    sw = vdb.util.stopwatch()
     sw.start()
     global type_cache
     t = type_cache.cache.get(name)

@@ -83,16 +83,48 @@ def get_gdb_sym( addr ):
             ret[saddr:eaddr+1] = m.group(1)
 
 
+pe_cache = {}
+
+def parse_and_eval_cached( ex, override = False ):
+    global pe_cache
+    if( override ):
+        cv = None
+    else:
+        cv = pe_cache.get( ex,None)
+    if( cv is not None ):
+        return cv
+
+    res = gdb.parse_and_eval( ex )
+    pe_cache[ex] = res
+    return res
+
 
 
 def get_symbols( addr, xlen ):
     ret = intervaltree.IntervalTree()
     xaddr = addr+xlen
 
+    recnt = 0
     while xaddr > addr:
-#        nm = get_gdb_sym(xaddr)
-        nm = gdb.parse_and_eval(f"(void*)({xaddr})")
-        m=symre.match(str(nm))
+#        nm = ""
+        nm = get_gdb_sym(xaddr)
+        astr = f"(void*)({xaddr})"
+        xstr = f"0x{int(xaddr):x}"
+#        nm = gdb.parse_and_eval(astr)
+#        nm = parse_and_eval_cached( astr )
+
+        m = None
+        nm = str(nm)
+        if( len(nm) != len(xstr) ):
+            recnt += 1
+#            print("len(nm) = '%s'" % (len(nm),) )
+#            print("len(xstr) = '%s'" % (len(xstr),) )
+#            print("RE")
+            m=symre.match(str(nm))
+#        print("xstr = '%s'" % (xstr,) )
+#        print("astr = '%s'" % (astr,) )
+#        print("nm = '%s'" % (nm,) )
+#        print("m = '%s'" % (m,) )
         if( m ):
 #            print("m = '%s'" % m )
 #            print("m.group(1) = '%s'" % m.group(1) )
@@ -110,6 +142,7 @@ def get_symbols( addr, xlen ):
             ret[saddr:eaddr+1] = m.group(1)
         else:
             xaddr -= 1
+    print(" recnt = '%s'" % ( recnt,) )
 #    ret.reverse()
 #    print("ret = '%s'" % ret )
     return ret
@@ -123,12 +156,15 @@ def get_annotation( xaddr, symtree ):
         xs = symtree[xaddr]
     return xs
 
-def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False ):
+def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False, symbols = True ):
     if( chaindepth < 0 ):
         chaindepth = default_chaindepth.value
     if( xlen == -1):
         xlen = default_sizes.get(addr,default_len.value)
-    symtree = get_symbols(addr,xlen)
+    if( symbols ):
+        symtree = get_symbols(addr,xlen)
+    else:
+        symtree = intervaltree.IntervalTree()
     olen = xlen
 
     data = vdb.memory.read(addr,xlen)

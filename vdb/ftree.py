@@ -320,7 +320,7 @@ class ftree:
         self.pretty_print_types = re_list( pretty_print_types )
 
     def pointer_blacklisted( self, path, ptr ):
-        sw = vdb.cache.stopwatch()
+        sw = vdb.util.stopwatch()
         sw.start()
 #        print("path = '%s'" % path )
 #        print("ptr.obj.get_path() = '%s'" % ptr.obj.get_path() )
@@ -515,7 +515,7 @@ class ftree:
         return ( ret, rows, ptrlist )
 
     def array_entry( self, fval, elements, path ):
-        sw = vdb.cache.stopwatch()
+        sw = vdb.util.stopwatch()
         sw.start()
 #        print(f"array_entry(fval,{elements},{path})")
         try:
@@ -632,7 +632,7 @@ class ftree:
     # the right side of the table, that is for plain types just the value representation. Additionally it returns a list
     # of pointers (with some ports maybe?)
     def table_entry( self, obj, fval, path, force_pp = False ):
-        sw = vdb.cache.stopwatch()
+        sw = vdb.util.stopwatch()
         sw.start()
 #        print(f"table_entry( {obj}, {fval}, {elements}")
 #        moreptr = []
@@ -804,10 +804,10 @@ class ftree:
     def check_for_array( self, ptr ):
         if( verbosity.value > 3 ):
             print(f"check_for_array( {ptr} )")
-        sw = vdb.cache.stopwatch()
+        sw = vdb.util.stopwatch()
         sw.start()
         ret = None
-#        resw = vdb.cache.stopwatch()
+#        resw = vdb.util.stopwatch()
         for are,action in self.array_element_filter:
 #            print("are = '%s'" % are )
             idx = ptr.obj.get_base().index
@@ -868,7 +868,7 @@ class ftree:
     def try_member_cast(  self, val, path ):
         if( verbosity.value > 4 ):
             print(f"try_member_cast( @0x{int(val.address):x}, {path})")
-        sw = vdb.cache.stopwatch()
+        sw = vdb.util.stopwatch()
         sw.start()
 #        print("path = '%s'" % path )
         for df,action in self.member_cast_filter:
@@ -1154,7 +1154,7 @@ ftree <pointer>|<variable> [<limit>]  - It takes a pointer to some object or a v
 #            print("val['refcount'] = '%s'" % val['refcount'] )
 #            return
 #            f.ftree (val, 0,limit,g )
-            sw = vdb.cache.stopwatch()
+            sw = vdb.util.stopwatch()
             sw.start()
             try:
                 f.ftree( val, 0, limit, g )

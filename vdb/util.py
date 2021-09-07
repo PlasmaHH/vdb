@@ -6,6 +6,7 @@ import gdb
 import re
 import traceback
 import itertools
+import time
 
 def nstr( s ):
     if( s is None ):
@@ -214,5 +215,35 @@ def format_table( tbl, padbefore = " ", padafter = " " ):
         ret += "\n"
     return ret
 
+class stopwatch:
+
+    def __init__( self ):
+        self.t_start = None
+        self.t_stop = None
+        self.accumulated = 0.0
+
+    def print( self, msg ):
+        dif = self.get()
+        print(msg.format(dif))
+
+    def start( self ):
+        self.t_start = time.time()
+
+    def stop( self ):
+        self.t_stop = time.time()
+
+    def pause( self ):
+        self.stop()
+        self.accumulated += self.lap()
+
+    def cont( self ):
+        self.start()
+
+    def lap( self ):
+        dif = self.t_stop - self.t_start
+        return dif
+
+    def get( self ):
+        return self.lap() + self.accumulated
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

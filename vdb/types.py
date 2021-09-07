@@ -36,6 +36,7 @@ def load_caches( ):
         type_locations = tl
     global rl_thread
     rl_thread = vdb.texe.submit(refresh_locations)
+    print("rl_thread.__dict__ = '%s'" % (rl_thread.__dict__,) )
 #    rl_thread.detach()
 
 def save_caches( ):
@@ -45,6 +46,18 @@ def save_caches( ):
     import pickle
     pickle.dump(type_locations,open(fn,"wb+"))
     traceback.print_exc()
+
+# only to be set to true on process exit
+stop_refreshing = False
+ctags = None
+
+@vdb.event.gdb_exiting()
+def abort_refresh_locations( ):
+    global stop_refreshing
+    print("Setting to true")
+    stop_refreshing = True
+    if( ctags is not None ):
+        ctags.terminate()
 
 """
 search all include dirs (system and extra configured) for types. cache that. maybe later do that in a thread when loading and if the command is used before thats finished wait for it to do?
@@ -57,11 +70,20 @@ def refresh_locations( ):
 
         type_tags = set( [ "t","s","c","u" ] )
 #        tags = subprocess.che suoutput( cmd )
+        global ctags
         ctags = subprocess.Popen( cmd, stdout=subprocess.PIPE )
 
         tlo = {}
+
+#        print("Waiting on ctags output...")
 #        f4cnt = {}
         for line in ctags.stdout:
+#            print("line = '%s'" % (line,) )
+            if( stop_refreshing ):
+                print("Aborting background type location refresh")
+                return None
+#            else:
+#                print(".",end="",flush=True)
             line = line.decode("utf-8")
             line = line[:-1]
             comp = line.split(';"')

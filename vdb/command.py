@@ -54,6 +54,7 @@ class command(gdb.Command):
 
     def invoke (self, arg, from_tty):
         try:
+            print("arg = '%s'" % (arg,) )
             argv = gdb.string_to_argv(arg)
 
             if( len(argv) == 1 and argv[0] == "/?" ):

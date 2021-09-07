@@ -334,9 +334,10 @@ class track_item:
 
     next_number = 1
 
-    def __init__( self, expr, ue, ea, pe ):
+    def __init__( self, expr, ue, ea, pe, name = None ):
         self.expression = " ".join(expr)
         self.number = track_item.next_number
+        self.name = name
         self.use_execute = ue
         self.eval_after = ea
         self.python_eval = pe
@@ -376,6 +377,16 @@ def track( argv, execute, eval_after, do_eval ):
         ex_bp.add(bp.number)
         for _,sbp in bp.subpoints.items():
             ex_bp.add(sbp.number)
+
+    ename = None
+    if( len(argv) > 1 and argv[1] == "=" ):
+        ename = argv[0]
+        argv = argv[2:]
+    elif( argv[0][-1] == "=" ):
+        ename = argv[0][:-1]
+        argv = argv[1:]
+
+    print("ename = '%s'" % (ename,) )
 
 #    print("argv[0] = '%s'" % argv[0] )
     bpnum = None
@@ -420,7 +431,7 @@ def track( argv, execute, eval_after, do_eval ):
     global trackings_by_bpid
     global trackings_by_number
 
-    nti = track_item( expr, execute, eval_after, do_eval )
+    nti = track_item( expr, execute, eval_after, do_eval , ename)
 #    trackings.setdefault(str(bpnum),[]).append(track_item( expr, execute, eval_after, do_eval ))
     trackings_by_bpid.setdefault(str(bpnum),[]).append( nti )
     trackings_by_number[nti.number] = nti
@@ -465,14 +476,14 @@ def show_track( ftbl, number ):
     tracks = trackings_by_bpid.get(str(number),None)
     if( tracks is not None ):
         for track in tracks:
-            ftbl.append( [None] * 7 + [track.number,track.expression] )
+            ftbl.append( [None] * 7 + [track.number,track.name,track.expression] )
 
 def show( ):
 
     parse_breakpoints()
     bps = parse_breakpoints()
     ftbl = []
-    ftbl.append( [ "Num","Type","Disp","Enb","Address","What","Inferior","TrackNo","TrackExpr" ] )
+    ftbl.append( [ "Num","Type","Disp","Enb","Address","What","Inferior","TrackNo","TrackName","TrackExpr" ] )
 
     if( len(bps) == 0 ):
         print("No breakpoints, catchppoints or watchpoints.")
@@ -507,10 +518,17 @@ def data( ):
     datatable = []
 
     dataexpressions = []
+    datanames = []
+    names = 0
     for tk in sorted(trackings_by_number.keys()):
         for tracking in by_number(tk):
             dataexpressions.append( tracking.expression )
+            datanames.append( tracking.name )
+            if( tracking.name ):
+                names += 1
 
+    if( names > 0 ):
+        datatable.append( ["Name"] + datanames )
     datatable.append( ["Time"] + dataexpressions )
     datatable.append( [] )
     for ts in sorted(tracking_data.keys()):
@@ -548,10 +566,11 @@ track   - pass expression to parse_and_eval
 track/E - interpret expression as python code to evaluate
 track/x - execute expression and use resulting gdb value
 track/X - execute expression and then run parse_and_eval on the result ($)
+track/s - work with tracking sets (see documentation for them)
 
 id           is the id of an existing breakpoint
 location    can be any location that gdb understands for breakpoints
-expression  is the expression expected by any of the above formats. Upon hitting the breakpoint, it will be evaluated and then automatically continued.
+expression  is the expression expected by any of the above formats. Upon hitting the breakpoint, it will be evaluated and then automatically continued. The special expression $ret is used to denote a return value of a finish expression.
 
 If no breakpoint can be found with an existing location, we try to set one at that location, otherwise we try to re-use the same location
 Note: while it works ok for breakpoints and watchpoints, using catchpoints is somewhat difficult and often does not work
@@ -607,7 +626,37 @@ You should have a look at the data and graph modules, which can take the data fr
 
 cmd_track()
 
+"""
+Notes for track sets
+X - need generic feature giving columns a name independent from the expression
+- add a feature to generically get the return value of a "finish" expression of a breakpoint
+- a set contains advanced track expressions for multiple functions that act together
+  - these expresions have a "display" method, like hexdump of a buffer
+  - each expression yields one or more values for the track record (like buffer size)
+  - maybe we can even find a generic way to sort the calls into multiple contexts (e.g. per ssl connection?)
+  - all the hexdump etc. output is displayed, saved or both
+First example is SSL:
+    SSL_write(buf,num): easy, just variables
+    SSL_read(buf) => num, needs the return value feature
+    SSL context object "s" to figure out the connection. s->rbio->num is the socket maybe?
+hex/xyz showspec should be supported and also implemented in the hexdump module directly. default the fastest possible
+"""
 
-
+ssl_set = { 
+            "SSL_read" : # A function/location to set the breakpoint
+                [   # a list of "actions" with their parameters, a non matching "filter" will stop evaluation
+                    ( "filter", [ "set", "ssl_fd_filter", "s->rbio->num" ] ),
+                    ( "hex",
+                            [ "buf", "$ret" ], # hex expects address and length
+                            [ "$rdi", "$rsi" ] # only if the above doesn't work, try to fall back to these
+                            ),
+                ],
+            "SSL_write" : [ ( "hex", [ "buf", "num" ], ["$rdi", "$rsi" ] ) ],
+            "connect" : [
+                    ( "filter", [ "cmp", "{port}", "ntohs( ((sockaddr_in*)addr)->sin_port )" ] ),
+                    ( "filter", [ "cmp", "{ip}", "( ((sockaddr_in*)addr)->sin_addr)" ] ),
+                    ( "store", [ "fd", "ssl_fd_filter" ] )
+                ]
+            }
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

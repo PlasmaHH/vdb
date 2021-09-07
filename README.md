@@ -36,6 +36,8 @@ under x86_64 Linux with gcc > 10.
 	* [ssh](#ssh)
 	* [track](#track)
 	* [types](#types)
+	* [ssl](#ssl)
+	* [profile](#profile)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
 	* [pointer (chaining)](#pointer-chaining)
@@ -214,6 +216,14 @@ The `types` module allows to load/create type information on the fly while debug
 information.
 
 [You can find detailed information about this module here](doc/TYPES.md)
+## ssl
+Allows to hexdump data passed through ssl library calls.
+
+Note: This is subject to change a lot, maybe to a more generic mechanism
+[You can find detailed information about this module here](doc/SSL.md)
+## profile
+Allows to profile python calls
+[You can find detailed information about this module here](doc/PROFILE.md)
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
 you suppress loading of the modules that load it.

@@ -184,8 +184,10 @@ enable_graph     = vdb.config.parameter( "vdb-enable-graph",True)
 enable_data      = vdb.config.parameter( "vdb-enable-data",True)
 enable_syscall   = vdb.config.parameter( "vdb-enable-syscall",True)
 enable_types     = vdb.config.parameter( "vdb-enable-types",True)
+enable_ssl       = vdb.config.parameter( "vdb-enable-ssl",True)
+enable_profile   = vdb.config.parameter( "vdb-enable-profile",True)
 
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard,hashtable,ssh,track,graph,tee,data,syscall,types" )
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,grep,pahole,ftree,dashboard,hashtable,ssh,track,graph,tee,data,syscall,types,ssl,profile" )
 
 home_first  = vdb.config.parameter( "vdb-plugin-home-first",True)
 search_down = vdb.config.parameter( "vdb-plugin-search-down",True)

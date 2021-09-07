@@ -61,6 +61,9 @@ def stop( *darg ):
 def before_prompt( *darg ):
     return on_event( gdb.events.before_prompt, darg )
 
+def gdb_exiting( *darg ):
+    return on_event( gdb.events.gdb_exiting, darg )
+
 def new_objfile( *darg ):
     return on_event( gdb.events.new_objfile, darg )
 

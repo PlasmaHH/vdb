@@ -263,8 +263,7 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None, use_which = 
 #    print("find_file('%s')" % fname )
     if( s.check(True) is not None ):
         return (None,None)
-#    sw=vdb.cache.stopwatch()
-#    sw.start()
+
     src = fname.replace("{pid}",str(pid))
     if( use_which ):
 #        src = "$(which %s)" % src
@@ -291,8 +290,7 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None, use_which = 
         fsize=int(s.read())
 #        print("fsize = '%s'" % fsize )
     if( csum is None ):
-#        sw=vdb.cache.stopwatch()
-#        sw.start()
+
 #        print("src = '%s'" % src )
         s.call(csum_cmd.value + " " + src )
         print(f"Checking if {src} is already locally cached…")
