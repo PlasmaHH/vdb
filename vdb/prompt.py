@@ -19,7 +19,7 @@ prompt_color = 10*[None]
 prompt_text = 10*[None]
 
 
-prompt_base = vdb.config.parameter( "vdb-prompt-base","{start}{0}{1}{2}{3}{4}{git}{5}{6}{7}{8}{9}{[:host:]}{end}", on_set = defer_set_prompt )
+prompt_base = vdb.config.parameter( "vdb-prompt-base","{start}{0}{1}{2}{3}{4}{git}{5}{6}{7}{8}{9}{[:host:]}{progress}{end}", on_set = defer_set_prompt )
 
 for i in range(0,10):
     prompt_color[i] = vdb.config.parameter( "vdb-prompt-colors-%s" % i, "#ffff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
@@ -38,6 +38,9 @@ prompt_color_time   = vdb.config.parameter( "vdb-prompt-colors-time",   "#ffffff
 prompt_color_frame  = vdb.config.parameter( "vdb-prompt-colors-frame",  "#9999ff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
 prompt_color_host  = vdb.config.parameter( "vdb-prompt-colors-host",  "#ffff4f", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
 
+prompt_progress = vdb.config.parameter( "vdb-prompt-progress", True, on_set = defer_set_prompt )
+prompt_color_progress = vdb.config.parameter( "vdb-prompt-colors-progress", "#ffbb00", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
+
 prompt_text_time = vdb.config.parameter( "vdb-prompt-text-time",     " %H:%M:%S" )
 # TODO introduce hooks to dynamically insert information, use format string like substitutions for them.
 # Possible information includes (maybe we can colour code something too?)
@@ -50,6 +53,27 @@ prompt_text_time = vdb.config.parameter( "vdb-prompt-text-time",     " %H:%M:%S"
 
 git_cache_time = 0
 git_cache_prompt = ""
+
+current_progress = []
+
+def add_progress( pfunc ):
+    global current_progress
+    current_progress.append(pfunc)
+
+#def dummy_progress( ):
+#    return "99%"
+#current_progress = dummy_progress
+
+def get_progress_prompt():
+    global current_progress
+    if( prompt_progress.value is True ):
+        if( len(current_progress) > 0 ):
+            cp = current_progress[0]()
+            if( cp is None ):
+                current_progress = current_progress[:1]
+            else:
+                return cp
+    return ""
 
 def get_git_prompt( ):
     global git_cache_time
@@ -154,6 +178,8 @@ def refresh_prompt( ):
     # now do all the dynamic ones, later we might want to do it for each time the prompt is called
     if( has_key["git"] ):
         prompt = prompt_replace(prompt,"git", get_git_prompt(), prompt_color_git.value )
+    if( has_key["progress"] ):
+        prompt = prompt_replace(prompt,"progress", get_progress_prompt(), prompt_color_progress.value )
     if( has_key["time"] ):
 #        prompt = prompt_replace(prompt,"time",time.strftime( " %H:%M:%S", time.localtime() ),prompt_color_time.value )
         prompt = prompt_replace(prompt,"time",time.strftime( prompt_text_time.value, time.localtime() ),prompt_color_time.value )
@@ -185,9 +211,10 @@ def reset_prompt( ):
     check_format("frame")
     check_format("thread")
     check_format("host")
+    check_format("progress")
 
     if( prompt_git.value is False ):
-        has_key["{git}"] = False
+        has_key["git"] = False
         cached_prompt_base = cached_prompt_base.replace("{git}","")
 
     refresh_prompt()

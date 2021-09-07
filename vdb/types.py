@@ -35,8 +35,8 @@ def load_caches( ):
         tl = pickle.load( open( fn, "rb" ) )
         type_locations = tl
     global rl_thread
-    rl_thread = vdb.texe.submit(refresh_locations)
-    print("rl_thread.__dict__ = '%s'" % (rl_thread.__dict__,) )
+    rl_thread = vdb.texe.submit(progress_refresh_locations)
+#    print("rl_thread.__dict__ = '%s'" % (rl_thread.__dict__,) )
 #    rl_thread.detach()
 
 def save_caches( ):
@@ -62,9 +62,35 @@ def abort_refresh_locations( ):
 """
 search all include dirs (system and extra configured) for types. cache that. maybe later do that in a thread when loading and if the command is used before thats finished wait for it to do?
 """
+ctags_progress = None
+
+def get_progress_refresh_locations( ):
+    return ctags_progress
+
+def progress_refresh_locations( ):
+    vdb.prompt.add_progress( get_progress_refresh_locations )
+    global ctags_progress
+    try:
+        ctags_progress = "[ ctags #/# ]"
+        refresh_locations()
+    except:
+        pass
+    finally:
+        ctags_progress = None
+
+def set_progress( c, tc, l ):
+    global ctags_progress
+    if( l is not None ):
+        ctags_progress = f"[ ctags {c}/{tc} {l} ]"
+    else:
+        ctags_progress = f"[ ctags {c}/{tc} … ]"
+
 def refresh_locations( ):
     print("ctags_dirs.elements = '%s'" % (ctags_dirs.elements,) )
+    ccnt = 0
     for d in ctags_dirs.elements:
+        set_progress( ccnt, len(ctags_dirs.elements), None )
+        ccnt += 1
         cmd = [ ctags_cmd.value ] + ctags_parameters.value.split() + [d]
         print("cmd = '%s'" % (" ".join(cmd),) )
 
@@ -76,8 +102,12 @@ def refresh_locations( ):
         tlo = {}
 
 #        print("Waiting on ctags output...")
+        lcnt = 0
 #        f4cnt = {}
         for line in ctags.stdout:
+            lcnt += 1
+            set_progress( ccnt, len(ctags_dirs.elements), lcnt )
+
 #            print("line = '%s'" % (line,) )
             if( stop_refreshing ):
                 print("Aborting background type location refresh")
