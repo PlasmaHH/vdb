@@ -26,6 +26,13 @@ def on_event( gdbreg, darg ):
         return func
     return decorator
 
+def on_noop( darg ):
+    def decorator( func ):
+        def wrapper(*arg):
+            pass
+        return func
+    return decorator
+
 hooks = {}
 
 def register_hook( ev, f ):
@@ -62,7 +69,11 @@ def before_prompt( *darg ):
     return on_event( gdb.events.before_prompt, darg )
 
 def gdb_exiting( *darg ):
-    return on_event( gdb.events.gdb_exiting, darg )
+    try:
+        return on_event( gdb.events.gdb_exiting, darg )
+    # Only supported since gdb 12, silently ignore otherwise
+    except:
+        return on_noop( darg )
 
 def new_objfile( *darg ):
     return on_event( gdb.events.new_objfile, darg )
