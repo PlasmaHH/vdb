@@ -642,17 +642,72 @@ First example is SSL:
 hex/xyz showspec should be supported and also implemented in the hexdump module directly. default the fastest possible
 """
 
+class finish_breakpoint( gdb.FinishBreakpoint ):
+
+    def __init__( self, frame, action ):
+        super( finish_breakpoint, self).__init__(frame)
+        self.action = action
+
+    def stop( self ):
+        self.action.fin_action( self.return_value )
+        return False
+
 class track_action:
-    pass
+
+    # returns a gdb value or python result for the expression, depending on the type. Expression can end in /x or so.
+    # Returns None when the expression returned none, or when the expression was $ret (return value special case)
+    def get( self, expression, way = None ):
+        print("get()")
+        print("expression = '%s'" % (expression,) )
+        print("way = '%s'" % (way,) )
+        if( expression[-2] == "/" ):
+            way = expression[-1]
+            expression = expression[:-2]
+
+        if( way is None ):
+            way = "v"
+
+        ret = None
+        if( expression == "$ret" ):
+            return None
+
+        if( way == "x" ):
+            #gdb.execute => gdb.Value
+            ret = gdb.execute(expression,False,True)
+        elif( way == "X" ):
+            #gdb.execute => gdb parse_and_eval($)
+            gdb.execute(expression,False,True)
+            ret = gdb.parse_and_eval("$")
+        elif( way == "E" ):
+            #python.run() => python result
+            ex = expression
+            if( ex.find("$(") != -1 ):
+                ex = ex.replace( "$(", "gdb.parse_and_eval(" )
+            ret=eval(ex,globals())
+        elif( way == "v" ):
+            # frame.value() => gdb.value
+            frame = gdb.newest_frame() # maybe get the frame from the breakpoint object?
+            ret = frame.read_var(expression)
+        elif( way == "p" ):
+            # gdb.parse-and_eval() => gdb.value
+            ret = gdb.parse_and_eval(expression)
+        else:
+            raise Exception("Unknown type to get result: %s" % way )
+        return ret
+
 
 class filter_track_action:
 
     def __init__( self, filter_list ):
         pass
+    def action( self ):
+        pass
 
 class store_track_action:
 
     def __init__( self, store_list ):
+        pass
+    def action( self ):
         pass
 
 class delete_track_action:
@@ -660,48 +715,83 @@ class delete_track_action:
     def __init__( self, del_list ):
         pass
 
-class hexdump_track_action:
+    def action( self ):
+        pass
 
-    def get( self, expression, way ):
-        if( way == "x" ):
-            #gdb.execute => gdb.Value
-            pass
-        elif( way == "X" ):
-            #gdb.execute => gdb parse_and_eval($)
-            pass
-        elif( way == "E" ):
-            #python.run() => python result
-            pass
-        elif( way == "v" ):
-            # frame.value() => gdb.value
-            pass 
-        elif( way == "p" ):
-            # gdb.parse-and_eval() => gdb.value
-            pass
-        else:
-            raise Exception("Unknown type to get result: %s" % way )
+class hexdump_track_action( track_action ):
 
     def __init__( self, tuple_list ):
         print(f"hexdump_track_action with {len(tuple_list)} alternatives:")
         self.address = None
         self.length  = None
+        self.tuple_list = tuple_list
+        self.buffer = None
+        self.size = None
+        self.buffer_expression = None
+        self.size_expression = None
         for buf,sz in tuple_list:
             print(f"hexdump({buf},{sz})")
 
+    def dump( self ):
+        vdb.hexdump.hexdump( self.buffer, self.size )
     # called on breakpoint hit
     # @returns true if all went fine, false if it went wrong, and None if we need to call fin_action
     def action( self ):
-        pass
+        print("hexdump.action()")
+        for buf,sz in self.tuple_list:
+            try:
+                print("buf = '%s'" % (buf,) )
+                print("sz = '%s'" % (sz,) )
+                self.buffer = self.get( buf )
+                self.size = self.get(sz)
+                self.buffer_expression = buf
+                self.size_expression = sz
+
+                print("self.buffer_expression = '%s'" % (self.buffer_expression,) )
+                print("self.size_expression = '%s'" % (self.size_expression,) )
+            except:
+                # ok, something went wrong, silently ignore it and try the next tuple
+                pass
+            break
+        if( self.buffer_expression == "$ret" or self.size_expression == "$ret" ):
+            frame = gdb.newest_frame()
+            self.finbp = finish_breakpoint( frame, self )
+        else:
+            self.dump()
+            # neeed a "fin action"
     
     # called (optionally) on finish
-    def fin_action( self ):
-        pass
+    def fin_action( self, retval ):
+        print("fin_action")
+        print("retval = '%s'" % (retval,) )
+        if( self.buffer_expression == "$ret" ):
+            self.buffer = retval
+        if( self.size_expression == "$ret" ):
+            self.size = retval
+#        self.finbp.delete()
+        self.finbp = None
+        self.dump()
+
+class track_breakpoint( gdb.Breakpoint ):
+
+    def __init__( self, location, track_item ):
+        super( track_breakpoint, self ).__init__(location)
+        self.track_item = track_item
+        print("track_item = '%s'" % (track_item,) )
+        print("location = '%s'" % (location,) )
+
+    def stop( self ):
+        print("track_breakpoint.stop()")
+        self.track_item.stop()
+        return False
 
 class extended_track_item:
+
     def __init__( self, location, action_list ):
         print("Extended Track Item:")
         print(f"Location: {location}")
         print(f"{len(action_list)} action items...")
+        self.actions = []
         for action,param in action_list:
             print(f"Action '{action}' with {len(param)} parameters")
             ai = None
@@ -715,6 +805,14 @@ class extended_track_item:
                 ai = delete_track_action( param )
             else:
                 print(f"Unknown action item {action}")
+            if( ai is not None ):
+                self.actions.append(ai)
+        self.bp = track_breakpoint( location, self )
+
+    def stop( self ):
+        print("eti.stop()")
+        for ai in self.actions:
+            ai.action()
 
 #
 # track set = A dictionary location/function : [ list of action items ]
@@ -736,12 +834,16 @@ class extended_track_item:
 
 # XXX maybe... cmp/xXE should work the same as for track for cmp/track/store/hex/etc ? should mixing of types be
 # possible here? maybe then as cmp/xXx means x for #0, X for #1 and x for #2 ?
+# more clear would be /x at the end of the expression. If the expression itself needs to end on /x just do /x/x (or
+# whatever type of evaluation you need)
+# XXX very future idea: sometimes you may want to check a passed by non-const reference parameter at the point of the
+# function return, maybe we want to support that too? 
 
 ssl_set = { 
             "SSL_read" : # A function/location to set the breakpoint
                 [   # a list of "actions" with their parameters, a non matching "filter" will stop evaluation
                     ( "filter", [ "set", "ssl_fd_filter", "s->rbio->num" ] ),
-                    ( "hex", [ 
+                    ( "hex", [
                             ( "buf", "$ret" ), # hex expects address and length
                             ( "$rdi", "$ret" ) # only if the above doesn't work, try to fall back to these
                             ]
@@ -758,8 +860,11 @@ ssl_set = {
                 ]
             }
 
-for k,v in ssl_set.items():
-#    print("k = '%s'" % (k,) )
-#    print("v = '%s'" % (v,) )
-    eti = extended_track_item( k, v )
+etis = []
+def init():
+    for k,v in ssl_set.items():
+        eti = extended_track_item( k, v )
+        etis.append(eti)
+
+init()
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
