@@ -79,6 +79,10 @@ class object:
         self.subobjects = []
         self.field = field
         if( field is not None ):
+            print("field = '%s'" % (field,) )
+            print("field.name = '%s'" % (field.name,) )
+            print("field.bitpos = '%s'" % (field.bitpos,) )
+            print("field.bitsize = '%s'" % (field.bitsize,) )
             self.name = field.name
             self.bit_offset = field.bitpos
             self.byte_offset = self.bit_offset // 8

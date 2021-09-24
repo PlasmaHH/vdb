@@ -642,21 +642,124 @@ First example is SSL:
 hex/xyz showspec should be supported and also implemented in the hexdump module directly. default the fastest possible
 """
 
+class track_action:
+    pass
+
+class filter_track_action:
+
+    def __init__( self, filter_list ):
+        pass
+
+class store_track_action:
+
+    def __init__( self, store_list ):
+        pass
+
+class delete_track_action:
+
+    def __init__( self, del_list ):
+        pass
+
+class hexdump_track_action:
+
+    def get( self, expression, way ):
+        if( way == "x" ):
+            #gdb.execute => gdb.Value
+            pass
+        elif( way == "X" ):
+            #gdb.execute => gdb parse_and_eval($)
+            pass
+        elif( way == "E" ):
+            #python.run() => python result
+            pass
+        elif( way == "v" ):
+            # frame.value() => gdb.value
+            pass 
+        elif( way == "p" ):
+            # gdb.parse-and_eval() => gdb.value
+            pass
+        else:
+            raise Exception("Unknown type to get result: %s" % way )
+
+    def __init__( self, tuple_list ):
+        print(f"hexdump_track_action with {len(tuple_list)} alternatives:")
+        self.address = None
+        self.length  = None
+        for buf,sz in tuple_list:
+            print(f"hexdump({buf},{sz})")
+
+    # called on breakpoint hit
+    # @returns true if all went fine, false if it went wrong, and None if we need to call fin_action
+    def action( self ):
+        pass
+    
+    # called (optionally) on finish
+    def fin_action( self ):
+        pass
+
+class extended_track_item:
+    def __init__( self, location, action_list ):
+        print("Extended Track Item:")
+        print(f"Location: {location}")
+        print(f"{len(action_list)} action items...")
+        for action,param in action_list:
+            print(f"Action '{action}' with {len(param)} parameters")
+            ai = None
+            if( action == "hex" ):
+                ai = hexdump_track_action( param )
+            elif( action == "filter" ):
+                ai = filter_track_action( param )
+            elif( action == "store" ):
+                ai = store_track_action( param )
+            elif( action == "delete" ):
+                ai = delete_track_action( param )
+            else:
+                print(f"Unknown action item {action}")
+
+#
+# track set = A dictionary location/function : [ list of action items ]
+# action item = tuple of action type and a single item of parameters for that action  (typically a list)
+# - different actions:
+
+# hex : takes list of pairs to dump. They are alternatives for getting the same information, that is when one fails due
+# to exception, only then the next in the list is used
+
+# store : stores an expression in a set (?) for later retrieval through filters
+# delete : deletes from a store (if possible) ?
+
+# track : tracks this item/expression (just as it would be in a standard track expression) (XXX: How to specify # execute/parse/python ?
+
+# filter : aborts handling of the list of actions when the filter is "false". Contains different types of "filter # expressions"
+#       - cmp : compares one (user supplied) value to an expression of some kind. Or Two expressions even?
+#       - set : compares if the value is in a named set (previously stored via some other action?)
+
+
+# XXX maybe... cmp/xXE should work the same as for track for cmp/track/store/hex/etc ? should mixing of types be
+# possible here? maybe then as cmp/xXx means x for #0, X for #1 and x for #2 ?
+
 ssl_set = { 
             "SSL_read" : # A function/location to set the breakpoint
                 [   # a list of "actions" with their parameters, a non matching "filter" will stop evaluation
                     ( "filter", [ "set", "ssl_fd_filter", "s->rbio->num" ] ),
-                    ( "hex",
-                            [ "buf", "$ret" ], # hex expects address and length
-                            [ "$rdi", "$rsi" ] # only if the above doesn't work, try to fall back to these
+                    ( "hex", [ 
+                            ( "buf", "$ret" ), # hex expects address and length
+                            ( "$rdi", "$ret" ) # only if the above doesn't work, try to fall back to these
+                            ]
                             ),
                 ],
-            "SSL_write" : [ ( "hex", [ "buf", "num" ], ["$rdi", "$rsi" ] ) ],
+            "SSL_write" : [ ( "hex", [ ( "buf", "num" ), ( "$rdi", "$rsi" ) ] ) ],
             "connect" : [
                     ( "filter", [ "cmp", "{port}", "ntohs( ((sockaddr_in*)addr)->sin_port )" ] ),
                     ( "filter", [ "cmp", "{ip}", "( ((sockaddr_in*)addr)->sin_addr)" ] ),
                     ( "store", [ "fd", "ssl_fd_filter" ] )
+                ],
+            "close" : [
+                    ( "delete", [ "fd", "ssl_fd_filter" ] )
                 ]
             }
 
+for k,v in ssl_set.items():
+#    print("k = '%s'" % (k,) )
+#    print("v = '%s'" % (v,) )
+    eti = extended_track_item( k, v )
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

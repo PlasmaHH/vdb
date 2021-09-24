@@ -12,14 +12,18 @@ import os
 import traceback
 import subprocess
 import tempfile
+import time
 
 ctags_cmd = vdb.config.parameter("vdb-types-ctags-cmd", "ctags" )
 ctags_parameters = vdb.config.parameter("vdb-types-ctags-parameters","--extra=+q -f - --sort=no -R")
+
 ctags_dirs = vdb.config.parameter("vdb-types-ctags-files","/usr/include/", on_set  = vdb.config.set_array_elements )
 #ctags_dirs = vdb.config.parameter("vdb-types-ctags-files","test.h", on_set  = vdb.config.set_array_elements )
 ctags_cache = vdb.config.parameter("vdb-types-cache",True)
+ctags_cache_age = vdb.config.parameter("vdb-types-cache-max-age", 86400 )
 
 type_locations = {}
+cache_timestamp = 0
 
 rl_thread = None
 
@@ -28,23 +32,29 @@ def load_caches( ):
         return
     import pickle
     global type_locations
+    global cache_timestamp
     fn = vdb.vdb_dir + "/cache/type_locations"
     if( not os.path.exists(fn) ):
         print(f"Skipping to load type_locations cache, {fn} does not exist")
     else:
         tl = pickle.load( open( fn, "rb" ) )
-        type_locations = tl
-    global rl_thread
-    rl_thread = vdb.texe.submit(progress_refresh_locations)
-#    print("rl_thread.__dict__ = '%s'" % (rl_thread.__dict__,) )
-#    rl_thread.detach()
+        type_locations,cache_timestamp = tl
+    if( time.time() > ( cache_timestamp + ctags_cache_age.value ) ):
+        global rl_thread
+        rl_thread = vdb.texe.submit(progress_refresh_locations)
+        print(f"Cache is {time.time() - cache_timestamp}s old, refreshing")
+    else:
+        print(f"Cache is {time.time() - cache_timestamp}s old, no need to refresh")
+
 
 def save_caches( ):
     fn = vdb.vdb_dir + "/cache/type_locations"
     fdir = os.path.dirname(fn)
     os.makedirs(fdir,exist_ok = True)
+    global cache_timestamp
+    cache_timestamp = time.time()
     import pickle
-    pickle.dump(type_locations,open(fn,"wb+"))
+    pickle.dump( (type_locations,cache_timestamp),open(fn,"wb+"))
     traceback.print_exc()
 
 # only to be set to true on process exit
@@ -54,7 +64,7 @@ ctags = None
 @vdb.event.gdb_exiting()
 def abort_refresh_locations( ):
     global stop_refreshing
-    print("Setting to true")
+#    print("Setting to true")
     stop_refreshing = True
     if( ctags is not None ):
         ctags.terminate()
@@ -70,6 +80,7 @@ def get_progress_refresh_locations( ):
 def progress_refresh_locations( ):
     vdb.prompt.add_progress( get_progress_refresh_locations )
     global ctags_progress
+    global ctags
     try:
         ctags_progress = "[ ctags #/# ]"
         refresh_locations()
@@ -77,6 +88,8 @@ def progress_refresh_locations( ):
         pass
     finally:
         ctags_progress = None
+        ctags = None
+
 
 def set_progress( c, tc, l ):
     global ctags_progress
