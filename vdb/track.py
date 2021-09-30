@@ -848,7 +848,7 @@ class delete_track_action:
 class hexdump_track_action( track_action ):
 
     def __init__( self, location, tuple_list ):
-        print(f"hexdump_track_action with {len(tuple_list)} alternatives:")
+#        print(f"hexdump_track_action with {len(tuple_list)} alternatives:")
         self.address = None
         self.length  = None
         self.tuple_list = tuple_list
@@ -857,8 +857,8 @@ class hexdump_track_action( track_action ):
         self.buffer_expression = None
         self.size_expression = None
         self.location = location
-        for buf,sz in tuple_list:
-            print(f"hexdump({buf},{sz})")
+#        for buf,sz in tuple_list:
+#            print(f"hexdump({buf},{sz})")
 
     def dump( self ):
         ps,pu = vdb.pointer.chain( self.buffer, vdb.arch.pointer_size, 3, test_for_ascii = True )
