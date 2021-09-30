@@ -617,6 +617,8 @@ You should have a look at the data and graph modules, which can take the data fr
                clear()
             elif( argv[0] == "set" ):
                init_set( argv[1:] )
+            elif( argv[0] == "set.disable" ):
+               del_set( argv[1:] )
             elif( len(argv) > 1 ):
                 track(argv,execute,eval_after_execute,python_eval)
             else:
@@ -651,11 +653,12 @@ track_storage = {}
 class finish_breakpoint( gdb.FinishBreakpoint ):
 
     def __init__( self, frame, action ):
-        super( finish_breakpoint, self).__init__(frame)
+        super( finish_breakpoint, self).__init__(frame,True)
         self.action = action
 
     def stop( self ):
         self.action.fin_action( self.return_value )
+        self.action.fin_bp = None
         return False
 
 class track_action:
@@ -702,11 +705,17 @@ class track_action:
             raise Exception("Unknown type to get result: %s" % way )
         return ret
 
+    def getn( self, expression, way = None ):
+        try:
+            return self.get(expression,way)
+        except:
+            return None
+
 
 class filter_track_action(track_action):
 
     def __init__( self, filter_list, location, prefix, parameters ):
-        print("filter_list = '%s'" % (filter_list,) )
+#        print("filter_list = '%s'" % (filter_list,) )
         ftype = filter_list[0]
         self.prefix = prefix
         if( ftype == "cmp" ):
@@ -732,28 +741,67 @@ class filter_track_action(track_action):
         else:
             raise Exception("Unknown filter type %s" % ftype)
 
-    def compare_to_value( self ):
-        return self.value
+    def compare_to_value( self, rval ):
+        lval = self.value
+        # value is not available. Since we maybe want two filters accessing the same value in different ways, we ignore
+        # that case here. One day we may want to add a facility for the user to specify
+        if( lval is None or rval is None ):
+            return True
 
-    def compare_to_map( self ):
-        print("track_storage = '%s'" % (track_storage,) )
-        print("self.prefix = '%s'" % (self.prefix,) )
-        val = None
+        lval,rval = self.refine( lval,rval )
+#        print("lval = '%s'" % (lval,) )
+#        print("rval = '%s'" % (rval,) )
+
+#        print("type(lval) = '%s'" % (type(lval),) )
+#        print("type(rval) = '%s'" % (type(rval),) )
+        return ( lval == rval )
+
+    def compare_to_map( self, rval ):
+#        print("track_storage = '%s'" % (track_storage,) )
+#        print("self.prefix = '%s'" % (self.prefix,) )
+#        print("rval = '%s'" % (rval,) )
+        if( rval is None ):
+            return True
+
         storage = track_storage.get( self.prefix, None )
-        print("storage = '%s'" % (storage,) )
+#        print("storage = '%s'" % (storage,) )
         if( storage is not None ):
-            val = storage.get( self.value_map, None )
-            print("val = '%s'" % (val,) )
-        return val
+            setstorage = storage.get( self.value_map, None )
+            for lval in setstorage:
+#                print("lval = '%s'" % (lval,) )
+                el,er = self.refine( lval, rval )
+                if( el == er ):
+                    return True
+        return False
+
+    def refine( self, lval, rval ):
+        # Either we can convert both to double, or both to string, or leave both as if. Only converting one is not
+        # possible
+        # XXX in case we have two python result objects that convert to strings but we want to leave them as-is, what do
+        # we do? The conversion is mainly for gdb results as string or gdb.Value and other incompatibilities
+        try:
+            d_l = float(lval)
+            d_r = float(rval)
+            return ( d_l, d_r )
+        except:
+            try:
+                # nah, didn't work, lets try strings, that usually works
+                s_l = str(lval)
+                s_r = str(rval)
+                return ( s_l, s_r )
+            except:
+                # ok, didn't work either, leave as is
+                return ( lval, rval )
+
 
     def action( self ):
-        print("filter track action()")
-        print("track_storage = '%s'" % (track_storage,) )
-        lval = self.compto()
-        rval = self.get( self.expression )
-        print("lval = '%s'" % (lval,) )
-        print("rval = '%s'" % (rval,) )
+#        print("filter track action()")
+#        print("track_storage = '%s'" % (track_storage,) )
+        rval = self.getn( self.expression )
+        ret = self.compto(rval)
+        return ret
 
+ 
 class store_track_action(track_action):
 
     def __init__( self, store_list, location, prefix ):
@@ -767,17 +815,35 @@ class store_track_action(track_action):
 
         global track_storage
         store = track_storage.setdefault( self.map_key, {} )
-        store[self.storage_map] = val
-        print(f"{self.expression} = {val} => {self.storage_map}")
-        print("track_storage = '%s'" % (track_storage,) )
+        storeset = store.setdefault(self.storage_map,set())
+        storeset.add( val )
+#        print(f"{self.expression} = {val} => {self.storage_map}")
+#        print("track_storage = '%s'" % (track_storage,) )
+        return True
 
 class delete_track_action:
 
-    def __init__( self, del_list ):
-        pass
+    def __init__( self, del_list, location, prefix ):
+        self.expression = del_list[0]
+        self.storage_map = del_list[1]
+        self.map_key = prefix
 
     def action( self ):
-        pass
+#        print("delete action()")
+        store = track_storage.setdefault( self.map_key, {} )
+#        print("self.map_key = '%s'" % (self.map_key,) )
+#        print("store = '%s'" % (store,) )
+        if( store is not None ):
+#            print("self.storage_map = '%s'" % (self.storage_map,) )
+            storeset = store.get(self.storage_map,None)
+#            print("storeset = '%s'" % (storeset,) )
+            if( storeset is not None ):
+                val = self.get( self.expression )
+#                print("val = '%s'" % (val,) )
+#                print("storeset = '%s'" % (storeset,) )
+                storeset.discard( val )
+#                print("storeset = '%s'" % (storeset,) )
+        return True
 
 class hexdump_track_action( track_action ):
 
@@ -801,9 +867,9 @@ class hexdump_track_action( track_action ):
         print(f"{self.location} : {self.buffer_expression} = {ps}, {self.size_expression} = {self.size}");
         vdb.hexdump.hexdump( self.buffer, self.size )
     # called on breakpoint hit
-    # @returns true if all went fine, false if it went wrong, and None if we need to call fin_action
+    # 
     def action( self ):
-        print("hexdump.action()")
+#        print("hexdump.action()")
         for buf,sz in self.tuple_list:
             try:
 #                print("buf = '%s'" % (buf,) )
@@ -821,22 +887,21 @@ class hexdump_track_action( track_action ):
                 pass
             break
         if( self.buffer_expression == "$ret" or self.size_expression == "$ret" ):
-            frame = gdb.newest_frame()
-            self.finbp = finish_breakpoint( frame, self )
+            # neeed a "fin action"
+            return None
         else:
             self.dump()
-            # neeed a "fin action"
+            return True
     
     # called (optionally) on finish
     def fin_action( self, retval ):
-        print("fin_action")
-        print("retval = '%s'" % (retval,) )
+#        print("fin_action")
+#        print("retval = '%s'" % (retval,) )
         if( self.buffer_expression == "$ret" ):
             self.buffer = retval
         if( self.size_expression == "$ret" ):
             self.size = retval
 #        self.finbp.delete()
-        self.finbp = None
         self.dump()
 
 class track_breakpoint( gdb.Breakpoint ):
@@ -844,23 +909,23 @@ class track_breakpoint( gdb.Breakpoint ):
     def __init__( self, location, track_item ):
         super( track_breakpoint, self ).__init__(location)
         self.track_item = track_item
-        print("track_item = '%s'" % (track_item,) )
-        print("location = '%s'" % (location,) )
+#        print("track_item = '%s'" % (track_item,) )
+#        print("location = '%s'" % (location,) )
 
     def stop( self ):
-        print("track_breakpoint.stop()")
+#        print("track_breakpoint.stop()")
         self.track_item.stop()
         return False
 
 class extended_track_item:
 
     def __init__( self, location, action_list, prefix, parameters ):
-        print("Extended Track Item:")
-        print(f"Location: {location}")
-        print(f"{len(action_list)} action items...")
+#        print("Extended Track Item:")
+#        print(f"Location: {location}")
+#        print(f"{len(action_list)} action items...")
         self.actions = []
         for action,param in action_list:
-            print(f"Action '{action}' with {len(param)} parameters")
+#            print(f"Action '{action}' with {len(param)} parameters")
             ai = None
             if( action == "hex" ):
                 ai = hexdump_track_action( location, param )
@@ -869,18 +934,32 @@ class extended_track_item:
             elif( action == "store" ):
                 ai = store_track_action( param, location, prefix )
             elif( action == "delete" ):
-                ai = delete_track_action( param )
+                ai = delete_track_action( param, location, prefix )
             else:
                 print(f"Unknown action item {action}")
             if( ai is not None ):
                 self.actions.append(ai)
         self.bp = track_breakpoint( location, self )
 
+    def clear( self ):
+        self.bp.delete()
+        self.bp = None
+
     def stop( self ):
-        print("eti.stop()")
-        gdb.execute("bt")
+#        print("eti.stop()")
+#        gdb.execute("bt")
         for ai in self.actions:
-            ai.action()
+            # @returns true if all went fine, false if it went wrong, and None if we need to call fin_action
+            # For filter actions this basically means true when the filter could match, False if it didn't. 
+            # So in case of a false, we break, either because of a non matching filter, or because something went too
+            # wrong to continue
+            ret = ai.action()
+#            print("ret = '%s'" % (ret,) )
+            if( ret is False ):
+                break
+            if( ret is None ):
+                frame = gdb.newest_frame()
+                ai.fin_bp = finish_breakpoint( frame, ai )
 
 #
 # track set = A dictionary location/function : [ list of action items ]
@@ -907,7 +986,7 @@ class extended_track_item:
 # XXX very future idea: sometimes you may want to check a passed by non-const reference parameter at the point of the
 # function return, maybe we want to support that too? 
 
-ssl_set = { 
+ssl_set = {
             "SSL_read" : # A function/location to set the breakpoint
                 [   # a list of "actions" with their parameters, a non matching "filter" will stop evaluation
                     ( "filter", [ "map", "ssl_fd_filter", "s->rbio->num" ] ),
@@ -931,13 +1010,23 @@ ssl_set = {
 
 sets = { "ssl" : ssl_set }
 
-etis = []
+set_data = {}
 def init_set( argv ):
     setname = argv[0]
     paramlist = argv[1:]
     tset = sets.get(setname,None)
+
+    global set_data
+    eset = set_data.get( setname, None )
+    if( eset ):
+        print("Set '%s' already enabled, overwriting with new filters" % setname )
+        del_set( argv[:1] )
+
+    etis = []
+    set_data[ setname ] = etis
+
     # XXX later support some "disable" commands
-    print("argv = '%s'" % (argv,) )
+#    print("argv = '%s'" % (argv,) )
     if( tset is None ):
         print("Could not find set '%s'" % setname )
     parameters = {}
@@ -947,12 +1036,27 @@ def init_set( argv ):
         except:
             print("Failed to parse %s, expecting key=value format" % a )
             return
-        print("k = '%s'" % (k,) )
-        print("v = '%s'" % (v,) )
+#        print("k = '%s'" % (k,) )
+#        print("v = '%s'" % (v,) )
         parameters[k] = v
 
     for k,v in ssl_set.items():
         eti = extended_track_item( k, v, setname + ".", parameters )
         etis.append(eti)
+    print("Enabled set '%s'" % setname)
 
+def del_set( argv ):
+    setname = argv[0]
+    etis = set_data.get(setname,None)
+    if( etis is None ):
+        print("Set '%s' not found, cannot disable" % setname)
+        return
+
+    for ei in etis:
+        ei.clear()
+
+    etis.clear()
+    del set_data[setname]
+
+    print("Disabled set '%s'" % setname)
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
