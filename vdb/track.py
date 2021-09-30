@@ -334,14 +334,18 @@ class track_item:
 
     next_number = 1
 
+    def get_next_number( ):
+        ret = track_item.next_number
+        track_item.next_number += 1
+        return ret
+
     def __init__( self, expr, ue, ea, pe, name = None ):
         self.expression = " ".join(expr)
-        self.number = track_item.next_number
+        self.number = track_item.get_next_number()
         self.name = name
         self.use_execute = ue
         self.eval_after = ea
         self.python_eval = pe
-        track_item.next_number += 1
 
     def execute( self, now ):
         try:
@@ -657,7 +661,8 @@ class finish_breakpoint( gdb.FinishBreakpoint ):
         self.action = action
 
     def stop( self ):
-        self.action.fin_action( self.return_value )
+        now = time.time()
+        self.action.fin_action( self.return_value, now )
         self.action.fin_bp = None
         return False
 
@@ -794,14 +799,51 @@ class filter_track_action(track_action):
                 return ( lval, rval )
 
 
-    def action( self ):
+    def action( self, now ):
 #        print("filter track action()")
 #        print("track_storage = '%s'" % (track_storage,) )
         rval = self.getn( self.expression )
         ret = self.compto(rval)
         return ret
 
- 
+class display_track_item:
+
+    def __init__( self, expression ):
+        self.expression = expression
+        self.name = None
+
+class data_track_action( track_action ):
+
+    def __init__( self, data_list, location, prefix ):
+        print("data_list = '%s'" % (data_list,) )
+        self.data_list = []
+        global trackings_by_number
+        for dl in data_list:
+            tn = track_item.get_next_number()
+            self.data_list.append( (dl,tn) )
+            dti = display_track_item( prefix + location + "." + dl )
+            trackings_by_number[tn] = dti
+
+    def store_data( self, ex, val, number, now ):
+        if( val is not None ):
+            print(f"{ex} = {val}")
+            td = tracking_data.setdefault(now,{})
+            td[number] = str(val)
+
+    def action( self,now ):
+        ret = True
+        for dl,tn in self.data_list:
+            if( dl == "$ret" ):
+                ret = None
+                self.ret_number = tn
+            else:
+                self.store_data( dl, self.getn(dl), tn, now )
+
+        return ret
+
+    def fin_action( self, retval, now ):
+        self.store_data("$ret",retval,self.ret_number, now)
+
 class store_track_action(track_action):
 
     def __init__( self, store_list, location, prefix ):
@@ -810,7 +852,7 @@ class store_track_action(track_action):
         self.storage_map = store_list[1]
         self.map_key = prefix
 
-    def action( self ):
+    def action( self,now ):
         val = self.get( self.expression )
 
         global track_storage
@@ -828,7 +870,7 @@ class delete_track_action:
         self.storage_map = del_list[1]
         self.map_key = prefix
 
-    def action( self ):
+    def action( self,now ):
 #        print("delete action()")
         store = track_storage.setdefault( self.map_key, {} )
 #        print("self.map_key = '%s'" % (self.map_key,) )
@@ -868,7 +910,7 @@ class hexdump_track_action( track_action ):
         vdb.hexdump.hexdump( self.buffer, self.size )
     # called on breakpoint hit
     # 
-    def action( self ):
+    def action( self,now ):
 #        print("hexdump.action()")
         for buf,sz in self.tuple_list:
             try:
@@ -894,7 +936,7 @@ class hexdump_track_action( track_action ):
             return True
     
     # called (optionally) on finish
-    def fin_action( self, retval ):
+    def fin_action( self, retval, now ):
 #        print("fin_action")
 #        print("retval = '%s'" % (retval,) )
         if( self.buffer_expression == "$ret" ):
@@ -935,6 +977,8 @@ class extended_track_item:
                 ai = store_track_action( param, location, prefix )
             elif( action == "delete" ):
                 ai = delete_track_action( param, location, prefix )
+            elif( action == "data" ):
+                ai = data_track_action( param, location, prefix )
             else:
                 print(f"Unknown action item {action}")
             if( ai is not None ):
@@ -946,6 +990,7 @@ class extended_track_item:
         self.bp = None
 
     def stop( self ):
+        now = time.time()
 #        print("eti.stop()")
 #        gdb.execute("bt")
         for ai in self.actions:
@@ -953,7 +998,7 @@ class extended_track_item:
             # For filter actions this basically means true when the filter could match, False if it didn't. 
             # So in case of a false, we break, either because of a non matching filter, or because something went too
             # wrong to continue
-            ret = ai.action()
+            ret = ai.action(now)
 #            print("ret = '%s'" % (ret,) )
             if( ret is False ):
                 break
@@ -995,6 +1040,7 @@ ssl_set = {
                             ( "$rdi", "$ret" ) # only if the above doesn't work, try to fall back to these
                             ]
                             ),
+                    ( "data", [ "buf", "$rdi", "$ret" ] ),
                 ],
             "SSL_write" : [ ( "hex", [ ( "buf", "num" ), ( "$rdi", "$rsi" ) ] ) ],
             "connect" : [

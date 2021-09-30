@@ -59,6 +59,7 @@ A track set is a bunch of more detailed track specifications that work together.
 then you can add your own. For most detail have a look at the ssl_set definition in track.py
 <details>
 <summary>ssl_set</summary>
+
 ```
 ssl_set = {
             "SSL_read" : # A function/location to set the breakpoint
@@ -116,6 +117,11 @@ The delete will delete the value from the set that is given by the mapname.
 ### Hexdump
 This action will output the given data as a hexdump. Instead of just a pair/tuple of buffer/size, this will take a list
 of tuples. The first one that yields a result will be used to hexdump. Supports `$ret` as an expression.
+
+### Data
+Takes a list of expressions (supports `$ret` too ) that will then be filled into the internal track data store and are
+available via `track data`
+
 ### Predefined Sets
 The following sets and their purpose are predefined
 
