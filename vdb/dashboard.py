@@ -118,10 +118,10 @@ class tty(target):
         self.file = f
 
     def write( self, output ):
-        self.file.write(output)
+        return self.file.write(output)
 
     def flush( self ):
-        self.file.flush()
+        return self.file.flush()
 
     def name( self ):
         return "tty"
@@ -264,7 +264,29 @@ def trigger_cls( id, to ):
                 db.cls = to
                 return
 
+class output_redirect:
+
+    def __init__( self, output ):
+        self.output = output
+
+    def print( self, msg ):
+#        print("Redirecting output %s" % msg )
+#        print("self.output.tty = '%s'" % (self.output.tty,) )
+#        print("self.output.file = '%s'" % (self.output.file,) )
+        ret = self.output.write(msg)
+#        print("ret = '%s'" % (ret,) )
+        ret = self.output.write("\n")
+#        print("ret = '%s'" % (ret,) )
+        ret = self.output.flush()
+#        print("ret = '%s'" % (ret,) )
+
+
 def add_board( tgt, argv ):
+    # A special "log" command that basically means to redirect stuff to that dashboard
+    if( argv[0] == "log" ):
+        od = output_redirect(tgt)
+        vdb.util.logprint = od.print
+        return
     cmd = " ".join(argv)
 #    print("cmd = '%s'" % cmd )
     db = dashboard()

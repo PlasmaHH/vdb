@@ -127,15 +127,15 @@ def load_plugins( plugindir ):
         print(f"Loading plugins in {plugindir}…")
 
         for pt in enabled_modules + [ "plugins" ]:
-            pdir = f"{plugindir}{pt}/"
+            pdir = f"{plugindir}/{pt}/"
             if( os.path.isdir(pdir) ):
                 for fn in filter( lambda x : x.endswith(".py"), os.listdir(pdir) ):
                     try:
-                        print(f"Loading plugin {plugindir}{pt}/{fn}")
+                        print(f"Loading plugin {plugindir}/{pt}/{fn}")
                         importname = f"{pt}.{fn[:-3]}"
                         importlib.import_module(importname)
                     except:
-                        print(f"Error while loading plugin {plugindir}{pt}/{fn}")
+                        print(f"Error while loading plugin {plugindir}/{pt}/{fn}")
                         traceback.print_exc()
                         pass
     except:

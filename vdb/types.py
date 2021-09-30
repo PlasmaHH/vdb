@@ -163,7 +163,7 @@ def refresh_locations( ):
 #            print(f"{k} : {v}")
     global type_locations
     type_locations = tlo
-    print("Background type location refresh finished")
+    vdb.util.log("Background type location refresh finished")
     save_caches()
 
 def compile( code ):

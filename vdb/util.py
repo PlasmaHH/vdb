@@ -83,8 +83,11 @@ def num_suffix( num, iso = False, factor = 1.5 ):
     suffix = suffixes[n]
     return (snum,suffix)
 
+logprint = print
+
 def log(fmt, *more ):
-    print(fmt.format(*more))
+#    print("logprint = '%s'" % (logprint,) )
+    logprint(fmt.format(*more))
 
 def indent( i, fmt, *more ):
     log("  " * i + fmt, *more )
