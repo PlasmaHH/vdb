@@ -58,6 +58,7 @@ sym_cache = intervaltree.IntervalTree()
 
 symre=re.compile("0x[0-9a-fA-F]* <([^+]*)(\+[0-9]*)*>")
 def get_gdb_sym( addr ):
+    ret = intervaltree.IntervalTree()
     addr = int(addr)
     global sym_cache
     xs = sym_cache[addr]
@@ -142,7 +143,7 @@ def get_symbols( addr, xlen ):
             ret[saddr:eaddr+1] = m.group(1)
         else:
             xaddr -= 1
-    print(" recnt = '%s'" % ( recnt,) )
+#    print(" recnt = '%s'" % ( recnt,) )
 #    ret.reverse()
 #    print("ret = '%s'" % ret )
     return ret
