@@ -188,7 +188,9 @@ def do_load( argv ):
         fn = type_locations.get(tname,None)
         if( fn is None ):
             print(f"Sorry, unable to find {argv[0]} in the type cache")
+            return
 #    print("fn = '%s'" % (fn,) )
+    
     compile(f"""
     #include "{fn}"
     extern {tname} varx;
