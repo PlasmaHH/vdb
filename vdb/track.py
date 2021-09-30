@@ -615,6 +615,8 @@ You should have a look at the data and graph modules, which can take the data fr
                 do_del(argv[1:])
             elif( argv[0] == "clear" ):
                clear()
+            elif( argv[0] == "set" ):
+               init_set( argv[1:] )
             elif( len(argv) > 1 ):
                 track(argv,execute,eval_after_execute,python_eval)
             else:
@@ -642,6 +644,10 @@ First example is SSL:
 hex/xyz showspec should be supported and also implemented in the hexdump module directly. default the fastest possible
 """
 
+
+track_storage = {}
+
+
 class finish_breakpoint( gdb.FinishBreakpoint ):
 
     def __init__( self, frame, action ):
@@ -657,9 +663,9 @@ class track_action:
     # returns a gdb value or python result for the expression, depending on the type. Expression can end in /x or so.
     # Returns None when the expression returned none, or when the expression was $ret (return value special case)
     def get( self, expression, way = None ):
-        print("get()")
-        print("expression = '%s'" % (expression,) )
-        print("way = '%s'" % (way,) )
+#        print("get()")
+#        print("expression = '%s'" % (expression,) )
+#        print("way = '%s'" % (way,) )
         if( expression[-2] == "/" ):
             way = expression[-1]
             expression = expression[:-2]
@@ -687,6 +693,7 @@ class track_action:
         elif( way == "v" ):
             # frame.value() => gdb.value
             frame = gdb.newest_frame() # maybe get the frame from the breakpoint object?
+#            print("frame = '%s'" % (frame,) )
             ret = frame.read_var(expression)
         elif( way == "p" ):
             # gdb.parse-and_eval() => gdb.value
@@ -696,19 +703,73 @@ class track_action:
         return ret
 
 
-class filter_track_action:
+class filter_track_action(track_action):
 
-    def __init__( self, filter_list ):
-        pass
+    def __init__( self, filter_list, location, prefix, parameters ):
+        print("filter_list = '%s'" % (filter_list,) )
+        ftype = filter_list[0]
+        self.prefix = prefix
+        if( ftype == "cmp" ):
+            val = filter_list[1]
+            ex = filter_list[2]
+            if( val[0] == "{" and val[-1] == "}" ):
+                pkey = val[1:-1]
+                pval = parameters.get(pkey,None)
+                if( pval is None ):
+                    raise Exception("Need parameter %s in enable call" % pkey)
+                self.value = pval
+            else:
+                self.value = val
+            self.expression = ex
+            self.compto = self.compare_to_value
+        elif( ftype == "map" ):
+            cmpmap = filter_list[1]
+            ex = filter_list[2]
+
+            self.expression = ex
+            self.value_map = cmpmap
+            self.compto = self.compare_to_map
+        else:
+            raise Exception("Unknown filter type %s" % ftype)
+
+    def compare_to_value( self ):
+        return self.value
+
+    def compare_to_map( self ):
+        print("track_storage = '%s'" % (track_storage,) )
+        print("self.prefix = '%s'" % (self.prefix,) )
+        val = None
+        storage = track_storage.get( self.prefix, None )
+        print("storage = '%s'" % (storage,) )
+        if( storage is not None ):
+            val = storage.get( self.value_map, None )
+            print("val = '%s'" % (val,) )
+        return val
+
     def action( self ):
-        pass
+        print("filter track action()")
+        print("track_storage = '%s'" % (track_storage,) )
+        lval = self.compto()
+        rval = self.get( self.expression )
+        print("lval = '%s'" % (lval,) )
+        print("rval = '%s'" % (rval,) )
 
-class store_track_action:
+class store_track_action(track_action):
 
-    def __init__( self, store_list ):
-        pass
+    def __init__( self, store_list, location, prefix ):
+        vdb.util.requires( len(store_list) == 2, "store action parameter list must have exactly 2 parameters, has %s" % len(store_list) )
+        self.expression = store_list[0]
+        self.storage_map = store_list[1]
+        self.map_key = prefix
+
     def action( self ):
-        pass
+        val = self.get( self.expression )
+
+        global track_storage
+        store = track_storage.setdefault( self.map_key, {} )
+        store[self.storage_map] = val
+        print(f"{self.expression} = {val} => {self.storage_map}")
+        print("track_storage = '%s'" % (track_storage,) )
 
 class delete_track_action:
 
@@ -720,7 +781,7 @@ class delete_track_action:
 
 class hexdump_track_action( track_action ):
 
-    def __init__( self, tuple_list ):
+    def __init__( self, location, tuple_list ):
         print(f"hexdump_track_action with {len(tuple_list)} alternatives:")
         self.address = None
         self.length  = None
@@ -729,10 +790,15 @@ class hexdump_track_action( track_action ):
         self.size = None
         self.buffer_expression = None
         self.size_expression = None
+        self.location = location
         for buf,sz in tuple_list:
             print(f"hexdump({buf},{sz})")
 
     def dump( self ):
+        ps,pu = vdb.pointer.chain( self.buffer, vdb.arch.pointer_size, 3, test_for_ascii = True )
+#        print("ps = '%s'" % (ps,) )
+#        print("pu = '%s'" % (pu,) )
+        print(f"{self.location} : {self.buffer_expression} = {ps}, {self.size_expression} = {self.size}");
         vdb.hexdump.hexdump( self.buffer, self.size )
     # called on breakpoint hit
     # @returns true if all went fine, false if it went wrong, and None if we need to call fin_action
@@ -740,16 +806,17 @@ class hexdump_track_action( track_action ):
         print("hexdump.action()")
         for buf,sz in self.tuple_list:
             try:
-                print("buf = '%s'" % (buf,) )
-                print("sz = '%s'" % (sz,) )
+#                print("buf = '%s'" % (buf,) )
+#                print("sz = '%s'" % (sz,) )
                 self.buffer = self.get( buf )
                 self.size = self.get(sz)
                 self.buffer_expression = buf
                 self.size_expression = sz
 
-                print("self.buffer_expression = '%s'" % (self.buffer_expression,) )
-                print("self.size_expression = '%s'" % (self.size_expression,) )
+#                print("self.buffer_expression = '%s'" % (self.buffer_expression,) )
+#                print("self.size_expression = '%s'" % (self.size_expression,) )
             except:
+                traceback.print_exc()
                 # ok, something went wrong, silently ignore it and try the next tuple
                 pass
             break
@@ -787,7 +854,7 @@ class track_breakpoint( gdb.Breakpoint ):
 
 class extended_track_item:
 
-    def __init__( self, location, action_list ):
+    def __init__( self, location, action_list, prefix, parameters ):
         print("Extended Track Item:")
         print(f"Location: {location}")
         print(f"{len(action_list)} action items...")
@@ -796,11 +863,11 @@ class extended_track_item:
             print(f"Action '{action}' with {len(param)} parameters")
             ai = None
             if( action == "hex" ):
-                ai = hexdump_track_action( param )
+                ai = hexdump_track_action( location, param )
             elif( action == "filter" ):
-                ai = filter_track_action( param )
+                ai = filter_track_action( param, location, prefix, parameters )
             elif( action == "store" ):
-                ai = store_track_action( param )
+                ai = store_track_action( param, location, prefix )
             elif( action == "delete" ):
                 ai = delete_track_action( param )
             else:
@@ -811,6 +878,7 @@ class extended_track_item:
 
     def stop( self ):
         print("eti.stop()")
+        gdb.execute("bt")
         for ai in self.actions:
             ai.action()
 
@@ -829,7 +897,7 @@ class extended_track_item:
 
 # filter : aborts handling of the list of actions when the filter is "false". Contains different types of "filter # expressions"
 #       - cmp : compares one (user supplied) value to an expression of some kind. Or Two expressions even?
-#       - set : compares if the value is in a named set (previously stored via some other action?)
+#       - map : compares if the value is in a named map (previously stored via some other action?)
 
 
 # XXX maybe... cmp/xXE should work the same as for track for cmp/track/store/hex/etc ? should mixing of types be
@@ -842,7 +910,7 @@ class extended_track_item:
 ssl_set = { 
             "SSL_read" : # A function/location to set the breakpoint
                 [   # a list of "actions" with their parameters, a non matching "filter" will stop evaluation
-                    ( "filter", [ "set", "ssl_fd_filter", "s->rbio->num" ] ),
+                    ( "filter", [ "map", "ssl_fd_filter", "s->rbio->num" ] ),
                     ( "hex", [
                             ( "buf", "$ret" ), # hex expects address and length
                             ( "$rdi", "$ret" ) # only if the above doesn't work, try to fall back to these
@@ -851,7 +919,8 @@ ssl_set = {
                 ],
             "SSL_write" : [ ( "hex", [ ( "buf", "num" ), ( "$rdi", "$rsi" ) ] ) ],
             "connect" : [
-                    ( "filter", [ "cmp", "{port}", "ntohs( ((sockaddr_in*)addr)->sin_port )" ] ),
+#                    ( "filter", [ "cmp", "{port}", "ntohs( ((sockaddr_in*)addr)->sin_port )" ] ),
+                    ( "filter", [ "cmp", "{port}", "ntohs( ((uint16_t*)addr)[1] )/p" ] ),
                     ( "filter", [ "cmp", "{ip}", "( ((sockaddr_in*)addr)->sin_addr)" ] ),
                     ( "store", [ "fd", "ssl_fd_filter" ] )
                 ],
@@ -860,11 +929,30 @@ ssl_set = {
                 ]
             }
 
+sets = { "ssl" : ssl_set }
+
 etis = []
-def init():
+def init_set( argv ):
+    setname = argv[0]
+    paramlist = argv[1:]
+    tset = sets.get(setname,None)
+    # XXX later support some "disable" commands
+    print("argv = '%s'" % (argv,) )
+    if( tset is None ):
+        print("Could not find set '%s'" % setname )
+    parameters = {}
+    for a in paramlist:
+        try:
+            k,v = a.split("=")
+        except:
+            print("Failed to parse %s, expecting key=value format" % a )
+            return
+        print("k = '%s'" % (k,) )
+        print("v = '%s'" % (v,) )
+        parameters[k] = v
+
     for k,v in ssl_set.items():
-        eti = extended_track_item( k, v )
+        eti = extended_track_item( k, v, setname + ".", parameters )
         etis.append(eti)
 
-init()
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

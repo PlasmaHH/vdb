@@ -648,4 +648,7 @@ class cmd_ssh (vdb.command.command):
 
 cmd_ssh()
 
+# TODO: copy file/libraries in all modes, run, core, attach, when gdbserver connection is slow. configurable? auto
+# detect?
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
