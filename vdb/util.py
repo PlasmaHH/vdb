@@ -246,4 +246,8 @@ class stopwatch:
     def get( self ):
         return self.lap() + self.accumulated
 
+# todo: create special requirement exception
+def requires( check, msg ):
+    if( not check ):
+        raise Exception("Requirement not met: %s" % msg )
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
