@@ -15,6 +15,7 @@ def reset_info():
     global need_update
     need_update = True
 
+@vdb.event.new_objfile()
 def gather_info( ):
     global pointer_size
     pointer_size = gdb.lookup_type("void").pointer().sizeof*8
