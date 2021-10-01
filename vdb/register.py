@@ -966,8 +966,8 @@ We recommend having an alias reg = registers in your .gdbinit
 
     def update( self ):
 #        print("Updating registers...",file=sys.stderr)
-        with open("register.log","a") as f:
-            traceback.print_stack(file=f)
+#        with open("register.log","a") as f:
+#            traceback.print_stack(file=f)
         try:
             nrr = Registers()
             global registers
