@@ -79,10 +79,10 @@ class object:
         self.subobjects = []
         self.field = field
         if( field is not None ):
-            print("field = '%s'" % (field,) )
-            print("field.name = '%s'" % (field.name,) )
-            print("field.bitpos = '%s'" % (field.bitpos,) )
-            print("field.bitsize = '%s'" % (field.bitsize,) )
+#            print("field = '%s'" % (field,) )
+#            print("field.name = '%s'" % (field.name,) )
+#            print("field.bitpos = '%s'" % (field.bitpos,) )
+#            print("field.bitsize = '%s'" % (field.bitsize,) )
             self.name = field.name
             self.bit_offset = field.bitpos
             self.byte_offset = self.bit_offset // 8
@@ -179,12 +179,12 @@ object_cache = { }
 
 class object_layout:
     def __init__( self, otype = None, value = None ):
-        print("otype = '%s'" % (otype,) )
+#        print("otype = '%s'" % (otype,) )
         if( otype is None ):
-            print("value.type = '%s'" % (value.type,) )
+#            print("value.type = '%s'" % (value.type,) )
             otype = value.type
-        print("otype = '%s'" % (otype,) )
-        print("otype.sizeof = '%s'" % (otype.sizeof,) )
+#        print("otype = '%s'" % (otype,) )
+#        print("otype.sizeof = '%s'" % (otype.sizeof,) )
         self.type = otype
         self.value = value
 #        print("self.type = '%s'" % self.type )
@@ -211,9 +211,9 @@ class object_layout:
 
             if( self.type == self.value.dynamic_type and self.type != self.vtype ):
                 self.type = self.vtype
-        print("self.type.sizeof = '%s'" % (self.type.sizeof,) )
+#        print("self.type.sizeof = '%s'" % (self.type.sizeof,) )
         self.type = self.type.strip_typedefs()
-        print("self.type.sizeof = '%s'" % (self.type.sizeof,) )
+#        print("self.type.sizeof = '%s'" % (self.type.sizeof,) )
         self.bytes = list(itertools.repeat(byte_descriptor(None,None,None),self.type.sizeof))
         self.descriptors = []
 #        print("self.vtype = '%s'" % self.vtype )

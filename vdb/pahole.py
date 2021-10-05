@@ -128,7 +128,7 @@ pahole/e - expanded output, showing each byte on one line (the default)
 #            traceback.print_exc()
 
         if ptype.code != gdb.TYPE_CODE_STRUCT and ptype.code != gdb.TYPE_CODE_UNION:
-            raise gdb.GdbError('%s is not a struct/union type: %s' % (" ".join(argv), ptype.code))
+            raise gdb.GdbError('%s is not a struct/union type: %s' % (" ".join(argv), vdb.util.gdb_type_code(ptype.code)))
         try:
             xl = vdb.layout.object_layout(stype,sobj)
             print_pahole(xl,condensed)
