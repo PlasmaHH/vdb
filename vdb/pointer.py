@@ -91,7 +91,7 @@ def as_tail( ptr ):
     if( s is not None ):
         if( len(s) >= min_acsii.value ):
             s = printable_str(s)
-            return f"XXX[{len(s)}]'{s}'"
+            return f"[{len(s)}]'{s}'"
 
     at = vdb.memory.mmap.get_atype( ptr )
 #    print("at = '%s'" % at )

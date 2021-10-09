@@ -96,6 +96,7 @@ class object:
         self.parent = None
         # Don't clone that one
         self.index = None
+#        print("self.byte_offset = '%s'" % (self.byte_offset,) )
 
     def clone( self ):
         ret = object( self.type, None )
@@ -139,10 +140,12 @@ class object:
 
 cgdb = vdb.cache.execute_cache()
 
-def get_vtt_name( atype ):
+def get_vtt_name( atype, name = None ):
     VTT=None
     try:
-        cmd = "p &'VTT for %s'" % (atype.name)
+        if name is None:
+            name = atype.name
+        cmd = "p &'VTT for %s'" % (name)
 #        print("cmd = '%s'" % cmd )
 #        ofresult = gdb.execute(cmd,False,True)
         global cgdb
@@ -157,6 +160,12 @@ def get_vtt_name( atype ):
         pass
     return VTT
 
+def get_vtable_entry( name, offset ):
+    cmd="((ptrdiff_t*)&'vtable for %s')[%s]" % (name,offset)
+#    print("cmd = '%s'" % (cmd,) )
+    ofresult = gdb.parse_and_eval(cmd)
+#    print("ofresult = '%s'" % (ofresult,) )
+    return ofresult
 
 def get_vtt_entry( vtt, offset ):
 #    print("vtt = '%s'" % vtt )
@@ -298,10 +307,34 @@ class object_layout:
 
     def parse( self, atype, parent, offset = 0 ):
 #        print("atype = '%s'" % atype )
-        for f in self.extract_fields(atype):
+        
+        basecnt = 0
+        baseidx = 1
+        ef = self.extract_fields(atype)
+        for f in ef:
+            if( f.bitpos is None ):
+                basecnt += 1
+#        print("basecnt = '%s'" % (basecnt,) )
+        for f in ef:
             if( not hasattr(f,"bitpos") ):
                 # Ignore static fields
                 continue
+            # Skip fields where gdb doesn't know it (at the moment virtual base classes due to some bug)
+            if( f.bitpos is None ):
+                xname = atype.name + "::" + f.type.name
+                # 0x28 0x20 0x14
+#                print("xname = '%s'" % (xname,) )
+                vtt = get_vtt_name( atype )
+#                print("atype.name = '%s'" % (atype.name,) )
+#                print("f.type.name = '%s'" % (f.type.name,) )
+#                print("vtt = '%s'" % (vtt,) )
+                vof = get_vtable_entry( atype.name, basecnt - baseidx )
+#                print("vof = '%s'" % (vof,) )
+                baseidx += 1
+#                f.bitpos = int( -8 * vof )
+                f.bitpos = int( 8 * vof )
+#                print("f.bitpos = '%s'" % (f.bitpos,) )
+#                continue
 #            print("")
             so = object(f.type,f)
 #            so.offset = offset
@@ -331,6 +364,7 @@ class object_layout:
 #                print("so = '%s'" % so )
                 voffset = get_vtt_entry( self.vtt, so.byte_offset )
                 so.byte_offset = voffset
+#                print("so.byte_offset = '%s'" % (so.byte_offset,) )
 #                print("VIRTUAL")
                 # Virtual, get the real position
                 pass

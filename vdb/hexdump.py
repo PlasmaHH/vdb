@@ -111,8 +111,11 @@ def get_symbols( addr, xlen ):
         nm = get_gdb_sym(xaddr)
         astr = f"(void*)({xaddr})"
         xstr = f"0x{int(xaddr):x}"
+#        print("nm = '%s'" % (nm,) )
 #        nm = gdb.parse_and_eval(astr)
-#        nm = parse_and_eval_cached( astr )
+#        print("nm = '%s'" % (nm,) )
+        if( nm is None ):
+            nm = parse_and_eval_cached( astr )
 
         m = None
         nm = str(nm)
