@@ -59,6 +59,7 @@ next_marker_dot = vdb.config.parameter("vdb-asm-next-marker-dot", " → " )
 next_mark_ptr     = vdb.config.parameter("vdb-asm-next-mark-pointer", True )
 shorten_header    = vdb.config.parameter("vdb-asm-shorten-header", False )
 prefer_linear_dot = vdb.config.parameter("vdb-asm-prefer-linear-dot",False)
+debug_registers = vdb.config.parameter("vdb-asm-debug-registers",False)
 
 offset_fmt = vdb.config.parameter("vdb-asm-offset-format", "<{offset:<+{maxlen}}>:" )
 offset_txt_fmt = vdb.config.parameter("vdb-asm-text-offset-format", "<+{offset:<{maxlen}}>:" )
@@ -1022,7 +1023,8 @@ def parse_from_gdb( arg, fakedata = None ):
 #    print("key = '%s'" % key )
 
     ret = None
-    ret = parse_cache.get(key,None)
+    if( not debug_registers.value ):
+        ret = parse_cache.get(key,None)
 #    print("ret = '%s'" % ret )
     if( ret is not None and fakedata is None ):
         return fix_marker(ret,arg)
@@ -1298,7 +1300,8 @@ def parse_from_gdb( arg, fakedata = None ):
                     tgt.possible_register_sets.append(possible_registers)
 
 
-#        ins._gen_extra()
+        if( debug_registers.value ):
+            ins._gen_extra()
         ins = next
         if( ins is None ):
             ins = flowstack.pop()
