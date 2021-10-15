@@ -46,6 +46,7 @@ asm_colors_dot = [
 pre_colors = [
         ( "lock.*","#f0f" ),
         ( "rep.*","#f29" ),
+        ( "bnd.*","#f08" )
         ]
 
 pre_colors_dot = [
@@ -100,7 +101,7 @@ color_call_dot       = vdb.config.parameter("vdb-asm-colors-call-dot",       "#6
 nonfunc_bytes      = vdb.config.parameter("vdb-asm-nonfunction-bytes",16)
 history_limit      = vdb.config.parameter("vdb-asm-history-limit",4)
 tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
-asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnprTj" )
+asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnprTjh" )
 asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnprT" )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
@@ -128,20 +129,22 @@ def reg_set( possible_registers, regname, regval ):
 #        possible_registers[regname[:-1]] = regval
 
 def reg_reg( possible_registers, regfrom, regto ):
-#    print("regfrom = '%s'" % (regfrom,) )
-#    print("regto = '%s'" % (regto,) )
-    if( regfrom.startswith("fs:0") ):
-        add = regfrom[3:]
-        oldmem = vdb.memory.read(f"$fs_base + {add}",vdb.arch.pointer_size//8)
-        oldmem = oldmem.cast("P")
-        oldval = oldmem[0]
-    else:
-        oldval = possible_registers.get(regfrom,None)
-        if( oldval is None ):
-            oldval = possible_registers.get(vdb.register.altname(regfrom),None)
+    try:
+        if( regfrom.startswith("fs:0") ):
+            add = regfrom[3:]
+            oldmem = vdb.memory.read(f"$fs_base + {add}",vdb.arch.pointer_size//8)
+            oldmem = oldmem.cast("P")
+            oldval = oldmem[0]
+        else:
+            oldval = possible_registers.get(regfrom,None)
+            if( oldval is None ):
+                oldval = possible_registers.get(vdb.register.altname(regfrom),None)
 
-    if( oldval is not None ):
-        reg_set( possible_registers, regto, oldval )
+        if( oldval is not None ):
+            reg_set( possible_registers, regto, oldval )
+    except:
+#        traceback.print_exc()
+        pass
 
 ix = -1
 def next_index( ):
@@ -590,19 +593,24 @@ ascii mockup:
 #        else:
 #            rec = None
         inh = {}
+#        print("rec = '%s'" % (rec,) )
         if( rec is not None ):
             try:
                 rins = rec.instruction_history
             except NotImplementedError:
+#                print("not implemented")
                 rins = None
 #            print("rins = '%s'" % rins )
             if( rins is not None ):
                 for h in rins:
 #                    print("h = '%s'" % h )
 #                    print("h.pc = '%s'" % h.pc )
-                    print("h.decoded = '%s'" % h.decoded )
-                    print("h.data = '%s'" % h.data.tolist() )
-                    inh.setdefault(h.pc,[]).append(str(h.number))
+#                    print("h.decoded = '%s'" % h.decoded )
+#                    print("h.data = '%s'" % h.data.tolist() )
+                    hn = h.number
+                    if( h.is_speculative ):
+                        hn = -hn
+                    inh.setdefault(h.pc,[]).append(str(hn))
         for i in self.instructions:
             if( rec is not None ):
                 h = inh.get(i.address,None)
@@ -1310,8 +1318,9 @@ def parse_from_gdb( arg, fakedata = None ):
 #    print(f"Returning for {key}")
     return ret
 
-def parse_from( arg, fakedata = None ):
+def parse_from( arg, fakedata = None, context = None ):
     rng = arg.split(",")
+#    print("rng = '%s'" % (rng,) )
     if( len(rng) == 2 ):
         try:
             fr=vdb.util.gint(rng[0])
@@ -1334,10 +1343,14 @@ def parse_from( arg, fakedata = None ):
         else:
             ret = parse_from_gdb(arg,fakedata)
     except gdb.error as e:
+        nfbytes = str(nonfunc_bytes.value)
+        if( context is not None and context[1] is not None ):
+            nfbytes = str(context[1])
+#        print("context = '%s'" % (context,) )
         if( str(e) == "No function contains specified address." ):
-            return parse_from(arg+","+str(nonfunc_bytes.value))
+            return parse_from(arg+","+nfbytes)
         elif( str(e) == "No function contains program counter for selected frame." ):
-            return parse_from("$pc,"+str(nonfunc_bytes.value))
+            return parse_from("$pc,"+nfbytes)
         else:
             print("e = '%s'" % e )
             traceback.print_exc()
@@ -1380,7 +1393,7 @@ def disassemble( argv ):
                 return
 
 
-    listing = parse_from(" ".join(argv),fakedata)
+    listing = parse_from(" ".join(argv),fakedata,context)
     listing.print(asm_showspec.value, context)
     if( dotty ):
         g = listing.to_dot(asm_showspec_dot.value)
