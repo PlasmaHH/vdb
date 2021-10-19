@@ -280,6 +280,16 @@ class output_redirect:
         ret = self.output.flush()
 #        print("ret = '%s'" % (ret,) )
 
+def modify_board( argv ):
+    id = int(argv[0])
+    argv = argv[1:]
+    global dash_events
+    for on,evl in dash_events.items():
+        for db in evl:
+            if( db.id == id ):
+                old = db.command
+                db.command = " ".join(argv)
+                print(f"Modified dash {id} to {db.command} (old was {old})")
 
 def add_board( tgt, argv ):
     # A special "log" command that basically means to redirect stuff to that dashboard
@@ -335,6 +345,8 @@ def call_dashboard( argv ):
         trigger_dashboard(argv[1],True)
     elif( "disable".startswith(argv[0]) ):
         trigger_dashboard(argv[1],False)
+    elif( "modify".startswith(argv[0]) ):
+        modify_board(argv[1:])
     elif( "cls".startswith(argv[0]) ):
         trigger_cls(argv[1],True)
     elif( "nocls".startswith(argv[0]) ):
