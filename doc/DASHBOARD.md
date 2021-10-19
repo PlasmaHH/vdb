@@ -55,6 +55,8 @@ will enable you to
   etc.
 * `dashboard [no]cls` Enables or disables the option to clear screen before starting the output. Clearing the screen is
   done via ansi escape sequences.
+* `dashboard modify <id> <command>` modifies the command of the given ID to the new command string. Handy for fine
+  adjusting layouts and stuff.
 
 ## Configuration
 The boolean config option
