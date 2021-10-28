@@ -54,13 +54,17 @@ pre_colors_dot = [
         ( "rep.*","#f02090" ),
         ]
 
+def invalidate_cache( c ):
+    global parse_cache
+    parse_cache = {}
+
 next_marker = vdb.config.parameter("vdb-asm-next-marker", " → " )
 next_marker_dot = vdb.config.parameter("vdb-asm-next-marker-dot", " → " )
 
 next_mark_ptr     = vdb.config.parameter("vdb-asm-next-mark-pointer", True )
 shorten_header    = vdb.config.parameter("vdb-asm-shorten-header", False )
 prefer_linear_dot = vdb.config.parameter("vdb-asm-prefer-linear-dot",False)
-debug_registers = vdb.config.parameter("vdb-asm-debug-registers",False)
+debug_registers = vdb.config.parameter("vdb-asm-debug-registers",False, on_set = invalidate_cache )
 
 offset_fmt = vdb.config.parameter("vdb-asm-offset-format", "<{offset:<+{maxlen}}>:" )
 offset_txt_fmt = vdb.config.parameter("vdb-asm-text-offset-format", "<+{offset:<{maxlen}}>:" )
@@ -654,6 +658,8 @@ ascii mockup:
 
         otbl = []
 
+        otmap = {0:0}
+
         for i in self.instructions:
             line = []
             otbl.append(line)
@@ -779,6 +785,8 @@ ascii mockup:
 
 #            ret.append(line)
             cnt += 1
+#            print("cnt = '%s'" % (cnt,) )
+#            print("len(otbl) = '%s'" % (len(otbl),) )
 
             if( len(i.extra) > 0 ):
 #                print("prejump = '%s'" % (prejump,) )
@@ -794,13 +802,20 @@ ascii mockup:
                     el.append(ex)
                     otbl.append(el)
 
+            otmap[cnt] = len(otbl)
             if( context is not None and context_end is not None and context_end <= cnt ):
                 break
 
-        ret = otbl
-        if( marked_line is not None and context is not None ):
+        if( context is not None ):
             if( context_start < 0 ):
                 context_start = 0
+            if( context_end > cnt ):
+                context_end = cnt
+            context_start = otmap[context_start]
+            context_end = otmap[context_end]
+
+        ret = otbl
+        if( marked_line is not None and context is not None ):
             ret = ret[context_start:context_end]
 
 
@@ -999,7 +1014,9 @@ def fix_marker( ls, alt = None ):
     return ls
 
 parse_cache = {}
-def parse_from_gdb( arg, fakedata = None ):
+
+
+def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached = True ):
 #    print("fakedata = '%s'" % fakedata )
 #    print("arg = '%s'" % arg )
 #    print("len(arg) = '%s'" % len(arg) )
@@ -1031,7 +1048,7 @@ def parse_from_gdb( arg, fakedata = None ):
 #    print("key = '%s'" % key )
 
     ret = None
-    if( not debug_registers.value ):
+    if( not debug_registers.value and cached ):
         ret = parse_cache.get(key,None)
 #    print("ret = '%s'" % ret )
     if( ret is not None and fakedata is None ):
@@ -1047,8 +1064,11 @@ def parse_from_gdb( arg, fakedata = None ):
 
     archname="x86"
     try:
-        archname = gdb.selected_frame().architecture().name()
-        prefixes, conditional_jump_mnemonics, unconditional_jump_mnemonics, return_mnemonics, call_mnemonics = mnemonics[archname]
+        if( arch is not None ):
+            archname = arch
+        else:
+            archname = gdb.selected_frame().architecture().name()
+            prefixes, conditional_jump_mnemonics, unconditional_jump_mnemonics, return_mnemonics, call_mnemonics = mnemonics[archname]
     except:
         print("Not configured for architecture %s, falling back to x86" % archname )
         pass
@@ -1074,7 +1094,6 @@ def parse_from_gdb( arg, fakedata = None ):
     oldins = None
 #    print("dis = '%s'" % dis )
     for line in dis.splitlines():
-#        print("line = '%s'" % line )
         ins = instruction()
         fm=re.search(funcre,line)
         if( fm ):
@@ -1240,6 +1259,14 @@ def parse_from_gdb( arg, fakedata = None ):
 #    for ins in ret.instructions:
     flowstack = [None]
 
+    movre = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
+    leare = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
+
+    if( fakeframe is not None ):
+        frame = fakeframe
+    else:
+        frame = gdb.selected_frame()
+
     passlimit = 2
     while ins is not None:
         ins.passes += 1
@@ -1258,23 +1285,69 @@ def parse_from_gdb( arg, fakedata = None ):
                     regname = args[0][1:]
                     reg_set( possible_registers,regname,0)
                     ins.possible_register_sets.append(possible_registers)
+        elif( ins.mnemonic == "lea" ):
+            m = leare.match(ins.args)
+            if( m is not None ):
+#                print("m = '%s'" % (m,) )
+#                print("m.group(0) = '%s'" % (m.group(0),) )
+#                print("m.group(1) = '%s'" % (m.group(1),) )
+#                print("m.group(2) = '%s'" % (m.group(2),) )
+#                print("m.group(3) = '%s'" % (m.group(3),) )
+                offset = m.group(1)
+                sreg = m.group(2)[1:]
+                treg = m.group(3)[1:]
+                sregv = possible_registers.get(sreg,None)
+                if( sregv is None and ( sreg == "rbp" or sreg == "ebp" ) ):
+                    sregv = frame.read_register(sreg)
+                if( sregv is not None ):
+                    expr = f"({offset} + {sregv})"
+                    tval = gdb.parse_and_eval(expr)
+                    reg_set( possible_registers, treg, tval )
+                    ins.possible_register_sets.append(possible_registers)
 
         elif( ins.mnemonic == "mov" ):
-            args = ins.args.split(",")
+            m = movre.match(ins.args)
+            if( m is not None ):
+#                print("m = '%s'" % (m,) )
+#                print("m.group(0) = '%s'" % (m.group(0),) )
+#                print("m.group(1) = '%s'" % (m.group(1),) )
+#                print("m.group(2) = '%s'" % (m.group(2),) )
+#                print("m.group(3) = '%s'" % (m.group(3),) )
+                offset = m.group(1)
+                mreg = m.group(2)[1:]
+                treg = m.group(3)[1:]
+                mregv = possible_registers.get(mreg,None)
+                if( mregv is None and ( mreg == "rbp" or mreg == "ebp" ) ):
+                    mregv = frame.read_register(mreg)
+                if( mregv is not None ):
+#                    print("mregv.type = '%s'" % (mregv.type,) )
+                    if( treg[0] == "e" ):
+                        expr = f"*((uint32_t*)(({mregv.type})({offset} + {mregv})))"
+                    else:
+                        expr = f"*(({mregv.type}*)(({mregv.type})({offset} + {mregv})))"
+#                    print("expr = '%s'" % (expr,) )
+                    tval = gdb.parse_and_eval(expr)
+#                    print("tval = '%s'" % (tval,) )
+                    if( tval is not None ):
+                        reg_set( possible_registers, treg, tval )
+                        ins.possible_register_sets.append(possible_registers)
+#                        ins.add_extra(f"mem mov into {treg}")
+            else:
+                args = ins.args.split(",")
 #                print("len(args) = '%s'" % (len(args),) )
-            # do we get into trouble with at&t and intel syntax here?
-            if( len(args) == 2 ):
+                # do we get into trouble with at&t and intel syntax here?
+                if( len(args) == 2 ):
 #                    print("args[0] = '%s'" % (args[0],) )
 #                    print("args[1] = '%s'" % (args[1],) )
-                if( args[0][0] == "$" and args[1][0] == "%" ):
-                    regname = args[1][1:]
-                    regval = vdb.util.xint(args[0][1:])
-                    reg_set(possible_registers,regname,regval)
-                elif( args[0][0] == "%" and args[1][0] == "%" ):
-                    regfrom = args[0][1:]
-                    regto   = args[1][1:]
-                    reg_reg( possible_registers, regfrom, regto )
-                ins.possible_register_sets.append(possible_registers)
+                    if( args[0][0] == "$" and args[1][0] == "%" ):
+                        regname = args[1][1:]
+                        regval = vdb.util.xint(args[0][1:])
+                        reg_set(possible_registers,regname,regval)
+                    elif( args[0][0] == "%" and args[1][0] == "%" ):
+                        regfrom = args[0][1:]
+                        regto   = args[1][1:]
+                        reg_reg( possible_registers, regfrom, regto )
+                    ins.possible_register_sets.append(possible_registers)
         elif( ins.mnemonic == "syscall" ):
 #            print("possible_registers = '%s'" % (possible_registers,) )
 #            ins._gen_extra()
@@ -1287,13 +1360,15 @@ def parse_from_gdb( arg, fakedata = None ):
                     qm = "?"
                     if( ins.marked or (ins.next and ins.next.marked) ):
                         qm="!"
-                    ins.add_extra( sc.to_str(possible_registers,qm) )
+                    ins.add_extra( sc.to_str(possible_registers,qm,fakeframe) )
                     possible_registers = sc.clobber(possible_registers)
                 else:
                     ins.add_extra(f"syscall[{rax}]()")
 #                    ins.add_extra(f"{possible_registers}")
         # make sure to do this after syscall is handled
         if( ins.mnemonic in set(["call","ret"]) ):
+            if( ins.mnemonic == "call" ):
+                ins.possible_register_sets.append(possible_registers)
             possible_registers = {}
 #            ins.add_extra("DELETED PR")
 
@@ -1444,7 +1519,7 @@ part of a function, unlike the disassemble command those are right away disassem
         try:
             disassemble( argv )
         except gdb.error as e:
-            print(e)
+            print("asm: %s" % e)
         except:
             traceback.print_exc()
             raise
