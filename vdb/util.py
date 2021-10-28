@@ -67,6 +67,12 @@ def unquote( s ):
 suffixes_iso = [ "", "k","M","G","T","P","E","Z","Y" ]
 suffixes_bin = [ "", "ki","Mi","Gi","Ti","Pi","Ei","Zi","Yi" ] 
 
+def bark( ):
+    import traceback
+    st = traceback.extract_stack()
+    st = st[-2]
+    print(f"{st.name}:{st.filename}:{st.lineno}")
+
 def num_suffix( num, iso = False, factor = 1.5 ):
     if( iso ):
         p = 1000
