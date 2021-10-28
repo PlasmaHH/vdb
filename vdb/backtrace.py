@@ -421,6 +421,15 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
         l = super(BacktraceDecorator,self).line()
         return l
 
+    def frame_locals( self ):
+        import vdb
+        if( vdb.enabled("unwind") ):
+            import vdb.unwind
+            if( vdb.unwind.unwinder.annotate_frames ):
+                return vdb.unwind.unwinder.do_annotate_frames( self.fobj.inferior_frame() )
+
+        l = super(BacktraceDecorator,self).frame_locals()
+        return l
 
 
 class BacktraceIterator:
@@ -537,7 +546,7 @@ def do_backtrace( argv ):
                 btoutput = re.sub( "^(\s*)#[0-9]*", " ", btoutput, flags = re.MULTILINE )
             print(btoutput)
     except gdb.error as e:
-        print(e)
+        print("backtrace: %s" % e)
         pass
     except:
         traceback.print_exc()
