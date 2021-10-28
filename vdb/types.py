@@ -55,7 +55,6 @@ def save_caches( ):
     cache_timestamp = time.time()
     import pickle
     pickle.dump( (type_locations,cache_timestamp),open(fn,"wb+"))
-    traceback.print_exc()
 
 # only to be set to true on process exit
 stop_refreshing = False
@@ -85,6 +84,7 @@ def progress_refresh_locations( ):
         ctags_progress = "[ ctags #/# ]"
         refresh_locations()
     except:
+        traceback.print_exc()
         pass
     finally:
         ctags_progress = None
@@ -130,7 +130,9 @@ def refresh_locations( ):
             line = line.decode("utf-8")
             line = line[:-1]
             comp = line.split(';"')
-#            print("comp = '%s'" % (comp,) )
+            if( len(comp) < 2 ):
+                print("comp = '%s'" % (comp,) )
+                continue
             fields = []
             fields += comp[0].split("\t",1) + comp[1].split("\t") + [None]*3
             if( len(fields[3]) != 1 ):
