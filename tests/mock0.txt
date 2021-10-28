@@ -1,0 +1,41 @@
+   0x00007ffff7b17f70 <+0>:     48 8b 15 d9 3e 13 00    mov    0x133ed9(%rip),%rdx        # 0x7ffff7c4be50
+   0x00007ffff7b17f77 <+7>:     48 8d 05 f2 8c 01 00    lea    0x18cf2(%rip),%rax        # 0x7ffff7b30c70 <__memmove_erms>
+   0x00007ffff7b17f7e <+14>:    8b 8a cc 00 00 00       mov    0xcc(%rdx),%ecx
+   0x00007ffff7b17f84 <+20>:    f6 c5 30        test   $0x30,%ch
+   0x00007ffff7b17f87 <+23>:    75 57   jne    0x7ffff7b17fe0 <__new_memcpy_ifunc+112>
+   0x00007ffff7b17f89 <+25>:    48 b8 04 00 00 00 00 40 00 00   movabs $0x400000000004,%rax
+   0x00007ffff7b17f93 <+35>:    48 23 82 c8 00 00 00    and    0xc8(%rdx),%rax
+   0x00007ffff7b17f9a <+42>:    48 83 f8 04     cmp    $0x4,%rax
+   0x00007ffff7b17f9e <+46>:    74 48   je     0x7ffff7b17fe8 <__new_memcpy_ifunc+120>
+   0x00007ffff7b17fa0 <+48>:    f6 c5 01        test   $0x1,%ch
+   0x00007ffff7b17fa3 <+51>:    74 1b   je     0x7ffff7b17fc0 <__new_memcpy_ifunc+80>
+   0x00007ffff7b17fa5 <+53>:    f6 42 7d 02     testb  $0x2,0x7d(%rdx)
+   0x00007ffff7b17fa9 <+57>:    48 8d 05 b0 63 0d 00    lea    0xd63b0(%rip),%rax        # 0x7ffff7bee360 <__memmove_avx_unaligned_erms>
+   0x00007ffff7b17fb0 <+64>:    48 8d 15 49 63 0d 00    lea    0xd6349(%rip),%rdx        # 0x7ffff7bee300 <__memmove_avx_unaligned>
+   0x00007ffff7b17fb7 <+71>:    48 0f 44 c2     cmove  %rdx,%rax
+   0x00007ffff7b17fbb <+75>:    c3      retq   
+   0x00007ffff7b17fbc <+76>:    0f 1f 40 00     nopl   0x0(%rax)
+   0x00007ffff7b17fc0 <+80>:    f6 42 71 02     testb  $0x2,0x71(%rdx)
+   0x00007ffff7b17fc4 <+84>:    74 4a   je     0x7ffff7b18010 <__new_memcpy_ifunc+160>
+   0x00007ffff7b17fc6 <+86>:    f6 c1 20        test   $0x20,%cl
+   0x00007ffff7b17fc9 <+89>:    75 45   jne    0x7ffff7b18010 <__new_memcpy_ifunc+160>
+   0x00007ffff7b17fcb <+91>:    83 e1 08        and    $0x8,%ecx
+   0x00007ffff7b17fce <+94>:    48 8d 05 cb 0b 0b 00    lea    0xb0bcb(%rip),%rax        # 0x7ffff7bc8ba0 <__memcpy_ssse3>
+   0x00007ffff7b17fd5 <+101>:   48 8d 15 34 61 0b 00    lea    0xb6134(%rip),%rdx        # 0x7ffff7bce110 <__memcpy_ssse3_back>
+   0x00007ffff7b17fdc <+108>:   48 0f 45 c2     cmovne %rdx,%rax
+   0x00007ffff7b17fe0 <+112>:   c3      retq   
+   0x00007ffff7b17fe1 <+113>:   0f 1f 80 00 00 00 00    nopl   0x0(%rax)
+   0x00007ffff7b17fe8 <+120>:   48 8d 05 61 a6 0d 00    lea    0xda661(%rip),%rax        # 0x7ffff7bf2650 <__memmove_avx512_no_vzeroupper>
+   0x00007ffff7b17fef <+127>:   80 e5 08        and    $0x8,%ch
+   0x00007ffff7b17ff2 <+130>:   75 ec   jne    0x7ffff7b17fe0 <__new_memcpy_ifunc+112>
+   0x00007ffff7b17ff4 <+132>:   f6 42 7d 02     testb  $0x2,0x7d(%rdx)
+   0x00007ffff7b17ff8 <+136>:   48 8d 05 b1 b0 0d 00    lea    0xdb0b1(%rip),%rax        # 0x7ffff7bf30b0 <__memmove_avx512_unaligned_erms>
+   0x00007ffff7b17fff <+143>:   48 8d 15 3a b0 0d 00    lea    0xdb03a(%rip),%rdx        # 0x7ffff7bf3040 <__memmove_avx512_unaligned>
+   0x00007ffff7b18006 <+150>:   48 0f 44 c2     cmove  %rdx,%rax
+   0x00007ffff7b1800a <+154>:   c3      retq   
+   0x00007ffff7b1800b <+155>:   0f 1f 44 00 00  nopl   0x0(%rax,%rax,1)
+   0x00007ffff7b18010 <+160>:   f6 42 7d 02     testb  $0x2,0x7d(%rdx)
+   0x00007ffff7b18014 <+164>:   48 8d 05 b5 8c 01 00    lea    0x18cb5(%rip),%rax        # 0x7ffff7b30cd0 <__memmove_sse2_unaligned_erms>
+   0x00007ffff7b1801b <+171>:   48 8d 15 ee 8b 01 00    lea    0x18bee(%rip),%rdx        # 0x7ffff7b30c10 <memcpy@GLIBC_2.2.5>
+   0x00007ffff7b18022 <+178>:   48 0f 44 c2     cmove  %rdx,%rax
+   0x00007ffff7b18026 <+182>:   c3      retq   

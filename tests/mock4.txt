@@ -1,0 +1,11 @@
+   0x00007fb32fecb162 <+18>:    jne    0x7fb32fecb198 <raise+72>
+   0x00007fb32fecb177 <+39>:    movslq %edi,%rdx
+   0x00007fb32fecb17a <+42>:    movslq %esi,%rsi
+   0x00007fb32fecb18d <+61>:    ja     0x7fb32fecb1ad <raise+93>
+   0x00007fb32fecb18f <+63>:    repz retq 
+   0x00007fb32fecb191 <+65>:    nopl   0x0(%rax)
+   0x00007fb32fecb198 <+72>:    test   %ecx,%ecx
+   0x00007fb32fecb19a <+74>:    jg     0x7fb32fecb177 <raise+39>
+   0x00007fb32fecb1a9 <+89>:    mov    %eax,%ecx
+   0x00007fb32fecb1ab <+91>:    jmp    0x7fb32fecb177 <raise+39>
+   0x00007fb32fecb1ad <+93>:    mov    0x36bca4(%rip),%rdx        # 0x7fb330236e58

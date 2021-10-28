@@ -1,0 +1,63 @@
+Instructions in range 0x4021e6 - 0x4022d2 of main(int, char const**)
+     0x00000000004021e6 6  <+0 >:     55                      push  %rbp
+     0x00000000004021e7 5  <+1 >:     48 89 e5                mov   %rsp,%rbp
+     0x00000000004021ea 4  <+4 >:     53                      push  %rbx
+     0x00000000004021eb 3  <+5 >:     48 83 ec 48             sub   $0x48,%rsp
+     0x00000000004021ef 2  <+9 >:     89 7d bc                mov   %edi,-0x44(%rbp)
+     0x00000000004021f2 1  <+12>:     48 89 75 b0             mov   %rsi,-0x50(%rbp)
+  →  0x00000000004021f6 0  <+16>:     48 8d 45 c0             lea   -0x40(%rbp),%rax
+     0x00000000004021fa    <+20>:     48 89 c7                mov   %rax,%rdi
+     0x00000000004021fd    <+23>:     e8 9e 06 00 00          call  0x4028a0              <std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char> >::basic_string()>
+     0x0000000000402202    <+28>:     48 c7 45 e8 40 63 40 00 movq  $0x406340,-0x18(%rbp)
+     0x000000000040220a    <+36>:     be 04 30 40 00          mov   $0x403004,%esi
+     0x000000000040220f    <+41>:     bf 00 61 40 00          mov   $0x406100,%edi
+     0x0000000000402214    <+46>:     e8 57 fe ff ff          call  0x402070              <std::basic_ostream<char,std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char,std::char_traits<char> >&,char const*)@plt>
+     0x0000000000402219    <+51>:     48 89 c2                mov   %rax,%rdx
+     0x000000000040221c    <+54>:     48 8b 45 e8             mov   -0x18(%rbp),%rax
+     0x0000000000402220    <+58>:     48 89 c6                mov   %rax,%rsi
+     0x0000000000402223    <+61>:     48 89 d7                mov   %rdx,%rdi
+     0x0000000000402226    <+64>:     e8 15 fe ff ff          call  0x402040              <std::ostream::operator<<(void const*)@plt>
+     0x000000000040222b    <+69>:     be 15 30 40 00          mov   $0x403015,%esi
+     0x0000000000402230    <+74>:     48 89 c7                mov   %rax,%rdi
+     0x0000000000402233    <+77>:     e8 38 fe ff ff          call  0x402070              <std::basic_ostream<char,std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char,std::char_traits<char> >&,char const*)@plt>
+     0x0000000000402238    <+82>:     48 c7 45 e0 54 63 40 00 movq  $0x406354,-0x20(%rbp)
+     0x0000000000402240    <+90>:     be 17 30 40 00          mov   $0x403017,%esi
+     0x0000000000402245    <+95>:     bf 00 61 40 00          mov   $0x406100,%edi
+     0x000000000040224a    <+100>:    e8 21 fe ff ff          call  0x402070              <std::basic_ostream<char,std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char,std::char_traits<char> >&,char const*)@plt>
+     0x000000000040224f    <+105>:    48 89 c2                mov   %rax,%rdx
+     0x0000000000402252    <+108>:    48 8b 45 e0             mov   -0x20(%rbp),%rax
+     0x0000000000402256    <+112>:    48 89 c6                mov   %rax,%rsi
+     0x0000000000402259    <+115>:    48 89 d7                mov   %rdx,%rdi
+     0x000000000040225c    <+118>:    e8 df fd ff ff          call  0x402040              <std::ostream::operator<<(void const*)@plt>
+     0x0000000000402261    <+123>:    be 15 30 40 00          mov   $0x403015,%esi
+     0x0000000000402266    <+128>:    48 89 c7                mov   %rax,%rdi
+     0x0000000000402269    <+131>:    e8 02 fe ff ff          call  0x402070              <std::basic_ostream<char,std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char,std::char_traits<char> >&,char const*)@plt>
+     0x000000000040226e    <+136>:    be 23 30 40 00          mov   $0x403023,%esi
+     0x0000000000402273    <+141>:    bf 00 61 40 00          mov   $0x406100,%edi
+     0x0000000000402278    <+146>:    e8 f3 fd ff ff          call  0x402070              <std::basic_ostream<char,std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char,std::char_traits<char> >&,char const*)@plt>
+     0x000000000040227d    <+151>:    48 89 c2                mov   %rax,%rdx
+     0x0000000000402280    <+154>:    48 8b 45 e0             mov   -0x20(%rbp),%rax
+     0x0000000000402284    <+158>:    48 2b 45 e8             sub   -0x18(%rbp),%rax
+     0x0000000000402288    <+162>:    48 89 c6                mov   %rax,%rsi
+     0x000000000040228b    <+165>:    48 89 d7                mov   %rdx,%rdi
+     0x000000000040228e    <+168>:    e8 ad fd ff ff          call  0x402040              <std::ostream::operator<<(void const*)@plt>
+     0x0000000000402293    <+173>:    be 15 30 40 00          mov   $0x403015,%esi
+     0x0000000000402298    <+178>:    48 89 c7                mov   %rax,%rdi
+     0x000000000040229b    <+181>:    e8 d0 fd ff ff          call  0x402070              <std::basic_ostream<char,std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char,std::char_traits<char> >&,char const*)@plt>
+     0x00000000004022a0    <+186>:    48 8d 45 c0             lea   -0x40(%rbp),%rax
+     0x00000000004022a4    <+190>:    48 89 c7                mov   %rax,%rdi
+     0x00000000004022a7    <+193>:    e8 50 05 00 00          call  0x4027fc              <std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char> >::~basic_string()>
+     0x00000000004022ac    <+198>:    b8 00 00 00 00          mov   $0x0,%eax
+     0x00000000004022b1    <+203>: ╭◄ eb 1a                   jmp   0x4022cd              <main(int,char const**)+231>
+     0x00000000004022b3    <+205>: │  48 89 c3                mov   %rax,%rbx
+     0x00000000004022b6    <+208>: │  48 8d 45 c0             lea   -0x40(%rbp),%rax
+     0x00000000004022ba    <+212>: │  48 89 c7                mov   %rax,%rdi
+     0x00000000004022bd    <+215>: │  e8 3a 05 00 00          call  0x4027fc              <std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char> >::~basic_string()>
+     0x00000000004022c2    <+220>: │  48 89 d8                mov   %rbx,%rax
+     0x00000000004022c5    <+223>: │  48 89 c7                mov   %rax,%rdi
+     0x00000000004022c8    <+226>: │  e8 03 fe ff ff          call  0x4020d0              <_Unwind_Resume@plt>
+     0x00000000004022cd    <+231>: ╰► 48 8b 5d f8             mov   -0x8(%rbp),%rbx
+     0x00000000004022d1    <+235>:    c9                      leave
+     0x00000000004022d2    <+236>:    c3                      ret
+
+Exiting vdb...

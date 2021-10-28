@@ -1,0 +1,8 @@
+   0x2 <+35>: ff mov $3
+   0x3 <+44>: ff cmp      $0x6,%eax
+
+   0x4 <+35>: ff mov $3
+   0x5 <+35>: ff mov $3
+   0x6 <+35>: ff jmpq     *0xa37d60(,%rax,8)
+   0x8 <+37>: ff mov $3
+   0xa <+37>: ff mov $3

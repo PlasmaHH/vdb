@@ -1,0 +1,11 @@
+   0x1 <+0>: ff mov $1
+   0x2 <+1>: ff jmp 0x3 <foo>
+   0x3 <+2>: ff mov $3
+   0x4 <+3>: ff jmp 0x6 <foo>
+   0x5 <+4>: ff jmp 0x6 <foo>
+=>   0x6 <+5>: ff mov $6
+   0x7 <+6>: ff jmp 0xb <foo>
+   0x8 <+7>: ff jmp 0xa <foo>
+   0x9 <+8>: ff mov $3
+   0xa <+9>: ff lock mov $3
+   0xb <+10>: ff mov $3

@@ -994,6 +994,13 @@ mnemonics = {
 pc_list = [ "rip", "eip", "ip", "pc" ]
 last_working_pc = ""
 
+class fake_frame:
+    def __init__( self ):
+        pass
+
+    def read_register(self,reg):
+        return None
+
 def fix_marker( ls, alt = None ):
 #    mark = vdb.util.gint("$rip")
     try:
@@ -1017,9 +1024,8 @@ parse_cache = {}
 
 
 def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached = True ):
-#    print("fakedata = '%s'" % fakedata )
-#    print("arg = '%s'" % arg )
-#    print("len(arg) = '%s'" % len(arg) )
+
+#    print(f"parse_from_gdb(arg={arg},fakedata={len(fakedata)}, arch={arch}, fakeframe={fakeframe}, cached={cached}")
     global parse_cache
 
     key = arg
@@ -1265,7 +1271,10 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     if( fakeframe is not None ):
         frame = fakeframe
     else:
-        frame = gdb.selected_frame()
+        try:
+            frame = gdb.selected_frame()
+        except:
+            frame = fake_frame()
 
     passlimit = 2
     while ins is not None:
@@ -1366,6 +1375,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
                     ins.add_extra(f"syscall[{rax}]()")
 #                    ins.add_extra(f"{possible_registers}")
         # make sure to do this after syscall is handled
+#        print("ins.mnemonic = '%s'" % (ins.mnemonic,) )
         if( ins.mnemonic in set(["call","ret"]) ):
             if( ins.mnemonic == "call" ):
                 ins.possible_register_sets.append(possible_registers)
@@ -1378,7 +1388,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
                 next = None
             for tga in ins.targets:
                 tgt = ret.by_addr.get(tga,None)
-                if( tgt is not None ):
+                if( tgt is not None and tgt.passes < passlimit ):
                     flowstack.append(tgt)
                     tgt.possible_register_sets.append(possible_registers)
 
@@ -1388,6 +1398,10 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
         ins = next
         if( ins is None ):
             ins = flowstack.pop()
+
+#        print("ins.address = '%s'" % (ins.address,) )
+#        print("ins.passes = '%s'" % (ins.passes,) )
+#        print("len(flowstack) = '%s'" % (len(flowstack),) )
 
 
 #    print(f"Returning for {key}")
@@ -1439,7 +1453,7 @@ def disassemble( argv ):
     fakedata = None
 
     if( len(argv) > 0 ):
-
+#        print("argv = '%s'" % (argv,) )
         if( argv[0][0] == "/" ):
             if( argv[0][1] == "+" and argv[0][2:].isdigit() ):
                 context = ( None, int(argv[0][2:]) )

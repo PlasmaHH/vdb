@@ -1,0 +1,311 @@
+Not configured for architecture x86, falling back to x86
+Instructions in range 0x7ffff7b17f70 - 0x7ffff7b18026 of None
+  0x7ffff7b17f70   <+0 >:        48 8b 15 d9 3e 13 00          mov    0x133ed9(%rip),%rdx  0x7ffff7c4be50
+  0x7ffff7b17f77   <+7 >:        48 8d 05 f2 8c 01 00          lea    0x18cf2(%rip),%rax   0x7ffff7b30c70 <__memmove_erms>
+  0x7ffff7b17f7e   <+14>:        8b 8a cc 00 00 00             mov    0xcc(%rdx),%ecx
+  0x7ffff7b17f84   <+20>:        f6 c5 30                      test   $0x30,%ch
+  0x7ffff7b17f87   <+23>:  ╭◄    75 57                         jne    0x7ffff7b17fe0       <__new_memcpy_ifunc+112>
+  0x7ffff7b17f89   <+25>:  │     48 b8 04 00 00 00 00 40 00 00 movabs $0x400000000004,%rax
+  0x7ffff7b17f93   <+35>:  │     48 23 82 c8 00 00 00          and    0xc8(%rdx),%rax
+  0x7ffff7b17f9a   <+42>:  │     48 83 f8 04                   cmp    $0x4,%rax
+  0x7ffff7b17f9e   <+46>:  │╭◄   74 48                         je     0x7ffff7b17fe8       <__new_memcpy_ifunc+120>
+  0x7ffff7b17fa0   <+48>:  ││    f6 c5 01                      test   $0x1,%ch
+  0x7ffff7b17fa3   <+51>:  ││╭◄  74 1b                         je     0x7ffff7b17fc0       <__new_memcpy_ifunc+80>
+  0x7ffff7b17fa5   <+53>:  │││   f6 42 7d 02                   testb  $0x2,0x7d(%rdx)
+  0x7ffff7b17fa9   <+57>:  │││   48 8d 05 b0 63 0d 00          lea    0xd63b0(%rip),%rax   0x7ffff7bee360 <__memmove_avx_unaligned_erms>
+  0x7ffff7b17fb0   <+64>:  │││   48 8d 15 49 63 0d 00          lea    0xd6349(%rip),%rdx   0x7ffff7bee300 <__memmove_avx_unaligned>
+  0x7ffff7b17fb7   <+71>:  │││   48 0f 44 c2                   cmove  %rdx,%rax
+  0x7ffff7b17fbb   <+75>:  │││   c3                            retq
+  0x7ffff7b17fbc   <+76>:  │││   0f 1f 40 00                   nopl   0x0(%rax)
+  0x7ffff7b17fc0   <+80>:  ││╰►  f6 42 71 02                   testb  $0x2,0x71(%rdx)
+  0x7ffff7b17fc4   <+84>:  ││╭◄  74 4a                         je     0x7ffff7b18010       <__new_memcpy_ifunc+160>
+  0x7ffff7b17fc6   <+86>:  │││   f6 c1 20                      test   $0x20,%cl
+  0x7ffff7b17fc9   <+89>:  │││╭◄ 75 45                         jne    0x7ffff7b18010       <__new_memcpy_ifunc+160>
+  0x7ffff7b17fcb   <+91>:  ││││  83 e1 08                      and    $0x8,%ecx
+  0x7ffff7b17fce   <+94>:  ││││  48 8d 05 cb 0b 0b 00          lea    0xb0bcb(%rip),%rax   0x7ffff7bc8ba0 <__memcpy_ssse3>
+  0x7ffff7b17fd5   <+101>: ││││  48 8d 15 34 61 0b 00          lea    0xb6134(%rip),%rdx   0x7ffff7bce110 <__memcpy_ssse3_back>
+  0x7ffff7b17fdc   <+108>: ││││  48 0f 45 c2                   cmovne %rdx,%rax
+  0x7ffff7b17fe0   <+112>: ├│││► c3                            retq
+  0x7ffff7b17fe1   <+113>: ││││  0f 1f 80 00 00 00 00          nopl   0x0(%rax)
+  0x7ffff7b17fe8   <+120>: │╰││► 48 8d 05 61 a6 0d 00          lea    0xda661(%rip),%rax   0x7ffff7bf2650 <__memmove_avx512_no_vzeroupper>
+  0x7ffff7b17fef   <+127>: │ ││  80 e5 08                      and    $0x8,%ch
+  0x7ffff7b17ff2   <+130>: ╰─││◄ 75 ec                         jne    0x7ffff7b17fe0       <__new_memcpy_ifunc+112>
+  0x7ffff7b17ff4   <+132>:   ││  f6 42 7d 02                   testb  $0x2,0x7d(%rdx)
+  0x7ffff7b17ff8   <+136>:   ││  48 8d 05 b1 b0 0d 00          lea    0xdb0b1(%rip),%rax   0x7ffff7bf30b0 <__memmove_avx512_unaligned_erms>
+  0x7ffff7b17fff   <+143>:   ││  48 8d 15 3a b0 0d 00          lea    0xdb03a(%rip),%rdx   0x7ffff7bf3040 <__memmove_avx512_unaligned>
+  0x7ffff7b18006   <+150>:   ││  48 0f 44 c2                   cmove  %rdx,%rax
+  0x7ffff7b1800a   <+154>:   ││  c3                            retq
+  0x7ffff7b1800b   <+155>:   ││  0f 1f 44 00 00                nopl   0x0(%rax,%rax,1)
+  0x7ffff7b18010   <+160>:   ╰┴► f6 42 7d 02                   testb  $0x2,0x7d(%rdx)
+  0x7ffff7b18014   <+164>:       48 8d 05 b5 8c 01 00          lea    0x18cb5(%rip),%rax   0x7ffff7b30cd0 <__memmove_sse2_unaligned_erms>
+  0x7ffff7b1801b   <+171>:       48 8d 15 ee 8b 01 00          lea    0x18bee(%rip),%rdx   0x7ffff7b30c10 <memcpy@GLIBC_2.2.5>
+  0x7ffff7b18022   <+178>:       48 0f 44 c2                   cmove  %rdx,%rax
+  0x7ffff7b18026   <+182>:       c3                            retq
+
+Not configured for architecture x86, falling back to x86
+Instructions in range 0x7f42041c8426 - 0x7f42041c8644 of __GI_abort
+     0x7f42041c8426       <+0 >:         50                               push         %rax
+     0x7f42041c8427       <+1 >:         58                               pop          %rax
+     0x7f42041c8428       <+2 >:         64 48 8b 14 25 10 00 00 00       mov          %fs:0x10,%rdx
+     0x7f42041c8431       <+11>:         48 81 ec 28 01 00 00             sub          $0x128,%rsp
+     0x7f42041c8438       <+18>:         64 48 8b 04 25 28 00 00 00       mov          %fs:0x28,%rax
+     0x7f42041c8441       <+27>:         48 89 84 24 18 01 00 00          mov          %rax,0x118(%rsp)
+     0x7f42041c8449       <+35>:         31 c0                            xor          %eax,%eax
+     0x7f42041c844b       <+37>:         48 39 15 c6 e8 19 00             cmp          %rdx,0x19e8c6(%rip)      0x7f4204366d18 <lock+8>
+     0x7f42041c8452       <+44>:  ╭◄     74 44                            je           0x7f42041c8498           <__GI_abort+114>
+     0x7f42041c8454       <+46>:  │      be 01 00 00 00                   mov          $0x1,%esi
+     0x7f42041c8459       <+51>:  │      83 3d 90 22 1a 00 00             cmpl         $0x0,0x1a2290(%rip)      0x7f420436a6f0 <__libc_multiple_threads>
+     0x7f42041c8460       <+58>:  │╭◄    74 0c                            je           0x7f42041c846e           <__GI_abort+72>
+     0x7f42041c8462       <+60>:  ││     f0 0f b1 35 a6 e8 19 00          lock cmpxchg %esi,0x19e8a6(%rip)      0x7f4204366d10 <lock>
+     0x7f42041c846a       <+68>:  ││╭◄   75 0b                            jne          0x7f42041c8477           <__GI_abort+81>
+     0x7f42041c846c       <+70>:  │││╭◄  eb 23                            jmp          0x7f42041c8491           <__GI_abort+107>
+     0x7f42041c846e       <+72>:  │╰││►  0f b1 35 9b e8 19 00             cmpxchg      %esi,0x19e89b(%rip)      0x7f4204366d10 <lock>
+     0x7f42041c8475       <+79>:  │╭││◄  74 1a                            je           0x7f42041c8491           <__GI_abort+107>
+     0x7f42041c8477       <+81>:  ││╰│►  48 8d 3d 92 e8 19 00             lea          0x19e892(%rip),%rdi      0x7f4204366d10 <lock>
+     0x7f42041c847e       <+88>:  ││ │   48 81 ec 80 00 00 00             sub          $0x80,%rsp
+     0x7f42041c8485       <+95>:  ││ │   e8 f6 65 0e 00                   callq        0x7f42042aea80           <__lll_lock_wait_private>
+     0x7f42041c848a       <+100>: ││ │   48 81 c4 80 00 00 00             add          $0x80,%rsp
+     0x7f42041c8491       <+107>: │╰─┴►  48 89 15 80 e8 19 00             mov          %rdx,0x19e880(%rip)      0x7f4204366d18 <lock+8>
+     0x7f42041c8498       <+114>: ╰───►  ff 05 76 e8 19 00                incl         0x19e876(%rip)           0x7f4204366d14 <lock+4>
+     0x7f42041c849e 10f   <+120>:        83 3d 7b e8 19 00 00             cmpl         $0x0,0x19e87b(%rip)      0x7f4204366d20 <stage>
+     0x7f42041c84a5 9f    <+127>:  ╭──◄  75 36                            jne          0x7f42041c84dd           <__GI_abort+183>
+     0x7f42041c84a7       <+129>:  │     c7 05 6f e8 19 00 01 00 00 00    movl         $0x1,0x19e86f(%rip)      0x7f4204366d20 <stage>
+     0x7f42041c84b1       <+139>:  │     b8 10 00 00 00                   mov          $0x10,%eax
+     0x7f42041c84b6       <+144>:  │╭─►  48 ff c8                         dec          %rax
+     0x7f42041c84b9       <+147>:  ││    48 89 e6                         mov          %rsp,%rsi
+     0x7f42041c84bc       <+150>:  ││    48 83 f8 ff                      cmp          $0xffffffffffffffff,%rax
+     0x7f42041c84c0       <+154>:  ││╭◄  74 0a                            je           0x7f42041c84cc           <__GI_abort+166>
+     0x7f42041c84c2       <+156>:  │││   48 c7 04 c6 00 00 00 00          movq         $0x0,(%rsi,%rax,8)
+     0x7f42041c84ca       <+164>:  │╰│◄  eb ea                            jmp          0x7f42041c84b6           <__GI_abort+144>
+     0x7f42041c84cc       <+166>:  │ ╰►  31 d2                            xor          %edx,%edx
+     0x7f42041c84ce       <+168>:  │     bf 01 00 00 00                   mov          $0x1,%edi
+     0x7f42041c84d3 10c   <+173>:  │     48 83 0c 24 20                   orq          $0x20,(%rsp)
+     0x7f42041c84d8 9c    <+178>:  │     e8 43 6b 01 00                   callq        0x7f42041df020           <__GI___sigprocmask>
+     0x7f42041c84dd 8cf   <+183>:  ╰──►  8b 05 3d e8 19 00                mov          0x19e83d(%rip),%eax      0x7f4204366d20 <stage>
+     0x7f42041c84e3 7c    <+189>:        83 f8 01                         cmp          $0x1,%eax
+     0x7f42041c84e6 6c    <+192>: ╭───◄  0f 85 bd 00 00 00                jne          0x7f42041c85a9           <__GI_abort+387>
+     0x7f42041c84ec 5c    <+198>: │      ff 0d 22 e8 19 00                decl         0x19e822(%rip)           0x7f4204366d14 <lock+4>
+     0x7f42041c84f2 4c    <+204>: │      c7 05 24 e8 19 00 00 00 00 00    movl         $0x0,0x19e824(%rip)      0x7f4204366d20 <stage>
+     0x7f42041c84fc 3c    <+214>: │╭──◄  75 41                            jne          0x7f42041c853f           <__GI_abort+281>
+     0x7f42041c84fe 7d    <+216>: ││     48 c7 05 0f e8 19 00 00 00 00 00 movq         $0x0,0x19e80f(%rip)      0x7f4204366d18 <lock+8>
+     0x7f42041c8509 6d    <+227>: ││     83 3d e0 21 1a 00 00             cmpl         $0x0,0x1a21e0(%rip)      0x7f420436a6f0 <__libc_multiple_threads>
+     0x7f42041c8510 5d    <+234>: ││╭─◄  74 0b                            je           0x7f42041c851d           <__GI_abort+247>
+     0x7f42041c8512 5b    <+236>: │││    f0 ff 0d f7 e7 19 00             lock decl    0x19e7f7(%rip)           0x7f4204366d10 <lock>
+     0x7f42041c8519 4b    <+243>: │││╭◄  75 0a                            jne          0x7f42041c8525           <__GI_abort+255>
+     0x7f42041c851b 3b    <+245>: ││││╭◄ eb 22                            jmp          0x7f42041c853f           <__GI_abort+281>
+     0x7f42041c851d 4ad   <+247>: ││╰││► ff 0d ed e7 19 00                decl         0x19e7ed(%rip)           0x7f4204366d10 <lock>
+     0x7f42041c8523 3a    <+253>: ││╭││◄ 74 1a                            je           0x7f42041c853f           <__GI_abort+281>
+     0x7f42041c8525 6e    <+255>: │││╰│► 48 8d 3d e4 e7 19 00             lea          0x19e7e4(%rip),%rdi      0x7f4204366d10 <lock>
+     0x7f42041c852c 5     <+262>: │││ │  48 81 ec 80 00 00 00             sub          $0x80,%rsp
+     0x7f42041c8533 4     <+269>: │││ │  e8 78 65 0e 00                   callq        0x7f42042aeab0           <__lll_unlock_wake_private>
+     0x7f42041c8538 3     <+274>: │││ │  48 81 c4 80 00 00 00             add          $0x80,%rsp
+     0x7f42041c853f 2abc  <+281>: │╰┴─┴► bf 06 00 00 00                   mov          $0x6,%edi
+     0x7f42041c8544 1     <+286>: │      e8 37 67 01 00                   callq        0x7f42041dec80           <__GI_raise>
+  →  0x7f42041c8549 0     <+291>: │      64 48 8b 14 25 10 00 00 00       mov          %fs:0x10,%rdx
+     0x7f42041c8552       <+300>: │      48 39 15 bf e7 19 00             cmp          %rdx,0x19e7bf(%rip)      0x7f4204366d18 <lock+8>
+     0x7f42041c8559       <+307>: │╭───◄ 74 46                            je           0x7f42041c85a1           <__GI_abort+379>
+     0x7f42041c855b       <+309>: ││     be 01 00 00 00                   mov          $0x1,%esi
+     0x7f42041c8560       <+314>: ││     31 c0                            xor          %eax,%eax
+     0x7f42041c8562       <+316>: ││     83 3d 87 21 1a 00 00             cmpl         $0x0,0x1a2187(%rip)      0x7f420436a6f0 <__libc_multiple_threads>
+     0x7f42041c8569       <+323>: ││╭──◄ 74 0c                            je           0x7f42041c8577           <__GI_abort+337>
+     0x7f42041c856b       <+325>: │││    f0 0f b1 35 9d e7 19 00          lock cmpxchg %esi,0x19e79d(%rip)      0x7f4204366d10 <lock>
+     0x7f42041c8573       <+333>: │││╭─◄ 75 0b                            jne          0x7f42041c8580           <__GI_abort+346>
+     0x7f42041c8575       <+335>: ││││╭◄ eb 23                            jmp          0x7f42041c859a           <__GI_abort+372>
+     0x7f42041c8577       <+337>: ││╰││► 0f b1 35 92 e7 19 00             cmpxchg      %esi,0x19e792(%rip)      0x7f4204366d10 <lock>
+     0x7f42041c857e       <+344>: ││╭││◄ 74 1a                            je           0x7f42041c859a           <__GI_abort+372>
+     0x7f42041c8580       <+346>: │││╰│► 48 8d 3d 89 e7 19 00             lea          0x19e789(%rip),%rdi      0x7f4204366d10 <lock>
+     0x7f42041c8587       <+353>: │││ │  48 81 ec 80 00 00 00             sub          $0x80,%rsp
+     0x7f42041c858e       <+360>: │││ │  e8 ed 64 0e 00                   callq        0x7f42042aea80           <__lll_lock_wait_private>
+     0x7f42041c8593       <+365>: │││ │  48 81 c4 80 00 00 00             add          $0x80,%rsp
+     0x7f42041c859a       <+372>: ││╰─┴► 48 89 15 77 e7 19 00             mov          %rdx,0x19e777(%rip)      0x7f4204366d18 <lock+8>
+     0x7f42041c85a1       <+379>: │╰───► ff 05 6d e7 19 00                incl         0x19e76d(%rip)           0x7f4204366d14 <lock+4>
+     0x7f42041c85a7       <+385>: │   ╭◄ eb 05                            jmp          0x7f42041c85ae           <__GI_abort+392>
+     0x7f42041c85a9       <+387>: ╰───│► 83 f8 02                         cmp          $0x2,%eax
+     0x7f42041c85ac       <+390>:    ╭│◄ 75 47                            jne          0x7f42041c85f5           <__GI_abort+463>
+     0x7f42041c85ae       <+392>:    │╰► 48 8d b4 24 80 00 00 00          lea          0x80(%rsp),%rsi
+     0x7f42041c85b6       <+400>:    │   31 c0                            xor          %eax,%eax
+     0x7f42041c85b8       <+402>:    │   b9 26 00 00 00                   mov          $0x26,%ecx
+     0x7f42041c85bd       <+407>:    │   48 83 ca ff                      or           $0xffffffffffffffff,%rdx
+     0x7f42041c85c1       <+411>:    │   c7 05 55 e7 19 00 03 00 00 00    movl         $0x3,0x19e755(%rip)      0x7f4204366d20 <stage>
+     0x7f42041c85cb       <+421>:    │   48 89 f7                         mov          %rsi,%rdi
+     0x7f42041c85ce       <+424>:    │   f3 ab                            rep stos     %eax,%es:(%rdi)
+     0x7f42041c85d0       <+426>:    │   b8 10 00 00 00                   mov          $0x10,%eax
+     0x7f42041c85d5       <+431>:    │╭► 48 89 14 c6                      mov          %rdx,(%rsi,%rax,8)
+     0x7f42041c85d9       <+435>:    ││  48 ff c8                         dec          %rax
+     0x7f42041c85dc       <+438>:    │╰◄ 75 f7                            jne          0x7f42041c85d5           <__GI_abort+431>
+     0x7f42041c85de       <+440>:    │   31 d2                            xor          %edx,%edx
+     0x7f42041c85e0       <+442>:    │   bf 06 00 00 00                   mov          $0x6,%edi
+     0x7f42041c85e5       <+447>:    │   c7 84 24 08 01 00 00 00 00 00 00 movl         $0x0,0x108(%rsp)
+     0x7f42041c85f0       <+458>:    │   e8 fb 69 01 00                   callq        0x7f42041deff0           <__GI___sigaction>
+     0x7f42041c85f5       <+463>:    ╰─► 83 3d 24 e7 19 00 03             cmpl         $0x3,0x19e724(%rip)      0x7f4204366d20 <stage>
+     0x7f42041c85fc       <+470>:     ╭◄ 75 14                            jne          0x7f42041c8612           <__GI_abort+492>
+     0x7f42041c85fe       <+472>:     │  c7 05 18 e7 19 00 04 00 00 00    movl         $0x4,0x19e718(%rip)      0x7f4204366d20 <stage>
+     0x7f42041c8608       <+482>:     │  bf 06 00 00 00                   mov          $0x6,%edi
+     0x7f42041c860d       <+487>:     │  e8 6e 66 01 00                   callq        0x7f42041dec80           <__GI_raise>
+     0x7f42041c8612       <+492>:     ╰► 83 3d 07 e7 19 00 04             cmpl         $0x4,0x19e707(%rip)      0x7f4204366d20 <stage>
+     0x7f42041c8619       <+499>:     ╭◄ 75 0b                            jne          0x7f42041c8626           <__GI_abort+512>
+     0x7f42041c861b       <+501>:     │  c7 05 fb e6 19 00 05 00 00 00    movl         $0x5,0x19e6fb(%rip)      0x7f4204366d20 <stage>
+     0x7f42041c8625       <+511>:     │  f4                               hlt
+     0x7f42041c8626       <+512>:     ╰► 83 3d f3 e6 19 00 05             cmpl         $0x5,0x19e6f3(%rip)      0x7f4204366d20 <stage>
+     0x7f42041c862d       <+519>:     ╭◄ 75 14                            jne          0x7f42041c8643           <__GI_abort+541>
+     0x7f42041c862f       <+521>:     │  c7 05 e7 e6 19 00 06 00 00 00    movl         $0x6,0x19e6e7(%rip)      0x7f4204366d20 <stage>
+     0x7f42041c8639       <+531>:     │  bf 7f 00 00 00                   mov          $0x7f,%edi
+     0x7f42041c863e       <+536>:     │  e8 cd 60 0a 00                   callq        0x7f420426e710           <__GI__exit>
+     0x7f42041c8643       <+541>:     ├► f4                               hlt
+     0x7f42041c8644       <+542>:     ╰◄ eb fd                            jmp          0x7f42041c8643           <__GI_abort+541>
+
+Not configured for architecture x86, falling back to x86
+Instructions in range 0x1 - 0x3a of None
+  0x00000001   <+0>:       ff mov          $1
+  0x00000002   <+1>:  ╭◄   ff jmp          0x3       <foo>
+  0x00000003   <+2>:  ╰►   ff mov          $3
+  0x00000004   <+3>:  ╭◄   ff jmp          0x6       <foo>
+  0x00000005   <+4>:  │╭◄  ff jmp          0x6       <foo>
+  0x00000006   <+5>:  ╰┴►  ff mov          $6
+  0x00000007   <+6>:  ╭─◄  ff jmp          0xb       <foo>
+  0x00000008   <+7>:  │╭◄  ff jmp          0xa       <foo>
+  0x00000009   <+8>:  ││   ff mov          $3
+  0x0000000a   <+9>:  │╰►  ff mov          $3
+  0x0000000b   <+10>: ╰─►  ff mov          $3
+  0x0000000c   <+11>:  ╭►  ff mov          $3
+  0x0000000d   <+12>:  ╰◄  ff jmp          0xc       <foo>
+  0x0000000e   <+13>:      ff mov          $3
+  0x0000000f   <+14>: ╭─►  ff mov          $3
+  0x00000010   <+14>: │╭►  ff mov          $3
+  0x00000011   <+15>: ││   ff mov          $3
+  0x00000012   <+16>: │╰◄  ff jmp          0x10      <foo>
+  0x00000013   <+17>: ╰─◄  ff jmp          0xf       <foo>
+  0x00000014   <+18>:      ff mov          $3
+  0x00000015   <+19>: ╭─◄  ff jmp          0x18      <foo>
+  0x00000016   <+20>: │╭◄  ff jmp          0x19      <foo>
+  0x00000017   <+21>: ││╭◄ ff jmp          0x19      <foo>
+  0x00000018   <+22>: ╰││► ff mov          $3
+  0x00000019   <+23>:  ╰┴► ff mov          $3
+  0x0000001a   <+25>:      ff mov          $3
+  0x0000001b   <+26>: ╭──◄ ff jmp          0x1e      <foo>
+  0x0000001c   <+27>: │╭─► ff mov          $3
+  0x0000001d   <+26>: ││╭◄ ff jmp          0x20      <foo>
+  0x0000001e   <+27>: ╰││► ff mov          $3
+  0x0000001f   <+28>:  ╰│◄ ff jmp          0x1c      <foo>
+  0x00000020   <+29>:   ╰► ff mov          $3
+  0x00000021   <+30>:      ff mov          $3
+  0x00000022   <+31>:      ff lock cmpxchg %esi      wahtever
+  0x00000023   <+32>:      ff callq        0x4654235 <wherever>
+  0x00000024   <+33>:      ff mov          $3
+  0x00000025   <+34>:   ╭◄ ff jmp          0x26      <foo> # FIRST
+  0x00000026   <+35>:   ├► ff mov          $3
+  0x00000027   <+36>:   ╰◄ ff jmp          0x26      <foo>
+  0x00000028   <+33>:      ff mov          $3
+  0x00000029   <+34>:   ╭◄ ff jmp          0x2a      <foo> # first
+  0x0000002a   <+35>:   ├► ff mov          $3
+  0x0000002b   <+35>:   │  ff mov          $3
+  0x0000002c   <+36>:   ╰◄ ff jmp          0x2a      <foo>
+  0x0000002d   <+33>:      ff mov          $3
+  0x0000002e   <+34>:   ╭◄ ff jmp          0x30      <foo> # first
+  0x0000002f   <+35>:   │  ff mov          $3
+  0x00000030   <+35>:   ├► ff mov          $3
+  0x00000031   <+36>:   ╰◄ ff jmp          0x30      <foo>
+  0x00000032   <+35>:  ╭─► ff mov          $3
+  0x00000033   <+34>:  │╭◄ ff jmp          0x34      <foo>
+  0x00000034   <+35>:  │├► ff mov          $3
+  0x00000035   <+35>:  ││  ff mov          $3
+  0x00000036   <+35>:  ││  ff mov          $3
+  0x00000037   <+36>:  │╰◄ ff jmp          0x34      <foo>
+  0x00000038   <+37>:  │   ff mov          $3
+  0x00000039   <+37>:  ╰─◄ ff jmp          0x32      <foo>
+  0x0000003a   <+37>:      ff mov          $3
+
+Not configured for architecture x86, falling back to x86
+Instructions in range 0x1 - 0xb of None
+     0x00000001 4c   <+0>:      ff mov      $1
+     0x00000002 3c   <+1>:  ╭◄  ff jmp      0x3 <foo>
+     0x00000003 2ac  <+2>:  ╰►  ff mov      $3
+     0x00000004 1a   <+3>:  ╭◄  ff jmp      0x6 <foo>
+     0x00000005 1b   <+4>:  │╭◄ ff jmp      0x6 <foo>
+  →  0x00000006 0ab  <+5>:  ╰┴► ff mov      $6
+     0x00000007      <+6>:  ╭─◄ ff jmp      0xb <foo>
+     0x00000008      <+7>:  │╭◄ ff jmp      0xa <foo>
+     0x00000009      <+8>:  ││  ff mov      $3
+     0x0000000a      <+9>:  │╰► ff lock mov $3
+     0x0000000b      <+10>: ╰─► ff mov      $3
+
+Not configured for architecture x86, falling back to x86
+Instructions in range 0x7fb32fecb162 - 0x7fb32fecb1ad of None
+  0x7fb32fecb162   <+18>: ╭◄     jne       0x7fb32fecb198      <raise+72>
+  0x7fb32fecb177   <+39>: │╭┬►   movslq    %edi,%rdx
+  0x7fb32fecb17a   <+42>: │││    movslq    %esi,%rsi
+  0x7fb32fecb18d   <+61>: │││╭◄  ja        0x7fb32fecb1ad      <raise+93>
+  0x7fb32fecb18f   <+63>: ││││   repz retq
+  0x7fb32fecb191   <+65>: ││││   nopl      0x0(%rax)
+  0x7fb32fecb198   <+72>: ╰│││►  test      %ecx,%ecx
+  0x7fb32fecb19a   <+74>:  ╰││◄  jg        0x7fb32fecb177      <raise+39>
+  0x7fb32fecb1a9   <+89>:   ││   mov       %eax,%ecx
+  0x7fb32fecb1ab   <+91>:   ╰│◄  jmp       0x7fb32fecb177      <raise+39>
+  0x7fb32fecb1ad   <+93>:    ╰►  mov       0x36bca4(%rip),%rdx 0x7fb330236e58
+
+Not configured for architecture x86, falling back to x86
+Instructions in range 0x32 - 0x3a of None
+  0x00000032   <+35>: ╭►  ff mov $3
+  0x00000033   <+34>: │╭◄ ff jmp 0x34 <foo>
+  0x00000034   <+35>: │├► ff mov $3
+  0x00000035   <+35>: ││  ff mov $3
+  0x00000036   <+35>: ││  ff mov $3
+  0x00000037   <+36>: │╰◄ ff jmp 0x34 <foo>
+  0x00000038   <+37>: │   ff mov $3
+  0x00000039   <+37>: ╰─◄ ff jmp 0x32 <foo>
+  0x0000003a   <+37>:     ff mov $3
+
+Not configured for architecture x86, falling back to x86
+Instructions in range 0x1 - 0x16 of None
+  0x00000001   <+0>:      ff mov $1
+  0x00000002   <+1>: ╭◄   ff jmp 0x4  <foo>
+  0x00000003   <+3>: │╭◄  ff jmp 0x4  <foo>
+  0x00000004   <+2>: ├┼►  ff mov $3
+  0x00000005   <+3>: ││ ⥀ ff jmp 0x5  <foo>
+  0x00000006   <+4>: ╰│─◄ ff jmp 0x4  <foo>
+  0x00000007   <+4>:  ╰─◄ ff jmp 0x4  <foo>
+  0x00000008   <+5>:      ff mov $6
+  0x00000009   <+6>:   ╭◄ ff jmp 0xa  <foo>
+  0x0000000a   <+8>:   ├► ff mov $3
+  0x0000000b   <+7>:   ╰◄ ff jmp 0xa  <foo>
+  0x0000000c   <+9>:      ff mov $3
+  0x0000000d   <+7>:   ╭◄ ff jmp 0xe  <foo>
+  0x0000000e   <+7>:   ╰⥀ ff jmp 0xe  <foo>
+  0x0000000f   <+9>:      ff mov $3
+  0x00000010   <+7>:   ╭◄ ff jmp 0x11 <foo>
+  0x00000011   <+7>:   ╰⥀ ff jmp 0x11 <foo>
+  0x00000012   <+9>:      ff mov $3
+  0x00000013   <+7>:   ╭◄ ff jmp 0x14 <foo>
+  0x00000014   <+7>:   ├⥀ ff jmp 0x14 <foo>
+  0x00000015   <+7>:   ╰◄ ff jmp 0x14 <foo>
+  0x00000016   <+9>:      ff mov $3
+
+Not configured for architecture x86, falling back to x86
+Instructions in range 0x1 - 0xf of None
+  0x00000001   <+1>: ╭◄       ff jmp 0x8 <foo>
+  0x00000002   <+3>: │╭◄      ff jmp 0x8 <foo>
+  0x00000003   <+3>: ││╭◄     ff jmp 0x8 <foo>
+  0x00000004   <+4>: │││╭◄    ff jmp 0x8 <foo>
+  0x00000005   <+4>: ││││╭◄   ff jmp 0x8 <foo>
+  0x00000006   <+4>: │││││╭◄  ff jmp 0x8 <foo>
+  0x00000007   <+4>: ││││││╭◄ ff jmp 0x8 <foo>
+  0x00000008   <+4>: ├┼┼┼┼┼┼⥀ ff jmp 0x8 <foo>
+  0x00000009   <+4>: ╰││││││◄ ff jmp 0x8 <foo>
+  0x0000000a   <+4>:  ╰│││││◄ ff jmp 0x8 <foo>
+  0x0000000b   <+4>:   ╰││││◄ ff jmp 0x8 <foo>
+  0x0000000c   <+4>:    ╰│││◄ ff jmp 0x8 <foo>
+  0x0000000d   <+4>:     ╰││◄ ff jmp 0x8 <foo>
+  0x0000000e   <+4>:      ╰│◄ ff jmp 0x8 <foo>
+  0x0000000f   <+4>:       ╰◄ ff jmp 0x8 <foo>
+
+Not configured for architecture x86, falling back to x86
+Instructions in range 0x2 - 0xa of None
+  0x00000002   <+35>:  ff mov  $3
+  0x00000003   <+44>:  ff cmp  $0x6,%eax
+  0x00000004   <+35>:  ff mov  $3
+  0x00000005   <+35>:  ff mov  $3
+  0x00000006   <+35>:  ff jmpq *0xa37d60(,%rax,8) 0 computed jump targets 
+  0x00000008   <+37>:  ff mov  $3
+  0x0000000a   <+37>:  ff mov  $3
+
+Exiting vdb...

@@ -1,0 +1,9 @@
+   0x32 <+35>: ff mov $3
+   0x33 <+34>: ff jmp 0x34 <foo>
+   0x34 <+35>: ff mov $3
+   0x35 <+35>: ff mov $3
+   0x36 <+35>: ff mov $3
+   0x37 <+36>: ff jmp 0x34 <foo>
+   0x38 <+37>: ff mov $3
+   0x39 <+37>: ff jmp 0x32 <foo>
+   0x3a <+37>: ff mov $3

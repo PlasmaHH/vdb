@@ -1,0 +1,65 @@
+   0x1 <+0>: ff mov $1
+   0x2 <+1>: ff jmp 0x3 <foo>
+   0x3 <+2>: ff mov $3
+   0x4 <+3>: ff jmp 0x6 <foo>
+   0x5 <+4>: ff jmp 0x6 <foo>
+   0x6 <+5>: ff mov $6
+   0x7 <+6>: ff jmp 0xb <foo>
+   0x8 <+7>: ff jmp 0xa <foo>
+   0x9 <+8>: ff mov $3
+   0xa <+9>: ff mov $3
+   0xb <+10>: ff mov $3
+   0xc <+11>: ff mov $3
+   0xd <+12>: ff jmp 0xc <foo>
+   0xe <+13>: ff mov $3
+   0xf <+14>: ff mov $3
+   0x10 <+14>: ff mov $3
+   0x11 <+15>: ff mov $3
+   0x12 <+16>: ff jmp 0x10 <foo>
+   0x13 <+17>: ff jmp 0xf <foo>
+   0x14 <+18>: ff mov $3
+   0x15 <+19>: ff jmp 0x18 <foo>
+   0x16 <+20>: ff jmp 0x19 <foo>
+   0x17 <+21>: ff jmp 0x19 <foo>
+   0x18 <+22>: ff mov $3
+   0x19 <+23>: ff mov $3
+   0x1a <+25>: ff mov $3
+   0x1b <+26>: ff jmp 0x1e <foo>
+   0x1c <+27>: ff mov $3
+   0x1d <+26>: ff jmp 0x20 <foo>
+   0x1e <+27>: ff mov $3
+   0x1f <+28>: ff jmp 0x1c <foo>
+   0x20 <+29>: ff mov $3
+   0x21 <+30>: ff mov $3
+   0x22 <+31>: ff lock cmpxchg %esi # wahtever
+   0x23 <+32>: ff callq 0x4654235 <wherever>
+   0x24 <+33>: ff mov $3
+   0x25 <+34>: ff jmp 0x26 <foo> # FIRST
+   0x26 <+35>: ff mov $3
+   0x27 <+36>: ff jmp 0x26 <foo>
+
+   0x28 <+33>: ff mov $3
+
+   0x29 <+34>: ff jmp 0x2a <foo> # first
+   0x2a <+35>: ff mov $3
+   0x2b <+35>: ff mov $3
+   0x2c <+36>: ff jmp 0x2a <foo>
+
+   0x2d <+33>: ff mov $3
+
+   0x2e <+34>: ff jmp 0x30 <foo> # first
+   0x2f <+35>: ff mov $3
+   0x30 <+35>: ff mov $3
+   0x31 <+36>: ff jmp 0x30 <foo>
+
+   0x32 <+35>: ff mov $3
+
+   0x33 <+34>: ff jmp 0x34 <foo>
+   0x34 <+35>: ff mov $3
+   0x35 <+35>: ff mov $3
+   0x36 <+35>: ff mov $3
+   0x37 <+36>: ff jmp 0x34 <foo>
+
+   0x38 <+37>: ff mov $3
+   0x39 <+37>: ff jmp 0x32 <foo>
+   0x3a <+37>: ff mov $3
