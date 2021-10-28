@@ -533,12 +533,15 @@ class syscall_parameter:
         self.types = []
         self.register = None
 
-def reg( r, rd, qm = "?" ):
+def reg( r, rd, qm = "?", frame = None ):
     ret = rd.get(r,None)
     q = ""
     if( ret is None ):
         try:
-            ret = vdb.register.read(r)
+            if( frame is not None ):
+                ret = frame.read_register(r)
+            if( ret is None or ret.is_optimized_out ):
+                ret = vdb.register.read(r)
         except:
             return (None,True)
         q = qm
@@ -592,11 +595,11 @@ class syscall:
         self.optional_paramters = []
         self.clobbers = []
 
-    def to_str( self, registers, qm = "?" ):
+    def to_str( self, registers, qm = "?", frame = None ):
 
         ret = f"{self.name}[{self.nr}]( "
         for p in self.parameters:
-            rval,q = reg(p.register,registers,qm)
+            rval,q = reg(p.register,registers,qm,frame)
             ret += param_str(self.name,rval,p.types[0],p.names[0],p.register, q)
             ret += ","
         ret = ret[:-1]
@@ -605,7 +608,7 @@ class syscall:
             if( len(self.parameters) > 0 ):
                 ret += ","
             for o in self.optional_paramters:
-                rval,q = reg(o.register,registers,qm)
+                rval,q = reg(o.register,registers,qm,frame)
                 ret += param_str(self.name,rval,o.types[0],o.names[0],o.register,q)
                 ret += ","
             ret = ret[:-1]
