@@ -191,7 +191,7 @@ class dashboard:
         try:
             cout = gdb.execute(self.command,False,True)
         except gdb.error as ge:
-            cout = str(ge)
+            cout = "dashboard: %s" % str(ge)
         except:
             cout = traceback.format_exc()
 
@@ -398,7 +398,7 @@ Remember that you can use dash as short as long as no other command collides wit
             call_dashboard(argv)
         except gdb.error as ge:
 #            traceback.print_exc()
-            print(ge)
+            print("dashboard: %s" % ge)
         except:
             traceback.print_exc()
             raise
