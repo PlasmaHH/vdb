@@ -260,6 +260,14 @@ def run_tests( tests ):
 
 tests = [
             {
+                "name" : "ftree backtrace",
+                "file" : "ftree.cxx",
+                "commands" : [ "r", None, "bt" ],
+                "hash" : "4bb6e33ddf91a27fa15a3d6818b8a007",
+                "expect" : "ftree_backtrace.exp",
+                "enabled" : True
+            },
+            {
                 "name" : "pahole types",
                 "file" : "paholetest.cxx",
                 "commands" : [ "start", None, "pahole/c morev", "pahole/c f3", "pahole/c u", "pahole/c oax", "pahole/c xv" ],
