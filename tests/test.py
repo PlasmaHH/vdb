@@ -12,6 +12,21 @@ import colors
 sys.path.insert(0,'..')
 import vdb.color
 
+goodcolor = "#080"
+failcolor = "#f00"
+skipcolor = "#ff0"
+
+def color( msg, col ):
+    print(vdb.color.color(msg,col))
+
+def good( msg ):
+    color(msg,goodcolor)
+
+def skip( msg ):
+    color(msg,skipcolor)
+
+def fail( msg ):
+    color(msg,failcolor)
 
 def same(a,b):
 #	print ("re.match(%s,%s)") % (b,a)
@@ -196,7 +211,7 @@ def run_tests( tests ):
         en = test.get("enabled",None)
         print("Test '%s' :" % n)
         if( en is not None and en == False ):
-            print("Skipping, not enabled")
+            skip("Skipping, not enabled")
             skipped += 1
             continue
         if( f is not None and c is not None ):
@@ -205,10 +220,10 @@ def run_tests( tests ):
             h0 = test.get("hash",None)
             if( h0 is not None ):
                 if( h == h0 ):
-                    print("hash passed")
+                    good("hash passed")
                     passed += 1
                 else:
-                    print("hash failed")
+                    fail("hash failed")
                     print("Expected: %s, result %s" % (h0,h) )
                     failed += 1
         else:
@@ -219,7 +234,7 @@ def run_tests( tests ):
             g=colors.strip_color(g)
             r = diff(g.splitlines(keepends=True),tolines)
             if( len(r) > 0 ):
-                print("Failed:")
+                fail("Failed:")
                 print("".join(r))
                 ofn = os.path.splitext(e)[0]
                 ofn += ".out"
@@ -227,20 +242,19 @@ def run_tests( tests ):
                     o.write(g)
                 failed += 1
             else:
-                print("expect passed")
+                good("expect passed")
                 passed += 1
 #            print("r = '%s'" % (r,) )
 
-    goodcolor = "#080"
-    failcolor = "#f00"
-    skipcolor = "#ff0"
+    fc = failcolor
+    sk = skipcolor
     if( failed == 0 ):
-        failcolor = goodcolor
+        fc = goodcolor
     if( skipped == 0 ):
-        skipcolor = goodcolor
+        sk = goodcolor
     print(vdb.color.color(f"Passed: {passed}",goodcolor),end="")
-    print(vdb.color.color(f", Failed: {failed}",failcolor),end="")
-    print(vdb.color.color(f", Skipped: {skipped}",skipcolor))
+    print(vdb.color.color(f", Failed: {failed}",fc),end="")
+    print(vdb.color.color(f", Skipped: {skipped}",sk))
 
 
 
@@ -250,14 +264,14 @@ tests = [
                 "file" : "paholetest.cxx",
                 "commands" : [ "start", None, "pahole/c morev", "pahole/c f3", "pahole/c u", "pahole/c oax", "pahole/c xv" ],
                 "hash" : "18c39b3d99a413f7eb008ed0bf69e2a4",
-                "enabled" : False
+                "enabled" : True
             },
             {
                 "name" : "pahole variables",
                 "file" : "paholetest.cxx",
                 "commands" : [ "start", None, "pahole/c vm", "pahole/c fd", "pahole/c uu", "pahole/c xxx", "pahole/c x" ],
                 "hash" : "6ff35e9faa4ff294ee8bf10eebb3047c",
-                "enabled" : False
+                "enabled" : True
             },
             {
                 "name" : "disassemble",
@@ -265,7 +279,7 @@ tests = [
                 "commands" : [ "start", None, "dis" ],
                 "hash" : "5ed9eeaff6ea320f66756334445d3e13",
                 "expect" : "pahole_disassemble.exp",
-                "enabled" : False
+                "enabled" : True
             },
             {
                 "name" : "mock disassemble",
