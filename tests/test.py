@@ -9,6 +9,9 @@ import sys
 import re
 import colors
 
+sys.path.insert(0,'..')
+import vdb.color
+
 
 def same(a,b):
 #	print ("re.match(%s,%s)") % (b,a)
@@ -228,7 +231,16 @@ def run_tests( tests ):
                 passed += 1
 #            print("r = '%s'" % (r,) )
 
-    print("Passed: %s, Failed: %s, Skipped: %s" % (passed,failed,skipped) )
+    goodcolor = "#080"
+    failcolor = "#f00"
+    skipcolor = "#ff0"
+    if( failed == 0 ):
+        failcolor = goodcolor
+    if( skipped == 0 ):
+        skipcolor = goodcolor
+    print(vdb.color.color(f"Passed: {passed}",goodcolor),end="")
+    print(vdb.color.color(f", Failed: {failed}",failcolor),end="")
+    print(vdb.color.color(f", Skipped: {skipped}",skipcolor))
 
 
 
@@ -238,14 +250,14 @@ tests = [
                 "file" : "paholetest.cxx",
                 "commands" : [ "start", None, "pahole/c morev", "pahole/c f3", "pahole/c u", "pahole/c oax", "pahole/c xv" ],
                 "hash" : "18c39b3d99a413f7eb008ed0bf69e2a4",
-                "enabled" : True
+                "enabled" : False
             },
             {
                 "name" : "pahole variables",
                 "file" : "paholetest.cxx",
                 "commands" : [ "start", None, "pahole/c vm", "pahole/c fd", "pahole/c uu", "pahole/c xxx", "pahole/c x" ],
                 "hash" : "6ff35e9faa4ff294ee8bf10eebb3047c",
-                "enabled" : True
+                "enabled" : False
             },
             {
                 "name" : "disassemble",
@@ -253,7 +265,7 @@ tests = [
                 "commands" : [ "start", None, "dis" ],
                 "hash" : "5ed9eeaff6ea320f66756334445d3e13",
                 "expect" : "pahole_disassemble.exp",
-                "enabled" : True
+                "enabled" : False
             },
             {
                 "name" : "mock disassemble",
