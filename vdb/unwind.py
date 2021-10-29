@@ -352,7 +352,7 @@ def hint( argv ):
         stack_base = argv[0]
 
     vptype = gdb.lookup_type("void").pointer()
-    isym = gdb.execute("info symbol $rip",False,True)
+    isym = gdb.execute("info symbol $pc",False,True)
     m=re.search(".*(\+ [0-9]*) in section.*",isym)
     funcstart = None
     if( m is not None ):
@@ -360,7 +360,7 @@ def hint( argv ):
 #        print("m.group(0) = '%s'" % (m.group(0),) )
 #        print("m.group(1) = '%s'" % (m.group(1),) )
         offset = m.group(1)
-        funcstart = gdb.parse_and_eval(f"$rip-{offset}")
+        funcstart = gdb.parse_and_eval(f"$pc-{offset}")
         print(f"Searching for call to {funcstart}")
 #        print("offset = '%s'" % (offset,) )
 

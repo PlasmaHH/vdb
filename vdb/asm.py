@@ -1522,7 +1522,7 @@ def disassemble( argv ):
             pass
         try:
             if( marked is None and len(argv) == 0 ):
-                marked = int(gdb.parse_and_eval("$rip"))
+                marked = int(gdb.parse_and_eval("$pc"))
         except:
             pass
 
