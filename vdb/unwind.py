@@ -6,16 +6,23 @@ import vdb.color
 import vdb.command
 import vdb.arch
 import vdb.event
+import vdb.memory
+import vdb.asm
+import vdb.hook
 
 import gdb
 import gdb.unwinder
 
 import re
 import traceback
+import colors
 
-#from gdb.unwinder import Unwinder
+enable_unwinder = vdb.config.parameter("vdb-unwind-enable",False)
 
-#import gdb.unwinder
+hint_marker = vdb.config.parameter("vdb-unwind-hint-marker", "-----v")
+
+hint_color = vdb.config.parameter("vdb-unwind-colors-hint",   "#f55", gdb_type = vdb.config.PARAM_COLOUR)
+hint_start_color = vdb.config.parameter("vdb-unwind-colors-hint-start",   "#ff8", gdb_type = vdb.config.PARAM_COLOUR)
 
 class FrameId(object):
     def __init__(self, sp, pc):
@@ -43,7 +50,7 @@ class frame_info:
 #            print("rr.is_optimized_out = '%s'" % (rr.is_optimized_out,) )
             if( not rr.is_optimized_out ):
                 self.registers[r] = pf.read_register(r)
-        print(self)
+#        print(self)
 
     def __str__(self):
         ret = f"tid={self.thread_id}, level={self.level}, sp={self.sp}, pc={self.pc}, rbp={self.rbp}, registers={self.registers}"
@@ -73,6 +80,7 @@ class unwind_filter(gdb.unwinder.Unwinder):
         self.cache = {}
         self.replacements = {}
         self.annotations = {}
+        self.clear()
 
     def do_annotate_frames( self, frame ):
         fi = self.cache.get(frame.level(),None)
@@ -204,8 +212,8 @@ class unwind_filter(gdb.unwinder.Unwinder):
 #            print("fid.pc.type.sizeof = '%s'" % (fid.pc.type.sizeof,) )
             unwind_info = pending_frame.create_unwind_info(fid)
 
-#            for rnum in range(0,64): # anyone an idea how to filter out the real ones?
-            for rnum in range(0,0): # anyone an idea how to filter out the real ones?
+            all_registers = pending_frame.architecture().registers()
+            for rnum in all_registers:
                 try:
                     rval = pending_frame.read_register(rnum)
                     unwind_info.add_saved_register(rnum,rval)
@@ -215,6 +223,13 @@ class unwind_filter(gdb.unwinder.Unwinder):
             unwind_info.add_saved_register("pc",fid.pc)
             unwind_info.add_saved_register("sp",fid.sp)
             unwind_info.add_saved_register("rbp",r.rbp)
+            for reg in [ "rax", "rdi", "rsi", "rdx", "rcx", "r8", "r9" ]:
+                rval = possible_registers.get(reg,None)
+                if( rval is not None ):
+                    cvalue = gdb.Value(rval).cast(self.ptype).cast(self.vptype)
+#                    print("reg = '%s'" % (reg,) )
+#                    print("rval = '%s'" % (rval,) )
+                    unwind_info.add_saved_register(reg,cvalue)
 
 #            self.skip_next = True
 #            print("unwind_info = '%s'" % (unwind_info,) )
@@ -276,7 +291,7 @@ class unwind_dispatch(gdb.unwinder.Unwinder):
 
     def __init__( self ):
         super(unwind_dispatch, self).__init__("vdb unwinder")
-        self.enabled = True
+        self.enabled = enable_unwinder.value
         self.unwinders = {}
         self.annotate_frames = True
 
@@ -328,11 +343,76 @@ class unwind_dispatch(gdb.unwinder.Unwinder):
 unwinder = unwind_dispatch()
 flush_count=0
 
+def hint( argv ):
+    stack_base="$sp"
+    if( len(argv) > 0 ):
+        stack_base = argv[0]
+
+    vptype = gdb.lookup_type("void").pointer()
+    isym = gdb.execute("info symbol $rip",False,True)
+    m=re.search(".*(\+ [0-9]*) in section.*",isym)
+    funcstart = None
+    if( m is not None ):
+#        print("m = '%s'" % (m,) )
+#        print("m.group(0) = '%s'" % (m.group(0),) )
+#        print("m.group(1) = '%s'" % (m.group(1),) )
+        offset = m.group(1)
+        funcstart = gdb.parse_and_eval(f"$rip-{offset}")
+        print(f"Searching for call to {funcstart}")
+#        print("offset = '%s'" % (offset,) )
+
+    callre = re.compile("call (0x[0-9a-f]*)")
+    # $rsp-16 is kinda the default position
+    # for other archs we might search differently?
+    for i in range(-8,64):
+        pos = f"{stack_base}+({vptype.sizeof}*{i})"
+        mem=vdb.memory.read(pos,vptype.sizeof)
+        val=gdb.Value(mem,vptype)
+
+        at = vdb.memory.mmap.get_atype(val)
+        if( at == vdb.memory.access_type.ACCESS_EX ):
+            dis=gdb.execute(f"dis/1,0 {int(val)}",False,True)
+            dis = dis.splitlines()
+#            rng = dis[0]
+            dis = dis[1:]
+            pose = gdb.parse_and_eval(pos)
+            print(vdb.color.color(f"At {pose} ({pos}) in ",hint_start_color.value), end = "")
+            print(f"{val}:")
+            if( funcstart is not None ):
+                for d in dis:
+                    pd = colors.strip_color(d)
+                    m = callre.search(pd)
+                    if( m is not None ):
+#                        print("m = '%s'" % (m,) )
+#                        print("m.group(0) = '%s'" % (m.group(0),) )
+#                        print("m.group(1) = '%s'" % (m.group(1),) )
+                        target = m.group(1)
+                        target = vdb.util.xint(target)
+#                        print("target = '%s'" % (target,) )
+#                        print("funcstart = '%s'" % (funcstart,) )
+                        if( target == int(funcstart) ):
+                            print(vdb.color.color(hint_marker.value,hint_color.value))
+            for d in dis:
+                if( len(d) > 0 ):
+                    print(d)
+#            print("dis = '%s'" % (dis,) )
+
+#            asm=vdb.asm.get_single(val)
+#            da=gdb.selected_frame().architecture().disassemble(int(val),count=1)
+
+
 @vdb.event.new_objfile()
 def flush():
     global flush_count
     flush_count += 1
+    frameno = None
+    try:
+        frameno = gdb.selected_frame().level()
+    except:
+        pass
     gdb.execute("maintenance flush register-cache") # clear cache, cause to call again
+    if( frameno is not None ):
+        gdb.execute(f"frame {frameno}",False,True)
 
 @vdb.event.stop()
 @vdb.event.new_objfile()
@@ -369,6 +449,7 @@ def fix( argv ):
 
 @vdb.event.before_prompt()
 def auto_flush():
+#    if( flush_count < 1 and unwinder.enabled ):
     if( flush_count < 1 ):
         flush()
 
@@ -387,7 +468,7 @@ class cmd_unwind (vdb.command.command):
     def do_invoke (self, argv ):
         try:
             if( len(argv) > 0 ):
-                print("argv = '%s'" % (argv,) )
+#                print("argv = '%s'" % (argv,) )
                 if( argv[0] == "enable" ):
                     enable()
                 elif( argv[0] == "disable" ):
@@ -398,6 +479,8 @@ class cmd_unwind (vdb.command.command):
                     fix(argv[1:])
                 elif( argv[0] == "clear" ):
                     clear()
+                elif( argv[0] == "hint" ):
+                    hint(argv[1:])
                 else:
                     raise Exception("No idea what you mean by %s" % argv)
             else:
@@ -409,7 +492,11 @@ class cmd_unwind (vdb.command.command):
 
 cmd_unwind()
 
+# not sure if this is the right place, but its a "fix" from some odd unwind related behaviour, so just put it here
+#def frame_changed( frcmd ):
+#    print("Detected frame change, flushing registers")
+#    gdb.execute("maintenance flush register-cache")
 
-
+#vdb.hook.any_after( "^fr.*\s+[0-9]+", frame_changed )
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
