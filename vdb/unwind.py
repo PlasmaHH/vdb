@@ -20,9 +20,11 @@ import colors
 enable_unwinder = vdb.config.parameter("vdb-unwind-enable",False)
 
 hint_marker = vdb.config.parameter("vdb-unwind-hint-marker", "-----v")
+hint_context = vdb.config.parameter("vdb-unwind-hint-context","1,0")
 
 hint_color = vdb.config.parameter("vdb-unwind-colors-hint",   "#f55", gdb_type = vdb.config.PARAM_COLOUR)
 hint_start_color = vdb.config.parameter("vdb-unwind-colors-hint-start",   "#ff8", gdb_type = vdb.config.PARAM_COLOUR)
+
 
 class FrameId(object):
     def __init__(self, sp, pc):
@@ -371,7 +373,7 @@ def hint( argv ):
 
         at = vdb.memory.mmap.get_atype(val)
         if( at == vdb.memory.access_type.ACCESS_EX ):
-            dis=gdb.execute(f"dis/1,0 {int(val)}",False,True)
+            dis=gdb.execute(f"dis/{hint_context.value} {int(val)}",False,True)
             dis = dis.splitlines()
 #            rng = dis[0]
             dis = dis[1:]

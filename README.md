@@ -36,6 +36,7 @@ under x86_64 Linux with gcc > 10.
 	* [ssh](#ssh)
 	* [track](#track)
 	* [types](#types)
+	* [unwind](#unwind)
 	* [profile](#profile)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
@@ -215,6 +216,11 @@ The `types` module allows to load/create type information on the fly while debug
 information.
 
 [You can find detailed information about this module here](doc/TYPES.md)
+
+## unwind
+This `unwind` module contains a custom (disabled by default) unwinder that allows to tweak a bit the information
+gathered in each frame. 
+[You can find detailed information about this module here](doc/UNWIND.md)
 
 ## profile
 Allows to profile python calls
