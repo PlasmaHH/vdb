@@ -1136,7 +1136,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #            print("rr.group(1) = '%s'" % rr.group(1) )
 #            print("rr.group(2) = '%s'" % rr.group(2) )
             continue
-        if( line.startswith("Adress range") ):
+        if( line.startswith("Address range") ):
             continue
         m=re.search(linere,line)
         if( m ):
