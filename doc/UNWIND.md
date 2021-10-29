@@ -75,3 +75,10 @@ vdb-unwind-colors-hint-start
 ```
 
 This is how the highlighting of a new hint match start message is done.
+## Example
+![](img/unwind.2.png)
+For the above example of the frame 7, we do the `unwind hint` there. As you can see the heuristics tell us about the
+computed jump possibly being a good path. No others are marked. However with a bit of experience on knows that certain
+calls (especially those that may never return) are internally replaced by direct jumps, so the call to `__cxa_throw` is
+very likely the one that is happening there, and so we can try it and it makes the backtrace a little more correct.
+
