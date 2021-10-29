@@ -687,8 +687,12 @@ ascii mockup:
         extra_marker = None
 
         for i in self.instructions:
-            if( marked is not None and i.address == marked ):
-                extra_marker = cnt
+            if( marked is not None):
+                if( i.address == marked ):
+                    extra_marker = cnt
+                elif( marked > i.address ):
+                    if( (marked - i.address) < len(i.bytes) ):
+                        extra_marker = cnt
             line = []
             otbl.append(line)
             prejump = 0
@@ -1131,6 +1135,8 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #            print("rr.group(0) = '%s'" % rr.group(0) )
 #            print("rr.group(1) = '%s'" % rr.group(1) )
 #            print("rr.group(2) = '%s'" % rr.group(2) )
+            continue
+        if( line.startswith("Adress range") ):
             continue
         m=re.search(linere,line)
         if( m ):
