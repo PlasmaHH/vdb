@@ -38,6 +38,13 @@ using this primitive.
 vdb-unwind-enable
 ```
 The default state of the unwinder. It is recommended to leave it disabled until needed.
+
+## Example
+Here you can see how after frame 7 gdb gets utterly confused and spits out nonsense.
+![](img/unwind.0.png)
+After manually telling it that frame 8 is really a different position, gdb is able to get further (until again it loses
+track. We could go on there for a next round if we so wanted)
+![](img/unwind.1.png)
 # Stack search help
 ## `unwind hint` command
 This command will help you search the stack for return pointers that originated from a function call to the current

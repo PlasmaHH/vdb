@@ -29,16 +29,19 @@ def fail( msg ):
     color(msg,failcolor)
 
 def same(a,b):
+    print("a = '%s'" % (a,) )
+    print("b = '%s'" % (b,) )
 #	print ("re.match(%s,%s)") % (b,a)
-	if a == b:
-		return True
+    if a == b:
+        return True
 #	print a
-	try:
-		m = re.match(b,a)
-		if(m):
-			return True
-	except Exception:
-		return False
+    try:
+        m = re.match(b,a) # b is the regexp
+        print("m = '%s'" % (m,) )
+        if(m):
+            return True
+    except Exception:
+        return False
 
 def my_find_longest_match(self, alo, ahi, blo, bhi):
 	"""Find longest matching block in a[alo:ahi] and b[blo:bhi].
@@ -263,7 +266,7 @@ tests = [
                 "name" : "ftree backtrace",
                 "file" : "ftree.cxx",
                 "commands" : [ "r", None, "bt" ],
-                "hash" : "4bb6e33ddf91a27fa15a3d6818b8a007",
+#                "hash" : "4bb6e33ddf91a27fa15a3d6818b8a007",
                 "expect" : "ftree_backtrace.exp",
                 "enabled" : True
             },
