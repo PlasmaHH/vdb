@@ -121,6 +121,13 @@ def get_syscall( nr ):
         return None
 
 def reg_set( possible_registers, regname, regval ):
+    try:
+        regval.fetch_lazy()
+    except AttributeError: # not a gdb.Value
+        pass
+    except gdb.MemoryError: # a lazy values memory access failed, don't save anything
+        return
+
     regval = vdb.util.xint(regval)
     possible_registers[regname] = regval
     # little hack to have eax/rax be populated
@@ -644,8 +651,25 @@ ascii mockup:
             for x in x_q:
                 self.backtrack_next( x[0], x[1], x[2] )
 
+    def compute_context( self, context, marked_line ):
+        context_start = None
+        context_end = None
+        if( context is not None ):
+            if( context[0] is not None and context[1] is not None ):
+                # old behaviour
+                context_start = marked_line - context[0]
+                context_end = marked_line + context[1] + 1
+            elif( context[0] is not None ):
+                context_start = marked_line - context[0]
+                context_end = marked_line + 1
+            elif( context[1] is not None ):
+                context_start = marked_line 
+                context_end = marked_line + context[1] + 1
+        return ( context_start, context_end )
 
-    def to_str( self, showspec = "maodbnprT", context = None ):
+
+
+    def to_str( self, showspec = "maodbnprT", context = None, marked = None ):
         self.lazy_finish()
         hf = self.function
         if( shorten_header.value ):
@@ -660,7 +684,11 @@ ascii mockup:
 
         otmap = {0:0}
 
+        extra_marker = None
+
         for i in self.instructions:
+            if( marked is not None and i.address == marked ):
+                extra_marker = cnt
             line = []
             otbl.append(line)
             prejump = 0
@@ -670,18 +698,7 @@ ascii mockup:
                 if( i.marked ):
                     line.append( ( vdb.color.color(next_marker.value,color_marker.value), len(next_marker.value) ) )
                     marked_line = cnt
-                    if( context is not None ):
-                        if( context[0] is not None and context[1] is not None ):
-                            # old behaviour
-                            context_start = marked_line - context[0]
-                            context_end = marked_line + context[1] + 1
-                        elif( context[0] is not None ):
-                            context_start = marked_line - context[0]
-                            context_end = marked_line + 1
-                        elif( context[1] is not None ):
-                            context_start = marked_line 
-                            context_end = marked_line + context[1] + 1
-
+                    context_start, context_end = self.compute_context(context,marked_line)
                 else:
                     line.append( "" )
 
@@ -806,7 +823,10 @@ ascii mockup:
             if( context is not None and context_end is not None and context_end <= cnt ):
                 break
 
-        if( context is not None ):
+        if( context_start is None and extra_marker is not None ):
+            context_start, context_end = self.compute_context(context,extra_marker)
+
+        if( context_start is not None ):
             if( context_start < 0 ):
                 context_start = 0
             if( context_end > cnt ):
@@ -815,7 +835,7 @@ ascii mockup:
             context_end = otmap[context_end]
 
         ret = otbl
-        if( marked_line is not None and context is not None ):
+        if( context_start is not None and context_end is not None ):
             ret = ret[context_start:context_end]
 
 
@@ -824,8 +844,8 @@ ascii mockup:
         return f"Instructions in range 0x{self.start:x} - 0x{self.end:x} of {hf}\n" + ret
 #        return "\n".join(ret)
 
-    def print( self, showspec = "maodbnprT", context = None ):
-        print(self.to_str(showspec, context))
+    def print( self, showspec = "maodbnprT", context = None, marked = None ):
+        print(self.to_str(showspec, context, marked))
 
     def color_dot_relist( self, s, l ):
         for r,c in l:
@@ -1306,10 +1326,14 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
                 sreg = m.group(2)[1:]
                 treg = m.group(3)[1:]
                 sregv = possible_registers.get(sreg,None)
+#                print("sregv = '%s'" % (sregv,) )
                 if( sregv is None and ( sreg == "rbp" or sreg == "ebp" ) ):
                     sregv = frame.read_register(sreg)
+                    sregv = int(sregv)
+#                print("sregv = '%s'" % (sregv,) )
                 if( sregv is not None ):
                     expr = f"({offset} + {sregv})"
+#                    print("expr = '%s'" % (expr,) )
                     tval = gdb.parse_and_eval(expr)
                     reg_set( possible_registers, treg, tval )
                     ins.possible_register_sets.append(possible_registers)
@@ -1483,7 +1507,15 @@ def disassemble( argv ):
 
 
     listing = parse_from(" ".join(argv),fakedata,context)
-    listing.print(asm_showspec.value, context)
+    marked = None
+    if( context is not None ):
+        try:
+            marked = int(gdb.parse_and_eval(" ".join(argv)))
+        except:
+            pass
+
+#    print("marked = '%s'" % (marked,) )
+    listing.print(asm_showspec.value, context,marked)
     if( dotty ):
         g = listing.to_dot(asm_showspec_dot.value)
         g.write("dis.dot")
