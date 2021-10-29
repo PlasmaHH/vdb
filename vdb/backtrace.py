@@ -34,15 +34,15 @@ frame_marker = vdb.config.parameter("vdb-bt-selected-frame-marker","► ")
 
 class ArgVal():
 
-	def __init__( self, sym, val ):
-		self.sym = sym
-		self.val = val
+    def __init__( self, sym, val ):
+        self.sym = sym
+        self.val = val
 
-	def symbol(self):
-		return self.sym
+    def symbol(self):
+        return self.sym
 
-	def value(self):
-		return self.val
+    def value(self):
+        return self.val
 
 signals = {
 1 : "SIGHUP",
@@ -113,37 +113,47 @@ no_codes = {
 addr_signals = set( [ 7, 11 ] )
 
 def get_siginfo( si, v = None ):
-	ret = "Kernel Signal Handler: "
-	signo=si["si_signo"]
-	signo=int(signo)
-	addr=False
-	ret += "Signal {} ({})".format(signo, signals.get(signo,"??"))
-	si_code=si["si_code"]
-	si_code=int(si_code)
+    ret = "Kernel Signal Handler: "
+    signo = None
+    try:
+        signo=si["si_signo"]
+        signo=int(signo)
+    except:
+        signo = None
 
-	codes = no_codes
-	if( signo == 11 ):
-		codes = segv_codes
-	elif( signo == 7 ):
-		codes = bus_codes
+    addr=False
+    ret += "Signal {} ({})".format(signo, signals.get(signo,"??"))
 
-	ret += ", code {} ({})".format(si_code,codes.get(si_code,"??"))
+    si_code = None
+    try:
+        si_code=si["si_code"]
+        si_code=int(si_code)
+    except:
+        si_code = None
 
-	if( signo in addr_signals ):
-		fault=si["_sifields"]["_sigfault"]["si_addr"]
-		code=si["_sifields"]["_sigfault"]["si_addr"]
-		mode="access"
-		try:
-			mv=gdb.parse_and_eval("((ucontext_t*){})->uc_mcontext.gregs[19] & 2".format(v))
-			mv=int(mv)
-			if( mv == 0 ):
-				mode = "read"
-			elif( mv == 1 ):
-				mode = "write"
-		except:
-			pass
-		ret += " trying to {} {}".format(mode,fault)
-	return ret
+    codes = no_codes
+    if( signo == 11 ):
+        codes = segv_codes
+    elif( signo == 7 ):
+        codes = bus_codes
+
+    ret += ", code {} ({})".format(si_code,codes.get(si_code,"??"))
+
+    if( signo in addr_signals ):
+        fault=si["_sifields"]["_sigfault"]["si_addr"]
+        code=si["_sifields"]["_sigfault"]["si_addr"]
+        mode="access"
+        try:
+            mv=gdb.parse_and_eval("((ucontext_t*){})->uc_mcontext.gregs[19] & 2".format(v))
+            mv=int(mv)
+            if( mv == 0 ):
+                mode = "read"
+            elif( mv == 1 ):
+                mode = "write"
+        except:
+            pass
+        ret += " trying to {} {}".format(mode,fault)
+    return ret
 
 
 class SignalFrame():
@@ -526,6 +536,7 @@ def do_backtrace( argv ):
         elif( len(argv) > 0 and argv[0] == "/f" ):
             full="-full"
             argv = argv[1:]
+            vdb.memory.print_legend( addr_colorspec.value )
         elif( color_addr.value ):
             vdb.memory.print_legend( addr_colorspec.value )
         if( "p" not in showspec.value ):

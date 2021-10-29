@@ -25,6 +25,7 @@ class FrameId(object):
 class frame_info:
 
     def __init__(self,pf):
+        self.thread_id = gdb.selected_thread().num
         self.sp = pf.read_register("sp")
         self.pc = pf.read_register("pc")
         self.rbp = pf.read_register("rbp")
@@ -42,6 +43,11 @@ class frame_info:
 #            print("rr.is_optimized_out = '%s'" % (rr.is_optimized_out,) )
             if( not rr.is_optimized_out ):
                 self.registers[r] = pf.read_register(r)
+        print(self)
+
+    def __str__(self):
+        ret = f"tid={self.thread_id}, level={self.level}, sp={self.sp}, pc={self.pc}, rbp={self.rbp}, registers={self.registers}"
+        return ret
 
     def id( self ):
         return FrameId( self.sp, self.pc )
@@ -67,7 +73,6 @@ class unwind_filter(gdb.unwinder.Unwinder):
         self.cache = {}
         self.replacements = {}
         self.annotations = {}
-        self.annotate_frames = True
 
     def do_annotate_frames( self, frame ):
         fi = self.cache.get(frame.level(),None)
@@ -267,7 +272,60 @@ class unwind_filter(gdb.unwinder.Unwinder):
         # Return the result:
 #        return unwind_info
 
-unwinder = unwind_filter()
+class unwind_dispatch(gdb.unwinder.Unwinder):
+
+    def __init__( self ):
+        super(unwind_dispatch, self).__init__("vdb unwinder")
+        self.enabled = True
+        self.unwinders = {}
+        self.annotate_frames = True
+
+
+    def do_annotate_frames( self, frame, tid = None ):
+        return self.current_unwinder(tid).do_annotate_frames(frame)
+
+    def __call__(self,pending_frame):
+        try:
+            if( self.enabled ):
+                return self.do_call(pending_frame)
+            else:
+                return None
+        except:
+            print("unwind __call__")
+            traceback.print_exc()
+
+    def current_unwinder( self, tid = None ):
+        if( tid  is None ):
+            tid = gdb.selected_thread().num
+
+        unwinder = self.unwinders.get(tid,None)
+        if( unwinder is None ):
+            unwinder = unwind_filter()
+            self.unwinders[tid] = unwinder
+        return unwinder
+
+
+    def do_call(self,pending_frame):
+        
+        return self.current_unwinder()(pending_frame)
+
+    def clear( self ):
+        for t,u in self.unwinders.items():
+            u.clear()
+
+    def enable( self, en ):
+        for t,u in self.unwinders.items():
+            u.enabled = en
+
+    def hide( self, frameno ):
+        return self.current_unwinder().hide(frameno)
+
+    def fix( self, frameno, reg, val ):
+        return self.current_unwinder().fix(frameno,reg,val)
+
+
+#unwinder = unwind_filter()
+unwinder = unwind_dispatch()
 flush_count=0
 
 @vdb.event.new_objfile()
@@ -289,12 +347,12 @@ def register():
 
 def enable():
     global unwinder
-    unwinder.enabled = True
+    unwinder.enable(True)
     register()
 
 def disable():
     global unwinder
-    unwinder.enabled = False
+    unwinder.enable(False)
     register()
 
 def hide( argv ):
