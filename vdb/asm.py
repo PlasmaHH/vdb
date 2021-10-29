@@ -1359,11 +1359,12 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
                 if( mregv is None and ( mreg == "rbp" or mreg == "ebp" ) ):
                     mregv = frame.read_register(mreg)
                 if( mregv is not None ):
+#                    print("type(mregv) = '%s'" % (type(mregv),) )
 #                    print("mregv.type = '%s'" % (mregv.type,) )
                     if( treg[0] == "e" ):
-                        expr = f"*((uint32_t*)(({mregv.type})({offset} + {mregv})))"
+                        expr = f"*((uint32_t*)(({mregv.type})({offset} + {int(mregv)})))"
                     else:
-                        expr = f"*(({mregv.type}*)(({mregv.type})({offset} + {mregv})))"
+                        expr = f"*(({mregv.type}*)(({mregv.type})({offset} + {int(mregv)})))"
 #                    print("expr = '%s'" % (expr,) )
                     tval = gdb.parse_and_eval(expr)
 #                    print("tval = '%s'" % (tval,) )

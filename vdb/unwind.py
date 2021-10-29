@@ -331,6 +331,7 @@ class unwind_dispatch(gdb.unwinder.Unwinder):
             u.clear()
 
     def enable( self, en ):
+        self.enabled = en
         for t,u in self.unwinders.items():
             u.enabled = en
 
@@ -364,6 +365,7 @@ def hint( argv ):
 #        print("offset = '%s'" % (offset,) )
 
     callre = re.compile("call (0x[0-9a-f]*)")
+    ccallre = re.compile("call \*%") # computed calls
     # $rsp-16 is kinda the default position
     # for other archs we might search differently?
     for i in range(-8,64):
@@ -373,7 +375,9 @@ def hint( argv ):
 
         at = vdb.memory.mmap.get_atype(val)
         if( at == vdb.memory.access_type.ACCESS_EX ):
-            dis=gdb.execute(f"dis/{hint_context.value} {int(val)}",False,True)
+            cmd=f"dis/{hint_context.value} {int(val)}"
+            print("cmd = '%s'" % (cmd,) )
+            dis=gdb.execute(cmd,False,True)
             dis = dis.splitlines()
 #            rng = dis[0]
             dis = dis[1:]
@@ -384,7 +388,12 @@ def hint( argv ):
                 for d in dis:
                     pd = colors.strip_color(d)
                     m = callre.search(pd)
-                    if( m is not None ):
+                    if( m is None ):
+                        m = ccallre.search(pd)
+                        if( m is not None ):
+                            print(vdb.color.color(hint_marker.value,hint_color.value), end = "")
+                            print(" (computed call, check actual registers if possible)")
+                    else:
 #                        print("m = '%s'" % (m,) )
 #                        print("m.group(0) = '%s'" % (m.group(0),) )
 #                        print("m.group(1) = '%s'" % (m.group(1),) )
