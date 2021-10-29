@@ -1520,6 +1520,11 @@ def disassemble( argv ):
             marked = int(gdb.parse_and_eval(" ".join(argv)))
         except:
             pass
+        try:
+            if( marked is None and len(argv) == 0 ):
+                marked = int(gdb.parse_and_eval("$rip"))
+        except:
+            pass
 
 #    print("marked = '%s'" % (marked,) )
     listing.print(asm_showspec.value, context,marked)
