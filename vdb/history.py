@@ -253,6 +253,8 @@ def extract_gdb_history( ):
             fw = lc[1]
             fwidx = cmd.find(fw)
             cmd = cmd[fwidx:]
+            if( cmd.startswith("fz ") ):
+                cmd = cmd[3:]
             retd[num] = cmd
     return list(retd.values())
 
