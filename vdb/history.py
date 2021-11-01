@@ -25,7 +25,8 @@ color_prompt  = vdb.config.parameter("vdb-history-colors-prompt",       "#87afd7
 color_match   = vdb.config.parameter("vdb-history-colors-match",        "#87af87", gdb_type = vdb.config.PARAM_COLOUR)
 
 match_maxlen  = vdb.config.parameter("vdb-history-match-maxlen",120)
-#next_mark_ptr     = vdb.config.parameter("vdb-history-next-mark-pointer", True )
+case_sensitive = vdb.config.parameter("vdb-history-match-case-sensitive",True)
+
 
 class raw_input:
 
@@ -180,7 +181,13 @@ class fuzzy_history(raw_input):
 #            print("nfstring = '%s'" % (nfstring,) )
 #            print("hlstring = '%s'" % (hlstring,) )
             s = string[sidx]
-            if( s == search[idx] ):
+#            if( s == search[idx] ):
+            a = s
+            b = search[idx]
+            if( not case_sensitive.value ):
+                a = a.casefold()
+                b = b.casefold()
+            if( a == b ):
                 if( len(nfstring) < match_maxlen.value ):
                     hlstring += vdb.color.color(s,color_match.value)
 #                    hlstring += "*"
@@ -324,7 +331,7 @@ class cmd_fz (vdb.command.command):
                 ret = fz.get()
                 self.last_returned = [ret]
             else:
-                self.last_returned = None
+                self.last_returned = []
             print( vdb.prompt.refresh_prompt() + "fz ", end = "" )
             return self.last_returned
         except:
