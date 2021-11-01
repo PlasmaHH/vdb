@@ -276,7 +276,7 @@ class cmd_fz (vdb.command.command):
             fz.loop()
             ret = fz.get()
             self.last_returned = [ret]
-            print("PROMPT> fz ", end = "")
+            print( vdb.prompt.refresh_prompt() + "fz ", end = "" )
             return self.last_returned
         except:
             traceback.print_exc()
@@ -285,7 +285,13 @@ class cmd_fz (vdb.command.command):
         return []
 
     def invoke (self, arg, from_tty):
-        print("This special command needs to be invoked as fz<tab><tab>")
+        if( len(arg) == 0 ):
+            print("This special command needs to be invoked as fz<tab><tab>")
+        else:
+            try:
+                gdb.execute(arg,from_tty,False)
+            except gdb.error as e:
+                print(f"gdb.error: {e}")
 
 cmd_fz()
 
