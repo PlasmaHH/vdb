@@ -24,6 +24,7 @@ color_stat    = vdb.config.parameter("vdb-history-colors-statistics",   "#afaf87
 color_prompt  = vdb.config.parameter("vdb-history-colors-prompt",       "#87afd7", gdb_type = vdb.config.PARAM_COLOUR)
 color_match   = vdb.config.parameter("vdb-history-colors-match",        "#87af87", gdb_type = vdb.config.PARAM_COLOUR)
 
+match_maxlen  = vdb.config.parameter("vdb-history-match-maxlen",120)
 #next_mark_ptr     = vdb.config.parameter("vdb-history-next-mark-pointer", True )
 
 class raw_input:
@@ -119,7 +120,7 @@ class fuzzy_history(raw_input):
                 continue
             self.history.append(h)
         self.current = ""
-        self.result_display = self.maxmatches*[""]
+        self.result_display = self.maxmatches*[("","")]
         self.matches = len(self.history)
         self.marker = maxmatches
         self.escape = False
@@ -142,13 +143,12 @@ class fuzzy_history(raw_input):
     
     def results( self ):
         cnt=0
-        for r in self.result_display:
+        for r,h in self.result_display:
             cnt += 1
             a = ansi(sys.stdout)
             a.column(0)
             a.clear_line(0)
-            if( len(r) > 120 ):
-                r = r[:120] + ".."
+
             if( self.marker == cnt ):
                 sys.stdout.write(vdb.color.color("> ",f"{color_marker.value},{color_bg.value}"))
                 sys.stdout.write(vdb.color.color(r,",#333"))
@@ -171,14 +171,44 @@ class fuzzy_history(raw_input):
 
     def entry_matches( self, search, string ):
         if( len(search) == 0 ):
-            return True
+            return string
         idx = 0
-        for s in string:
+        hlstring = ""
+        nfstring =  ""
+        for sidx in range(0,len(string)):
+#            print("sidx = '%s'" % (sidx,) )
+#            print("nfstring = '%s'" % (nfstring,) )
+#            print("hlstring = '%s'" % (hlstring,) )
+            s = string[sidx]
             if( s == search[idx] ):
+                if( len(nfstring) < match_maxlen.value ):
+                    hlstring += vdb.color.color(s,color_match.value)
+#                    hlstring += "*"
                 idx += 1
                 if( idx >= len(search) ):
-                    return True
-        return False
+#                    print()
+#                    print("search = '%s'" % (search,) )
+#                    print("string = '%s'" % (string,) )
+#                    print("nfstring = '%s'" % (nfstring,) )
+#                    print("len(nfstring) = '%s'" % (len(nfstring),) )
+                    tail = string[sidx+1:]
+#                    print("tail = '%s'" % (tail,) )
+                    if( len(nfstring) < match_maxlen.value ):
+                        if( len(string) < match_maxlen.value ):
+                            hlstring += tail
+                        else:
+                            tailtail = tail[: match_maxlen.value - len(nfstring) ]
+#                            print("tailtail = '%s'" % (tailtail,) )
+                            hlstring += tailtail
+#                    print("hlstring = '%s'" % (hlstring,) )
+#                    print()
+                    return hlstring
+            else:
+                if( len(nfstring) < match_maxlen.value ):
+                    hlstring += s
+            if( len(nfstring) < match_maxlen.value ):
+                nfstring += s
+        return None
 
     def match( self ):
 #        rstr = ""
@@ -186,7 +216,7 @@ class fuzzy_history(raw_input):
 #            rstr += re.escape(c) + ".*"
 #        sre=re.compile(rstr)
 
-        self.result_display = self.maxmatches*[""]
+        self.result_display = self.maxmatches*[("","")]
         ridx = self.maxmatches
         self.matches = 0
         for h in reversed(self.history):
@@ -195,11 +225,14 @@ class fuzzy_history(raw_input):
             a.clear_line(0)
 #            sys.stdout.write(f"Testing item {h} against {rstr}")
 #            if( sre.search(h) is not None ):
-            if( self.entry_matches( self.current, h )):
+            m = self.entry_matches( self.current, h )
+            if( m is not None ):
                 self.matches += 1
                 ridx -= 1
                 if( ridx >= 0 ):
-                    self.result_display[ridx] = h
+                    if( m is None ):
+                        m = ""
+                    self.result_display[ridx] = (m,h)
 
         self.full_format()
 
@@ -247,7 +280,7 @@ class fuzzy_history(raw_input):
         return valid
 
     def get( self ):
-        return self.result_display[self.marker-1]
+        return self.result_display[self.marker-1][1]
 
 
 def extract_gdb_history( ):
@@ -287,9 +320,11 @@ class cmd_fz (vdb.command.command):
         try:
             history = extract_gdb_history()
             fz=fuzzy_history(history,20)
-            fz.loop()
-            ret = fz.get()
-            self.last_returned = [ret]
+            if( fz.loop() ):
+                ret = fz.get()
+                self.last_returned = [ret]
+            else:
+                self.last_returned = None
             print( vdb.prompt.refresh_prompt() + "fz ", end = "" )
             return self.last_returned
         except:
@@ -301,6 +336,12 @@ class cmd_fz (vdb.command.command):
     def invoke (self, arg, from_tty):
         if( len(arg) == 0 ):
             print("This special command needs to be invoked as fz<tab><tab>")
+            return None
+            fz = fuzzy_history([],20)
+            fz.after_loop(True)
+            history = extract_gdb_history()
+            for h in history:
+                fz.entry_matches("gdb.his",h)
         else:
             try:
                 gdb.execute(arg,from_tty,False)
