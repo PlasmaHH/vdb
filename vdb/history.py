@@ -15,7 +15,16 @@ import os
 import pathlib
 import sys
 import string
-import colors
+
+
+
+color_marker  = vdb.config.parameter("vdb-history-colors-marker",       "#d1005c", gdb_type = vdb.config.PARAM_COLOUR)
+color_bg      = vdb.config.parameter("vdb-history-colors-background",   "#303030", gdb_type = vdb.config.PARAM_COLOUR)
+color_stat    = vdb.config.parameter("vdb-history-colors-statistics",   "#afaf87", gdb_type = vdb.config.PARAM_COLOUR)
+color_prompt  = vdb.config.parameter("vdb-history-colors-prompt",       "#87afd7", gdb_type = vdb.config.PARAM_COLOUR)
+color_match   = vdb.config.parameter("vdb-history-colors-match",        "#87af87", gdb_type = vdb.config.PARAM_COLOUR)
+
+#next_mark_ptr     = vdb.config.parameter("vdb-history-next-mark-pointer", True )
 
 class raw_input:
 
@@ -126,7 +135,10 @@ class fuzzy_history(raw_input):
         a = ansi(sys.stdout)
         a.column(0)
         a.clear_line(0)
-        sys.stdout.write(f"> {self.current}  < {self.matches}/{len(self.history)}")
+        sys.stdout.write( vdb.color.color(">", color_prompt.value ) )
+        sys.stdout.write( f" {self.current}  " )
+        sys.stdout.write( vdb.color.color("<", color_prompt.value ) )
+        sys.stdout.write( vdb.color.color(f" {self.matches}/{len(self.history)}", color_stat.value) )
     
     def results( self ):
         cnt=0
@@ -138,10 +150,10 @@ class fuzzy_history(raw_input):
             if( len(r) > 120 ):
                 r = r[:120] + ".."
             if( self.marker == cnt ):
-                sys.stdout.write(colors.color("> ",fg="#c00",bg="#333"))
-                sys.stdout.write(colors.color(r,bg="#333"))
+                sys.stdout.write(vdb.color.color("> ",f"{color_marker.value},{color_bg.value}"))
+                sys.stdout.write(vdb.color.color(r,",#333"))
             else:
-                sys.stdout.write(colors.color(" ",bg="#333"))
+                sys.stdout.write(vdb.color.color(" ",",#333"))
                 sys.stdout.write(" ")
                 sys.stdout.write(r)
             sys.stdout.write("\n")
