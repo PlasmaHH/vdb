@@ -222,6 +222,7 @@ This `unwind` module contains a custom (disabled by default) unwinder that allow
 gathered in each frame. 
 [You can find detailed information about this module here](doc/UNWIND.md)
 
+![](img/unwind.2.png)
 ## profile
 Allows to profile python calls
 [You can find detailed information about this module here](doc/PROFILE.md)
