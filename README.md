@@ -230,7 +230,7 @@ The `history` module deals with the gdb command history. It can emulate an fzf l
 awkward way due to gdb limitations.
 [You can find detailed information about this module here](doc/HISTORY.md)
 
-![](doc/img/history.2.png)
+![](doc/img/history.0.png)
 ## profile
 Allows to profile python calls
 [You can find detailed information about this module here](doc/PROFILE.md)
