@@ -37,6 +37,7 @@ under x86_64 Linux with gcc > 10.
 	* [track](#track)
 	* [types](#types)
 	* [unwind](#unwind)
+	* [history](#history)
 	* [profile](#profile)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
@@ -223,6 +224,11 @@ gathered in each frame.
 [You can find detailed information about this module here](doc/UNWIND.md)
 
 ![](doc/img/unwind.2.png)
+
+## history
+The `history` module deals with the gdb command history. It can emulate an fzf like command history search in a somewhat
+awkward way due to gdb limitations.
+[You can find detailed information about this module here](doc/HISTORY.md)
 ## profile
 Allows to profile python calls
 [You can find detailed information about this module here](doc/PROFILE.md)
