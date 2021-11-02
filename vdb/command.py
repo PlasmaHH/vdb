@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import vdb.command
+import vdb.config
 
 import gdb
 import traceback

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import vdb.config
+
 class subcommands:
 
     def __init__( self ):
@@ -54,4 +56,8 @@ def show( argv ):
     globals.show()
 
 add_subcommand( [ "show", "subcommands" ], show )
+
+# a bit of a wrong place here but we need to avoid cyclic dependencies
+add_subcommand( [ "show", "config" ], vdb.config.show_config )
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

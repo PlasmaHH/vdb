@@ -12,6 +12,7 @@ import gdb
 import sys
 import types
 import traceback
+import re
 
 PARAM_COLOUR = 0x800
 PARAM_COLOR  = PARAM_COLOUR
@@ -31,6 +32,7 @@ def guess_gdb_type( p ):
 def split_colors( cfg ):
     cfg.elements = cfg.value.split(";")
 
+registry = {}
 # In case the type is our artifical type colour, it will translate to gdb string and we check internally for a colour
 # string
 class parameter(gdb.Parameter):
@@ -44,14 +46,16 @@ class parameter(gdb.Parameter):
         self.show_doc = docstring + ':'
         self.is_colour = False
         self.is_float = False
+        self.gdb_type = gdb_type
         if( gdb_type == PARAM_COLOR ):
             if( name.find("-colors-") == -1 ):
                 raise Exception("Colour names must have -colors- in their name, '%s' does not" % name )
             self.is_colour = True
             gdb_type = gdb.PARAM_STRING
             self.theme_default = default
-        if( gdb_type is None ):
+        elif( gdb_type is None ):
             gdb_type = guess_gdb_type(default)
+            self.gdb_type = gdb_type
         if( gdb_type is  PARAM_FLOAT ):
             self.is_float = True
             self.fvalue = float(default)
@@ -66,6 +70,8 @@ class parameter(gdb.Parameter):
                 self.on_set(self)
         except:
             pass
+        global registry
+        registry[self.name] = self
 
     def check_colour( self ):
         x = vdb.color.color("",self.value)
@@ -186,5 +192,21 @@ def set_array_elements( cfg ):
                 cfg.elements += list( range(s,e+1,r) )
 #    print("cfg.elements = '%s'" % cfg.elements )
 
+def show_config( argv ):
+    cre = None
+    if( len(argv) > 0 ):
+        cre = re.compile(argv[0])
+
+    otbl = []
+    otbl.append( ["Name","Type","Hooked","Value"] )
+    for n,c in registry.items():
+        if( c.gdb_type == PARAM_COLOR and c.value is not None ):
+            print("c.value = '%s'" % (c.value,) )
+            val = vdb.color.colorl( c.value, c.value )
+            otbl.append( [ n, c.gdb_type, None, val ] )
+        else:
+            otbl.append( [ n, c.gdb_type, None, c.value ] )
+
+    print( vdb.util.format_table(otbl) )
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
