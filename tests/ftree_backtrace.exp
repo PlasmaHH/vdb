@@ -1,22 +1,22 @@
  [STACK(OWN)] [STACK(OTHER)] [HEAP] [MMAP] [SHM] [CODE] [BSS] [NULL] [RO] [WO] [RW] [EX] [INV] [INAC] [UNK]
-#0  0x00007ffff7b1f87c in ► __pthread_kill_implementation (threadid="<optimized out>", signo="6", no_tid="0") at pthread_kill.c:44
-    Kernel Signal Handler: Signal 6 (SIGABRT), code -6 (SI_TKILL) ()
+#0  0x00007ffff7b1f87c in ► __pthread_kill_implementation \(threadid="<optimized out>", signo="6", no_tid="0"\) at pthread_kill.c:44
+    Kernel Signal Handler: Signal 6 \(SIGABRT\), code -6 \(SI_TKILL\) \(\)
 #1  0x00007ffff7b1f8dc in __pthread_kill_internal (signo="6", threadid="<optimized out>") at pthread_kill.c:78
 #2  0x00007ffff7ad26ec in __GI_raise (sig="6") at ../sysdeps/posix/raise.c:26
 #3  0x00007ffff7abc7a9 in __GI_abort () at abort.c:79
 #4  0x00007ffff7b13a62 in __libc_message (action="do_abort", fmt="0x7ffff7c5069f \"%s\\n\"") at ../sysdeps/posix/libc_fatal.c:155
 #5  0x00007ffff7b29867 in malloc_printerr (str="0x7ffff7c53290 \"double free or corruption (out)\"") at malloc.c:5543
-.*
-#7  0x00007ffff7b2dbfe in __GI___libc_free (mem="<optimized out>") at malloc.c:3278
-#8  0x00000000004059ee in rabbit<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > (t="0x0", x="0x7fffffff.*") at ftree.cxx:86
-#9  0x000000000040424c in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > (t="0x0", x="0x7fffffff.*", level="0") at ftree.cxx:94
-#10 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > (t="0x0", x="0x7fffffff.*", level="1") at ftree.cxx:96
-#11 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > (t="0x0", x="0x7fffffff.*", level="2") at ftree.cxx:96
-#12 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > (t="0x0", x="0x7fffffff.*", level="3") at ftree.cxx:96
-#13 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > (t="0x0", x="0x7fffffff.*", level="4") at ftree.cxx:96
-#14 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > (t="0x0", x="0x7fffffff.*", level="5") at ftree.cxx:96
-#15 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > (t="0x0", x="0x7fffffff.*", level="6") at ftree.cxx:96
-#16 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > (t="0x0", x="0x7fffffff.*", level="7") at ftree.cxx:96
-#17 0x00000000004025f0 in main (argc="1", argv="0x7fffffffd5f8") at ftree.cxx:146
+#6  0x00007ffff7b2b5a4 in _int_free \(av="0x7ffff7c8aaa0 <main_arena>", p="0x7fffffff.*", have_lock="<optimized out>"\) at malloc.c:4475
+#7  0x00007ffff7b2dbfe in __GI___libc_free \(mem="<optimized out>"\) at malloc.c:3278
+#8  0x00000000004059ee in rabbit<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*"\) at ftree.cxx:86
+#9  0x000000000040424c in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*", level="0"\) at ftree.cxx:94
+#10 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*", level="1"\) at ftree.cxx:96
+#11 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*", level="2"\) at ftree.cxx:96
+#12 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*", level="3"\) at ftree.cxx:96
+#13 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*", level="4"\) at ftree.cxx:96
+#14 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*", level="5"\) at ftree.cxx:96
+#15 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*", level="6"\) at ftree.cxx:96
+#16 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*", level="7"\) at ftree.cxx:96
+#17 0x00000000004025f0 in main \(argc="1", argv="0x7fffffff.*"\) at ftree.cxx:146
 
 Exiting vdb...

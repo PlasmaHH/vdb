@@ -29,15 +29,15 @@ def fail( msg ):
     color(msg,failcolor)
 
 def same(a,b):
-    print("a = '%s'" % (a,) )
-    print("b = '%s'" % (b,) )
+#    print("a = '%s'" % (a,) )
+#    print("b = '%s'" % (b,) )
 #	print ("re.match(%s,%s)") % (b,a)
     if a == b:
         return True
 #	print a
     try:
         m = re.match(b,a) # b is the regexp
-        print("m = '%s'" % (m,) )
+#        print("m = '%s'" % (m,) )
         if(m):
             return True
     except Exception:
