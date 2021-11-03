@@ -6,7 +6,7 @@ import functools
 import subprocess
 import gdb
 
-commands = vdb.config.parameter("vdb-pipe-commands","grep,egrep,tee,head,tail,uniq,sort,less,cat", gdb_type = vdb.config.PARAM_ARRAY )
+commands = vdb.config.parameter("vdb-pipe-commands","grep,egrep,tee,head,tail,uniq,sort,less,cat,wc", gdb_type = vdb.config.PARAM_ARRAY )
 up_wraps = vdb.config.parameter("vdb-pipe-wrap","show,info,help,x,print,list,set,maint", gdb_type = vdb.config.PARAM_ARRAY )
 
 pipe_commands = { }

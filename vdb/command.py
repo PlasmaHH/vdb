@@ -75,7 +75,7 @@ class command(gdb.Command):
             self.do_invoke(argv)
 
     def invoke (self, arg, from_tty):
-        if( self.repeat is not True ):
+        if( self.repeat is not True and from_tty is True ):
             lcmds = gdb.execute("show commands",False,True)
             if( lcmds == self.last_commands ):
                 return
