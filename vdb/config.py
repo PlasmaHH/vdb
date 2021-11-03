@@ -17,6 +17,8 @@ import re
 PARAM_COLOUR = 0x800
 PARAM_COLOR  = PARAM_COLOUR
 PARAM_FLOAT  = 0x801
+PARAM_COLOUR_LIST = 0x802
+PARAM_COLOR_LIST = PARAM_COLOUR_LIST
 
 
 def guess_gdb_type( p ):
@@ -47,11 +49,17 @@ class parameter(gdb.Parameter):
         self.is_colour = False
         self.is_float = False
         self.gdb_type = gdb_type
+        self.set_gdb_type = gdb_type
         if( gdb_type == PARAM_COLOR ):
             if( name.find("-colors-") == -1 ):
                 raise Exception("Colour names must have -colors- in their name, '%s' does not" % name )
             self.is_colour = True
             gdb_type = gdb.PARAM_STRING
+            self.theme_default = default
+        elif( gdb_type == PARAM_COLOUR_LIST and on_set is None ):
+            self.is_colour = True
+            gdb_type = gdb.PARAM_STRING
+            on_set = split_colors
             self.theme_default = default
         elif( gdb_type is None ):
             gdb_type = guess_gdb_type(default)
@@ -111,6 +119,23 @@ class parameter(gdb.Parameter):
 
     def get_show_string(self, svalue):
         return '%s (currently: %r)' % (self.docstring, self.value)
+
+    def get_vdb_show_string(self ):
+        val = self.value
+        if( self.set_gdb_type == PARAM_COLOR ):
+            val = vdb.color.colorl( val, val )
+        elif( self.set_gdb_type == PARAM_COLOUR_LIST ):
+            cval = []
+            pval = 0
+            for e in self.elements:
+                cv,pv = vdb.color.colorl(e,e)
+                cval.append(cv)
+                pval += pv
+
+            cval = ";".join(cval)
+            val = (cval,pval)
+
+        return val
 
 
 verbosity = parameter("vdb-config-verbosity",3)
@@ -205,14 +230,12 @@ def show_config( argv ):
             gdb.PARAM_BOOLEAN : "bool",
             gdb.PARAM_INTEGER : "int",
             PARAM_FLOAT : "float",
+            PARAM_COLOUR_LIST : "colors",
             }
     for n,c in registry.items():
-        if( c.gdb_type == PARAM_COLOR and c.value is not None ):
-#            print("c.value = '%s'" % (c.value,) )
-            val = vdb.color.colorl( c.value, c.value )
-            otbl.append( [ n, c.gdb_type, None, val ] )
-        else:
-            otbl.append( [ n, c.gdb_type, None, c.value ] )
+        val = c.get_vdb_show_string()
+
+        otbl.append( [ n, type_map.get(c.gdb_type,c.gdb_type), None, val ] )
 
     print( vdb.util.format_table(otbl) )
 

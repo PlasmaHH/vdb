@@ -110,7 +110,7 @@ dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Sourc
 
 
 
-color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,on_set = vdb.config.split_colors)
+color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
 
 def get_syscall( nr ):

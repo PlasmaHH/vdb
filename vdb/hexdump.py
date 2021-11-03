@@ -30,7 +30,7 @@ pc_separator = vdb.config.parameter("vdb-hexdump-pointer-chain-separator","|")
 row_format = vdb.config.parameter("vdb-hexdump-row-format", "{p}: {l}{t} {s}{pointer_string}{value_string}")
 
 
-color_list = vdb.config.parameter("vdb-hexdump-colors-symbols", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,on_set  = vdb.config.split_colors)
+color_list = vdb.config.parameter("vdb-hexdump-colors-symbols", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
 def print_header( ):
     plen = vdb.arch.pointer_size // 4

@@ -46,7 +46,7 @@ color_arrows   = vdb.config.parameter("vdb-ftree-color-arrows",True )
 
 #vdb.config.set_array_elements(array_elements)
 
-color_list = vdb.config.parameter("vdb-ftree-colors-arrows", "#ff0000;#00ff00;#0000ff;#ff8000;#ff00ff;#00ffff" ,on_set = vdb.config.split_colors)
+color_list = vdb.config.parameter("vdb-ftree-colors-arrows", "#ff0000;#00ff00;#0000ff;#ff8000;#ff00ff;#00ffff" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
 def indent( i, fmt, *more ):
     try:
