@@ -6,7 +6,8 @@ import functools
 import subprocess
 import gdb
 
-commands = vdb.config.parameter("vdb-pipe-commands","grep,egrep,tee,head,tail,uniq,sort",on_set = vdb.config.set_array_elements )
+commands = vdb.config.parameter("vdb-pipe-commands","grep,egrep,tee,head,tail,uniq,sort,less,cat",on_set = vdb.config.set_array_elements )
+up_wraps = vdb.config.parameter("vdb-pipe-wrap","show,info,help,x,print,list,set", on_set = vdb.config.set_array_elements )
 
 pipe_commands = { }
 
@@ -39,6 +40,35 @@ class cmd_external(vdb.command.command):
             raise
             pass
 
+class cmd_wrap(vdb.command.command):
+    """Executes a some command"""
+
+    def __init__ (self,cmdname):
+        self.cmdname = cmdname
+        self.wrapped_name = cmdname.capitalize()
+        super (cmd_wrap, self).__init__ (self.wrapped_name, gdb.COMMAND_DATA)
+        self.dont_repeat()
+        self.saved_arg = None
+        self.saved_from_tty = None
+
+    def do_invoke (self, argv):
+        arg = self.saved_arg
+        from_tty = self.saved_from_tty
+        try:
+            gdb.execute(f"{self.cmdname} {arg}",from_tty)
+        except gdb.error as e:
+            print(e)
+        except:
+            traceback.print_exc()
+            raise
+            pass
+
+
+    def invoke (self, arg, from_tty):
+        self.saved_arg = arg
+        self.saved_from_tty = from_tty
+        super().invoke(arg,from_tty)
+
 def do_cmd( cmd, data, argv ):
     p = subprocess.run([ cmd ] + argv , input = data, encoding = "utf-8" )
 
@@ -46,4 +76,9 @@ for cmd in commands.elements:
 #    cmd_external(cmd)
     add(cmd,functools.partial(do_cmd,cmd))
 
+def wrap(cmd):
+    cmd_wrap(cmd)
+
+for cmd in up_wraps.elements:
+    wrap(cmd)
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

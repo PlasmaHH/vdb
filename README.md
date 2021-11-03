@@ -29,7 +29,6 @@ under x86_64 Linux with gcc > 10.
 	* [register](#register)
 	* [hexdump](#hexdump)
 	* [asm](#asm)
-	* [grep](#grep)
 	* [pahole](#pahole)
 	* [ftree](#ftree)
 	* [hashtable](#hashtable)
@@ -39,6 +38,7 @@ under x86_64 Linux with gcc > 10.
 	* [unwind](#unwind)
 	* [history](#history)
 	* [profile](#profile)
+	* [pipe](#pipe)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
 	* [pointer (chaining)](#pointer-chaining)
@@ -46,6 +46,7 @@ under x86_64 Linux with gcc > 10.
 	* [type layout](#type-layout)
 * [Configuration](#configuration)
 	* [gdb config](#gdb-config)
+	* [examine configuration](#examine-configuration)
 	* [Color settings](#color-settings)
 		* [colorspec](#colorspec)
 * [Plugins](#plugins)
@@ -165,11 +166,6 @@ optionally try to create a basic block flow graph, even in a lot of cases being 
 ![](doc/img/disassemble.png)
 ![](doc/img/dis.dot.png)
 [You can find detailed information about this module here](doc/ASM.md)
-## grep
-When loading this module, all our commands support a pipe like syntax to call grep on the output. The data will be piped
-to an externally called grep, as well as the parameters to grep.
-
-![](doc/img/grep.png)
 
 ## pahole
 This is an enhanced and redone version of the pahole python command that once came with gdb. It has support for virtual
@@ -234,6 +230,23 @@ awkward way due to gdb limitations.
 ## profile
 Allows to profile python calls
 [You can find detailed information about this module here](doc/PROFILE.md)
+
+## pipe
+The pipe module offers the possibility to pass the output of our commands to external tools via simple shell piping
+syntax. Currently enabled commands are
+```
+vdb-pipe-commands = grep,egrep,tee,head,tail,uniq,sort,less,cat
+```
+
+Additionally we provide very thing wrappers around the following existing commands
+```
+vdb-pipe-wrap = show,info,help,x,print,list,set
+```
+
+These wrappers create new commands with the same name but starting with an uppercase letter. These will behave more like
+vdb commands and support piping. Note that you always need to specify the full command, that is `pr` instead of `print`
+will not work generally. For an example see [examine configuration](#examine-configuration)
+
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
 you suppress loading of the modules that load it.
@@ -273,6 +286,14 @@ can set them in the .gdbinit file after the `vdb start` command, or you can prov
 sourced into gdb when it exists. When the setting <whatever we chose for it> is enabled, we will also read the
 ./.vdbinit after it, which can be project specific. If that doesn't exist we go down the filesystem until we either find
 one, or we reach ~/ (which we already loaded) or /.
+
+Note: Currently .vdbinit is not available and we are unsure if it will ever come back due to .vdb plugin directory being
+more powerful.
+
+## examine configuration
+The subcommand `vdb show config` can show all known vdb config objects nicely. It supports pipe commands.
+
+![](doc/img/vdb.config.show.png)
 
 ## Color settings
 All modules that colour their output have settings of the form

@@ -199,9 +199,16 @@ def show_config( argv ):
 
     otbl = []
     otbl.append( ["Name","Type","Hooked","Value"] )
+    type_map = {
+            PARAM_COLOR : "color",
+            gdb.PARAM_STRING : "string",
+            gdb.PARAM_BOOLEAN : "bool",
+            gdb.PARAM_INTEGER : "int",
+            PARAM_FLOAT : "float",
+            }
     for n,c in registry.items():
         if( c.gdb_type == PARAM_COLOR and c.value is not None ):
-            print("c.value = '%s'" % (c.value,) )
+#            print("c.value = '%s'" % (c.value,) )
             val = vdb.color.colorl( c.value, c.value )
             otbl.append( [ n, c.gdb_type, None, val ] )
         else:

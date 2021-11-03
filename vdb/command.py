@@ -22,7 +22,7 @@ class command(gdb.Command):
         global command_registry
         command_registry[self.name] = self
 
-    def pipe( self, argv ):
+    def pipe( self, arg, argv ):
         import vdb.pipe
         try:
             i = argv.index("|") # throws if not found
@@ -31,24 +31,29 @@ class command(gdb.Command):
             pcmd = a1[0]
             a1 = a1[1:]
 
-#            print("argv = '%s'" % argv )
+            i = arg.rfind("|",0,len(arg))
+            if( i < 0 ):
+                self.do_invoke(argv)
+            ocmd = arg[0:i].strip()
 #            print("i = '%s'" % (i,) )
-#            print("a0 = '%s'" % (a0,) )
-#            print("a1 = '%s'" % (a1,) )
+            pcmd = arg[i+1:].strip()
+#            print("ocmd = '%s'" % (ocmd,) )
 #            print("pcmd = '%s'" % (pcmd,) )
-            gout = gdb.execute("{} {}".format(self.name," ".join('"{}"'.format(a) for a in a0)),False,True)
-#            print("gout = '%s'" % gout )
 
-            vdb.pipe.call(pcmd,gout,a1)
+            gout=gdb.execute(self.name + " " + ocmd,False,True)
+            pa = gdb.string_to_argv(pcmd)
+#            gout = gdb.execute("{} {}".format(self.name," ".join('"{}"'.format(a) for a in a0)),False,True)
+
+            vdb.pipe.call(pa[0],gout,pa[1:])
             return
         except:
 #            traceback.print_exc()
             pass
         self.do_invoke(argv)
 
-    def invoke_or_pipe( self, argv ):
+    def invoke_or_pipe( self, arg,argv ):
         if( sys.modules.get("vdb.pipe",None) != None ):
-            self.pipe(argv)
+            self.pipe(arg,argv)
         else:
             self.do_invoke(argv)
 
@@ -67,7 +72,7 @@ class command(gdb.Command):
                 import cProfile
                 cProfile.runctx("self.invoke_or_pipe(argv)",globals(),locals())
             else:
-                self.invoke_or_pipe(argv)
+                self.invoke_or_pipe(arg,argv)
         except:
             traceback.print_exc()
             raise
