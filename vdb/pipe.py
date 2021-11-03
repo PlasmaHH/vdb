@@ -4,8 +4,9 @@
 import vdb.config
 import functools
 import subprocess
+import gdb
 
-commands = vdb.config.parameter("vdb-pipe-commands","grep,egrep,tee,head,tail",on_set = vdb.config.set_array_elements )
+commands = vdb.config.parameter("vdb-pipe-commands","grep,egrep,tee,head,tail,uniq,sort",on_set = vdb.config.set_array_elements )
 
 pipe_commands = { }
 
@@ -30,8 +31,9 @@ class cmd_external(vdb.command.command):
 
     def do_invoke (self, argv):
         try:
+            print("argv = '%s'" % (argv,) )
             # what did I want to do here? hmmm...
-            call_cmd(argv)
+#            call_cmd(argv)
         except:
             traceback.print_exc()
             raise
