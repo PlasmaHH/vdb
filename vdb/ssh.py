@@ -27,7 +27,7 @@ scp_opts = vdb.config.parameter("vdb-ssh-scp-options", "")
 gdbserver_cmd = vdb.config.parameter("vdb-ssh-gdbserver-command", "gdbserver")
 
 csum_timeout = vdb.config.parameter("vdb-ssh-checksum-timeout-factor",4e-9)
-valid_ports = vdb.config.parameter("vdb-ssh-valid-ports","5000:6000,8000:10000", on_set  = vdb.config.set_array_elements )
+valid_ports = vdb.config.parameter("vdb-ssh-valid-ports","5000:6000,8000:10000", gdb_type = vdb.config.PARAM_ARRAY )
 scp_compression = vdb.config.parameter("vdb-ssh-scp-compression",False)
 
 cfg_fix_autoload = vdb.config.parameter("vdb-ssh-fix-autoload",True)

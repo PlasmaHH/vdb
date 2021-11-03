@@ -27,8 +27,8 @@ import datetime
 verbosity      = vdb.config.parameter("vdb-ftree-verbosity",3 )
 dot_filebase   = vdb.config.parameter("vdb-ftree-filebase","ftree")
 dot_command    = vdb.config.parameter("vdb-ftree-dot-command", "nohup dot -Txlib {filename} &>/dev/null &" )
-#array_elements = vdb.config.parameter("vdb-ftree-array-elements","0,1,2,3,-4,-3,-2,-1",on_set  = vdb.config.set_array_elements )
-array_elements = vdb.config.parameter("vdb-ftree-array-elements","0:3,-4:-1",on_set  = vdb.config.set_array_elements )
+
+array_elements = vdb.config.parameter("vdb-ftree-array-elements","0:3,-4:-1", gdb_type = vdb.config.PARAM_ARRAY )
 color_invalid  = vdb.config.parameter("vdb-ftree-colors-invalid","#ff2222",gdb_type = vdb.config.PARAM_COLOUR)
 color_union    = vdb.config.parameter("vdb-ftree-colors-union","#ffff66",gdb_type = vdb.config.PARAM_COLOUR)
 color_vcast    = vdb.config.parameter("vdb-ftree-colors-virtual-cast","#ccaaff",gdb_type = vdb.config.PARAM_COLOUR)

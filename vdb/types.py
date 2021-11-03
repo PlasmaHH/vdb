@@ -17,8 +17,8 @@ import time
 ctags_cmd = vdb.config.parameter("vdb-types-ctags-cmd", "ctags" )
 ctags_parameters = vdb.config.parameter("vdb-types-ctags-parameters","--extra=+q -f - --sort=no -R")
 
-ctags_dirs = vdb.config.parameter("vdb-types-ctags-files","/usr/include/", on_set  = vdb.config.set_array_elements )
-#ctags_dirs = vdb.config.parameter("vdb-types-ctags-files","test.h", on_set  = vdb.config.set_array_elements )
+ctags_dirs = vdb.config.parameter("vdb-types-ctags-files","/usr/include/", gdb_type = vdb.config.PARAM_ARRAY )
+
 ctags_cache = vdb.config.parameter("vdb-types-cache",True)
 ctags_cache_age = vdb.config.parameter("vdb-types-cache-max-age", 86400 )
 

@@ -19,6 +19,7 @@ PARAM_COLOR  = PARAM_COLOUR
 PARAM_FLOAT  = 0x801
 PARAM_COLOUR_LIST = 0x802
 PARAM_COLOR_LIST = PARAM_COLOUR_LIST
+PARAM_ARRAY = 0x803
 
 
 def guess_gdb_type( p ):
@@ -49,7 +50,6 @@ class parameter(gdb.Parameter):
         self.is_colour = False
         self.is_float = False
         self.gdb_type = gdb_type
-        self.set_gdb_type = gdb_type
         if( gdb_type == PARAM_COLOR ):
             if( name.find("-colors-") == -1 ):
                 raise Exception("Colour names must have -colors- in their name, '%s' does not" % name )
@@ -61,6 +61,9 @@ class parameter(gdb.Parameter):
             gdb_type = gdb.PARAM_STRING
             on_set = split_colors
             self.theme_default = default
+        elif( gdb_type == PARAM_ARRAY and on_set is None ):
+            on_set = set_array_elements
+            gdb_type = guess_gdb_type(default)
         elif( gdb_type is None ):
             gdb_type = guess_gdb_type(default)
             self.gdb_type = gdb_type
@@ -122,9 +125,9 @@ class parameter(gdb.Parameter):
 
     def get_vdb_show_string(self ):
         val = self.value
-        if( self.set_gdb_type == PARAM_COLOR ):
+        if( self.gdb_type == PARAM_COLOR ):
             val = vdb.color.colorl( val, val )
-        elif( self.set_gdb_type == PARAM_COLOUR_LIST ):
+        elif( self.gdb_type == PARAM_COLOUR_LIST ):
             cval = []
             pval = 0
             for e in self.elements:
@@ -231,6 +234,7 @@ def show_config( argv ):
             gdb.PARAM_INTEGER : "int",
             PARAM_FLOAT : "float",
             PARAM_COLOUR_LIST : "colors",
+            PARAM_ARRAY : "array"
             }
     for n,c in registry.items():
         val = c.get_vdb_show_string()
