@@ -48,6 +48,7 @@ color_iv = vdb.config.parameter("vdb-memory-colors-invalid"     , "#16f", gdb_ty
 ignore_empty = vdb.config.parameter("vdb-memory-ignore-empty-sections", False, gdb_type = gdb.PARAM_BOOLEAN )
 
 test_write = vdb.config.parameter("vdb-memory-test-write-access", True )
+default_colorspec = vdb.config.parameter("vdb-memory-default-colorspec","sma")
 
 
 class access_type(Enum):
@@ -243,12 +244,15 @@ def section_color( sec ):
 valid_colorspec="Aams"
 
 def check_colorspec( colorspec ):
-    for c in colorspec:
-        if( c not in valid_colorspec ):
-            raise Exception("'%s' is not allowed in colorspecs" % c )
+    if( colorspec is not None ):
+        for c in colorspec:
+            if( c not in valid_colorspec ):
+                raise Exception("'%s' is not allowed in colorspecs" % c )
 
 
 def print_legend( colorspec = "Aasm" ):
+    if( colorspec is None ):
+        colorspec = default_colorspec.value
     legends = []
     if( "A" in colorspec ):
         legends.append(vdb.color.color("[ASCII]",        vdb.memory.color_ascii.value))
@@ -348,6 +352,26 @@ class memory_region:
                 self.atype = access_type.ACCESS_INACCESSIBLE
         self._test_prefixes()
         # TODO figure out how to find out executable, and also if executalbe is always RO
+
+    def rwxp( self ):
+        ret = ""
+        if( self.can_read ):
+            ret += "r"
+        else:
+            ret += "-"
+
+        if( self.can_write ):
+            ret += "w"
+        else:
+            ret += "-"
+
+        if( self.atype == access_type.ACCESS_EX ):
+            ret += "x"
+        else:
+            ret +="-"
+
+        ret += "?" # shared/private, hmmm...
+        return ret
 
     def __str__( self ):
         s = ""
@@ -563,13 +587,15 @@ class memory_map:
 #        print("mm.section = '%s'" % mm.section )
         return ( ret, mm )
 
-    def color( self, addr, s = None, colorspec = "sma", mm = None ):
+    def color( self, addr, s = None, colorspec = None, mm = None ):
         """
         returns a tuple of the coloured string as well as the region that matched it, or None
         """
+        if( colorspec is None ):
+            colorspec = default_colorspec.value
         self.lazy_parse()
         if( s is None ):
-            s = str(addr)
+#            s = str(addr)
             plen = vdb.arch.pointer_size // 4
             s = f"0x{addr:0{plen}x}"
         if( mm is None ):
@@ -735,26 +761,37 @@ class memory_map:
 
 
 # XXX This is basically the vmmap implementation, maybe we move parts of it there?
-    def print( self, colorspec ):
+    def print( self, colorspec, short = False ):
         self.lazy_parse()
+        otbl = []
 #        cnt = 0
+#        plen = vdb.arch.pointer_size // 4
+
         for r in sorted(self.regions):
             r = r[2]
 #            cnt += 1
 #            if( cnt > 10 ):
 #                break
-            s,mm,col,ascii = self.color(r.start, colorspec = colorspec, mm = r )
-#            ms = vdb.color.color(f"0x{r.start:<x}",col)
-            ms = vdb.color.color(s,col)
-            me = vdb.color.color(f"0x{r.end:<x}",col)
+            _,mm,col,ascii = self.color(r.start, colorspec = colorspec, mm = r )
+            rwxp = r.rwxp()
+
+            xplen = 2 * ( ( r.end.bit_length() + 7 ) // 8 )
+
+            ms = vdb.color.colorl(f"0x{r.start:0{xplen}x}", col)
+            me = vdb.color.colorl(f"0x{r.end:0{xplen}x}", col)
+
             size= r.end - r.start
             f = vdb.util.nstr(r.file)
             s = vdb.util.nstr(r.section)
+            if( short and r.section is not None ):
+                continue
 
             sz,suf=vdb.util.num_suffix(r.size,factor = 1)
             by = f"{sz:.1f}{suf}B"
 #            print("0x{:x} - 0x{:x} {} {}".format(r.start,r.end,r.section,r.file))
-            print("{} - {} {:>10} {:<20} {}".format(ms,me,by,s,f))
+#            print("{} - {} {:>10} {:<20} {}".format(ms,me,by,s,f))
+            otbl.append([ms,"-",me,rwxp,by,s,f])
+        print( vdb.util.format_table(otbl))
 #            print("size = '%s'" % size )
 #            print("r.mtype = '%s'" % r.mtype )
 
