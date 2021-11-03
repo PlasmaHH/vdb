@@ -13,7 +13,18 @@ command_registry = {}
 
 class command(gdb.Command):
 
-    def __init__ (self,n,t,c=None):
+    def __init__ (self,n,t,c=None, replace = False, prefix = True):
+        if( replace is not True ): # check if the command already exists
+            try:
+                help = gdb.execute(f"help {n}",False,True)
+                if( prefix is not True ):
+                    raise Exception("Cannot register command")
+                print(f"Command already exists: {n}, replacing it with vdb.{n}")
+                n = "vdb." + n
+            except gdb.error:
+                pass
+#                print(f"No such command: {n}")
+
         if( c is None ):
             super (command, self).__init__ (n,t)
         else:

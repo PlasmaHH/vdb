@@ -581,7 +581,7 @@ All standard backtrace arguments (help backtrace) can be used after ours (mainly
     """
 
     def __init__ (self):
-        super (cmd_bt, self).__init__ ("bt", gdb.COMMAND_STACK, gdb.COMPLETE_EXPRESSION)
+        super (cmd_bt, self).__init__ ("bt", gdb.COMMAND_STACK, gdb.COMPLETE_EXPRESSION, replace = True)
         self.dont_repeat()
 
     def do_invoke (self, argv ):
