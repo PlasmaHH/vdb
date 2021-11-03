@@ -32,6 +32,12 @@ class command(gdb.Command):
         self.name = n
         global command_registry
         command_registry[self.name] = self
+        self.last_commands = None
+        self.repeat = True
+
+    def dont_repeat( self ):
+        self.repeat = False
+        super().dont_repeat()
 
     def pipe( self, arg, argv ):
         import vdb.pipe
@@ -69,6 +75,12 @@ class command(gdb.Command):
             self.do_invoke(argv)
 
     def invoke (self, arg, from_tty):
+        if( self.repeat is not True ):
+            lcmds = gdb.execute("show commands",False,True)
+            if( lcmds == self.last_commands ):
+                return
+            self.last_commands = lcmds
+
         try:
 #            print("arg = '%s'" % (arg,) )
             argv = gdb.string_to_argv(arg)
