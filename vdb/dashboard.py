@@ -17,6 +17,7 @@ import socket
 import sys
 import threading
 import re
+import datetime
 
 
 """
@@ -25,6 +26,8 @@ tmux new-session\; select-pane -T "disassembler" \; split-window -v\; select-pan
 show_stat = vdb.config.parameter("vdb-dash-show-stats",False)
 disable_silent = vdb.config.parameter("vdb-dash-disable-silent",False)
 auto_time = vdb.config.parameter("vdb-dash-auto-disable-time", 10.0 )
+append_time = vdb.config.parameter("vdb-dash-append-time",True)
+time_format = vdb.config.parameter("vdb-dash-append-time-format","%c {runtime:10.4f}s")
 
 class target:
     def __init__( self ):
@@ -207,6 +210,12 @@ class dashboard:
         self.output.flush()
         sw.stop()
         self.last_time = sw.get()
+        if( append_time.value is True ):
+            runtime = sw.get()
+            now = datetime.datetime.now().strftime(time_format.value)
+            now = now.format(**locals())
+            self.output.write(now)
+            self.output.flush()
         if( self.last_time > auto_time.fvalue ):
             self.disable("Execution time exceeded: %s" % auto_time.value )
 

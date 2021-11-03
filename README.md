@@ -360,15 +360,10 @@ is usually a safe bet.
 There are a lot of ideas and enhancements that are possible or need to be done. Among them are:
 
 * support for other architectures than x86_64 (maybe generic with all values from gdb, even with register autodetection)
-* fully implement extra flexible .vdb search mechanism
-* hexdump for real objects, likely using a generic annotation mechanism. Can then also be used for annotating buffers to
-  be parsed. Add some API to make it easier for people to programmatically create those annotations for buffers.
+* Add some API to make it easier for people to programmatically create those annotations for buffers.
 * symbol position and size caching
 * clearing of caches on events that might have changed it.
 * generic mechanism for hashtable load images and calculations
-* ports/dashboard mechanism that will be able to output generic information to various other places
-* reverse execution support even without records. We might be able to determine possible paths which led to where we are
-  with the possible values. A disasm or similar might get another mode that tells us about it
 * Extract information out of the allocator. With a proper middle layer we can support multiple versions. This could draw
   some maps of where free space and allocated space is.
 * a stack inspector possibly based on the hexdump annotation mechanism. Try to identify pointers to known things, like
@@ -380,5 +375,4 @@ There are a lot of ideas and enhancements that are possible or need to be done. 
   of them via "info types" takes minutes.
 * For the port output dashboards, maybe check if there is an easy way to find out what the connecting telnet is
   supporting
-* For dashboards maybe add a time of creation/call/display optionally to the status line?
 * Highlighting hooks for plugins to make addresses stand out more that the user wants to know about
