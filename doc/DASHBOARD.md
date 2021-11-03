@@ -81,3 +81,9 @@ you can suppress any message when disabling a dashboard. This is useful when the
 malfunction and you want to disable it without ever sending data to it.
 
 
+With the following settings you can append a time of day and execution to the dashboard to spot when it is not being
+updated more easy (see the default for format options)
+```
+vdb-dash-append-time
+vdb-dash-append-time-format
+```
