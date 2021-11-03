@@ -283,12 +283,9 @@ start`.
 ## gdb config
 Setting any string based configuration option to the special value `default` will reset it to the built in default. You
 can set them in the .gdbinit file after the `vdb start` command, or you can provide a `~/.vdbinit` file that will be
-sourced into gdb when it exists. When the setting <whatever we chose for it> is enabled, we will also read the
+sourced into gdb when it exists. We will also read the
 ./.vdbinit after it, which can be project specific. If that doesn't exist we go down the filesystem until we either find
 one, or we reach ~/ (which we already loaded) or /.
-
-Note: Currently .vdbinit is not available and we are unsure if it will ever come back due to .vdb plugin directory being
-more powerful.
 
 ## examine configuration
 The subcommand `vdb show config` can show all known vdb config objects nicely. It supports pipe commands.

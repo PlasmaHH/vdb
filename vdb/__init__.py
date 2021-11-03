@@ -13,6 +13,7 @@ import importlib
 import traceback
 import concurrent.futures
 import atexit
+
 """
 
 search order:
@@ -114,6 +115,12 @@ def is_in_safe_path( pdir ):
             return True
     return False
 
+def load_init( vdb_init ):
+    try:
+        with open(vdb_init,"r") as f:
+            vdb.config.execute(f.read())
+    except FileNotFoundError:
+        pass
 
 def load_plugins( plugindir ):
     try:
@@ -190,30 +197,41 @@ enable_pipe      = vdb.config.parameter( "vdb-enable-pipe",True)
 
 configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,pahole,ftree,dashboard,hashtable,ssh,track,graph,data,syscall,types,profile,unwind,hook,history,pipe" )
 
-home_first  = vdb.config.parameter( "vdb-plugin-home-first",True)
-search_down = vdb.config.parameter( "vdb-plugin-search-down",True)
-honor_sp    = vdb.config.parameter( "vdb-plugin-honor-safe-path",True)
-max_threads = vdb.config.parameter( "vdb-max-threads",4)
+home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)
+search_down     = vdb.config.parameter( "vdb-plugin-search-down",True)
+honor_sp        = vdb.config.parameter( "vdb-plugin-honor-safe-path",True)
+max_threads     = vdb.config.parameter( "vdb-max-threads",4)
+inithome_first  = vdb.config.parameter( "vdb-init-home-first",True)
+initsearch_down = vdb.config.parameter( "vdb-init-search-down",True)
 
 
 enabled_modules = [ ]
 vdb_dir = None
+vdb_init = None
 texe = None
 keep_running = True
 
-def start( vdbd = None ):
+def start( vdbd = None, vdbinit = None ):
     print("Starting vdb modules…")
     
     global texe
     texe = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads.value,thread_name_prefix="vdb")
 
     global vdb_dir
+    global vdb_init
 
     if( vdbd is not None ):
         vdb_dir = os.path.expanduser(vdbd)
     else:
         vdb_dir = os.path.expanduser("~") + "/.vdb/"
     vdb_dir = os.path.realpath(vdb_dir)
+
+    if( vdbinit is not None ):
+        vdb_init = os.path.expanduser(vdbinit)
+    else:
+        vdb_init = os.path.expanduser("~") + "/.vdbinit"
+    vdb_init = os.path.realpath(vdb_init)
+
 
     available_modules = configured_modules.value.split(",")
     for mod in available_modules:
@@ -231,6 +249,7 @@ def start( vdbd = None ):
             pass
 
     plug_dirs = []
+    init_files = []
 
     rvdb = os.path.realpath(vdb_dir)
     cwd = os.path.realpath(os.getcwd())
@@ -241,6 +260,7 @@ def start( vdbd = None ):
             break
 #        print("cvdb = '%s'" % cvdb )
         plug_dirs.append(cvdb)
+        init_files.append(cwd + "/.vdbinit")
 #        print("cwd = '%s'" % cwd )
         cwd,down = os.path.split(cwd)
 #        print("down = '%s'" % down )
@@ -248,10 +268,21 @@ def start( vdbd = None ):
     if( not search_down.value ):
         plug_dirs.reverse()
 
+    if( not initsearch_down.value ):
+        init_files.reverse()
+
     if( home_first.value ):
         plug_dirs = [ vdb_dir ] + plug_dirs
     else:
         plug_dirs = plug_dirs + [ vdb_dir ]
+
+    if( inithome_first.value ):
+        init_files = [ vdb_init ] + init_files
+    else:
+        init_files = init_files + [ vdb_init ]
+
+    for i in init_files:
+        load_init(i)
 
     for d in plug_dirs:
         load_plugins(d)
