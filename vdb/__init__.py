@@ -4,6 +4,7 @@
 import vdb.config
 import vdb.subcommands
 import vdb.command
+import vdb.util
 
 import gdb
 
@@ -114,8 +115,6 @@ def is_in_safe_path( pdir ):
     for p in sp:
         p = os.path.normpath(p) + "/"
         if( pdir.startswith(p) ):
-#            print("pdir = '%s'" % pdir )
-#            print("p = '%s'" % p )
             return True
     return False
 
@@ -208,11 +207,11 @@ def start( vdbd = None, vdbinit = None ):
         try:
             bval = gdb.parameter( f"vdb-enable-{mod}")
             if( bval ):
-                print(f"Loading module {mod}…")
+                vdb.util.log(f"Loading module {mod}…")
                 importlib.import_module(f"vdb.{mod}")
                 enabled_modules.append(mod)
             else:
-                print(f"Skipping load of module {mod}…")
+                vdb.util.log(f"Skipping load of module {mod}…")
         except:
             print(f"Error loading module {mod}:")
             traceback.print_exc()
@@ -270,5 +269,7 @@ def exit( ):
     keep_running = False
 
 atexit.register(exit)
+
+log = vdb.util.log
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

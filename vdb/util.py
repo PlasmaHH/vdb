@@ -90,13 +90,18 @@ def num_suffix( num, iso = False, factor = 1.5 ):
     return (snum,suffix)
 
 logprint = print
+loglevel = 3
 
-def log(fmt, *more ):
-#    print("logprint = '%s'" % (logprint,) )
-    logprint(fmt.format(*more))
+def maybe_logprint( level, msg ):
+    if( level <= loglevel ):
+        logprint(msg)
 
-def indent( i, fmt, *more ):
-    log("  " * i + fmt, *more )
+def log(fmt, **more ):
+    level = more.get("level",1)
+    maybe_logprint(level,fmt.format(**more))
+
+def indent( i, fmt, **more ):
+    log("  " * i + fmt, **more )
 
 
 

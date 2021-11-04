@@ -27,7 +27,7 @@ cache_timestamp = 0
 
 rl_thread = None
 
-def load_caches( ):
+def load_caches( force = False ):
     if( ctags_cache.value is None ):
         return
     import pickle
@@ -39,12 +39,12 @@ def load_caches( ):
     else:
         tl = pickle.load( open( fn, "rb" ) )
         type_locations,cache_timestamp = tl
-    if( time.time() > ( cache_timestamp + ctags_cache_age.value ) ):
+    if( force or time.time() > ( cache_timestamp + ctags_cache_age.value ) ):
         global rl_thread
         rl_thread = vdb.texe.submit(progress_refresh_locations)
-        print(f"Cache is {time.time() - cache_timestamp}s old, refreshing")
+        print(f"Cache is {time.time() - cache_timestamp:5.1f}s old, refreshing")
     else:
-        print(f"Cache is {time.time() - cache_timestamp}s old, no need to refresh")
+        print(f"Cache is {time.time() - cache_timestamp:5.1f}s old, no need to refresh")
 
 
 def save_caches( ):
@@ -63,7 +63,6 @@ ctags = None
 @vdb.event.gdb_exiting()
 def abort_refresh_locations( ):
     global stop_refreshing
-#    print("Setting to true")
     stop_refreshing = True
     if( ctags is not None ):
         ctags.terminate()
@@ -165,7 +164,7 @@ def refresh_locations( ):
 #            print(f"{k} : {v}")
     global type_locations
     type_locations = tlo
-    vdb.util.log("Background type location refresh finished")
+    vdb.log("Background type location refresh finished")
     save_caches()
 
 def compile( code ):
@@ -212,7 +211,10 @@ def do_create( argv ):
     void __vdb_injector( {tname}* var ) {{ }}
     """)
     print(f"Loaded type info for symbol {tname}")
-    
+
+def do_refresh( ):
+    load_caches(True)
+
 class cmd_types (vdb.command.command):
     """Introduce new types into the currently debugged process
   types <subcommand> <parameter>
@@ -232,8 +234,10 @@ class cmd_types (vdb.command.command):
             if( len(argv) > 0 ):
                 if( argv[0] == "create" ):
                     do_create(argv[1:])
-                if( argv[0] == "load" ):
+                elif( argv[0] == "load" ):
                     do_load(argv[1:])
+                elif( argv[0] == "refresh" ):
+                    do_refresh()
 
             else:
                 raise Exception("types got %s arguments, expecting 1 or more" % len(argv) )
