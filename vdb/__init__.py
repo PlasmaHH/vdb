@@ -18,9 +18,8 @@ import atexit
 
 # First setup the most important settings that configure which parts we want to have active
 
-theme = vdb.config.parameter( "vdb-theme",None)
-
 enable = vdb.config.parameter( "vdb-enable", True )
+theme  = vdb.config.parameter( "vdb-theme",None)
 
 enable_prompt    = vdb.config.parameter( "vdb-enable-prompt",True)
 enable_backtrace = vdb.config.parameter( "vdb-enable-backtrace",True)
@@ -165,8 +164,9 @@ def load_themes( vdbdir ):
         return
     tfile = f"{tdir}{theme.value}.py"
     if( not os.path.isfile(tfile) ):
+        print(f"Theme file {tfile} not found, not loading any theme")
         return
-#        raise gdb.GdbError(f"Theme file {tfile} not found, can't load")
+
     print("Trying to load theme from " + tfile)
     try:
         oldpath = []
@@ -223,17 +223,16 @@ def start( vdbd = None, vdbinit = None ):
 
     rvdb = os.path.realpath(vdb_dir)
     cwd = os.path.realpath(os.getcwd())
-#    print("rvdb = '%s'" % rvdb )
+
     while( cwd != "/" ):
         cvdb = cwd + "/.vdb/"
         if( os.path.normpath(cvdb) == os.path.normpath(rvdb) ):
             break
-#        print("cvdb = '%s'" % cvdb )
+
         plug_dirs.append(cvdb)
         init_files.append(cwd + "/.vdbinit")
-#        print("cwd = '%s'" % cwd )
         cwd,down = os.path.split(cwd)
-#        print("down = '%s'" % down )
+
 
     if( not search_down.value ):
         plug_dirs.reverse()
@@ -271,32 +270,5 @@ def exit( ):
     keep_running = False
 
 atexit.register(exit)
-#pre_commands = """
-#set confirm off
-#set verbose off
-#set prompt %s
-#set height 0
-#set history expansion on
-#set history save on
-#set follow-fork-mode child
-#set backtrace past-main on
-#set step-mode on
-#set print pretty on
-#set width 0
-#set print elements 15
-#handle SIGALRM nostop print nopass
-#handle SIGBUS  stop   print nopass
-#handle SIGPIPE nostop print nopass
-#handle SIGSEGV stop   print nopass
-#""".strip() % prompt
-#
-
-
-try:
-#    gdb.execute("set disassembly-flavor intel")
-    gdb.execute("set disassembly-flavor att")
-except gdb.error:
-    pass
-
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

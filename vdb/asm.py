@@ -1584,6 +1584,11 @@ part of a function, unlike the disassemble command those are right away disassem
 
 Dis()
 
+# We only support it, silently try to force it
+try:
+    gdb.execute("set disassembly-flavor att")
+except gdb.error:
+    pass
 
 if __name__ == "__main__":
     try:
