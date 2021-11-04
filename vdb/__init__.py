@@ -14,44 +14,52 @@ import traceback
 import concurrent.futures
 import atexit
 
-"""
 
-search order:
-    downwards
-    upwards
-
-    home-first
-    local-first
-
-
-vdbinit-search-order
-vdbinit-stop-on-find
-
-vdb-search-order
-vdb-stop-on-find
-
-theme-search-order
-theme-stop-on-find
-
-example tree:
-
-[1]~/.vdb/
-[2]~/.vdbinit
-
-[3]~/git/project/.vdb/
-[4]~/git/project/.vdbinit
-
-
-downwards local-first non-stop:
-
-look at (and load)
-~/.vdb
-~/git/project/.vdb
-~/git/.vdb
-
-"""
 
 # First setup the most important settings that configure which parts we want to have active
+
+theme = vdb.config.parameter( "vdb-theme",None)
+
+enable = vdb.config.parameter( "vdb-enable", True )
+
+enable_prompt    = vdb.config.parameter( "vdb-enable-prompt",True)
+enable_backtrace = vdb.config.parameter( "vdb-enable-backtrace",True)
+enable_register  = vdb.config.parameter( "vdb-enable-register",True)
+enable_vmmap     = vdb.config.parameter( "vdb-enable-vmmap",True)
+enable_hexdump   = vdb.config.parameter( "vdb-enable-hexdump",True)
+enable_asm       = vdb.config.parameter( "vdb-enable-asm",True)
+enable_pahole    = vdb.config.parameter( "vdb-enable-pahole",True)
+enable_ftree     = vdb.config.parameter( "vdb-enable-ftree",True)
+enable_dashboard = vdb.config.parameter( "vdb-enable-dashboard",True)
+enable_hashtable = vdb.config.parameter( "vdb-enable-hashtable",True)
+enable_ssh       = vdb.config.parameter( "vdb-enable-ssh",True)
+enable_track     = vdb.config.parameter( "vdb-enable-track",True)
+enable_graph     = vdb.config.parameter( "vdb-enable-graph",True)
+enable_data      = vdb.config.parameter( "vdb-enable-data",True)
+enable_syscall   = vdb.config.parameter( "vdb-enable-syscall",True)
+enable_types     = vdb.config.parameter( "vdb-enable-types",True)
+enable_profile   = vdb.config.parameter( "vdb-enable-profile",True)
+enable_unwind    = vdb.config.parameter( "vdb-enable-unwind",True)
+enable_hook      = vdb.config.parameter( "vdb-enable-hook",True)
+enable_history   = vdb.config.parameter( "vdb-enable-history",True)
+enable_pipe      = vdb.config.parameter( "vdb-enable-pipe",True)
+
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,pahole,ftree,dashboard,hashtable,ssh,track,graph,data,syscall,types,profile,unwind,hook,history,pipe" )
+
+home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)
+search_down     = vdb.config.parameter( "vdb-plugin-search-down",True)
+honor_sp        = vdb.config.parameter( "vdb-plugin-honor-safe-path",True)
+max_threads     = vdb.config.parameter( "vdb-max-threads",4)
+inithome_first  = vdb.config.parameter( "vdb-init-home-first",True)
+initsearch_down = vdb.config.parameter( "vdb-init-search-down",True)
+
+
+enabled_modules = [ ]
+vdb_dir = None
+vdb_init = None
+texe = None
+keep_running = True
+
 
 
 class cmd_vdb (vdb.command.command):
@@ -84,12 +92,9 @@ class cmd_vdb (vdb.command.command):
 
 cmd_vdb()
 
-theme = vdb.config.parameter( "vdb-theme",None)
-
 
 def is_in_safe_path( pdir ):
     pdir = os.path.normpath(pdir) + "/"
-#    print("pdir = '%s'" % pdir )
     sp = gdb.parameter("auto-load safe-path")
 
     debugdir = gdb.parameter("debug-file-directory")
@@ -173,45 +178,10 @@ def load_themes( vdbdir ):
     finally:
         sys.path = oldpath
 
-enable_prompt    = vdb.config.parameter( "vdb-enable-prompt",True)
-enable_backtrace = vdb.config.parameter( "vdb-enable-backtrace",True)
-enable_register  = vdb.config.parameter( "vdb-enable-register",True)
-enable_vmmap     = vdb.config.parameter( "vdb-enable-vmmap",True)
-enable_hexdump   = vdb.config.parameter( "vdb-enable-hexdump",True)
-enable_asm       = vdb.config.parameter( "vdb-enable-asm",True)
-enable_pahole    = vdb.config.parameter( "vdb-enable-pahole",True)
-enable_ftree     = vdb.config.parameter( "vdb-enable-ftree",True)
-enable_dashboard = vdb.config.parameter( "vdb-enable-dashboard",True)
-enable_hashtable = vdb.config.parameter( "vdb-enable-hashtable",True)
-enable_ssh       = vdb.config.parameter( "vdb-enable-ssh",True)
-enable_track     = vdb.config.parameter( "vdb-enable-track",True)
-enable_graph     = vdb.config.parameter( "vdb-enable-graph",True)
-enable_data      = vdb.config.parameter( "vdb-enable-data",True)
-enable_syscall   = vdb.config.parameter( "vdb-enable-syscall",True)
-enable_types     = vdb.config.parameter( "vdb-enable-types",True)
-enable_profile   = vdb.config.parameter( "vdb-enable-profile",True)
-enable_unwind    = vdb.config.parameter( "vdb-enable-unwind",True)
-enable_hook      = vdb.config.parameter( "vdb-enable-hook",True)
-enable_history   = vdb.config.parameter( "vdb-enable-history",True)
-enable_pipe      = vdb.config.parameter( "vdb-enable-pipe",True)
-
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,pahole,ftree,dashboard,hashtable,ssh,track,graph,data,syscall,types,profile,unwind,hook,history,pipe" )
-
-home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)
-search_down     = vdb.config.parameter( "vdb-plugin-search-down",True)
-honor_sp        = vdb.config.parameter( "vdb-plugin-honor-safe-path",True)
-max_threads     = vdb.config.parameter( "vdb-max-threads",4)
-inithome_first  = vdb.config.parameter( "vdb-init-home-first",True)
-initsearch_down = vdb.config.parameter( "vdb-init-search-down",True)
-
-
-enabled_modules = [ ]
-vdb_dir = None
-vdb_init = None
-texe = None
-keep_running = True
-
 def start( vdbd = None, vdbinit = None ):
+    if( enable.value is False ):
+        print("Not starting vdb, disabled by vdb-enable")
+        return None
     print("Starting vdb modules…")
     
     global texe
