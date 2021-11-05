@@ -466,10 +466,11 @@ def symbol(fname):
             fname = fname[0:oppos] # + color("(...)","#ff6611")
     return fname
 
-HOME=os.environ["HOME"]
-def path(fpath):
-	fpath = fpath.replace(HOME,"~")
-	return fpath
+def symbol_cmd(args):
+    print(symbol(args[0]))
+
+vdb.subcommands.add_subcommand( [ "shorten"] , symbol_cmd )
+
 
 def test( ):
     x=parse_function("abort ()")
