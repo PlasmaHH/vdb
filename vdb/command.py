@@ -75,10 +75,14 @@ class command(gdb.Command):
             self.do_invoke(argv)
 
     def invoke (self, arg, from_tty):
+#        print("arg = '%s'" % (arg,) )
+#        print("from_tty = '%s'" % (from_tty,) )
+#        gdb.execute("show commands",False,False)
         if( self.repeat is not True and from_tty is True ):
             lcmds = gdb.execute("show commands",False,True)
             if( lcmds == self.last_commands ):
-                return
+                pass # doesn't work well together qith uniq history, disable for now
+#                return
             self.last_commands = lcmds
 
         try:
