@@ -18,5 +18,8 @@
 #15 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*", level="6"\) at ftree.cxx:96
 #16 0x000000000040425f in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*", level="7"\) at ftree.cxx:96
 #17 0x00000000004025f0 in main \(argc="1", argv="0x7fffffff.*"\) at ftree.cxx:146
+#18 0x00007ffff7abd52d in __libc_start_call_main (main="0x402316 <main(int, char const**)>", argc="1", argv="0x7fffffffd478") at ../sysdeps/nptl/libc_start_call_main.h:58
+#19 0x00007ffff7abd5df in __libc_start_main_impl (main="0x402316 <main(int, char const**)>", argc="1", argv="0x7fffffffd478", init="<optimized out>", fini="<optimized out>", rtld_fini="<optimized out>", stack_end="0x7fffffffd468") at ../csu/libc-start.c:409
+#20 0x000000000040224f in _start () at ../sysdeps/x86_64/start.S:116
 
 Exiting vdb...

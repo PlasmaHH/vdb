@@ -8,9 +8,11 @@ import difflib
 import sys
 import re
 import colors
+import argparse
 
 sys.path.insert(0,'..')
 import vdb.color
+import vdb.util
 
 goodcolor = "#080"
 failcolor = "#f00"
@@ -204,6 +206,45 @@ def run_binary( binary, cmds ):
 
 
 def run_tests( tests ):
+
+    parser = argparse.ArgumentParser(description='run vdb tests.')
+    parser.add_argument("-s","--show", action="store_true", help = "Show the list of active tests (and a bit of info)")
+    parser.add_argument("-f","--filter", type=str, action="store", help = "Regex to filter tests for")
+
+    args = parser.parse_args(sys.argv[1:])
+
+    print("args.show = '%s'" % (args.show,) )
+    print("args.filter = '%s'" % (args.filter,) )
+
+
+    if( args.filter ):
+        cre = re.compile(args.filter)
+        for test in tests:
+            name = test.get("name",None)
+            if( name is not None and cre.search(name) is not None ):
+                pass
+            else:
+                test["enabled"] = False
+
+    if( args.show ):
+        otbl = []
+        otbl.append(["Name","Enabled","Commands","Expect","Hash","File"])
+        for test in tests:
+            line=[]
+            for kw in ["name","enabled","commands","expect","hash","file"]:
+                var = test.get(kw,None)
+                if( kw == "commands" ):
+                    var = len(var)
+                if( kw == "enabled" ):
+                    if( var ):
+                        var = "Y"
+                    else:
+                        var = "N"
+                line.append( var )
+            otbl.append(line)
+        print(vdb.util.format_table(otbl))
+        return None
+
     failed = 0
     passed = 0
     skipped = 0

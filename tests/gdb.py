@@ -56,6 +56,6 @@ COMPLETE_EXPRESSION = None
 class error(BaseException):
     pass
 
-def execute(a):
+def execute(a,b=None,c=None):
     pass
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
