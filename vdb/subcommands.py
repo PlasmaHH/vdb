@@ -39,6 +39,8 @@ class subcommands:
 
     def show( self, prefix = "" ):
         for k,s in self.subcommands.items():
+            if( k[0] == "_" ):
+                continue
             if( isinstance(s,subcommands) ):
                 s.show(f"{prefix} {k}")
             else:
