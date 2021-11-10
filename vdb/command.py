@@ -94,10 +94,10 @@ class command(gdb.Command):
                 return
 
             global profile_next
-            if( profile_next.value ):
+            if( profile_next.value and from_tty ):
                 profile_next.value = False
                 import cProfile
-                cProfile.runctx("self.invoke_or_pipe(argv)",globals(),locals())
+                cProfile.runctx("self.invoke_or_pipe(arg,argv)",globals(),locals())
             else:
                 self.invoke_or_pipe(arg,argv)
         except:
