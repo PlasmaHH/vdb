@@ -18,6 +18,12 @@ from collections.abc import Iterable
 vdb.enabled_modules.append("shorten")
 
 color_shorten = vdb.config.parameter("vdb-shorten-colors-templates", "#f60", gdb_type = vdb.config.PARAM_COLOUR)
+fold_ellipsis = vdb.config.parameter("vdb-shorten-fold-ellipsis", "…" )
+recursion_limit = vdb.config.parameter("vdb-shorten-recursion-limit",3)
+verbosity = vdb.config.parameter("vdb-shorten-verbosity",1)
+
+debug = vdb.config.parameter("vdb-shorten-debug",False)
+cache = vdb.config.parameter("vdb-shorten-cache",True)
 
 
 def log(fmt, *more ):
@@ -29,6 +35,8 @@ def log(fmt, *more ):
 def indent( i, fmt, *more ):
     log("  " * i + fmt, *more )
 
+def prefix( i, msg, end = None ):
+    print(" " * i + msg, end = end )
 
 
 class namespace:
@@ -44,227 +52,326 @@ class namespace:
 		return ret
 
 class type_or_function:
-	def __init__(self):
-		self.namespace=None
-		self.name="{{placeholder for name}}"
-		self.template_parameters=[]
-		self.subobject=None
-		self.parameters=[]
-		self.shortens = {}
-		self.suppress_templates = False
-		self.suppress_paramters = False
 
-	def add_tail( self, subob ):
-		if( self.subobject ):
-			self.subobject.add_tail(subob)
-		else:
-			self.subobject = subob
-	
-	def shorten( self, name ):
-		for old,new in self.shortens.items():
-			name = name.replace(old,new)
-		return name
+    next_id = 0
 
-	def add_ns( self, ns ):
-		if( len(ns) > 0 ):
-			ns=namespace(ns)
-			ns.parent = self.namespace
-			self.namespace = ns
+    def __init__(self):
+        self.namespace=None
+        self.name="{{placeholder for name}}"
+        self.template_parameters=None
+        self.subobject=None
+        self.parameters=None
+        self.shortens = {}
+        self.suppress_templates = False
+        self.suppress_paramters = False
+        self.id = type_or_function.next_id
+        type_or_function.next_id += 1
+        self.type = None
 
-	def add_param( self, par ):
-		self.parameters.append(par)
+    def to_dot( self, g ):
+        n = g.node(f"{self.name}.{self.id}")
+        n["id"] = self.id
+        n["name"] = self.name
+        n["type"] = self.type
+        if( self.namespace is None ):
+            n["ns"] = "None"
+        else:
+            n["ns"] = self.namespace
+        if( self.subobject ):
+            sn=self.subobject.to_dot(g)
+            n.edge(sn.name)
+        if( self.template_parameters is not None ):
+            n["tparam"] = len(self.template_parameters)
+            for tp in self.template_parameters:
+                tn = tp.to_dot(g)
+                n["tparam"].tds[1]["port"] = "tparam"
+                n.edge( tn.name, srcport = "tparam" )
+        else:
+            n["tparam"] = "None"
 
-	def add_template( self, tpar ):
-		if( len(tpar.name) > 0 ):
-			self.template_parameters.append(tpar)
+        if( self.parameters is not None ):
+            n["param"] = len(self.parameters)
+            for pp in self.parameters:
+                pb = pp.to_dot(g)
+                n["param"].tds[1]["port"] = "param"
+                n.edge( pb.name, srcport = "param")
+        else:
+            n["param"] = None
 
-	def dump( self, level = 0 ):
-		indent(level,"ns : " + str(self.namespace))
-		indent(level,"name : " + self.name)
-		indent(level,"template parameters[{}]".format(len(self.template_parameters)))
-		for t in self.template_parameters:
-			t.dump(level+1)
-		indent(level,"parameters[{}]".format(len(self.parameters)))
-		if( self.subobject is not None ):
-			indent(level,"Subobject")
-			self.subobject.dump(level+1)
+        return n
 
-	def fold_templates( self, shortlist ):
-		if( isinstance(shortlist,Iterable) and not isinstance(shortlist,str) ):
-			for s in shortlist:
-				self.fold_templates(s)
-		else:
-			if( self.subobject is not None ):
-				self.subobject.fold_templates(shortlist)
-			if( len(self.template_parameters ) ):
-				for tp in self.template_parameters:
-					tp.fold_templates(shortlist)
-			if( len(self.parameters) ):
-				for p in self.parameters:
-					p.fold_templates(shortlist)
-			if( self.name == shortlist ):
-				self.suppress_templates = True
+    def set_type( self, nt ):
+#        print(f"{self.type}[{self.id}] => {nt}")
+        self.type = nt
 
-	def add_shorten( self, fro, to = None ):
-		if( to is None ):
-			for f,t in fro.items():
-				self.add_shorten(f,t)
-		else:
-			if( self.subobject is not None ):
-				self.subobject.add_shorten(fro,to)
-			if( len(self.template_parameters ) ):
-				for tp in self.template_parameters:
-					tp.add_shorten(fro,to)
-			if( len(self.parameters) ):
-				for p in self.parameters:
-					p.add_shorten(fro,to)
-			self.shortens[fro] = to
+#    def add_tail( self, subob ):
+#        print("subob.id = '%s'" % (subob.id,) )
+#        if( self.subobject ):
+#            self.subobject.add_tail(subob)
+#        else:
+#            self.subobject = subob
 
-	def __str__(self):
-		if( len(self.name) == 0 ):
-			return ""
-		ret = ""
-		if( self.namespace is not None ):
-			ret += str(self.namespace) + "::"
-		ret += self.name
-		ret = self.shorten(ret)
-		if( len(self.template_parameters) ):
-			if( self.suppress_templates ):
-				ret += vdb.color.color("<…>",color_shorten.value)
-			else:
-				ret += "<"
-				first=True
-				for t in self.template_parameters:
-					if( first ):
-						first = False
-					else:
-						ret += ","
-					ts = str(t)
-					if( len(ts) == 0 ):
-						print("Template parameter of length 0")
-					ret += ts
-				ret += ">"
-		if( self.subobject is not None ):
-			if( len(self.subobject.name) != 0 ):
-				ret += "::" 
-			ret += str(self.subobject)
+    def shorten( self, name ):
+        for old,new in self.shortens.items():
+            name = name.replace(old,new)
+        return name
 
-		if( self.subobject is not None ):
-			if( len(self.subobject.parameters) ):
-				ret += "("
-				first = True
-				for par in self.subobject.parameters:
-					if( first ):
-						first = False
-					else:
-						ret += ","
-					ret += str(par)
-				ret += ")"
-		return ret
+    def add_ns( self, ns ):
+        if( len(ns) > 0 ):
+            ns=namespace(ns)
+            ns.parent = self.namespace
+            self.namespace = ns
+
+    def add_param( self, par ):
+        if( self.parameters is None ):
+            self.parameters = []
+        if( par is not None ):
+#            par.dump()
+            self.parameters.append(par)
+#        self.dump()
+
+    def add_template( self, tpar ):
+        if( self.template_parameters is None ):
+            self.template_parameters = []
+        if( len(tpar.name) > 0 ):
+            self.template_parameters.append(tpar)
+#        print("self.id = '%s'" % (self.id,) )
+#        print("self.template_parameters = '%s'" % (self.template_parameters,) )
+#        print("tpar = '%s'" % (tpar,) )
 
 
+    def dump( self, level = 0 ):
+        indent(level,"id : " + str(self.id))
+        indent(level,"ns : " + str(self.namespace))
+        indent(level,"name : " + self.name)
+        indent(level,"type : " + str(self.type))
+        if( self.template_parameters is not None ):
+            indent(level,"template parameters[{}]".format(len(self.template_parameters)))
+            for t in self.template_parameters:
+                t.dump(level+1)
+        else:
+            indent(level,"template parameters = None")
+        if( self.parameters ):
+            indent(level,"parameters[{}]".format(len(self.parameters)))
+        else:
+            indent(level,"parameters = None")
+        if( self.subobject is not None ):
+            indent(level,"Subobject")
+            self.subobject.dump(level+1)
+
+
+    def fold_templates( self, shortlist ):
+        if( isinstance(shortlist,Iterable) and not isinstance(shortlist,str) ):
+            for s in shortlist:
+                self.fold_templates(s)
+        else:
+            if( self.subobject is not None ):
+                self.subobject.fold_templates(shortlist)
+            if( self.template_parameters is not None and len(self.template_parameters ) > 0):
+                for tp in self.template_parameters:
+                    tp.fold_templates(shortlist)
+            if( self.parameters is not None and len(self.parameters) ):
+                for p in self.parameters:
+                    p.fold_templates(shortlist)
+            if( self.name == shortlist ):
+                self.suppress_templates = True
+
+    def add_shorten( self, fro, to = None ):
+        if( to is None ):
+            for f,t in fro.items():
+                self.add_shorten(f,t)
+        else:
+            if( self.subobject is not None ):
+                self.subobject.add_shorten(fro,to)
+            if( self.template_parameters is not None and len(self.template_parameters ) > 0 ):
+                for tp in self.template_parameters:
+                    tp.add_shorten(fro,to)
+            if( self.parameters is not None and len(self.parameters) ):
+                for p in self.parameters:
+                    p.add_shorten(fro,to)
+            self.shortens[fro] = to
+
+    def __str__(self):
+        return self.to_string()
+
+    def to_string( self, indent = 0 ):
+        if( len(self.name) == 0 ):
+            return ""
+        ret = ""
+        if( self.namespace is not None ):
+            ret += str(self.namespace) + "::"
+        ret += self.name
+        ret = self.shorten(ret)
+#        if( len(self.template_parameters) ):
+        if( self.template_parameters is not None ):
+            if( self.suppress_templates ):
+                ret += vdb.color.color("<" + fold_ellipsis.value +  ">",color_shorten.value)
+            else:
+                ret += "<"
+                first=True
+                for t in self.template_parameters:
+                    if( first ):
+                        first = False
+                    else:
+                        ret += ", "
+                    ts = str(t)
+                    if( len(ts) == 0 ):
+                        print("Template parameter of length 0")
+                    ret += ts
+                print("ret = '%s'" % (ret,) )
+                if( ret[-1] == ">" ):
+                    ret += " "
+                ret += ">"
+
+        if( self.subobject is not None ):
+            if( len(self.subobject.name) != 0 ):
+                ret += "::" 
+            ret += str(self.subobject)
+
+#        print("self.id = '%s'" % (self.id,) )
+#        print("self.parameters = '%s'" % (self.parameters,) )
+#        print("self.subobject = '%s'" % (self.subobject,) )
+        if( self.parameters is not None ):
+            ret += "("
+            first = True
+            
+            for par in self.parameters:
+                if( first ):
+                    first = False
+                else:
+                    ret += ", "
+                ret += str(par)
+            ret += ")"
+#        print("ret = '%s'" % (ret,) )
+        return ret
+
+def use_sofar( sofar ):
+    while( sofar.endswith(" ") ):
+        sofar = sofar[:-1]
+    return sofar
 
 def parse_fragment( frag, obj, level = 0 ):
-    #	indent(level,"Parsing fragment '{}'",frag[:50])
+#    indent(level,"Parsing fragment '{}'",frag[:250])
     sofar = ""
+
+    ans = "(anonymous namespace)"
 
     i = -1
     while i < len(frag)-1:
-        #		print("len(frag) = '%s'" % len(frag) )
-#		print("i = '%s'" % i )
         i += 1
-#		print("i = '%s'" % i )
-#		indent(level,"frag[%s] = '%s'" % (i,frag[i]) )
+
         s=frag[i]
+#        print(f"@{level} frag[{i}]='{frag[i]}'")
         if( s == " "):
+            if( len(sofar) > 0 ):
+                sofar += s
             continue
         if( s == "(" ):
-            obj.name = sofar
+            if( frag[i:].startswith(ans) ):
+                # sofar should be empty. assert maybe?
+                sofar = ans
+                i += len(ans)
+                i -= 1
+                continue
+            obj.add_param(None) # tell there are some, maybe 0
+            obj.name = use_sofar(sofar)
+            obj.set_type("function")
             while True:
                 ct = type_or_function()
+                ct.set_type("function parameter")
                 i += 1
-                i += parse_fragment( frag[i:], ct, level+1 ) 
+                consumed = parse_fragment( frag[i:], ct, level+1 ) 
+                i += consumed
 #				indent(level,"param {}",ct)
 #				print("frag[i:] = '%s'" % frag[i:] )
 #				print("frag[i+1:] = '%s'" % frag[i+1:] )
-                obj.add_param(ct)
+                if( len( ct.name) > 0 ):
+                    obj.add_param(ct)
+#                print("obj.id = '%s'" % (obj.id,) )
                 if( frag[i] == ")" ):
-                    return i+1
+#                    i+=1
+                    break
             continue
         if( s == ")" ):
-            obj.name = sofar
+            obj.name = use_sofar(sofar)
             return i
         if( s == ":" ):
-            obj.add_ns( sofar )
+            obj.add_ns( use_sofar(sofar) )
             sofar = ""
             continue
         if( s == "," ):
-            obj.name = sofar
+            obj.name = use_sofar(sofar)
             return i
         if( s == "<" ):
-            obj.name = sofar
-            sofar = ""
+            obj.name = use_sofar(sofar)
             while True:
-                #				indent(level,"obj = '%s'" % obj )
                 ct = type_or_function()
-                i += parse_fragment( frag[i+1:], ct,level+1 )
-#				indent(level,"ct = '%s'" % ct )
+                i+=1 # consume the <
+                i += parse_fragment( frag[i:], ct,level+1 )
+                ct.set_type("template parameter")
+#                print(f"after template fragment @{level} frag[{i}]='{frag[i]}'")
+#                print("ct.name = '%s'" % (ct.name,) )
+
                 obj.add_template( ct )
-                i+=1
-#				print("i = '%s'" % i )
-#				print("len(frag) = '%s'" % len(frag) )
-                if( i+1 == len(frag) ):
-                    return i
-#				indent(level,"T frag[%s] = '%s'" % (i,frag[i]) )
+#                print("i = '%s'" % i )
+#                print("len(frag) = '%s'" % len(frag) )
+#                print("frag = '%s'" % (frag,) )
+#                if( i+1 == len(frag) ): # assume last closing >
+#                    return i
+
                 if( frag[i] == "," ):
                     continue
                 if( frag[i] == ">" ):
-                    if( frag[i+1] == ":" ):
+                    if( (i+1) < len(frag) and frag[i+1] == ":" ):
                         sub = type_or_function()
                         obj.subobject = sub
                         obj = sub
-                        break
-                    else:
-                        return i
+                        sofar = ""
+#                    else:
+#                        i+=1
+#                    print("level = '%s'" % (level,) )
+#                    print("i = '%s'" % (i,) )
+#                    print("ct.name = '%s'" % (ct.name,) )
+#                    if( level == 0 ):
+#                        i += 1
+                    break
+#            print(f"template continue on {frag} [{i}]")
             continue
         if( s == ">" ):
-            obj.name = sofar
-#			print("i = '%s'" % i )
+            obj.name = use_sofar(sofar)
             return i
-#		indent(level,"{} += {}".format(sofar,s))
 
         sofar += s
+
+#    print("len(frag) = '%s'" % (len(frag),) )
+#    print("at end i = '%s'" % (i,) )
+    i += 1
     if( len(sofar) > 0 ):
-        obj.name =sofar
+        obj.name = use_sofar(sofar)
     return i
 
 
 
 
 def parse_function( fun ):
-    #	print("fun = '%s'" % fun )
+#    print("fun = '%s'" % fun )
     func = type_or_function()
     rest = fun
     sub = func
-    while len(rest) > 0:
-        i = parse_fragment( rest , sub )
-#		print("sub = '%s'" % sub )
-#		print("rest = '%s'" % rest )
-#		print("i = '%s'" % i )
-        if( i == len(rest) ):
-            break
-        i += 1
-        rest = rest[i:]
-#		print("rest = '%s'" % rest )
-#		print("i = '%s'" % i )
-        if( len(rest) > 0 ):
-            sub0 = type_or_function()
-            sub.add_tail(sub0)
-            sub = sub0
+    func.set_type("type_or_function")
+    i = parse_fragment( rest , sub )
+
+
+
+    if( i != len(rest) ):
+        print(f"Consumed {i} out of {len(rest)} bytes, parser doesn't know about the rest")
+
     sf = str(func)
     s0 = sf.replace(" ","")
     s1 = fun.replace(" ","")
-    if( s0 != s1 ):
+    s0 = sf
+    s1 = fun
+    if( True and s0 != s1 ):
         #		func.dump()
         print("Recreating the function signature leads a difference (%s,%s)" % (len(s0),len(s1)))
         print("fun = '%s'" % fun )
@@ -335,6 +442,8 @@ def add_shorten_v( argv ):
         t=argv[1]
         add_shorten(f,t)
         print(f'Added shorten from "{f}" to "{t}"')
+    global symbol_cache
+    symbol_cache = {}
 
 def show_shorten( args ):
     print("Configured shortens are:")
@@ -383,6 +492,8 @@ def add_foldable_v( argv ):
         add_foldable( argv[0] )
     elif( len(argv) == 2 ):
         add_conditional( argv[0], argv[1] )
+    global symbol_cache
+    symbol_cache = {}
 
 def show_foldable( args ):
     print("Foldables are:")
@@ -404,16 +515,15 @@ def lazy_load_typedefs( ):
     global loaded_typedefs
     if( loaded_typedefs ):
         return
-    return
     loaded_typedefs = True
-    print("Getting typelist")
+    print("Loading typelist (can take a moment)")
     typelist = gdb.execute("info types",False,True)
-    print("Got it")
 
     candidates = set()
     cnt = 0
-    print("len(typelist) = '%s'" % len(typelist) )
+
     for line in typelist.splitlines():
+        cnt += 1
         # Want only typedefs of templates
         if( line.find("typedef") != -1 and line.find("<") != -1 ):
             sl = line.split()
@@ -430,16 +540,21 @@ def lazy_load_typedefs( ):
             if( to.endswith(";") ):
                 to = to[:-1]
             fr = " ".join(sl[:-1])
-            cnt += 1
-            candidates.add((fr,to))
-    print("cnt = '%s'" % cnt )
-    print("len(candidates) = '%s'" % len(candidates) )
+            if( len(fr) > len(to) ):
+                candidates.add((fr,to))
+
+
     for fr,to in candidates:
-        print("Shortening '%s' => '%s'" % (fr,to))
+        if( verbosity.value > 2 ):
+            print("Shortening '%s' => '%s'" % (fr,to))
         add_shorten(fr,to)
-#    print("candidates = '%s'" % candidates )
+        # XXX Try to fully replicate the gdb provided type string, including all spaces
+#        pfr = parse_function(fr)
+#        add_shorten(str(pfr),to)
+    print(f"Loaded {cnt} type items, found {len(candidates)} for automatic typedef shortening")
 
 
+symbol_cache = {}
 
 def symbol(fname):
     lazy_load_typedefs()
@@ -447,50 +562,49 @@ def symbol(fname):
     if( fname is None ):
         return fname
 
-#    fun = parse_function(fname)
+    infname = fname
 
-    for old,new in shortens.items():
-        fname = fname.replace(old,new)
-    for fold in foldables:
-        fname = template_fold(fname,fold)
+    global symbol_cache
+    if( cache.value ):
+        fret = symbol_cache.get(fname,None)
+        if( fret is not None ):
+            return fret
+    else:
+        symbol_cache = {}
 
-    for k,fl in conditional_foldables.items():
-        m = re.search(k,fname)
-        if( m ):
-            for f in fl:
-                fname = template_fold(fname,f)
-    if( fname.endswith(")") or fname.endswith(") const") ):
-        #		print("fname = '%s'" % fname )
-        oppos = fname.rfind("(")
-        if( oppos != -1 ):
-            fname = fname[0:oppos] # + color("(...)","#ff6611")
+    fun = parse_function(fname)
+    if( debug.value ):
+        g = vdb.dot.graph("function")
+        fun.to_dot(g)
+        g.write("shorten.dot")
+
+#    print( f"'{fun}' =?= '{fname}'")
+#    print("bef = '%s'" % (fun,) )
+    fun.add_shorten(shortens)
+    fun.fold_templates(foldables)
+
+    # Do the shortens on the complete string type too
+    fname=str(fun)
+
+    cnt = 0
+    while True:
+        cnt += 1
+        ofname = fname
+        for old,new in shortens.items():
+            fname = fname.replace(old,new)
+        if( ofname == fname ):
+            break
+        if( cnt >= recursion_limit.value ):
+            break
+
+    symbol_cache[infname] = fname
+#    print(f"[{len(symbol_cache)}]{infname} => {fname}")
     return fname
 
 def symbol_cmd(args):
-    print(symbol(args[0]))
+    sym = " ".join(args)
+    print(symbol(sym))
 
 vdb.subcommands.add_subcommand( [ "shorten"] , symbol_cmd )
 
-
-def test( ):
-    x=parse_function("abort ()")
-#    x=parse_function("abort<abc> ()")
-#    x=parse_function("abort<abc<def::ghi>> ()")
-#    x=parse_function("abort<abc,def<xxx>,ghi> ()")
-#    x=parse_function("abort<abc,def<xxx>> (unsigned)")
-#    x=parse_function("abort<abc,def<xxx>> ()")
-#    x=parse_function("xxx::str0<int>::str1<long>::fx::fy")
-#    x=parse_function("x0<a1<b1>::x>::f0")
-#    x=parse_function("x0<a1<b1>::x<bar>::u>::f0")
-#    x=parse_function("mx<true>::cde<abc<abg>::xyz>")
-#    x=parse_function("mx<true>::cde<abc<abg>::xyz>()")
-#    x=parse_function("mx<true>::cde<abc<abg>::xyz>(int,int)")
-    print("x = '%s'" % x )
-
-if __name__ == "__main__":
-    try:
-        test()
-    except:
-        traceback.print_exc()
-        pass
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

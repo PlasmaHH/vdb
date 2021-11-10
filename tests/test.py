@@ -210,12 +210,9 @@ def run_tests( tests ):
     parser = argparse.ArgumentParser(description='run vdb tests.')
     parser.add_argument("-s","--show", action="store_true", help = "Show the list of active tests (and a bit of info)")
     parser.add_argument("-f","--filter", type=str, action="store", help = "Regex to filter tests for")
+    parser.add_argument("-d","--debug", action="store_true", help = "enables test debugging mode")
 
     args = parser.parse_args(sys.argv[1:])
-
-    print("args.show = '%s'" % (args.show,) )
-    print("args.filter = '%s'" % (args.filter,) )
-
 
     if( args.filter ):
         cre = re.compile(args.filter)
@@ -253,6 +250,7 @@ def run_tests( tests ):
         c = test.get("commands",None)
         n = test.get("name", "unnamed test" )
         en = test.get("enabled",None)
+        op = test.get("output",args.debug)
         print("Test '%s' :" % n)
         if( en is not None and en == False ):
             skip("Skipping, not enabled")
@@ -273,6 +271,10 @@ def run_tests( tests ):
         else:
             g,h = run_binary( None, c )
         e = test.get("expect",None)
+        if( op ):
+            print(g)
+        if( args.debug ):
+            continue
         if( e is not None ):
             tolines = open(e, 'r').readlines()
             g=colors.strip_color(g)
@@ -350,6 +352,51 @@ tests = [
                 "expect" : "mock_disassemble.exp",
                 "enabled" : True
             },
+            {
+                   "name": "shorten functions",
+                "enabled": True,
+                "commands" : [ None,
+                "vdb add foldable foldme",
+                "vdb add shorten shorten<shorten> shorten",
+                "set vdb-shorten-debug on",
+#                "set vdb-shorten-debug off",
+                "vdb shorten abort",
+                "vdb shorten vdb::abort",
+                "vdb shorten vdb::__detail::abort",
+                "vdb shorten vdb::__detail::abort(__detail::x0)",
+                "vdb shorten abc::def<>::ghi()",
+                "vdb shorten abort ()",
+                "vdb shorten abort()",
+                "vdb shorten abort (val)",
+                "vdb shorten abort (val,vol)",
+                "vdb shorten abort<>()",
+                "vdb shorten abort<abc> ()",
+                "vdb shorten abort<abc>()",
+                "vdb shorten abort<abc> (v0,v1)",
+                "vdb shorten abort<abc<def::ghi>> ()",
+                "vdb shorten abort<abc,def<xxx>,ghi> ()",
+                "vdb shorten abort<abc,def<xxx>> (unsigned)",
+                "vdb shorten abort<abc,def<xxx>> ()",
+                "vdb shorten xxx::str0<int>::str1<long>::fx::fy",
+                "vdb shorten x0<a1<b1>::x>::f0",
+                "vdb shorten x0<a1<b1>::x<bar>::u>::f0",
+                "vdb shorten mx<true>::cde<abc<abg>::xyz>",
+                "vdb shorten mx<true>::cde<abc<abg>::xyz>()",
+                "vdb shorten mx<true>::cde<abc<abg>::xyz>(int,int)",
+                "vdb shorten std::function<void(void)>()",
+                "vdb shorten foldme<true>()",
+                "vdb shorten dontfold<foldme<true>>()",
+                "vdb shorten shorten<shorten>",
+                "vdb shorten shorten<shorten<shorten>>",
+                "vdb shorten std::unique_ptr<char [], (anonymous namespace)::free_as_in_malloc>",
+                "vdb shorten rabbit<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > >",
+                "vdb shorten main(int, char const**)",
+                "vdb shorten hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > >(node*, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > >*, int)",
+
+                    ],
+                "expect" : "shorten_function.exp",
+                "output" : True
+            }
 
         ]
 
