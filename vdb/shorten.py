@@ -67,6 +67,7 @@ class type_or_function:
         self.id = type_or_function.next_id
         type_or_function.next_id += 1
         self.type = None
+        self.tail = ""
 
     def to_dot( self, g ):
         n = g.node(f"{self.name}.{self.id}")
@@ -225,7 +226,7 @@ class type_or_function:
 
         if( self.subobject is not None ):
             if( len(self.subobject.name) != 0 ):
-                ret += "::" 
+                ret += self.subobject.tail
             ret += str(self.subobject)
 
 #        print("self.id = '%s'" % (self.id,) )
@@ -255,6 +256,8 @@ def parse_fragment( frag, obj, level = 0 ):
     sofar = ""
 
     ans = "(anonymous namespace)"
+
+    tailset = set( [ ":", "*", "&" ] )
 
     i = -1
     while i < len(frag)-1:
@@ -322,8 +325,11 @@ def parse_fragment( frag, obj, level = 0 ):
                 if( frag[i] == "," ):
                     continue
                 if( frag[i] == ">" ):
-                    if( (i+1) < len(frag) and frag[i+1] == ":" ):
+                    if( (i+1) < len(frag) and frag[i+1] in tailset ):
+
                         sub = type_or_function()
+                        if( frag[i+1] == ":" ):
+                            sub.tail = "::"
                         obj.subobject = sub
                         obj = sub
                         sofar = ""

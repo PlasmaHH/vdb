@@ -375,7 +375,7 @@ tests = [
             {
                 "name": "shorten functions",
                 "enabled": True,
-                "enabled_commands" : "0-2,33",
+#                "enabled_commands" : "0-2,33",
                 "commands" : [ None,
                 "vdb add foldable foldme",
                 "vdb add shorten shorten<shorten> shorten",
@@ -410,8 +410,9 @@ tests = [
                 "vdb shorten std::unique_ptr<char [], (anonymous namespace)::free_as_in_malloc>",
                 "vdb shorten rabbit<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > >",
                 "vdb shorten main(int, char const**)",
-#                "vdb shorten hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > >(node*, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > >*, int)",
-#                "vdb shorten std::remove_reference<std::pair<int const, int>&>",
+                "vdb shorten hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > >(node*, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > >*, int)",
+                "vdb shorten std::remove_reference<std::pair<int const, int>&>",
+                "vdb shorten std::pair<int const, int>&&",
                 "vdb shorten std::pair<int const, int>&",
 
                     ],
