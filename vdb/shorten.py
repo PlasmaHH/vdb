@@ -218,7 +218,7 @@ class type_or_function:
                     if( len(ts) == 0 ):
                         print("Template parameter of length 0")
                     ret += ts
-                print("ret = '%s'" % (ret,) )
+#                print("ret = '%s'" % (ret,) )
                 if( ret[-1] == ">" ):
                     ret += " "
                 ret += ">"
@@ -606,5 +606,30 @@ def symbol_cmd(args):
     print(symbol(sym))
 
 vdb.subcommands.add_subcommand( [ "shorten"] , symbol_cmd )
+
+# This does some of the work of load_typedefs, maybe share it
+def test_all(args):
+    typelist = gdb.execute("info types",False,True)
+
+    prere = re.compile("^[0-9]*:(.*)")
+    for line in typelist.splitlines():
+        line=line.strip()
+        if( len(line) == 0 ):
+            continue
+        if( line[-1] == ":" ):
+            continue
+
+        m = prere.match(line)
+        if( m is not None ):
+            line = m.group(1).strip()
+        if( line[-1] == ";" ):
+            line = line[:-1]
+        # They should be in the list as types elsewhere anyways
+        if( line.startswith("typedef") ):
+            continue
+
+        fun = parse_function(line)
+
+vdb.subcommands.add_subcommand( [ "_test_all_shorten"] , test_all )
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
