@@ -112,6 +112,15 @@ dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Sourc
 
 color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
+def wrap_shorten( fname ):
+    return fname
+    # we can get multiple things that are not function names, try to shorten only really for things that look like
+    # templates
+    if( fname.startswith("<") and fname.endswith(">") ):
+        xfname = fname[1:-1]
+        if( xfname.find("<") != -1 ):
+            fname = "<" + vdb.shorten.symbol(xfname) + ">"
+    return fname
 
 def get_syscall( nr ):
     if( vdb.enabled("syscall") ):
@@ -672,7 +681,7 @@ ascii mockup:
         self.lazy_finish()
         hf = self.function
         if( shorten_header.value ):
-            hf = vdb.shorten.symbol(hf)
+            hf = wrap_shorten(hf)
 
         marked_line = None
         cnt = 0
@@ -793,14 +802,14 @@ ascii mockup:
 
             if( "r" in showspec ):
                 if( i.reference is not None ):
-                    line.append( vdb.shorten.symbol(i.reference) )
+                    line.append( wrap_shorten(i.reference) )
 
             if( any((c in showspec) for c in "tT" ) ):
 #                if( i.targets is not None ):
 #                    line.append( i.targets)
                 if( "T" in showspec ):
                     if( i.target_name is not None ):
-                        line.append( vdb.shorten.symbol(i.target_name))
+                        line.append( wrap_shorten(i.target_name))
 
 
 #            ret.append(line)
@@ -914,12 +923,12 @@ ascii mockup:
 
         if( "r" in showspec ):
             if( i.reference is not None ):
-                tr.td_raw(vdb.dot.color(vdb.shorten.symbol(i.reference),color_function_dot.value))
+                tr.td_raw(vdb.dot.color(wrap_shorten(i.reference),color_function_dot.value))
 
         if( any((c in showspec) for c in "tT" ) ):
             if( "T" in showspec ):
                 if( i.target_name is not None ):
-                    tr.td_raw(vdb.dot.color(vdb.shorten.symbol(i.target_name),color_function_dot.value))
+                    tr.td_raw(vdb.dot.color(wrap_shorten(i.target_name),color_function_dot.value))
 
         for td in tr.tds:
             td["align"]="left"
