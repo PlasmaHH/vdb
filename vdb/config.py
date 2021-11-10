@@ -193,11 +193,11 @@ def execute( s ):
         execute_iterable(s)
 
 
-def set_array_elements( cfg ):
+def set_array_elements( cfg, d0 = ",", d1 = ":" ):
     cfg.elements = []
-    elem = cfg.value.split(",")
+    elem = cfg.value.split(d0)
     for i in elem:
-        i=i.split(":")
+        i=i.split(d1)
         if( len(i) == 1 ):
             try:
                 cfg.elements.append(int(i[0]))

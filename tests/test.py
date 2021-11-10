@@ -13,6 +13,7 @@ import argparse
 sys.path.insert(0,'..')
 import vdb.color
 import vdb.util
+import vdb.config
 
 goodcolor = "#080"
 failcolor = "#f00"
@@ -204,6 +205,12 @@ def run_binary( binary, cmds ):
 #    print("hash = '%s'" % (hash,) )
     return ( gdb, hash )
 
+# to "hijack" the config parser stuff
+class fake_config:
+    def __init__( self, v ):
+        self.value = v
+        self.elements = None
+
 
 def run_tests( tests ):
 
@@ -248,6 +255,19 @@ def run_tests( tests ):
     for test in tests:
         f = test.get("file",None)
         c = test.get("commands",None)
+        cl = test.get("enabled_commands",None)
+        cmset = None
+        if( cl is not None ):
+            fc = fake_config(cl)
+            vdb.config.set_array_elements(fc,d1="-")
+#            print("fc.elements = '%s'" % (fc.elements,) )
+            cmset = set(fc.elements)
+            nc=[]
+            for ci in range(0,len(c)):
+                if( ci in cmset ):
+                    nc.append(c[ci])
+            c = nc
+
         n = test.get("name", "unnamed test" )
         en = test.get("enabled",None)
         op = test.get("output",args.debug)
@@ -353,8 +373,9 @@ tests = [
                 "enabled" : True
             },
             {
-                   "name": "shorten functions",
+                "name": "shorten functions",
                 "enabled": True,
+                "enabled_commands" : "0-2,33",
                 "commands" : [ None,
                 "vdb add foldable foldme",
                 "vdb add shorten shorten<shorten> shorten",
@@ -365,33 +386,33 @@ tests = [
                 "vdb shorten vdb::__detail::abort",
                 "vdb shorten vdb::__detail::abort(__detail::x0)",
                 "vdb shorten abc::def<>::ghi()",
-                "vdb shorten abort ()",
                 "vdb shorten abort()",
-                "vdb shorten abort (val)",
-                "vdb shorten abort (val,vol)",
+                "vdb shorten abort(val)",
+                "vdb shorten abort(val, vol)",
                 "vdb shorten abort<>()",
-                "vdb shorten abort<abc> ()",
                 "vdb shorten abort<abc>()",
-                "vdb shorten abort<abc> (v0,v1)",
-                "vdb shorten abort<abc<def::ghi>> ()",
-                "vdb shorten abort<abc,def<xxx>,ghi> ()",
-                "vdb shorten abort<abc,def<xxx>> (unsigned)",
-                "vdb shorten abort<abc,def<xxx>> ()",
+                "vdb shorten abort<abc>(v0, v1)",
+                "vdb shorten abort<abc<def::ghi> >()",
+                "vdb shorten abort<abc, def<xxx>, ghi>()",
+                "vdb shorten abort<abc, def<xxx> >(unsigned)",
+                "vdb shorten abort<abc, def<xxx> >()",
                 "vdb shorten xxx::str0<int>::str1<long>::fx::fy",
                 "vdb shorten x0<a1<b1>::x>::f0",
                 "vdb shorten x0<a1<b1>::x<bar>::u>::f0",
                 "vdb shorten mx<true>::cde<abc<abg>::xyz>",
                 "vdb shorten mx<true>::cde<abc<abg>::xyz>()",
-                "vdb shorten mx<true>::cde<abc<abg>::xyz>(int,int)",
+                "vdb shorten mx<true>::cde<abc<abg>::xyz>(int, int)",
                 "vdb shorten std::function<void(void)>()",
                 "vdb shorten foldme<true>()",
-                "vdb shorten dontfold<foldme<true>>()",
+                "vdb shorten dontfold<foldme<true> >()",
                 "vdb shorten shorten<shorten>",
-                "vdb shorten shorten<shorten<shorten>>",
+                "vdb shorten shorten<shorten<shorten> >",
                 "vdb shorten std::unique_ptr<char [], (anonymous namespace)::free_as_in_malloc>",
                 "vdb shorten rabbit<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > >",
                 "vdb shorten main(int, char const**)",
-                "vdb shorten hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > >(node*, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > >*, int)",
+#                "vdb shorten hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > >(node*, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > >*, int)",
+#                "vdb shorten std::remove_reference<std::pair<int const, int>&>",
+                "vdb shorten std::pair<int const, int>&",
 
                     ],
                 "expect" : "shorten_function.exp",
