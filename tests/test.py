@@ -375,7 +375,7 @@ tests = [
             {
                 "name": "shorten functions",
                 "enabled": True,
-#                "enabled_commands" : "0-2,33",
+                "enabled_commands" : "0-3,40",
                 "commands" : [ None,
                 "vdb add foldable foldme",
                 "vdb add shorten shorten<shorten> shorten",
@@ -385,6 +385,7 @@ tests = [
                 "vdb shorten vdb::abort",
                 "vdb shorten vdb::__detail::abort",
                 "vdb shorten vdb::__detail::abort(__detail::x0)",
+                "vdb shorten std::map<int, int, std::less<int> >",
                 "vdb shorten abc::def<>::ghi()",
                 "vdb shorten abort()",
                 "vdb shorten abort(val)",
@@ -414,6 +415,10 @@ tests = [
                 "vdb shorten std::remove_reference<std::pair<int const, int>&>",
                 "vdb shorten std::pair<int const, int>&&",
                 "vdb shorten std::pair<int const, int>&",
+                "vdb shorten std::remove_reference<std::pair<int const, int> const&>",
+                "vdb shorten std::remove_reference<void (std::thread::*)()>",
+                "vdb shorten std::less<std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)2>*>",
+                "vdb shorten std::remove_reference<std::ios_base::<unnamed enum> >",
 
                     ],
                 "expect" : "shorten_function.exp",

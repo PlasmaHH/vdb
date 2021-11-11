@@ -81,6 +81,7 @@ class type_or_function:
         if( self.subobject ):
             sn=self.subobject.to_dot(g)
             n.edge(sn.name)
+        n["subobject"] = self.subobject
         if( self.template_parameters is not None ):
             n["tparam"] = len(self.template_parameters)
             for tp in self.template_parameters:
@@ -144,7 +145,7 @@ class type_or_function:
     def dump( self, level = 0 ):
         indent(level,"id : " + str(self.id))
         indent(level,"ns : " + str(self.namespace))
-        indent(level,"name : " + self.name)
+        indent(level,"name : " + str(self.name))
         indent(level,"type : " + str(self.type))
         if( self.template_parameters is not None ):
             indent(level,"template parameters[{}]".format(len(self.template_parameters)))
@@ -196,13 +197,18 @@ class type_or_function:
         return self.to_string()
 
     def to_string( self, indent = 0 ):
-        if( len(self.name) == 0 ):
+        selfname = self.name
+        if( selfname is None ):
+            selfname = ""
+        elif( len(selfname) == 0 ):
             return ""
+
         ret = ""
         if( self.namespace is not None ):
             ret += str(self.namespace) + "::"
-        ret += self.name
+        ret += selfname
         ret = self.shorten(ret)
+#        print("ret = '%s'" % (ret,) )
 #        if( len(self.template_parameters) ):
         if( self.template_parameters is not None ):
             if( self.suppress_templates ):
@@ -223,19 +229,13 @@ class type_or_function:
                 if( ret[-1] == ">" ):
                     ret += " "
                 ret += ">"
-
-        if( self.subobject is not None ):
-            if( len(self.subobject.name) != 0 ):
-                ret += self.subobject.tail
-            ret += str(self.subobject)
-
 #        print("self.id = '%s'" % (self.id,) )
 #        print("self.parameters = '%s'" % (self.parameters,) )
 #        print("self.subobject = '%s'" % (self.subobject,) )
         if( self.parameters is not None ):
             ret += "("
             first = True
-            
+
             for par in self.parameters:
                 if( first ):
                     first = False
@@ -243,12 +243,25 @@ class type_or_function:
                     ret += ", "
                 ret += str(par)
             ret += ")"
+
+        if( self.subobject is not None ):
+#            print("self.subobject = '%s'" % (self.subobject,) )
+#            print("self.subobject.parameters = '%s'" % (self.subobject.parameters,) )
+            if( self.subobject.name is not None and len(self.subobject.name) != 0 ):
+                ret += self.subobject.tail
+#            print("ret = '%s'" % (ret,) )
+#            print("self.subobject = '%s'" % (self.subobject,) )
+#            print("ret = '%s'" % (ret,) )
+            ret += str(self.subobject)
+
+
 #        print("ret = '%s'" % (ret,) )
         return ret
 
 def use_sofar( sofar ):
-    while( sofar.endswith(" ") ):
-        sofar = sofar[:-1]
+#    print("sofar = '%s'" % (sofar,) )
+#    while( sofar.endswith(" ") ):
+#        sofar = sofar[:-1]
     return sofar
 
 def parse_fragment( frag, obj, level = 0 ):
@@ -257,7 +270,10 @@ def parse_fragment( frag, obj, level = 0 ):
 
     ans = "(anonymous namespace)"
 
-    tailset = set( [ ":", "*", "&" ] )
+    tmpl_tailset = [ ":", "*", "&", " const" ]
+    func_tailset = [ "()" ]
+
+    swallow_next = False
 
     i = -1
     while i < len(frag)-1:
@@ -266,8 +282,12 @@ def parse_fragment( frag, obj, level = 0 ):
         s=frag[i]
 #        print(f"@{level} frag[{i}]='{frag[i]}'")
         if( s == " "):
-            if( len(sofar) > 0 ):
-                sofar += s
+            if( not swallow_next ):
+                if( len(sofar) > 0 ):
+#                    print(f"'{sofar}' => '{sofar+s}'")
+                    sofar += s
+#                sofar += str(level)
+            swallo_next = False
             continue
         if( s == "(" ):
             if( frag[i:].startswith(ans) ):
@@ -285,18 +305,35 @@ def parse_fragment( frag, obj, level = 0 ):
                 i += 1
                 consumed = parse_fragment( frag[i:], ct, level+1 ) 
                 i += consumed
+#                print("ct.subobject = '%s'" % (ct.subobject,) )
 #				indent(level,"param {}",ct)
-#				print("frag[i:] = '%s'" % frag[i:] )
+#                print("frag[i:] = '%s'" % frag[i:] )
 #				print("frag[i+1:] = '%s'" % frag[i+1:] )
                 if( len( ct.name) > 0 ):
                     obj.add_param(ct)
 #                print("obj.id = '%s'" % (obj.id,) )
                 if( frag[i] == ")" ):
-#                    i+=1
+                    if( ct.subobject is not None ):
+                        obj.subobject = ct.subobject
+                        obj.subobject.name = None
+                        ct.subobject = None
                     break
+#            print("obj.name = '%s'" % (obj.name,) )
+#            print("frag[i:] = '%s'" % (frag[i:],) )
             continue
         if( s == ")" ):
+#            vdb.util.bark() # print("BARK")
             obj.name = use_sofar(sofar)
+#            print("obj.name = '%s'" % (obj.name,) )
+            if( i+1 < len(frag) and frag[i+1] == "(" ):
+                # a member funciton pointer special case thingie? parse parameters again I guess?
+                sub = type_or_function()
+                obj.subobject = sub
+#                        print("frag[i+1:] = '%s'" % (frag[i+1:],) )
+                consumed=parse_fragment( frag[i+1:],sub,level+1)
+#                        print("consumed = '%s'" % (consumed,) )
+                i += consumed
+#                    i+=1
             return i
         if( s == ":" ):
             obj.add_ns( use_sofar(sofar) )
@@ -325,14 +362,21 @@ def parse_fragment( frag, obj, level = 0 ):
                 if( frag[i] == "," ):
                     continue
                 if( frag[i] == ">" ):
-                    if( (i+1) < len(frag) and frag[i+1] in tailset ):
-
-                        sub = type_or_function()
-                        if( frag[i+1] == ":" ):
-                            sub.tail = "::"
-                        obj.subobject = sub
-                        obj = sub
-                        sofar = ""
+#                    obj.name = use_sofar(sofar)
+#                    sofar = ""
+#                    print(f"tail: '{frag[i+1:]}'")
+                    if( (i+1) < len(frag) ):
+                        for tail in tmpl_tailset:
+                            if( frag[i+1:].startswith(tail) ):
+                                sub = type_or_function()
+                                if( frag[i+1] == ":" ):
+                                    sub.tail = "::"
+                                if( frag[i+1] == " " ):
+                                    sub.tail = " "
+                                obj.subobject = sub
+                                obj = sub
+                                sofar = ""
+                                break
 #                    else:
 #                        i+=1
 #                    print("level = '%s'" % (level,) )
@@ -341,9 +385,12 @@ def parse_fragment( frag, obj, level = 0 ):
 #                    if( level == 0 ):
 #                        i += 1
                     break
+            swallow_next = True
 #            print(f"template continue on {frag} [{i}]")
             continue
         if( s == ">" ):
+#            vdb.util.bark() # print("BARK")
+#            if( len(sofar) > 0 ):
             obj.name = use_sofar(sofar)
             return i
 
@@ -584,6 +631,7 @@ def symbol(fname):
         fun.to_dot(g)
         g.write("shorten.dot")
 
+#    print("debug.value = '%s'" % (debug.value,) )
 #    print( f"'{fun}' =?= '{fname}'")
 #    print("bef = '%s'" % (fun,) )
     fun.add_shorten(shortens)
@@ -618,6 +666,7 @@ def test_all(args):
     typelist = gdb.execute("info types",False,True)
 
     prere = re.compile("^[0-9]*:(.*)")
+    cnt = 0
     for line in typelist.splitlines():
         line=line.strip()
         if( len(line) == 0 ):
@@ -635,6 +684,8 @@ def test_all(args):
             continue
 
         fun = parse_function(line)
+        cnt += 1
+    print(f"Tested {cnt} type strings...")
 
 vdb.subcommands.add_subcommand( [ "_test_all_shorten"] , test_all )
 
