@@ -57,7 +57,8 @@ class type_or_function:
 
     def __init__(self):
         self.namespace=None
-        self.name="{{placeholder for name}}"
+#        self.name="{{placeholder for name}}"
+        self.name=None
         self.template_parameters=None
         self.subobject=None
         self.parameters=None
@@ -135,7 +136,7 @@ class type_or_function:
     def add_template( self, tpar ):
         if( self.template_parameters is None ):
             self.template_parameters = []
-        if( len(tpar.name) > 0 ):
+        if( tpar.name is None or len(tpar.name) > 0 ):
             self.template_parameters.append(tpar)
 #        print("self.id = '%s'" % (self.id,) )
 #        print("self.template_parameters = '%s'" % (self.template_parameters,) )
@@ -269,6 +270,7 @@ def parse_fragment( frag, obj, level = 0 ):
     sofar = ""
 
     ans = "(anonymous namespace)"
+    une = "<unnamed enum>"
 
     tmpl_tailset = [ ":", "*", "&", " const" ]
     func_tailset = [ "()" ]
@@ -297,7 +299,9 @@ def parse_fragment( frag, obj, level = 0 ):
                 i -= 1
                 continue
             obj.add_param(None) # tell there are some, maybe 0
+#            print(f"sofar use params '{sofar}'")
             obj.name = use_sofar(sofar)
+            sofar = ""
             obj.set_type("function")
             while True:
                 ct = type_or_function()
@@ -340,10 +344,18 @@ def parse_fragment( frag, obj, level = 0 ):
             sofar = ""
             continue
         if( s == "," ):
+#            print("comma use_sofar '{sofar}'")
             obj.name = use_sofar(sofar)
             return i
         if( s == "<" ):
+            if( frag[i:].startswith(une) ):
+                sofar = une
+                i += len(une)
+                i -= 1
+                continue
             obj.name = use_sofar(sofar)
+#            print(f"sofar before '{sofar}'")
+#            print(f"obj.name before '{obj.name}'")
             while True:
                 ct = type_or_function()
                 i+=1 # consume the <
@@ -373,8 +385,10 @@ def parse_fragment( frag, obj, level = 0 ):
                                     sub.tail = "::"
                                 if( frag[i+1] == " " ):
                                     sub.tail = " "
+#                                print("replacing subobject")
                                 obj.subobject = sub
                                 obj = sub
+#                                obj.name = use_sofar(sofar)
                                 sofar = ""
                                 break
 #                    else:
@@ -386,12 +400,29 @@ def parse_fragment( frag, obj, level = 0 ):
 #                        i += 1
                     break
             swallow_next = True
+#            print(f"sofar after '{sofar}'")
+#            print(f"obj.name after '{obj.name}'")
+#            print("sofar = '%s'" % (sofar,) )
 #            print(f"template continue on {frag} [{i}]")
             continue
         if( s == ">" ):
 #            vdb.util.bark() # print("BARK")
+#            print("obj.name = '%s'" % (obj.name,) )
+#            print("sofar = '%s'" % (sofar,) )
+            if( obj.name is not None and len(sofar) > 0 and obj.name != sofar ):
+#                print("Going subobject")
+                obj.subobject = type_or_function()
+                obj.subobject.name = use_sofar(sofar)
+                pass
+            elif( obj.name is not None and len(sofar) == 0 ):
+#                print("Leaving name")
+                pass # leave the old name
+            else:
+#                print("Old overwrite")
 #            if( len(sofar) > 0 ):
-            obj.name = use_sofar(sofar)
+                obj.name = use_sofar(sofar)
+            if( len(obj.name) == 0 ):
+                obj.name = None
             return i
 
         sofar += s
@@ -401,6 +432,7 @@ def parse_fragment( frag, obj, level = 0 ):
     i += 1
     if( len(sofar) > 0 ):
         obj.name = use_sofar(sofar)
+#        print(f"exit obj.name '{obj.name}'")
     return i
 
 
