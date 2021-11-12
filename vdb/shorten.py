@@ -69,6 +69,7 @@ class type_or_function:
         type_or_function.next_id += 1
         self.type = None
         self.tail = ""
+        self.cached_string = None
 
     def to_dot( self, g ):
         n = g.node(f"{self.name}.{self.id}")
@@ -198,6 +199,9 @@ class type_or_function:
         return self.to_string()
 
     def to_string( self, indent = 0 ):
+        if( self.cached_string is not None ):
+            return self.cached_string
+
         selfname = self.name
         if( selfname is None ):
             selfname = ""
@@ -223,8 +227,8 @@ class type_or_function:
                     else:
                         ret += ", "
                     ts = str(t)
-                    if( len(ts) == 0 ):
-                        print("Template parameter of length 0")
+#                    if( len(ts) == 0 ):
+#                        print(f"Template parameter of length 0 {self.name}")
                     ret += ts
 #                print("ret = '%s'" % (ret,) )
                 if( ret[-1] == ">" ):
@@ -255,7 +259,8 @@ class type_or_function:
 #            print("ret = '%s'" % (ret,) )
             ret += str(self.subobject)
 
-
+        if( cache.value is True ):
+            self.cached_string = ret
 #        print("ret = '%s'" % (ret,) )
         return ret
 
@@ -456,7 +461,7 @@ def parse_function( fun ):
     s1 = fun.replace(" ","")
     s0 = sf
     s1 = fun
-    if( True and s0 != s1 ):
+    if( debug.value and s0 != s1 ):
         #		func.dump()
         print("Recreating the function signature leads a difference (%s,%s)" % (len(s0),len(s1)))
         print("fun = '%s'" % fun )
@@ -472,6 +477,8 @@ def parse_function( fun ):
         print("Found   :" + d0)
         print("Expected:" + d1)
         func.dump()
+    elif( s0 != s1 ):
+        vwd.log( f"Failed to properly parse {fun}, shortening not possible, recommend writing  a testcase", level = 2)
 
 #	func.dump()
     return func
