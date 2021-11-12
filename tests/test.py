@@ -183,7 +183,7 @@ def compile( fn ):
 
 
 def run_binary( binary, cmds ):
-    cmdsx = [ "set confirm off", "echo ONLY_USE_OUT_AFTER_THIS" ] + cmds + [ "q" ]
+    cmdsx = [ "set confirm off", "dash null log", None ] + cmds + [ "q" ]
     gdb="/home/plasmahh/opt/gdb/bin/gdb"
     if( binary is not None ):
         cmdlist = [ gdb, binary ]

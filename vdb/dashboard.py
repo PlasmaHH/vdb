@@ -95,6 +95,25 @@ class port(target,threading.Thread):
         else:
             return f"{self.host}:{self.port} {clts}"
 
+class null(target):
+
+    def __init__( self ):
+        super().__init__()
+
+    def write( self, output ):
+        return len(output)
+
+    def flush( self ):
+        return None
+
+    def name( self ):
+        return "null"
+
+    def target( self ):
+        return None
+
+
+
 tty_cache = { }
 
 class tty(target):
@@ -301,6 +320,7 @@ def modify_board( argv ):
                 print(f"Modified dash {id} to {db.command} (old was {old})")
 
 def add_board( tgt, argv ):
+    vdb.util.bark() # print("BARK")
     # A special "log" command that basically means to redirect stuff to that dashboard
     if( argv[0] == "log" ):
         od = output_redirect(tgt)
@@ -336,6 +356,9 @@ def call_dashboard( argv ):
             raise gdb.error("dashboard tty, need at least 2 parameters")
         tgt = tty(argv[1])
         add_board(tgt,argv[2:])
+    elif( "null".startswith(argv[0]) ):
+        tgt = null()
+        add_board(tgt,argv[1:])
     elif( "tmux".startswith(argv[0]) ):
         if( len(argv) < 3 ):
             raise gdb.error("dashboard tmux, need at least 2 parameters")

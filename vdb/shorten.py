@@ -483,7 +483,7 @@ def parse_function( fun ):
         print("Expected:" + d1)
         func.dump()
     elif( s0 != s1 ):
-        vwd.log( f"Failed to properly parse {fun}, shortening not possible, recommend writing  a testcase", level = 2)
+        vdb.log( f"Failed to properly parse {fun}, shortening not possible, recommend writing  a testcase", level = 2)
 
 #	func.dump()
     return func
@@ -691,7 +691,7 @@ def symbol(fname):
         lazy_load_typedefs()
     elif( lazy_hint ):
         lazy_hint = False
-        print("Lazy typedef loading is disabled. To manually load typedefs for shortening, do vdb load shorten")
+        vdb.util.log("Lazy typedef loading is disabled. To manually load typedefs for shortening, do vdb load shorten")
 
     if( fname is None ):
         return fname
