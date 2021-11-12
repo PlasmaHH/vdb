@@ -165,6 +165,7 @@ class type_or_function:
 
 
     def fold_templates( self, shortlist ):
+        self.cached_string = None
         if( isinstance(shortlist,Iterable) and not isinstance(shortlist,str) ):
             for s in shortlist:
                 self.fold_templates(s)
@@ -179,8 +180,10 @@ class type_or_function:
                     p.fold_templates(shortlist)
             if( self.name == shortlist ):
                 self.suppress_templates = True
+#                print(f"SET {self.id}:{self.name} => {self.suppress_templates}")
 
     def add_shorten( self, fro, to = None ):
+        self.cached_string = None
         if( to is None ):
             for f,t in fro.items():
                 self.add_shorten(f,t)
@@ -213,8 +216,8 @@ class type_or_function:
             ret += str(self.namespace) + "::"
         ret += selfname
         ret = self.shorten(ret)
-#        print("ret = '%s'" % (ret,) )
-#        if( len(self.template_parameters) ):
+
+#        print(f"STR {self.id}:{self.name} => {self.suppress_templates}")
         if( self.template_parameters is not None ):
             if( self.suppress_templates ):
                 ret += vdb.color.color("<" + fold_ellipsis.value +  ">",color_shorten.value)

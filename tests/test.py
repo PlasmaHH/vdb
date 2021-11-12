@@ -375,7 +375,7 @@ tests = [
             {
                 "name": "shorten functions",
                 "enabled": True,
-#                "enabled_commands" : "0-3,40",
+#                "enabled_commands" : "0-3,27",
                 "commands" : [ None,
                 "vdb add foldable foldme",
                 "vdb add shorten shorten<shorten> shorten",
