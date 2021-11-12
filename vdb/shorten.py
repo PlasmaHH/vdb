@@ -11,6 +11,7 @@ import re
 import gdb
 import os
 import traceback
+import time
 
 from collections.abc import Iterable
 
@@ -24,6 +25,7 @@ verbosity = vdb.config.parameter("vdb-shorten-verbosity",1)
 
 debug = vdb.config.parameter("vdb-shorten-debug",False)
 cache = vdb.config.parameter("vdb-shorten-cache",True)
+lazy  = vdb.config.parameter("vdb-shorten-lazye-load-typedefs",False)
 
 
 def log(fmt, *more ):
@@ -524,6 +526,7 @@ shortens = {
         "std::basic_ostream<char, std::char_traits<char> >": "std::ostream",
         "std::basic_ostream<wchar_t, std::char_traits<wchar_t> >": "std::wostream",
         "(anonymous namespace)": "(anon)",
+        "<unnamed enum>": "<enum>",
         }
 
 def add_shorten( f, t ):
@@ -604,20 +607,45 @@ def show_foldable( args ):
 vdb.subcommands.add_subcommand( [ "add","foldable" ], add_foldable_v )
 vdb.subcommands.add_subcommand( [ "show","foldable"] , show_foldable )
 
+lazy_task = None
 
 loaded_typedefs = False
-def lazy_load_typedefs( ):
+def lazy_load_typedefs( x = None):
     global loaded_typedefs
     if( loaded_typedefs ):
         return
+
+    global lazy_task
+    # Already one task running?
+    if( lazy_task is not None ):
+        return
+
+    lazy_task = vdb.util.async_task( async_load_typedefs )
+    lazy_task.start()
+
+def async_load_typedefs( at ):
+    try:
+        print("Loading typelist in background...")
+        print("WARNING! Due to gdb/python instabilities doing anything during that phase may lead to crashes")
+        at.set_progress("[ types #/# ]")
+        load_typedefs( at )
+        print("Finished loading typelist")
+    except:
+        traceback.print_exc()
+    finally:
+        at.set_progress(None)
+    global lazy_task
+    lazy_task = None
+
+def load_typedefs( at ):
     loaded_typedefs = True
-    print("Loading typelist (can take a moment)")
     typelist = gdb.execute("info types",False,True)
 
     candidates = set()
     cnt = 0
 
-    for line in typelist.splitlines():
+    typelines = typelist.splitlines()
+    for line in typelines:
         cnt += 1
         # Want only typedefs of templates
         if( line.find("typedef") != -1 and line.find("<") != -1 ):
@@ -637,6 +665,8 @@ def lazy_load_typedefs( ):
             fr = " ".join(sl[:-1])
             if( len(fr) > len(to) ):
                 candidates.add((fr,to))
+        if( cnt % 100 == 0 ):
+            at.set_progress( f"[ types {cnt}/{len(typelines)}({len(candidates)}) ]" )
 
 
     for fr,to in candidates:
@@ -651,8 +681,17 @@ def lazy_load_typedefs( ):
 
 symbol_cache = {}
 
+lazy_hint = True
+
 def symbol(fname):
-    lazy_load_typedefs()
+
+    global lazy_hint
+
+    if( lazy.value ):
+        lazy_load_typedefs()
+    elif( lazy_hint ):
+        lazy_hint = False
+        print("Lazy typedef loading is disabled. To manually load typedefs for shortening, do vdb load shorten")
 
     if( fname is None ):
         return fname
@@ -702,6 +741,7 @@ def symbol_cmd(args):
     print(symbol(sym))
 
 vdb.subcommands.add_subcommand( [ "shorten"] , symbol_cmd )
+vdb.subcommands.add_subcommand( [ "load", "shorten"] , lazy_load_typedefs )
 
 # This does some of the work of load_typedefs, maybe share it
 def test_all(args):

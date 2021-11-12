@@ -264,4 +264,35 @@ class stopwatch:
 def requires( check, msg ):
     if( not check ):
         raise Exception("Requirement not met: %s" % msg )
+
+class async_task:
+    def __init__( self, task ):
+        self.task = task
+        self.progress = None
+        self.thread = None
+
+    def get_progress( self ):
+        return self.progress
+
+    def set_progress( self, msg ):
+        if( self.progress is None ):
+            import vdb.prompt
+            vdb.prompt.add_progress( self.get_progress )
+        self.progress = msg
+
+    def run( self ):
+        try:
+            while( self.thread is None ):
+                time.sleep(0) # necessary so the start function below can exit
+            self.task(self)
+        except:
+            traceback.print_exc()
+        finally:
+            self.progress = None
+
+    def start( self ):
+        import vdb
+        self.thread = vdb.texe.submit(self.run)
+
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

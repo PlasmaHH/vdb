@@ -4,6 +4,7 @@
 import vdb.config
 import vdb.color
 import vdb.command
+import vdb.util
 
 import gdb
 
@@ -25,7 +26,7 @@ ctags_cache_age = vdb.config.parameter("vdb-types-cache-max-age", 86400 )
 type_locations = {}
 cache_timestamp = 0
 
-rl_thread = None
+ctags_task = None
 
 def load_caches( force = False ):
     if( ctags_cache.value is None ):
@@ -40,8 +41,9 @@ def load_caches( force = False ):
         tl = pickle.load( open( fn, "rb" ) )
         type_locations,cache_timestamp = tl
     if( force or time.time() > ( cache_timestamp + ctags_cache_age.value ) ):
-        global rl_thread
-        rl_thread = vdb.texe.submit(progress_refresh_locations)
+        global ctags_task
+        ctags_task = vdb.util.async_task( progress_refresh_locations )
+        ctags_task.start()
         print(f"Cache is {time.time() - cache_timestamp:5.1f}s old, refreshing")
     else:
         print(f"Cache is {time.time() - cache_timestamp:5.1f}s old, no need to refresh")
@@ -70,38 +72,30 @@ def abort_refresh_locations( ):
 """
 search all include dirs (system and extra configured) for types. cache that. maybe later do that in a thread when loading and if the command is used before thats finished wait for it to do?
 """
-ctags_progress = None
 
-def get_progress_refresh_locations( ):
-    return ctags_progress
 
-def progress_refresh_locations( ):
-    vdb.prompt.add_progress( get_progress_refresh_locations )
-    global ctags_progress
+def progress_refresh_locations( at ):
     global ctags
     try:
-        ctags_progress = "[ ctags #/# ]"
-        refresh_locations()
+        refresh_locations(at)
     except:
         traceback.print_exc()
         pass
     finally:
-        ctags_progress = None
         ctags = None
 
-
-def set_progress( c, tc, l ):
-    global ctags_progress
+def set_progress( at, c, tc, l ):
     if( l is not None ):
-        ctags_progress = f"[ ctags {c}/{tc} {l} ]"
+        at.set_progress( f"[ ctags {c}/{tc} {l} ]" )
     else:
-        ctags_progress = f"[ ctags {c}/{tc} … ]"
+        at.set_progress( f"[ ctags {c}/{tc} … ]" )
 
-def refresh_locations( ):
-    print("ctags_dirs.elements = '%s'" % (ctags_dirs.elements,) )
+def refresh_locations( at ):
+    at.set_progress( "[ctags #/#]")
+#    print("ctags_dirs.elements = '%s'" % (ctags_dirs.elements,) )
     ccnt = 0
     for d in ctags_dirs.elements:
-        set_progress( ccnt, len(ctags_dirs.elements), None )
+        set_progress( at, ccnt, len(ctags_dirs.elements), None )
         ccnt += 1
         cmd = [ ctags_cmd.value ] + ctags_parameters.value.split() + [d]
         print("cmd = '%s'" % (" ".join(cmd),) )
@@ -118,7 +112,7 @@ def refresh_locations( ):
 #        f4cnt = {}
         for line in ctags.stdout:
             lcnt += 1
-            set_progress( ccnt, len(ctags_dirs.elements), lcnt )
+            set_progress( at, ccnt, len(ctags_dirs.elements), lcnt )
 
 #            print("line = '%s'" % (line,) )
             if( stop_refreshing ):
