@@ -19,7 +19,7 @@ prompt_color = 10*[None]
 prompt_text = 10*[None]
 
 
-prompt_base = vdb.config.parameter( "vdb-prompt-base","{start}{0}{1}{2}{3}{4}{git}{5}{6}{7}{8}{9}{[:host:]}{progress}{end}", on_set = defer_set_prompt )
+prompt_base = vdb.config.parameter( "vdb-prompt-base","{start}{0}{1}{2}{3}{4}{git}{5}{6}{7}{8}{9}{[:host:]}{progress}{time}{ T:thread}{#:frame}{end}", on_set = defer_set_prompt )
 
 for i in range(0,10):
     prompt_color[i] = vdb.config.parameter( "vdb-prompt-colors-%s" % i, "#ffff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
