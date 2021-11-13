@@ -158,8 +158,9 @@ def load_themes( vdbdir ):
     if( len(theme.value) == 0 ):
         print("Not loading any theme")
         return
-    tdir = f"{vdbdir}themes/"
+    tdir = f"{vdbdir}/themes/"
     if( not is_in_safe_path(tdir) ):
+#        print(f"{tdir} is not in safe path, not loading theme from there")
         return
     tfile = f"{tdir}{theme.value}.py"
     if( not os.path.isfile(tfile) ):

@@ -19,7 +19,7 @@ prompt_color = 10*[None]
 prompt_text = 10*[None]
 
 
-prompt_base = vdb.config.parameter( "vdb-prompt-base","{start}{0}{1}{2}{3}{4}{git}{5}{6}{7}{8}{9}{[:host:]}{progress}{time}{ T:thread}{#:frame}{end}", on_set = defer_set_prompt )
+prompt_base = vdb.config.parameter( "vdb-prompt-base","{start}{0}{1}{2}{3}{4}{time}{git}{5}{6}{7}{8}{9}{[:host:]}{progress}{ T:thread}{#:frame}{end}", on_set = defer_set_prompt )
 
 for i in range(0,10):
     prompt_color[i] = vdb.config.parameter( "vdb-prompt-colors-%s" % i, "#ffff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
@@ -31,7 +31,7 @@ prompt_text_end = vdb.config.parameter( "vdb-prompt-text-end",     "> ",  on_set
 prompt_color_start = vdb.config.parameter( "vdb-prompt-colors-start", "#ffff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
 prompt_color_end = vdb.config.parameter( "vdb-prompt-colors-end",     "#ffffff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
 
-prompt_git          = vdb.config.parameter( "vdb-prompt-git",                False,      on_set = defer_set_prompt )
+prompt_git          = vdb.config.parameter( "vdb-prompt-git",                True,      on_set = defer_set_prompt )
 prompt_color_git    = vdb.config.parameter( "vdb-prompt-colors-git",    "#99ff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
 prompt_color_thread = vdb.config.parameter( "vdb-prompt-colors-thread", "#9999ff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
 prompt_color_time   = vdb.config.parameter( "vdb-prompt-colors-time",   "#ffffff", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
