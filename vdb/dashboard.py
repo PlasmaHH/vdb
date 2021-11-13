@@ -296,8 +296,18 @@ class output_redirect:
 
     def __init__( self, output ):
         self.output = output
+        self.enabled = True
+        self.id = vdb.util.next_id("dashboard")
+        self.command = "<log>"
+        self.cls = False
+        self.last_time = 0
+
+    def set_state( self, to , reason = None ):
+        self.enabled = to
 
     def print( self, msg ):
+        if( not self.enabled ):
+            print(msg)
 #        print("Redirecting output %s" % msg )
 #        print("self.output.tty = '%s'" % (self.output.tty,) )
 #        print("self.output.file = '%s'" % (self.output.file,) )
@@ -307,6 +317,8 @@ class output_redirect:
 #        print("ret = '%s'" % (ret,) )
         ret = self.output.flush()
 #        print("ret = '%s'" % (ret,) )
+    def on_event( self ):
+        return None
 
 def modify_board( argv ):
     id = int(argv[0])
@@ -320,16 +332,17 @@ def modify_board( argv ):
                 print(f"Modified dash {id} to {db.command} (old was {old})")
 
 def add_board( tgt, argv ):
-    vdb.util.bark() # print("BARK")
+#    vdb.util.bark() # print("BARK")
+    global dash_events
     # A special "log" command that basically means to redirect stuff to that dashboard
     if( argv[0] == "log" ):
         od = output_redirect(tgt)
         vdb.util.logprint = od.print
+        dash_events.setdefault("before_prompt",[]).append(od)
         return
     cmd = " ".join(argv)
 #    print("cmd = '%s'" % cmd )
     db = dashboard()
-    global dash_events
     db.output = tgt
     db.command = cmd
     delist = dash_events.setdefault("before_prompt",[])

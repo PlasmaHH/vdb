@@ -37,6 +37,20 @@ For extra convenience we have a tmux command that will directly forward all para
 directories contain the settings to setup a dashboard. We provide some examples in the example `.vdb` directory that
 will enable you to 
 -->
+
+## null target
+The special target `null` will just ignore any command output and basically makes sure the command is executed each
+time. This can be combined with the special `log` command that redirects all log output to that target.
+
+## Special `log` command
+
+Using the special `log` command, you can redirect a portion of the vdb output to certain targets. These outputs are
+mostly those not generated as a result of an interactive command, such as status messages, certain kinds of warninigs
+etc.
+
+A useful combination is redirecting log output to null, so the output for testcases is only ever by the commands invoked
+by the testcases.
+
 ## Other commands
 
 * `dashboard show` Shows a list of all dashboards. The meaning of the columns is as follows:
