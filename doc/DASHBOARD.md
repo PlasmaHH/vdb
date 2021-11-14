@@ -5,8 +5,6 @@ outside of the terminal gdb is running on. This is usually a terminal running in
 can output to ports (allowing you to also have the output in terminals on other hosts), ttys (and any file really) or
 specific ttys on tmux panes.
 
-[You can find detailed information about this module here](DASHBOARD.md)
-
 Without any special trigger, the command will be executed always before a prompt is being displayed. When registering
 the command via the API you can also call arbitrary python functions and display their return instead.
 

@@ -18,6 +18,9 @@ The default config `vdb-prompt-base` controls how the prompt is assembled and is
 
 An base configuration that uses everything could be `{start}{0}{1}{2}{3}{4}{time}{git}{5}{6}{7}{8}{9}{[:host:]}{ T:thread}{#:frame}{end}` and uses all mentioned features.
 
+This might look like:
+![](img/prompt.0.png)
+
 The single options of the base config are 
 
 * `vdb-prompt-text-start` is `vdb` per default and replaces the `{start}` token of the prompt
