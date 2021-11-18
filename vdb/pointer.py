@@ -22,7 +22,7 @@ arrow_infinity = vdb.config.parameter("vdb-pointer-arrow-infinity", " ↔ " )
 
 ellipsis = vdb.config.parameter("vdb-pointer-ellipsis", "…" )
 
-min_acsii = vdb.config.parameter("vdb-pointer-min-ascii", 4 )
+min_ascii = vdb.config.parameter("vdb-pointer-min-ascii", 3 )
 
 
 gdb_void     = None
@@ -86,10 +86,10 @@ def printable_str( s ):
     ret = re.sub(f'[\t\n\r\v\f]', '.', ret)
     return ret
 
-def as_tail( ptr ):
+def as_tail( ptr, minasc ):
     s = as_c_str(ptr)
     if( s is not None ):
-        if( len(s) >= min_acsii.value ):
+        if( len(s) >= minasc ):
             s = printable_str(s)
             return f"[{len(s)}]'{s}'"
 
@@ -141,7 +141,7 @@ def escape_spaces( s ):
     s = s.replace("\f","\\f")
     return s
 
-def chain( ptr, archsize, maxlen = 8, test_for_ascii = True ):
+def chain( ptr, archsize, maxlen = 8, test_for_ascii = True, minascii = None ):
     if( gdb_void == None ):
         update_types()
     if( maxlen == 0 ):
@@ -158,7 +158,9 @@ def chain( ptr, archsize, maxlen = 8, test_for_ascii = True ):
     if( an ):
         ret += f" {an:<{plen}}"
         pure = False
-    s = as_tail(ptr)
+    if( minascii is None ):
+        minascii = min_ascii.value
+    s = as_tail(ptr, minascii)
     if( s is not None ):
         ret += f"{arrow_right.value}{s}"
         pure = False
