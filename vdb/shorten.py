@@ -25,7 +25,7 @@ verbosity = vdb.config.parameter("vdb-shorten-verbosity",1)
 
 debug = vdb.config.parameter("vdb-shorten-debug",False)
 cache = vdb.config.parameter("vdb-shorten-cache",True)
-lazy  = vdb.config.parameter("vdb-shorten-lazye-load-typedefs",False)
+lazy  = vdb.config.parameter("vdb-shorten-lazy-load-typedefs",False)
 
 
 def log(fmt, *more ):
