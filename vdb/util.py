@@ -7,6 +7,7 @@ import re
 import traceback
 import itertools
 import time
+import types
 
 def nstr( s ):
     if( s is None ):
@@ -42,6 +43,17 @@ def xint( s ):
         except:
             raise Exception("%s can not be parsed as integer, neither base 10 or 16" % s )
     return r
+
+class hexint(int):
+
+    def __new__(cls,val):
+        if( type(val) == int ):
+            return val
+        try:
+            return int(val)
+        except:
+            return super().__new__(int,val,0)
+
 
 def mint( s ):
     try:
@@ -293,6 +305,64 @@ class async_task:
     def start( self ):
         import vdb
         self.thread = vdb.texe.submit(self.run)
+
+
+class xdict(dict):
+
+    def getas( self, typ, name, default = None ):
+        try:
+            var = self.get(name,default)
+            var = typ(var)
+        except:
+#            print(f"{var} is not of {typ}")
+            var = default
+        return var
+
+def parse_vars( argv ):
+#    print("argv = '%s'" % (argv,) )
+    retargv = []
+    retvars = xdict()
+#    retvars.getas = types.MethodType( getas, retvars )
+#    retvars.getas = getas.__get__(retvars)
+
+    oldarg = None
+
+    store_next = False
+    for arg in argv:
+        if( store_next ):
+            store_next = False
+            retvars[oldarg] = arg
+            oldarg = None
+            continue
+        if( arg == "=" ):
+            store_next = True
+            continue
+        if( arg[-1] == "=" ):
+            if( oldarg is not None ):
+                retargv.append(oldarg)
+            oldarg = arg[:-1]
+            store_next = True
+            continue
+        if( arg[0] == "=" ):
+            retvars[oldarg] = arg[1:]
+            oldarg = None
+            continue
+        if( oldarg is not None ):
+            retargv.append(oldarg)
+        xp = arg.split("=")
+        if( len(xp) == 2 ):
+            retvars[xp[0]] = xp[1]
+            continue
+        oldarg = arg
+    if( oldarg is not None ):
+        retargv.append(oldarg)
+
+    return ( retargv, retvars )
+
+
+
+    print("retargv = '%s'" % (retargv,) )
+    print("retvars = '%s'" % (retvars,) )
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
