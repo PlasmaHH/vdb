@@ -326,6 +326,7 @@ def write( ptr, buf ):
 
 class memory_region:
 
+
     def __init__(self,start,end,section,file):
         self.start = start
         self.end = end
@@ -352,6 +353,9 @@ class memory_region:
                 self.atype = access_type.ACCESS_INACCESSIBLE
         self._test_prefixes()
         # TODO figure out how to find out executable, and also if executalbe is always RO
+
+    def is_unknown( self ):
+        return self.start == 0 and self.end == 0 and section is None and file is None
 
     def rwxp( self ):
         ret = ""
