@@ -33,7 +33,7 @@ The token text colour of all tokens can be configured with a setting with the sa
 ## Token Syntax
 
 Each token is replaced by the corresponding content, and sometimes this is not available, for example the thread id is
-not there when there is no progrma running. In order to display some custom text the tokens have the form of
+not there when there is no program running. In order to display some custom text the tokens have the form of
 {prefix:token:suffix} where prefix and suffix are displayed only when the token also has text. However only the token
 itself is coloured in the configured colour.
 
