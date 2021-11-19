@@ -18,12 +18,16 @@ specific parts of it by providing the necessary information.
 Calling it this way will automatically try to find a `va_list` type in the current scope. If it can't it will tell you
 and you have to specify the variable name yourself.
 
+![](img/va.0.png)
 ### `format=` specifier
 
 You can set a default format via the `vdb-va-default-format` for this or override it by specifying it on the command
 line. It is a specification about how the call is most likely structured. From the `va_list` alone it is often not
 possible to figure out the amount and order of certain types. The string can be a combination of the following
 characters (uppercase always means it is a fixed argument, prepending the varargs)
+
+
+![](img/va.1.png)
 
 * `*` The asterisk will mean that the last string is parsed as a printf format string and the output is tried to recover
   from there. On its own it means to show as much as possible
@@ -39,6 +43,7 @@ The most common semi-automatic value used for printf is possibly `S*`.
 Especially when forwarding arguments, or when otherwise not (yet) properly filling the `va_list` structure, specifying
 this will allow you to work completely without a `va_list` structure if necessary.
 
+![](img/va.2.png)
 ## configuration
 
 Further configuration options are
