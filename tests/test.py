@@ -335,7 +335,7 @@ tests = [
             {
                 "name" : "varargs",
                 "file" : "va.cxx",
-                "commands" : [ "start", "set vdb-va-default-format S*", None, "b printf" ] + 2* [ "c", "va wait", "va" ],
+                "commands" : [ "start", "set vdb-va-default-format S*", None, "b printf" ] + 8* [ "c", "va wait", "va fp_offset=48" ],
                 "expect" : "va.exp",
                 "output" : True
             },

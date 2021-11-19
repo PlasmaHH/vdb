@@ -182,9 +182,9 @@ def intformat( val, fmt ):
 #    print("val.type = '%s'" % (val.type,) )
     return val
 
-modfrom = "diocC uxX sS eEfFaA pn"
-modto   = "iiiii uuu ss dddddd pp"
-longto  = "lllll jjj ss dddddd pp"
+modfrom = "diocC uxX sS eEfFgGaA pn"
+modto   = "iiiii uuu ss ffffffff pp"
+longto  = "lllll jjj ss dddddddd pp"
 
 modmap = {}
 longmap = {}
@@ -210,9 +210,12 @@ def convert_format( fmt ):
                 next_long = True
             else:
 #                print("Checking for replacement")
-                to = modmap.get(f,None)
+                if( next_long ):
+                    to = longmap.get(f,None)
+                else:
+                    to = modmap.get(f,None)
                 if( to is None ):
-                    print("Unsupported printf format modifier")
+                    print(f"Unsupported printf format modifier '{f}'")
                     ret += i
                 else:
 #                    print(f"{f} => {to}")
@@ -346,6 +349,7 @@ def va_print( arg ):
         funcstr = "func"
 
     if( format is not None ):
+#        print("format = '%s'" % (format,) )
         funcstr += "( "
         cnt = 0
         ctype_p = gdb.lookup_type("char").pointer()
@@ -376,6 +380,7 @@ def va_print( arg ):
             if( f == "*" ):
 #                print("last_string = '%s'" % (last_string,) )
                 format = format[:-1] + convert_format(last_string)
+                print("format = '%s'" % (format,) )
                 maxi = len(format)-1
                 i -= 1
 #                print("format = '%s'" % (format,) )
