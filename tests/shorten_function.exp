@@ -1,0 +1,39 @@
+abort
+vdb::abort
+vdb::__detail::abort
+vdb::__detail::abort(__detail::x0)
+std::map<int, int, std::less<int> >
+abc::def<>::ghi()
+abort()
+abort(val)
+abort(val, vol)
+abort<>()
+abort<abc>()
+abort<abc>(v0, v1)
+abort<abc<def::ghi> >()
+abort<abc, def<xxx>, ghi>()
+abort<abc, def<xxx> >(unsigned)
+abort<abc, def<xxx> >()
+xxx::str0<int>::str1<long>::fx::fy
+x0<a1<b1>::x>::f0
+x0<a1<b1>::x<bar>::u>::f0
+mx<true>::cde<abc<abg>::xyz>
+mx<true>::cde<abc<abg>::xyz>()
+mx<true>::cde<abc<abg>::xyz>(int, int)
+std::function<void(void)>()
+foldme<…>()
+dontfold<foldme<…>>()
+shorten
+shorten<shorten >
+std::unique_ptr<char [], (anon)::free_as_in_malloc>
+rabbit<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > >
+main(int, char const**)
+hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > >(node*, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > >*, int)
+std::remove_reference<std::pair<int const, int>&>
+std::pair<int const, int>&&
+std::pair<int const, int>&
+std::remove_reference<std::pair<int const, int> const&>
+std::remove_reference<void (std::thread::*)()>
+std::less<std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)2>*>
+std::remove_reference<std::ios_base::<enum> >
+Exiting vdb...

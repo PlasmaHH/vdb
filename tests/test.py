@@ -329,7 +329,6 @@ tests = [
                 "name" : "ftree backtrace",
                 "file" : "ftree.cxx",
                 "commands" : [ "r", None, "bt" ],
-#                "hash" : "4bb6e33ddf91a27fa15a3d6818b8a007",
                 "expect" : "ftree_backtrace.exp",
                 "enabled" : True
             },
@@ -337,15 +336,16 @@ tests = [
                 "name" : "pahole types",
                 "file" : "paholetest.cxx",
                 "commands" : [ "start", None, "pahole/c morev", "pahole/c f3", "pahole/c u", "pahole/c oax", "pahole/c xv" ],
-                "hash" : "18c39b3d99a413f7eb008ed0bf69e2a4",
-                "enabled" : True
+                "enabled" : True,
+                "expect" : "pahole_types.exp"
             },
             {
                 "name" : "pahole variables",
                 "file" : "paholetest.cxx",
                 "commands" : [ "start", None, "pahole/c vm", "pahole/c fd", "pahole/c uu", "pahole/c xxx", "pahole/c x" ],
-                "hash" : "6ff35e9faa4ff294ee8bf10eebb3047c",
-                "enabled" : True
+                "enabled" : True,
+                "expect" : "pahole_variables.exp"
+
             },
             {
                 "name" : "disassemble",
@@ -379,8 +379,10 @@ tests = [
                 "commands" : [ None,
                 "vdb add foldable foldme",
                 "vdb add shorten shorten<shorten> shorten",
+                "vdb shorten shorten",
                 "set vdb-shorten-debug on",
-#                "set vdb-shorten-debug off",
+                "set vdb-shorten-debug off",
+                None,
                 "vdb shorten abort",
                 "vdb shorten vdb::abort",
                 "vdb shorten vdb::__detail::abort",
@@ -422,7 +424,7 @@ tests = [
 
                     ],
                 "expect" : "shorten_function.exp",
-                "output" : True
+#                "output" : True
             }
 
         ]
