@@ -335,7 +335,7 @@ tests = [
             {
                 "name" : "varargs",
                 "file" : "va.cxx",
-                "commands" : [ "start", "b printf", "c", "va" ],
+                "commands" : [ "start", None, "b printf", "c", "va" ],
                 "expect" : "va.exp",
                 "output" : True
             },

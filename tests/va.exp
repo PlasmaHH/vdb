@@ -1,12 +1,3 @@
-Cleared all tracking data
-Temporary breakpoint 1 at 0x401135: file va.cxx, line 5.
-Starting program: /home/plasmahh/git/vdb/tests/va 
-[Thread debugging using libthread_db enabled]
-Using host libthread_db library "/lib64/libthread_db.so.1".
-
-Temporary breakpoint 1, main (argc=1, argv=0x7fffffffd438) at va.cxx:5
-5		printf("%d", 1 );
-Automatically refreshed memory map in 0.0197s
 Breakpoint 2 at 0x7ffff7aed920: file printf.c, line 28.
 Continuing.
 
