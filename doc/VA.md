@@ -44,6 +44,15 @@ Especially when forwarding arguments, or when otherwise not (yet) properly filli
 this will allow you to work completely without a `va_list` structure if necessary.
 
 ![](img/va.2.png)
+
+### `va wait` subcommand
+
+Often you hit a breakpoint, like for `printf` and then the va_list is not properly setup. The `va wait` command can help
+here in that it single steps until it thinks it is in a valid state.
+
+Note: If the possibly unitialized memory already contained the proper values, this may execute too much instructions,
+possibly breaking other memory structures necessary (especially fixed arguments).
+
 ## configuration
 
 Further configuration options are

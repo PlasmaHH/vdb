@@ -29,6 +29,8 @@ default_format = vdb.config.parameter( "vdb-va-default-format", "*")
 max_overflow_int = vdb.config.parameter( "vdb-va-max-overflow-int", 42 )
 max_overflow_vec = vdb.config.parameter( "vdb-va-max-overflow-vector", 42 )
 
+wait_max_ins = vdb.config.parameter( "vdb-va-wait-max-instructions", 24 )
+
 #= vdb.config.parameter( "vdb-va-", )
 #= vdb.config.parameter( "vdb-va-", )
 
@@ -536,11 +538,54 @@ def va_print( arg ):
     print(funcstr)
 
 
-def wait( ):
-    gp_offset = argdict.getas(int,"gp_offset",gp_offset)
-    fp_offset = argdict.getas(int,"fp_offset",fp_offset)
-    reg_save_area = argdict.getas(gValue,"reg_save_area", reg_save_area)
-    overflow_arg_area = argdict.getas(gValue,"overflow_arg_area", overflow_arg_area)
+def wait(arg ):
+
+    arg, argdict = vdb.util.parse_vars( arg )
+    frame = gdb.selected_frame()
+    va_list = get_va_list( arg, frame )
+
+    if( va_list is None ):
+        print("Cannot wait for change of va_list, couldn't find it")
+
+
+    va_list_val = frame.read_var(va_list)
+    va_list_val = gValue(va_list_val)
+
+
+    first_gp_offset = int(va_list_val.gp_offset)
+    first_fp_offset = int(va_list_val.fp_offset)
+    first_reg_save_area = int(va_list_val.reg_save_area)
+    first_overflow_arg_area = int(va_list_val.overflow_arg_area)
+
+#    print("first_gp_offset = '%s'" % (first_gp_offset,) )
+#    print("first_fp_offset = '%s'" % (first_fp_offset,) )
+#    print("first_reg_save_area = 0x%08x" % (first_reg_save_area,) )
+#    print("first_overflow_arg_area = 0x%08x" % (first_overflow_arg_area,) )
+
+    for i in range(0,wait_max_ins.value):
+        # maybe also stop on frame change?
+        res=gdb.execute("stepi",False,True)
+
+        gp_offset = va_list_val.gp_offset
+        fp_offset = va_list_val.fp_offset
+        reg_save_area = va_list_val.reg_save_area
+        overflow_arg_area = va_list_val.overflow_arg_area
+
+#        print("gp_offset = '%s'" % (gp_offset,) )
+#        print("fp_offset = '%s'" % (fp_offset,) )
+#        print("reg_save_area = 0x%08x" % (reg_save_area,) )
+#        print("overflow_arg_area = 0x%08x" % (overflow_arg_area,) )
+
+        # Don't use fp_offset ... it is so rarely needed, and often gcc generates code that clobbers fixed parameters
+        # before it sets this up, so only output a message if it wasn't up to date
+        if( gp_offset != first_gp_offset and reg_save_area != first_reg_save_area and overflow_arg_area != first_overflow_arg_area ):
+#        if( gp_offset != first_gp_offset and fp_offset != first_fp_offset and reg_save_area != first_reg_save_area ):
+            print("va_list completely updated, va extraction has a higher chance of working now")
+            if( first_fp_offset == fp_offset ):
+                print("fp_offset did not update. Please single step (at the risk of clobbering fixed parameters) or inspect disasembly yourself to figure out a proper value")
+            break
+    else:
+        print(f"Executed vdb-va-wait-max-instructions ({wait_max_ins.value}) instructions but still the va_list members did not all change. We may need a higher value or did miss the right point, check manually")
 
 class cmd_va (vdb.command.command):
     """Take va and transform it into more useful views"""
@@ -554,7 +599,7 @@ class cmd_va (vdb.command.command):
             if( len(argv) == 1 ):
                 if( argv[0] == "wait" ):
                     print("Waiting...")
-                    wait()
+                    wait(argv[1:])
                     return
             va_print(argv)
         except:
