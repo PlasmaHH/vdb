@@ -228,6 +228,11 @@ def va_print( arg ):
     arg, argdict = vdb.util.parse_vars( arg )
     frame = gdb.selected_frame()
 
+    allprovided = False
+
+    if( "gp_offset" in argdict and "fp_offset" in argdict and "reg_save_area" in argdict and "overflow_arg_area" in argdict ):
+        allprovided = True
+
     if( len(arg) == 0 ):
         lre = re.compile("^[^\s]* =")
         locals = gdb.execute("info locals",False,True)
@@ -246,8 +251,11 @@ def va_print( arg ):
 #            print("line = '%s'" % (line,) )
 #            print("m = '%s'" % (m,) )
         else:
-            print("Could not automatically detect the va_list variable, please provide it")
-            return
+            if( not allprovided ):
+                print("Could not automatically detect the va_list variable, please provide it")
+                return
+            else:
+                va_list is None
     else:
         va_list = arg[0]
 
@@ -261,20 +269,24 @@ def va_print( arg ):
             break
         olvl = nf.level()
         nf = nf.older()
-#    print("retaddrs = '%s'" % (retaddrs,) )
 
-    va_list_val = frame.read_var(va_list)
-#    g = gValue(va_list_val)
+    if( va_list is not None ):
+        va_list_val = frame.read_var(va_list)
+        va_list_val = gValue(va_list_val)
 
-#    print("g = '%s'" % (g,) )
-#    print("g.gp_offset = '%s'" % (g.gp_offset,) )
-    va_list_val = gValue(va_list_val)
+        gp_offset = va_list_val.gp_offset
+        fp_offset = va_list_val.fp_offset
+        reg_save_area = va_list_val.reg_save_area
+        overflow_arg_area = va_list_val.overflow_arg_area
 
-#    print("va_list = '%s'" % (va_list,) )
-#    print("va_list_val = '%s'" % (va_list_val,) )
+    else:
+        print("Whoopsie, va_list is None, that should not happen at this point")
+        return
 
-    gp_offset = argdict.getas(int,"gp_offset",va_list_val.gp_offset)
-    fp_offset = argdict.getas(int,"fp_offset",va_list_val.fp_offset)
+    gp_offset = argdict.getas(int,"gp_offset",gp_offset)
+    fp_offset = argdict.getas(int,"fp_offset",fp_offset)
+    reg_save_area = argdict.getas(gValue,"reg_save_area", reg_save_area)
+    overflow_arg_area = argdict.getas(gValue,"overflow_arg_area", overflow_arg_area)
 
     if( gp_offset > 32*8 or gp_offset < 0 or gp_offset == 0 or gp_offset%8 != 0):
         print(f"Warning! Unlikely gp_offset value ({gp_offset}), results are likely wrong. Recommend rerunning with gp_offset=8")
@@ -282,8 +294,6 @@ def va_print( arg ):
     if( fp_offset > 32*8 or fp_offset < 0 or fp_offset == 0 or fp_offset%16 != 0):
         print(f"Warning! Unlikely fp_offset value ({fp_offset}), results are likely wrong. Recommend rerunning with fp_offset=48")
 
-    reg_save_area = argdict.getas(gValue,"reg_save_area", va_list_val.reg_save_area)
-    overflow_arg_area = argdict.getas(gValue,"overflow_arg_area", va_list_val.overflow_arg_area)
 
     mm = vdb.memory.mmap.find(int(reg_save_area))
     if( mm is None or mm.is_unknown() ):

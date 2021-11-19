@@ -38,6 +38,7 @@ under x86_64 Linux with gcc > 10.
 	* [unwind](#unwind)
 	* [history](#history)
 	* [profile](#profile)
+	* [va](#va)
 	* [pipe](#pipe)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
@@ -231,6 +232,9 @@ awkward way due to gdb limitations.
 Allows to profile python calls
 [You can find detailed information about this module here](doc/PROFILE.md)
 
+## va
+Allows you to inspect variable argument functions
+[You can find detailed information about this module here](doc/VA.md)
 ## pipe
 The pipe module offers the possibility to pass the output of our commands to external tools via simple shell piping
 syntax. Currently enabled commands are
