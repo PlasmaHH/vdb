@@ -235,11 +235,22 @@ def va_print( arg ):
 
     if( len(arg) == 0 ):
         if True:
-            for s in frame.block():
-                val=frame.read_var(s)
-                if( val.type.name == "va_list" ):
-                    va_list = s
+            b = frame.block()
+            while b is not None:
+#                print("b.function = '%s'" % (b.function,) )
+                va_list = None
+                for s in b:
+#                    print("s = '%s'" % (s,) )
+                    val=frame.read_var(s)
+                    if( val.type.name == "va_list" ):
+                        va_list = s
+                        break
+                if( b.function is not None ):
                     break
+                if( va_list is not None ):
+                    break
+                b = b.superblock
+
             else:
                 if( not allprovided ):
                     print("Could not automatically detect the va_list variable, please provide it")
@@ -341,16 +352,21 @@ def va_print( arg ):
 
         ptrtype = vdb.arch.gdb_uintptr_t.pointer()
         ireg_save = reg_save_area.cast(ptrtype)
+        ireg_over = overflow_arg_area.cast(ptrtype)
 
         dtype = gdb.lookup_type("double")
         dtype_p = dtype.pointer()
         dreg_save = reg_save_area.cast(dtype_p)
+        dreg_over = overflow_arg_area.cast(dtype_p)
 
         last_string = None
 
         maxi = len(format)-1
 
         i = -1
+        fp_next = 0
+        vr_next = 0
+        gp_next = 0
         while i < maxi:
             i += 1
             f = format[i]
@@ -367,7 +383,8 @@ def va_print( arg ):
                 funcstr += ", "
 
             if( f in "SPILUJ" ):
-                regname = saved_iregs[cnt]
+                regname = saved_iregs[gp_next]
+                gp_next += 1
                 rval = vdb.register.read(regname,frame)
                 if( f == "S" ):
                     rval = rval.cast(ctype_p)
@@ -383,7 +400,8 @@ def va_print( arg ):
                     rval = ireg_save[lidx]
                     l_gp_offset += 8
                 else:
-                    rval="??"
+                    rval = ireg_over[gp_next]
+                    gp_next += 1
                 if( f == "s" ):
                     try:
                         rval = rval.cast(ctype_p)
@@ -395,16 +413,27 @@ def va_print( arg ):
                 else:
                     rval = intformat(rval,f)
                     funcstr += vdb.color.color( rval, var_int_color.value )
-            elif( f in "FD" ):
-                pass
-            elif( f in "fd" ):
-                if( l_fp_offset < 176 ): # confirm value
+            elif( f == "F" ):
+                rname = saved_vregs[ vr_next ]
+                vr_next += 1
+                rval = vdb.register.read(rname,frame)
+                rval,rco = guess_vecrep(rval)
+                funcstr += vdb.color.color( rval, var_float_color.value )
+            elif( f == "f" ):
+                if( l_fp_offset < 16*11 ): # confirm value
                     lidx = l_fp_offset // 8
                     rval = dreg_save[lidx]
                     l_fp_offset += 16
-                    funcstr += vdb.color.color( rval, var_float_color.value )
                 else:
-                    rval = "??"
+                    rval = dreg_over[gp_next]
+                    gp_next += 1
+                funcstr += vdb.color.color( rval, var_float_color.value )
+            elif( f == "d" or f == "D" ):
+                rname = saved_fregs[ fp_next ]
+                fp_next += 1
+                rval = vdb.register.read(rname,frame)
+                funcstr += vdb.color.color( rval, var_float_color.value )
+
 
             cnt += 1
 
