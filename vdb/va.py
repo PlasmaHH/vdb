@@ -360,6 +360,8 @@ def va_print( arg ):
                     rval = rval.cast(ctype_p)
                     funcstr += vdb.color.color( rval, fixed_int_color.value )
                     last_string = str(rval)
+                elif( f == "P" ):
+                    funcstr += vdb.pointer.chain( rval, vdb.arch.pointer_size, 1, True, min_ascii.value )[0]
                 else:
                     funcstr += vdb.color.color( rval, fixed_int_color.value )
             elif( f in "spiluj" ):
@@ -375,6 +377,8 @@ def va_print( arg ):
                     except AttributeError:
                         pass
                     funcstr += vdb.color.color( rval, var_int_color.value )
+                elif( f == "p" ):
+                    funcstr += vdb.pointer.chain( rval, vdb.arch.pointer_size, 1, True, min_ascii.value )[0]
                 else:
                     rval = intformat(rval,f)
                     funcstr += vdb.color.color( rval, var_int_color.value )
