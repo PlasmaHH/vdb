@@ -578,7 +578,13 @@ def wait(arg ):
 
         # Don't use fp_offset ... it is so rarely needed, and often gcc generates code that clobbers fixed parameters
         # before it sets this up, so only output a message if it wasn't up to date
-        if( gp_offset != first_gp_offset and reg_save_area != first_reg_save_area and overflow_arg_area != first_overflow_arg_area ):
+#        if( gp_offset != first_gp_offset and reg_save_area != first_reg_save_area and overflow_arg_area != first_overflow_arg_area ):
+        # Turns out we can't really use the adresses too in case someone calls e.g. two printf() after another, they
+        # will be set already. Fortunately for us it seems gcc always changes this on va_arg() invocation and always
+        # sets it after the adresses, so until we find a better heuristics use this (hint: better heuristics may be
+        # actual watch points, which might be generically a good tool, also with the track stuff, surely they can share
+        # some code)
+        if( gp_offset != first_gp_offset ):
 #        if( gp_offset != first_gp_offset and fp_offset != first_fp_offset and reg_save_area != first_reg_save_area ):
             print("va_list completely updated, va extraction has a higher chance of working now")
             if( first_fp_offset == fp_offset ):
