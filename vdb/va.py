@@ -76,12 +76,15 @@ def guess_vecrep( val, colorspec = None ):
 
     return ( str(first), None )
 
-def guess_intrep( val, colorspec = None ):
+def guess_intrep( val ):
     try:
         val = int(val)
         if( val < 32*1024 ): # definetly always an int
             return ( str(val), None )
-        ca,mm,col,ascii = vdb.memory.mmap.color(val,colorspec = colorspec)
+#        ca,mm,col,ascii = vdb.memory.mmap.color(val,colorspec = None )
+        mm = vdb.memory.mmap.find(val)
+#        print("val = '0x%x'" % (val,) )
+#        print("mm = '%s'" % (mm,) )
         minascii = 2
         if( mm is not None and not mm.is_unknown() ): # It is a pointer to known memory
 #            print("ca = '%s'" % (ca,) )
@@ -96,12 +99,13 @@ def guess_intrep( val, colorspec = None ):
 #            print("pc = '%s'" % (pc,) )
             return (pc, "")
 #            return ( s, col )
-        if( val > 0x7f0000000000 ):
-            pc = vdb.pointer.chain( val, vdb.arch.pointer_size, 1, True, minascii )
-            pc = pc[0]
-            return (pc, "")
+#        if( val > 0x7f0000000000 ):
+#            pc = vdb.pointer.chain( val, vdb.arch.pointer_size, 1, True, minascii )
+#            pc = pc[0]
+#            return (pc, "")
         return ( str(val), None )
     except:
+        traceback.print_exc()
         return ( str(val), None )
 
 def int_range( saved, frm, to, stopvalues = set() ):
@@ -109,15 +113,18 @@ def int_range( saved, frm, to, stopvalues = set() ):
 
 #    print("stopvalues = '%s'" % (stopvalues,) )
     for i in range(frm,to):
-        rval = saved[i]
+        try:
+            rval = saved[i]
 #        print("int(rval) = '%s'" % (int(rval),) )
-        if( int(rval) in stopvalues ):
+            if( int(rval) in stopvalues ):
+                break
+            rval,rco = guess_intrep(rval)
+            if( rco is None ):
+                rco = var_int_color.value
+            ret += ", "
+            ret += vdb.color.color(rval,rco)
+        except gdb.MemoryError:
             break
-        rval,rco = guess_intrep(rval)
-        if( rco is None ):
-            rco = var_int_color.value
-        ret += ", "
-        ret += vdb.color.color(rval,rco)
     return ret
 
 def vec_range( saved, offset, frm, to, step, skip = False ):
@@ -131,15 +138,18 @@ def vec_range( saved, offset, frm, to, step, skip = False ):
 
     ret = ""
     for i in range(frm,to,step):
-#        print("dregp[i] = '%s'" % (dregp[i],) )
-        m,e = math.frexp(dregp[i])
+        try:
+
+            m,e = math.frexp(dregp[i])
 #        print("e = '%s'" % (e,) )
-        if( abs(e) > 256 ):
-            if( skip ):
-                continue
+            if( abs(e) > 256 ):
+                if( skip ):
+                    continue
+                break
+            ret += ", "
+            ret += vdb.color.color( str(dregp[i]), var_float_color.value )
+        except gdb.MemoryError:
             break
-        ret += ", "
-        ret += vdb.color.color( str(dregp[i]), var_float_color.value )
     return ret
 
 def intformat( val, fmt ):
@@ -162,9 +172,31 @@ def intformat( val, fmt ):
 def va_print( arg ):
 
     arg, argdict = vdb.util.parse_vars( arg )
-    va_list = arg[0]
-
     frame = gdb.selected_frame()
+
+    if( len(arg) == 0 ):
+        lre = re.compile("^[^\s]* =")
+        locals = gdb.execute("info locals",False,True)
+        for line in locals.splitlines():
+            m=lre.match(line)
+            if( m is not None ):
+                varname = line.split("=")[0].strip()
+                val=frame.read_var(varname)
+#                print("varname = '%s'" % (varname,) )
+#                print("val = '%s'" % (val,) )
+#                print("val.type = '%s'" % (val.type,) )
+                if( val.type.name == "va_list" ):
+                    va_list = varname
+#                    print("va_list = '%s'" % (va_list,) )
+                    break
+#            print("line = '%s'" % (line,) )
+#            print("m = '%s'" % (m,) )
+        else:
+            print("Could not automatically detect the va_list variable, please provide it")
+            return
+    else:
+        va_list = arg[0]
+
 
     retaddrs = set()
     nf = frame
@@ -183,36 +215,33 @@ def va_print( arg ):
 #    print("g = '%s'" % (g,) )
 #    print("g.gp_offset = '%s'" % (g.gp_offset,) )
     va_list_val = gValue(va_list_val)
-#    print("va_list_val.address = '%s'" % (va_list_val.address,) )
-#    print("va_list_val.gp_offset = '%s'" % (va_list_val.gp_offset,) )
-#    print("va_list_val.fp_offset = '%s'" % (va_list_val.fp_offset,) )
-#    print("va_list_val.overflow_arg_area = '%s'" % (va_list_val.overflow_arg_area,) )
-#    print("va_list_val.reg_save_area = '%s'" % (va_list_val.reg_save_area,) )
 
-    print("Possible function call(s):")
 
-#    print("g.gp_offset = '%s'" % (g.gp_offset,) )
-#    print("type(g.gp_offset) = '%s'" % (type(g.gp_offset),) )
 
     gp_offset = argdict.getas(int,"gp_offset",va_list_val.gp_offset)
     fp_offset = argdict.getas(int,"fp_offset",va_list_val.fp_offset)
-#    reg_save_area = argdict.getas(vdb.util.hexint,"reg_save_area", va_list_val.reg_save_area)
+
+    if( gp_offset > 32*8 or gp_offset < 0 or gp_offset == 0 or gp_offset%8 != 0):
+        print(f"Warning! Unlikely gp_offset value ({gp_offset}), results are likely wrong. Recommend rerunning with gp_offset=8")
+
+    if( fp_offset > 32*8 or fp_offset < 0 or fp_offset == 0 or fp_offset%16 != 0):
+        print(f"Warning! Unlikely fp_offset value ({fp_offset}), results are likely wrong. Recommend rerunning with fp_offset=48")
+
     reg_save_area = argdict.getas(gValue,"reg_save_area", va_list_val.reg_save_area)
     overflow_arg_area = argdict.getas(gValue,"overflow_arg_area", va_list_val.overflow_arg_area)
 
+    mm = vdb.memory.mmap.find(int(reg_save_area))
+    if( mm is None or mm.is_unknown() ):
+        print(f"reg_save_area is pointing to unknown memroy, results are likely wrong.")
+
+    mm = vdb.memory.mmap.find(int(overflow_arg_area))
+    if( mm is None or mm.is_unknown() ):
+        print(f"overflow_arg_area is pointing to unknown memroy, results are likely wrong.")
+
     print(f"Using gp_offset={gp_offset}, fp_offset={fp_offset}")
+    print("Possible function call(s):")
 
     format = argdict.get( "format", None)
-
-
-#    print("reg_save_area = '%s'" % (reg_save_area,) )
-
-#    print("reg_save_area = '%s'" % (reg_save_area,) )
-#    print("type(reg_save_area) = '%s'" % (type(reg_save_area),) )
-
-#    print("gp_offset = '%s'" % (gp_offset,) )
-#    print("type(gp_offset) = '%s'" % (type(gp_offset),) )
-
 
     num_fixed = int(gp_offset) // 8
 
@@ -383,11 +412,7 @@ class cmd_va (vdb.command.command):
 
     def do_invoke (self, argv ):
         try:
-            if( len(argv) > 0 ):
-                va_print(argv)
-            else:
-                raise gdb.error("Need parameter")
-
+            va_print(argv)
         except:
             traceback.print_exc()
             raise

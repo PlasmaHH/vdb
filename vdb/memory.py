@@ -355,7 +355,7 @@ class memory_region:
         # TODO figure out how to find out executable, and also if executalbe is always RO
 
     def is_unknown( self ):
-        return self.start == 0 and self.end == 0 and section is None and file is None
+        return self.start == 0 and self.end == 0 and self.section is None and self.file is None
 
     def rwxp( self ):
         ret = ""
