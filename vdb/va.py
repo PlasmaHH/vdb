@@ -222,16 +222,7 @@ def convert_format( fmt ):
                 next_long = False
     return ret
 
-
-def va_print( arg ):
-
-    arg, argdict = vdb.util.parse_vars( arg )
-    frame = gdb.selected_frame()
-
-    allprovided = False
-
-    if( "gp_offset" in argdict and "fp_offset" in argdict and "reg_save_area" in argdict and "overflow_arg_area" in argdict ):
-        allprovided = True
+def get_va_list( arg, frame ):
 
     if( len(arg) == 0 ):
         if True:
@@ -252,11 +243,7 @@ def va_print( arg ):
                 b = b.superblock
 
             else:
-                if( not allprovided ):
-                    print("Could not automatically detect the va_list variable, please provide it")
-                    return
-                else:
-                    va_list is None
+                va_list = None
         else:
             lre = re.compile("^[^\s]* =")
             locals = gdb.execute("info locals",False,True)
@@ -275,13 +262,17 @@ def va_print( arg ):
 #            print("line = '%s'" % (line,) )
 #            print("m = '%s'" % (m,) )
             else:
-                if( not allprovided ):
-                    print("Could not automatically detect the va_list variable, please provide it")
-                    return
-                else:
-                    va_list is None
+                va_list = None
     else:
         va_list = arg[0]
+
+    return va_list
+
+
+def va_print( arg ):
+
+    arg, argdict = vdb.util.parse_vars( arg )
+    frame = gdb.selected_frame()
 
 
     retaddrs = set()
@@ -294,6 +285,14 @@ def va_print( arg ):
         olvl = nf.level()
         nf = nf.older()
 
+    va_list = get_va_list( arg, frame )
+
+
+    allprovided = False
+
+    if( "gp_offset" in argdict and "fp_offset" in argdict and "reg_save_area" in argdict and "overflow_arg_area" in argdict ):
+        allprovided = True
+
     if( va_list is not None ):
         va_list_val = frame.read_var(va_list)
         va_list_val = gValue(va_list_val)
@@ -303,9 +302,11 @@ def va_print( arg ):
         reg_save_area = va_list_val.reg_save_area
         overflow_arg_area = va_list_val.overflow_arg_area
 
-    else:
-        print("Whoopsie, va_list is None, that should not happen at this point")
+    elif( not allprovided ):
+        print("Could not automatically detect the va_list variable, please provide it")
         return
+    else:
+        gp_offset = fp_offset = reg_save_area = overflow_arg_area = None
 
     gp_offset = argdict.getas(int,"gp_offset",gp_offset)
     fp_offset = argdict.getas(int,"fp_offset",fp_offset)
@@ -318,14 +319,13 @@ def va_print( arg ):
     if( fp_offset > 32*8 or fp_offset < 0 or fp_offset == 0 or fp_offset%16 != 0):
         print(f"Warning! Unlikely fp_offset value ({fp_offset}), results are likely wrong. Recommend rerunning with fp_offset=48")
 
-
     mm = vdb.memory.mmap.find(int(reg_save_area))
     if( mm is None or mm.is_unknown() ):
-        print(f"reg_save_area is pointing to unknown memroy, results are likely wrong.")
+        print(f"reg_save_area is pointing to unknown memory, results are likely wrong.")
 
     mm = vdb.memory.mmap.find(int(overflow_arg_area))
     if( mm is None or mm.is_unknown() ):
-        print(f"overflow_arg_area is pointing to unknown memroy, results are likely wrong.")
+        print(f"overflow_arg_area is pointing to unknown memory, results are likely wrong.")
 
     print(f"Using gp_offset={gp_offset}, fp_offset={fp_offset}")
     print("Possible function call(s):")
@@ -536,6 +536,11 @@ def va_print( arg ):
     print(funcstr)
 
 
+def wait( ):
+    gp_offset = argdict.getas(int,"gp_offset",gp_offset)
+    fp_offset = argdict.getas(int,"fp_offset",fp_offset)
+    reg_save_area = argdict.getas(gValue,"reg_save_area", reg_save_area)
+    overflow_arg_area = argdict.getas(gValue,"overflow_arg_area", overflow_arg_area)
 
 class cmd_va (vdb.command.command):
     """Take va and transform it into more useful views"""
@@ -546,6 +551,11 @@ class cmd_va (vdb.command.command):
 
     def do_invoke (self, argv ):
         try:
+            if( len(argv) == 1 ):
+                if( argv[0] == "wait" ):
+                    print("Waiting...")
+                    wait()
+                    return
             va_print(argv)
         except:
             traceback.print_exc()

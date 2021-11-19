@@ -240,7 +240,7 @@ def run_tests( tests ):
                 if( kw == "commands" ):
                     var = len(var)
                 if( kw == "enabled" ):
-                    if( var ):
+                    if( var == True or var is None ):
                         var = "Y"
                     else:
                         var = "N"
@@ -331,6 +331,13 @@ tests = [
                 "commands" : [ "r", None, "bt" ],
                 "expect" : "ftree_backtrace.exp",
                 "enabled" : True
+            },
+            {
+                "name" : "varargs",
+                "file" : "va.cxx",
+                "commands" : [ "start", "b printf", "c", "va" ],
+                "expect" : "va.exp",
+                "output" : True
             },
             {
                 "name" : "pahole types",
