@@ -380,7 +380,7 @@ def va_print( arg ):
             if( f == "*" ):
 #                print("last_string = '%s'" % (last_string,) )
                 format = format[:-1] + convert_format(last_string)
-                print("format = '%s'" % (format,) )
+#                print("format = '%s'" % (format,) )
                 maxi = len(format)-1
                 i -= 1
 #                print("format = '%s'" % (format,) )
