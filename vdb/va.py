@@ -22,6 +22,16 @@ var_int_color     = vdb.config.parameter( "vdb-va-colors-vararg-int",   "#c43", 
 
 # We have similar x86_64 specific stuff in the unwinder, we should have this at one place to better support other archs
 
+int_limit = vdb.config.parameter( "vdb-va-int-limit",32*1024 )
+min_ascii = vdb.config.parameter( "vdb-va-min-ascii", 2)
+max_exponent = vdb.config.parameter( "vdb-va-max-exponent", 256 )
+default_format = vdb.config.parameter( "vdb-va-default-format", "*")
+max_overflow_int = vdb.config.parameter( "vdb-va-max-overflow-int", 42 )
+max_overflow_vec = vdb.config.parameter( "vdb-va-max-overflow-vector", 42 )
+
+#= vdb.config.parameter( "vdb-va-", )
+#= vdb.config.parameter( "vdb-va-", )
+
 saved_iregs = [ "rdi", "rsi", "rdx", "rcx", "r8", "r9" ]
 saved_vregs = [ "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7" ]
 saved_fregs = [ "st7", "st6", "st5", "st4", "st3", "st2", "st1", "st0" ]
@@ -79,13 +89,12 @@ def guess_vecrep( val, colorspec = None ):
 def guess_intrep( val ):
     try:
         val = int(val)
-        if( val < 32*1024 ): # definetly always an int
+        if( val < int_limit.value ): # definetly always an int
             return ( str(val), None )
 #        ca,mm,col,ascii = vdb.memory.mmap.color(val,colorspec = None )
         mm = vdb.memory.mmap.find(val)
 #        print("val = '0x%x'" % (val,) )
 #        print("mm = '%s'" % (mm,) )
-        minascii = 2
         if( mm is not None and not mm.is_unknown() ): # It is a pointer to known memory
 #            print("ca = '%s'" % (ca,) )
 #            print("mm = '%s'" % (mm,) )
@@ -93,7 +102,7 @@ def guess_intrep( val ):
 #            print("ascii = '%s'" % (ascii,) )
 #            plen = vdb.arch.pointer_size // 4
 #            s = f"0x{val:0{plen}x}"
-            pc = vdb.pointer.chain( val, vdb.arch.pointer_size, 1, True, minascii )
+            pc = vdb.pointer.chain( val, vdb.arch.pointer_size, 1, True, min_ascii.value )
             pc = pc[0]
 #            print("type(pc) = '%s'" % (type(pc),) )
 #            print("pc = '%s'" % (pc,) )
@@ -142,7 +151,7 @@ def vec_range( saved, offset, frm, to, step, skip = False ):
 
             m,e = math.frexp(dregp[i])
 #        print("e = '%s'" % (e,) )
-            if( abs(e) > 256 ):
+            if( abs(e) > max_exponent.value ):
                 if( skip ):
                     continue
                 break
@@ -153,6 +162,8 @@ def vec_range( saved, offset, frm, to, step, skip = False ):
     return ret
 
 def intformat( val, fmt ):
+    if( type(val) == str ):
+        return val
     fmt = fmt.lower()
 #    print("val = '%s'" % (val,) )
 #    print("fmt = '%s'" % (fmt,) )
@@ -168,6 +179,49 @@ def intformat( val, fmt ):
 #    print("type(val) = '%s'" % (type(val),) )
 #    print("val.type = '%s'" % (val.type,) )
     return val
+
+modfrom = "diocC uxX sS eEfFaA pn"
+modto   = "iiiii uuu ss dddddd pp"
+longto  = "lllll jjj ss dddddd pp"
+
+modmap = {}
+longmap = {}
+
+for i in range(0,len(modfrom) ):
+    modmap[modfrom[i]] = modto[i]
+    longmap[modfrom[i]] = longto[i]
+
+def convert_format( fmt ):
+    next_fmt = False
+    next_long = False
+#    print("fmt = '%s'" % (fmt,) )
+    ret = ""
+    for f in fmt:
+#        print("f = '%s'" % (f,) )
+        if( next_fmt ):
+            # h for short, check whats actually passed
+            if( f in "01234567890. #+-Ih" ):
+                pass
+            elif( f == "%" ):
+                next_fmt = False
+            elif( f in "lqLjzZt" ):
+                next_long = True
+            else:
+#                print("Checking for replacement")
+                to = modmap.get(f,None)
+                if( to is None ):
+                    print("Unsupported printf format modifier")
+                    ret += i
+                else:
+#                    print(f"{f} => {to}")
+                    ret += to
+                next_fmt = False
+        else:
+            if( f == "%" ):
+                next_fmt = True
+                next_long = False
+    return ret
+
 
 def va_print( arg ):
 
@@ -216,7 +270,8 @@ def va_print( arg ):
 #    print("g.gp_offset = '%s'" % (g.gp_offset,) )
     va_list_val = gValue(va_list_val)
 
-
+#    print("va_list = '%s'" % (va_list,) )
+#    print("va_list_val = '%s'" % (va_list_val,) )
 
     gp_offset = argdict.getas(int,"gp_offset",va_list_val.gp_offset)
     fp_offset = argdict.getas(int,"fp_offset",va_list_val.fp_offset)
@@ -241,7 +296,9 @@ def va_print( arg ):
     print(f"Using gp_offset={gp_offset}, fp_offset={fp_offset}")
     print("Possible function call(s):")
 
-    format = argdict.get( "format", None)
+    format = argdict.get( "format", default_format.value )
+    if( format == "*" ):
+        format = None
 
     num_fixed = int(gp_offset) // 8
 
@@ -266,15 +323,33 @@ def va_print( arg ):
         dtype_p = dtype.pointer()
         dreg_save = reg_save_area.cast(dtype_p)
 
-        for f in format:
+        last_string = None
+
+        maxi = len(format)-1
+
+        i = -1
+        while i < maxi:
+            i += 1
+            f = format[i]
+                
+            if( f == "*" ):
+#                print("last_string = '%s'" % (last_string,) )
+                format = format[:-1] + convert_format(last_string)
+                maxi = len(format)-1
+                i -= 1
+#                print("format = '%s'" % (format,) )
+                continue
+
             if( cnt > 0 ):
                 funcstr += ", "
+
             if( f in "SPILUJ" ):
                 regname = saved_iregs[cnt]
                 rval = vdb.register.read(regname,frame)
                 if( f == "S" ):
                     rval = rval.cast(ctype_p)
                     funcstr += vdb.color.color( rval, fixed_int_color.value )
+                    last_string = str(rval)
                 else:
                     funcstr += vdb.color.color( rval, fixed_int_color.value )
             elif( f in "spiluj" ):
@@ -285,7 +360,10 @@ def va_print( arg ):
                 else:
                     rval="??"
                 if( f == "s" ):
-                    rval = rval.cast(ctype_p)
+                    try:
+                        rval = rval.cast(ctype_p)
+                    except AttributeError:
+                        pass
                     funcstr += vdb.color.color( rval, var_int_color.value )
                 else:
                     rval = intformat(rval,f)
@@ -340,12 +418,12 @@ def va_print( arg ):
     reg_save = reg_save_area.cast(ptrtype)
 
     funcstr += "\ngp vararg".ljust(pflen)
-    funcstr += int_range( reg_save, num_fixed, 6 )
+    funcstr += int_range( reg_save, num_fixed, len(saved_iregs) )
 
     overflow = overflow_arg_area.cast(ptrtype)
 
     funcstr += "\ngp vararg".ljust(pflen)
-    funcstr += int_range( overflow, 2, 42, retaddrs )
+    funcstr += int_range( overflow, 2, max_overflow_int.value, retaddrs )
 
 
 
@@ -370,12 +448,12 @@ def va_print( arg ):
             funcstr += vdb.color.color("?",fixed_int_color.value)
 
     funcstr += "\nfp vararg".ljust(pflen)
-    funcstr += vec_range(reg_save_area,fp_offset, 0,32,2)
+    funcstr += vec_range(reg_save_area,fp_offset, 0,len(saved_vregs),2)
 
     # it looks like the offset here is depending on the valid number of arguments we got so far from the overflow area.
     # We can't possibly know
     funcstr += "\nfp vararg".ljust(pflen)
-    funcstr += vec_range(overflow_arg_area,0, 0,30,1,True)
+    funcstr += vec_range(overflow_arg_area,0, 0,max_overflow_vec.value,1,True)
 
 
 #    for r in saved_iregs:
