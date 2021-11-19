@@ -234,28 +234,41 @@ def va_print( arg ):
         allprovided = True
 
     if( len(arg) == 0 ):
-        lre = re.compile("^[^\s]* =")
-        locals = gdb.execute("info locals",False,True)
-        for line in locals.splitlines():
-            m=lre.match(line)
-            if( m is not None ):
-                varname = line.split("=")[0].strip()
-                val=frame.read_var(varname)
+        if True:
+            for s in frame.block():
+                val=frame.read_var(s)
+                if( val.type.name == "va_list" ):
+                    va_list = s
+                    break
+            else:
+                if( not allprovided ):
+                    print("Could not automatically detect the va_list variable, please provide it")
+                    return
+                else:
+                    va_list is None
+        else:
+            lre = re.compile("^[^\s]* =")
+            locals = gdb.execute("info locals",False,True)
+            for line in locals.splitlines():
+                m=lre.match(line)
+                if( m is not None ):
+                    varname = line.split("=")[0].strip()
+                    val=frame.read_var(varname)
 #                print("varname = '%s'" % (varname,) )
 #                print("val = '%s'" % (val,) )
 #                print("val.type = '%s'" % (val.type,) )
-                if( val.type.name == "va_list" ):
-                    va_list = varname
+                    if( val.type.name == "va_list" ):
+                        va_list = varname
 #                    print("va_list = '%s'" % (va_list,) )
-                    break
+                        break
 #            print("line = '%s'" % (line,) )
 #            print("m = '%s'" % (m,) )
-        else:
-            if( not allprovided ):
-                print("Could not automatically detect the va_list variable, please provide it")
-                return
             else:
-                va_list is None
+                if( not allprovided ):
+                    print("Could not automatically detect the va_list variable, please provide it")
+                    return
+                else:
+                    va_list is None
     else:
         va_list = arg[0]
 
