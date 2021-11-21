@@ -257,4 +257,36 @@ fp_offset did not update. Please single step (at the risk of clobbering fixed pa
 Using gp_offset=8, fp_offset=48
 Possible function call(s):
 __printf( 0x402034 "%s", 0x402028 "Hello World")
+Continuing.
+
+Breakpoint 2, __printf (format=0x402037 "%p") at printf.c:28
+28	{
+Waiting...
+0x00007ffff7aed924	28	{
+0x00007ffff7aed92b	28	{
+0x00007ffff7aed92e	28	{
+0x00007ffff7aed933	28	{
+0x00007ffff7aed938	28	{
+0x00007ffff7aed93d	28	{
+0x00007ffff7aed942	28	{
+0x00007ffff7aed947	28	{
+0x00007ffff7aed949	28	{
+0x00007ffff7aed982	28	{
+0x00007ffff7aed98b	28	{
+0x00007ffff7aed990	28	{
+32	  va_start (arg, format);
+0x00007ffff7aed99a	33	  done = __vfprintf_internal (stdout, format, arg, 0);
+0x00007ffff7aed99d	33	  done = __vfprintf_internal (stdout, format, arg, 0);
+0x00007ffff7aed99f	32	  va_start (arg, format);
+0x00007ffff7aed9a4	32	  va_start (arg, format);
+0x00007ffff7aed9a9	33	  done = __vfprintf_internal (stdout, format, arg, 0);
+0x00007ffff7aed9ac	32	  va_start (arg, format);
+33	  done = __vfprintf_internal (stdout, format, arg, 0);
+0x00007ffff7aed9b8	32	  va_start (arg, format);
+0x00007ffff7aed9bf	33	  done = __vfprintf_internal (stdout, format, arg, 0);
+va_list completely updated, va extraction has a higher chance of working now
+fp_offset did not update. Please single step (at the risk of clobbering fixed parameters) or inspect disasembly yourself to figure out a proper value
+Using gp_offset=8, fp_offset=48
+Possible function call(s):
+__printf( 0x402037 "%p", 0x0000000000401126 <main(int, char const**)> →       push %rbp)
 Exiting vdb...

@@ -335,9 +335,9 @@ tests = [
             {
                 "name" : "varargs",
                 "file" : "va.cxx",
-                "commands" : [ "start", "set vdb-va-default-format S*", None, "b printf" ] + 8* [ "c", "va wait", "va fp_offset=48" ],
+                "commands" : [ "start", "set vdb-va-default-format S*", None, "b printf" ] + 9 * [ "c", "va wait", "va fp_offset=48" ],
                 "expect" : "va.exp",
-                "output" : True
+#                "output" : True
             },
             {
                 "name" : "pahole types",
