@@ -364,5 +364,31 @@ def parse_vars( argv ):
     print("retargv = '%s'" % (retargv,) )
     print("retvars = '%s'" % (retvars,) )
 
+class silence:
+
+    def __init__( self ):
+        self.redirect = None
+        self.file = None
+        self.logging = None
+
+    def __enter__( self ):
+        if( gdb.parameter("logging redirect") ):
+            self.redirect = "on"
+        else:
+            self.redirect = "off"
+        self.file = gdb.parameter("logging file")
+        self.logging = "off"
+
+        gdb.execute("set logging redirect on")
+        gdb.execute("set logging file si.txt")
+        gdb.execute("set logging on")
+        print("DISABLED OUTPUT")
+
+
+    def __exit__( self, type, value, traceback ):
+        gdb.execute(f"set logging off",False,True)
+#        gdb.execute(f"set logging redirect {self.redirect}",False,True)
+#        gdb.execute(f"set logging file {self.file}",False,True)
+        print("ENABLED OUTPUT")
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
