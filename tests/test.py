@@ -337,7 +337,7 @@ tests = [
                 "file" : "va.cxx",
                 "commands" : [ "start", "set vdb-va-default-format S*", None, "b printf" ] + 9 * [ "c", "va wait", "va fp_offset=48" ],
                 "expect" : "va.exp",
-#                "output" : True
+                "output" : True
             },
             {
                 "name" : "pahole types",
@@ -382,7 +382,7 @@ tests = [
             {
                 "name": "shorten functions",
                 "enabled": True,
-#                "enabled_commands" : "0-3,27",
+#                "enabled_commands" : "0-4,45",
                 "commands" : [ None,
                 "vdb add foldable foldme",
                 "vdb add shorten shorten<shorten> shorten",
@@ -428,6 +428,7 @@ tests = [
                 "vdb shorten std::remove_reference<void (std::thread::*)()>",
                 "vdb shorten std::less<std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)2>*>",
                 "vdb shorten std::remove_reference<std::ios_base::<unnamed enum> >",
+                "vdb shorten s0<(end)1, void>",
 
                     ],
                 "expect" : "shorten_function.exp",

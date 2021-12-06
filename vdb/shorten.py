@@ -151,6 +151,8 @@ class type_or_function:
         indent(level,"ns : " + str(self.namespace))
         indent(level,"name : " + str(self.name))
         indent(level,"type : " + str(self.type))
+        indent(level,"tail : '" + str(self.tail) + "'" )
+#        print("self.__dict__ = '%s'" % (self.__dict__,) )
         if( self.template_parameters is not None ):
             indent(level,"template parameters[{}]".format(len(self.template_parameters)))
             for t in self.template_parameters:
@@ -159,6 +161,11 @@ class type_or_function:
             indent(level,"template parameters = None")
         if( self.parameters ):
             indent(level,"parameters[{}]".format(len(self.parameters)))
+            cnt = 0
+            for p in self.parameters:
+                indent(level,f"param[{cnt}]")
+                cnt += 1
+                p.dump(level+1)
         else:
             indent(level,"parameters = None")
         if( self.subobject is not None ):
@@ -210,6 +217,9 @@ class type_or_function:
         selfname = self.name
         if( selfname is None ):
             selfname = ""
+#        elif( selfname == "__UNNAMED_OBJECT__" ):
+#            print("self.parameters = '%s'" % (self.parameters,) )
+#            selfname = ""
         elif( len(selfname) == 0 ):
             return ""
 
@@ -308,8 +318,10 @@ def parse_fragment( frag, obj, level = 0 ):
                 i += len(ans)
                 i -= 1
                 continue
+#            vdb.util.bark() # print("BARK")
             obj.add_param(None) # tell there are some, maybe 0
 #            print(f"sofar use params '{sofar}'")
+#            vdb.util.bark() # print("BARK")
             obj.name = use_sofar(sofar)
             sofar = ""
             obj.set_type("function")
@@ -324,6 +336,8 @@ def parse_fragment( frag, obj, level = 0 ):
 #                print("frag[i:] = '%s'" % frag[i:] )
 #				print("frag[i+1:] = '%s'" % frag[i+1:] )
                 if( len( ct.name) > 0 ):
+#                    vdb.util.bark() # print("BARK")
+#                    print("ct.name = '%s'" % (ct.name,) )
                     obj.add_param(ct)
 #                print("obj.id = '%s'" % (obj.id,) )
                 if( frag[i] == ")" ):
@@ -354,8 +368,15 @@ def parse_fragment( frag, obj, level = 0 ):
             sofar = ""
             continue
         if( s == "," ):
+#            vdb.util.bark() # print("BARK")
+#            print("obj.name = '%s'" % (obj.name,) )
+            if( obj.name is not None and len(sofar) > 0 and obj.name != sofar ):
+                obj.subobject = type_or_function()
+                obj.subobject.name = use_sofar(sofar)
+                obj.name="__UNNAMED_OBJECT__"
+            else:
 #            print("comma use_sofar '{sofar}'")
-            obj.name = use_sofar(sofar)
+                obj.name = use_sofar(sofar)
             return i
         if( s == "<" ):
             if( frag[i:].startswith(une) ):
@@ -369,11 +390,15 @@ def parse_fragment( frag, obj, level = 0 ):
             while True:
                 ct = type_or_function()
                 i+=1 # consume the <
+#                ct.name = ""
                 i += parse_fragment( frag[i:], ct,level+1 )
+                if( ct.name == "__UNNAMED_OBJECT__" ):
+                    ct.name = None
+#                vdb.util.bark() # print("BARK")
+#                print("ct.name = '%s'" % (ct.name,) )
                 ct.set_type("template parameter")
 #                print(f"after template fragment @{level} frag[{i}]='{frag[i]}'")
 #                print("ct.name = '%s'" % (ct.name,) )
-
                 obj.add_template( ct )
 #                print("i = '%s'" % i )
 #                print("len(frag) = '%s'" % len(frag) )
@@ -416,6 +441,7 @@ def parse_fragment( frag, obj, level = 0 ):
 #            print(f"template continue on {frag} [{i}]")
             continue
         if( s == ">" ):
+#            print("sofar = '%s'" % (sofar,) )
 #            vdb.util.bark() # print("BARK")
 #            print("obj.name = '%s'" % (obj.name,) )
 #            print("sofar = '%s'" % (sofar,) )
