@@ -221,6 +221,7 @@ def gdbserver( s, argv ):
 #    time.sleep(2)
     print("Setting target remote…")
     gdb.execute(f"target remote localhost:{gport}")
+#    gdb.execute(f"target extended-remote localhost:{gport}")
     print("Attached to remote process. Use 'detach' to end debugging.")
     return gs
 
@@ -650,5 +651,12 @@ cmd_ssh()
 
 # TODO: copy file/libraries in all modes, run, core, attach, when gdbserver connection is slow. configurable? auto
 # detect?
+
+# FIXME
+# run behaves like start and should be named so
+# make use of extended remote so we can have a real run
+# properly capture stdout/stderr and redirect it to the gdb session
+# on run/start copy the file (optionally) first over to make symbol lookups faster
+
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
