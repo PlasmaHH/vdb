@@ -358,7 +358,6 @@ tests = [
                 "name" : "disassemble",
                 "file" : "paholetest.cxx",
                 "commands" : [ "start", None, "dis" ],
-                "hash" : "5ed9eeaff6ea320f66756334445d3e13",
                 "expect" : "pahole_disassemble.exp",
                 "enabled" : True
             },
