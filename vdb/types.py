@@ -98,7 +98,7 @@ def refresh_locations( at ):
         set_progress( at, ccnt, len(ctags_dirs.elements), None )
         ccnt += 1
         cmd = [ ctags_cmd.value ] + ctags_parameters.value.split() + [d]
-        print("cmd = '%s'" % (" ".join(cmd),) )
+#        print("cmd = '%s'" % (" ".join(cmd),) )
 
         type_tags = set( [ "t","s","c","u" ] )
 #        tags = subprocess.che suoutput( cmd )

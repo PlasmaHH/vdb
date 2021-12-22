@@ -5,7 +5,7 @@ A set of python visual enhancements for gdb.
 
 **NOTE**
 This is work in progress and mainly geared to what I use in my daily work as a C++ developer. This also means it will mostly require the
-latest gdb version (10.1 as of writing this). Besides that it will most likely miss support for other platforms than C++
+latest gdb version (12.0 as of writing this). Besides that it will most likely miss support for other platforms than C++
 under x86_64 Linux with gcc > 10.
 
 ---

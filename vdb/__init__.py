@@ -95,6 +95,9 @@ cmd_vdb()
 
 
 def is_in_safe_path( pdir ):
+    if( not honor_sp.value ):
+        return True
+
     pdir = os.path.normpath(pdir) + "/"
     sp = gdb.parameter("auto-load safe-path")
 
@@ -160,10 +163,11 @@ def load_themes( vdbdir ):
         print("Not loading any theme")
         return
     tdir = f"{vdbdir}/themes/"
-    if( not is_in_safe_path(tdir) ):
-#        print(f"{tdir} is not in safe path, not loading theme from there")
-        return
     tfile = f"{tdir}{theme.value}.py"
+    if( not is_in_safe_path(tdir) ):
+        if( os.path.isfile(tfile) ):
+            print(f"{tdir} is not in safe path, not loading {tfile} from there")
+        return
     if( not os.path.isfile(tfile) ):
         print(f"Theme file {tfile} not found, not loading any theme")
         return

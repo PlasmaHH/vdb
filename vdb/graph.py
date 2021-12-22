@@ -18,6 +18,7 @@ import shutil
 
 
 graph_with = vdb.config.parameter("vdb-graph-with", "lines")
+gnuplot_bin = vdb.config.parameter("vdb-graph-gnuplot","",docstring="The binary for gnuplot to use, empty when it should be searched in path")
 
 
 """
@@ -214,14 +215,17 @@ graph/rt <id>  - use relative timestamps with the id
 """
 
     def __init__ (self):
-        gnuplot = shutil.which("gnuplot")
-        if( gnuplot is None ):
-            raise RuntimeError("gnuplot not found in PATH, refusing to load")
+
+        if( len( gnuplot_bin.value ) > 0 ):
+            gnuplkot = gnuplot_bin.value
+        else:
+            gnuplot = shutil.which("gnuplot")
+            if( gnuplot is None ):
+                raise RuntimeError("gnuplot not found in PATH, refusing to load")
+            print(f"Autodetected gnuplot binary as {gnuplot}")
         super (cmd_graph, self).__init__ ("graph", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.result = ""
         self.dont_repeat()
-
-        print("gnuplot = '%s'" % gnuplot )
 
     def do_invoke (self, argv ):
         print("argv = '%s'" % argv )

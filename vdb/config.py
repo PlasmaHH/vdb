@@ -39,14 +39,22 @@ registry = {}
 # In case the type is our artifical type colour, it will translate to gdb string and we check internally for a colour
 # string
 class parameter(gdb.Parameter):
-    def __init__(self, name, default, docstring = "value of %s", gdb_type = None, on_set = None ):
-        docstring = docstring % name
-        self.docstring = docstring
+    def __init__(self, name, default, showstring = "value of %s", docstring = "Documentation of %s", gdb_type = None, on_set = None ):
+        try:
+            self.docstring = docstring % name
+        except:
+            self.docstring = docstring
+        try:
+            self.showstring = showstring % name
+        except:
+            self.showstring = showstring
         self.name = name
         self.default = default
         self.theme_default = None
-        self.set_doc = 'Set ' + docstring
-        self.show_doc = docstring + ':'
+        self.set_doc = 'Set ' + showstring
+#        self.show_doc = docstring + ': %s'
+        self.show_doc = self.docstring
+        self.__doc__ = "" # to suppress undocumented warning of gdb. Is this a bug? or an undocumented feature?
         self.is_colour = False
         self.is_float = False
         self.gdb_type = gdb_type
@@ -116,12 +124,12 @@ class parameter(gdb.Parameter):
         if( verbosity.value is None or verbosity.value < 2 ):
             return ""
         if( self.is_colour ):
-            return 'Set %s to %s' % (self.docstring, vdb.color.color(pval,self.value))
+            return 'Set %s to %s' % (self.showstring, vdb.color.color(pval,self.value))
         else:
-            return 'Set %s to %r' % (self.docstring, pval )
+            return 'Set %s to %r' % (self.showstring, pval )
 
     def get_show_string(self, svalue):
-        return '%s (currently: %r)' % (self.docstring, self.value)
+        return '%s (currently: %r)' % (self.showstring, self.value)
 
     def get_vdb_show_string(self ):
         val = self.value
