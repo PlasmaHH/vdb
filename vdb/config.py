@@ -54,7 +54,8 @@ class parameter(gdb.Parameter):
         self.set_doc = 'Set ' + showstring
 #        self.show_doc = docstring + ': %s'
         self.show_doc = self.docstring
-        self.__doc__ = "" # to suppress undocumented warning of gdb. Is this a bug? or an undocumented feature?
+        if( self.__doc__ is None ):
+            self.__doc__ = "" # to suppress undocumented warning of gdb. Is this a bug? or an undocumented feature?
         self.is_colour = False
         self.is_float = False
         self.gdb_type = gdb_type
