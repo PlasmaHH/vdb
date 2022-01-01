@@ -569,8 +569,9 @@ def wait(arg ):
 
     for i in range(0,wait_max_ins.value):
         # maybe also stop on frame change?
-#    with vdb.util.silence() as _:
-        res=gdb.execute("stepi",False,True)
+        with vdb.util.silence() as _:
+            res=gdb.execute("stepi",False,False)
+#            res=gdb.execute("p $pc",False,True)
 
         gp_offset = va_list_val.gp_offset
         fp_offset = va_list_val.fp_offset

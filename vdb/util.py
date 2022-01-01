@@ -9,6 +9,9 @@ import itertools
 import time
 import types
 
+import os
+import sys
+
 def nstr( s ):
     if( s is None ):
         return ""
@@ -379,16 +382,31 @@ class silence:
         self.file = gdb.parameter("logging file")
         self.logging = "off"
 
-        gdb.execute("set logging redirect on")
-        gdb.execute("set logging file si.txt")
-        gdb.execute("set logging on")
-        print("DISABLED OUTPUT")
+#        print("ABOUT TO DISABLE OUTPUT")
+#        print("sys.stdout.fileno() = '%s'" % (sys.stdout.fileno(),) )
+#        gdb.execute("set logging redirect on")
+#        gdb.execute("set logging file si.txt")
+#        gdb.execute("set logging enabled on")
+
+        sys.stdout.flush()
+#        self.stdout_fd = os.dup( sys.stdout.fileno() )
+        self.stdout_fd = os.dup( 1 )
+        self.dev_null = open("/dev/null","w")
+##        os.dup2( self.dev_null.fileno(), self.stdout.fileno() )
+        os.dup2( self.dev_null.fileno(), 1 )
+#        print("DISABLED OUTPUT")
+        sys.stdout.flush()
 
 
     def __exit__( self, type, value, traceback ):
-        gdb.execute(f"set logging off",False,True)
+#        gdb.execute(f"set logging off")#,False,True)
+        sys.stdout.flush()
+##        os.dup2( self.stdout_fd, self.stdout.fileno() )
+        os.dup2( self.stdout_fd, 1 )
+#        gdb.execute(f"set logging off",False,False)
 #        gdb.execute(f"set logging redirect {self.redirect}",False,True)
 #        gdb.execute(f"set logging file {self.file}",False,True)
-        print("ENABLED OUTPUT")
+#        print("ENABLED OUTPUT")
+        sys.stdout.flush()
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
