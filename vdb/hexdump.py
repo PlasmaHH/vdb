@@ -458,7 +458,6 @@ We recommend having an alias hd = hexdump in your .gdbinit
 
     def __init__ (self):
         super (cmd_hexdump, self).__init__ ("hexdump", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-        self.dont_repeat()
 
     def do_invoke (self, argv):
         try:
@@ -467,6 +466,7 @@ We recommend having an alias hd = hexdump in your .gdbinit
             traceback.print_exc()
             raise
             pass
+        self.dont_repeat()
 
 cmd_hexdump()
 

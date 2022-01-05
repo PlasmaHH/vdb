@@ -28,7 +28,6 @@ class cmd_external(vdb.command.command):
 
     def __init__ (self,cmdname):
         super (cmd_external, self).__init__ (cmdname, gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-        self.dont_repeat()
 
     def do_invoke (self, argv):
         try:
@@ -39,6 +38,7 @@ class cmd_external(vdb.command.command):
             traceback.print_exc()
             raise
             pass
+        self.dont_repeat()
 
 class cmd_wrap(vdb.command.command):
     """Executes a some command"""
@@ -47,7 +47,6 @@ class cmd_wrap(vdb.command.command):
         self.cmdname = cmdname
         self.wrapped_name = cmdname.capitalize()
         super (cmd_wrap, self).__init__ (self.wrapped_name, gdb.COMMAND_DATA)
-        self.dont_repeat()
         self.saved_arg = None
         self.saved_from_tty = None
 
@@ -62,6 +61,7 @@ class cmd_wrap(vdb.command.command):
             traceback.print_exc()
             raise
             pass
+        self.dont_repeat()
 
 
     def invoke (self, arg, from_tty):

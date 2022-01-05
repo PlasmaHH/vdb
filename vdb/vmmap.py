@@ -33,7 +33,6 @@ vmmap <cspec> - uses this colorspec
 
     def __init__ (self):
         super (cmd_vmmap, self).__init__ ("vmmap", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-        self.dont_repeat()
 
     def do_invoke (self, argv ):
         try:
@@ -76,6 +75,7 @@ vmmap <cspec> - uses this colorspec
             traceback.print_exc()
             raise
             pass
+        self.dont_repeat()
 
 cmd_vmmap()
 

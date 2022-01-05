@@ -474,7 +474,6 @@ class cmd_unwind (vdb.command.command):
 
     def __init__ (self):
         super (cmd_unwind, self).__init__ ("unwind", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-        self.dont_repeat()
 
     def do_invoke (self, argv ):
         try:
@@ -500,6 +499,7 @@ class cmd_unwind (vdb.command.command):
             traceback.print_exc()
             raise
             pass
+        self.dont_repeat()
 
 cmd_unwind()
 

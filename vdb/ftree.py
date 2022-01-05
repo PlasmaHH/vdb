@@ -1107,7 +1107,6 @@ ftree <pointer>|<variable> [<limit>]  - It takes a pointer to some object or a v
     def __init__ (self):
         super (cmd_ftree, self).__init__ ("ftree", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.result = ""
-        self.dont_repeat()
 
 
     def print( self, msg,*more ):
@@ -1182,6 +1181,7 @@ ftree <pointer>|<variable> [<limit>]  - It takes a pointer to some object or a v
             vdb.cache.dump()
         except Exception as e:
             traceback.print_exc()
+        self.dont_repeat()
 
 cmd_ftree()
 

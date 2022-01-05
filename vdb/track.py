@@ -590,7 +590,6 @@ You should have a look at the data and graph modules, which can take the data fr
 
     def __init__ (self):
         super (cmd_track, self).__init__ ("track", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-        self.dont_repeat()
 
     def do_invoke (self, argv ):
         try:
@@ -631,6 +630,7 @@ You should have a look at the data and graph modules, which can take the data fr
             traceback.print_exc()
             raise
             pass
+        self.dont_repeat()
 
 cmd_track()
 

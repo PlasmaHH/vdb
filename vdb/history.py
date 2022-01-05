@@ -316,7 +316,6 @@ class cmd_fz (vdb.command.command):
 
     def __init__ (self):
         super (cmd_fz, self).__init__ ("fz", gdb.COMMAND_RUNNING)
-        self.dont_repeat()
         self.last_returned = None
 
     def complete( self, text, word ):
@@ -354,6 +353,7 @@ class cmd_fz (vdb.command.command):
                 gdb.execute(arg,from_tty,False)
             except gdb.error as e:
                 print(f"gdb.error: {e}")
+        self.dont_repeat()
 
 cmd_fz()
 

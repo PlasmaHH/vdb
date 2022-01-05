@@ -615,7 +615,6 @@ class cmd_ssh (vdb.command.command):
 
     def __init__ (self):
         super (cmd_ssh, self).__init__ ("ssh", gdb.COMMAND_RUNNING)
-        self.dont_repeat()
 
     def do_invoke (self, argv):
         try:
@@ -624,6 +623,7 @@ class cmd_ssh (vdb.command.command):
             traceback.print_exc()
             raise
             pass
+        self.dont_repeat()
 
     def complete( self, text, word ):
         if( word is None ):

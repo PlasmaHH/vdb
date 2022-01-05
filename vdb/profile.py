@@ -20,7 +20,6 @@ class cmd_profile (vdb.command.command):
 
     def __init__ (self):
         super (cmd_profile, self).__init__ ("profile", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-        self.dont_repeat()
 
     def invoke (self, arg, from_tty):
         try:
@@ -35,6 +34,7 @@ class cmd_profile (vdb.command.command):
             traceback.print_exc()
             raise
             pass
+        self.dont_repeat()
 
 cmd_profile()
 

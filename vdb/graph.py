@@ -225,7 +225,6 @@ graph/rt <id>  - use relative timestamps with the id
             print(f"Autodetected gnuplot binary as {gnuplot}")
         super (cmd_graph, self).__init__ ("graph", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.result = ""
-        self.dont_repeat()
 
     def do_invoke (self, argv ):
         print("argv = '%s'" % argv )
@@ -248,6 +247,7 @@ graph/rt <id>  - use relative timestamps with the id
 
         except Exception as e:
             traceback.print_exc()
+        self.dont_repeat()
 
 cmd_graph()
 

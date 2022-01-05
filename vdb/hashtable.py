@@ -220,7 +220,6 @@ Additionally a table tells you details about the amount of chain lengths and how
     def __init__ (self):
         super (cmd_hashtable, self).__init__ ("hashtable", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.result = ""
-        self.dont_repeat()
 
     def do_invoke (self, argv ):
         if len(argv) > 1:
@@ -232,6 +231,7 @@ Additionally a table tells you details about the amount of chain lengths and how
             eval_hashtable(a0)
         except Exception as e:
             traceback.print_exc()
+        self.dont_repeat()
 
 cmd_hashtable()
 

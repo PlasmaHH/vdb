@@ -433,7 +433,6 @@ Remember that you can use dash as short as long as no other command collides wit
 
     def __init__ (self):
         super ().__init__ ("dashboard", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-        self.dont_repeat()
 
     def do_invoke (self, argv):
         try:
@@ -448,6 +447,7 @@ Remember that you can use dash as short as long as no other command collides wit
             traceback.print_exc()
             raise
             pass
+        self.dont_repeat()
 
 cmd_dashboard()
 

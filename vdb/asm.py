@@ -1578,7 +1578,6 @@ part of a function, unlike the disassemble command those are right away disassem
 
     def __init__ (self):
         super (Dis, self).__init__ ("dis", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION, replace = True)
-        self.dont_repeat()
 
     def do_invoke (self, argv ):
 
@@ -1590,6 +1589,7 @@ part of a function, unlike the disassemble command those are right away disassem
             traceback.print_exc()
             raise
             pass
+        self.dont_repeat()
 
 Dis()
 
