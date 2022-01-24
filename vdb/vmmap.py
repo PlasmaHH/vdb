@@ -88,13 +88,24 @@ def visual( argv ):
 
     print(f"Found {len(clusters)} clusters")
 
+
     for s,e in clusters:
+        res = 4096
+
         num,suf = vdb.util.num_suffix( e-s )
-        print(f"From 0x{s:08x} to 0x{e:08x} (size {num:.02f} {suf}B)")
-        rep = " " * ((e-s)//4096)
+        maxl = 128 * 128
+
+        while( (e-s)/res > maxl ):
+            res *= 2
+        rnum,rsuf = vdb.util.num_suffix( res )
+#        print("rng = '%s'" % (rng,) )
+#        print("maxl = '%s'" % (maxl,) )
+
+        print(f"From 0x{s:08x} to 0x{e:08x} (size {num:.02f} {suf}B) @{rnum:.01f} {rsuf}B" )
+        rep = " " * ((e-s)//res)
         x = vdb.memory.mmap.regions[s:e]
-        sp = s//4096
-        ep = (e+4095)//4096
+        sp = s//res
+        ep = (e+(res-1))//res
 #        print("len(rep) = '%s'" % (len(rep),) )
 
         rep = ""
@@ -102,11 +113,12 @@ def visual( argv ):
 
         for ri in range(sp,ep):
 #            cnt+=1 
-            rptr = ri * 4096
+            rptr = ri * res
             ri -= sp
 #            print("ri = '%s'" % (ri,) )
             memc,region = vdb.memory.mmap.get_mcolor( rptr )
 #            print("memc = '%s'" % (memc,) )
+#            print("region = '%s'" % (region,) )
             if( region is None ):
                 rep += " "
             else:
