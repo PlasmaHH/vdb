@@ -20,6 +20,110 @@ def show_region( addr, colorspec ):
         return None
     print( f"Address {ca} is in {str(mm)}" )
 
+def visual( argv ):
+
+#    mingapsize = 128*1024
+    mingapsize = 8*1024
+
+    lastend = 0
+
+    biggaps = []
+    gapstartset = set()
+
+    vdb.memory.print_legend(None)
+    sorted_regions = sorted(vdb.memory.mmap.regions)
+#    print("len(sorted_regions) = '%s'" % (len(sorted_regions),) )
+    for r in sorted_regions:
+        r = r[2]
+        if( r.start == 0 ):
+            continue
+        if( r.file == "[vsyscall]" ):
+            continue
+        if( lastend == 0 ):
+            lastend = r.end
+            continue
+        gap = r.start - lastend
+        if( gap < 0 ): # this should somewhat filter out overlaps 
+            continue
+        if( gap > 4096 ): # only count more than a page
+            biggaps.append( ( gap, r.start ) )
+
+        lastend = r.end
+#    print("sorted(biggaps) = '%s'" % (sorted(biggaps,reverse=True),) )
+    for bg in sorted(biggaps,reverse=True):
+#        print("bg[0] = '%s'" % (bg[0],) )
+        if( bg[0] >= mingapsize ):
+            gapstartset.add( bg[1] )
+
+    s = 0
+    e = 0
+
+    clusters = []
+
+    memsum = 0
+    for r in sorted_regions:
+        r = r[2]
+        if( r.start == 0 ):
+            continue
+        if( r.file == "[vsyscall]" ):
+            continue
+        if( s == 0 ):
+            s = r.start
+            continue
+        if( r.start in gapstartset ):
+#            print("e = '%s'" % (e,) )
+#            print("r.start = '%s'" % (r.start,) )
+#            print("(r.start-e) = '%s'" % ((r.start-e),) )
+#            print(f"From 0x{s:08x} to 0x{e:08x} (size %{e-s})")
+            if( (e-s) > (r.start-e) ):
+                pass
+            else:
+                clusters.append( ( s, e ) )
+                memsum += (e-s)
+                s = r.start
+        if( r.end  > e ):
+            e = r.end
+    clusters.append( ( s, e ) )
+    memsum += (e-s)
+
+    print(f"Found {len(clusters)} clusters")
+
+    for s,e in clusters:
+        num,suf = vdb.util.num_suffix( e-s )
+        print(f"From 0x{s:08x} to 0x{e:08x} (size {num:.02f} {suf}B)")
+        rep = " " * ((e-s)//4096)
+        x = vdb.memory.mmap.regions[s:e]
+        sp = s//4096
+        ep = (e+4095)//4096
+#        print("len(rep) = '%s'" % (len(rep),) )
+
+        rep = ""
+#        cnt = 0
+
+        for ri in range(sp,ep):
+#            cnt+=1 
+            rptr = ri * 4096
+            ri -= sp
+#            print("ri = '%s'" % (ri,) )
+            memc,region = vdb.memory.mmap.get_mcolor( rptr )
+#            print("memc = '%s'" % (memc,) )
+            if( region is None ):
+                rep += " "
+            else:
+                cs = vdb.color.color( "#", memc )
+                rep += cs
+#        print("x = '%s'" % (x,) )
+#        print("cnt = '%s'" % (cnt,) )
+        print(rep)
+        print()
+
+    pages = memsum / 4096
+    print(f"Total pages occupied: {pages}")
+
+#    print("x = '%s'" % (x,) )
+
+
+
 
 class cmd_vmmap (vdb.command.command):
     """Module holding information about memory mappings
@@ -49,6 +153,9 @@ vmmap <cspec> - uses this colorspec
                         if( argv[0] == "refresh" ):
                             vdb.memory.mmap.parse()
                             return
+                        elif( argv[0] == "visual" ):
+                            visual(argv[1:])
+                            return
 
                         addr = None
                         try:
@@ -65,6 +172,7 @@ vmmap <cspec> - uses this colorspec
                             return show_region( addr, colorspec )
                 except:
                     traceback.print_exc()
+                    return
                     pass
             else:
                 raise Exception("vmmap got %s arguments, expecting 0 or 1" % len(argv) )
