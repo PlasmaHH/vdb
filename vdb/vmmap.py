@@ -11,6 +11,9 @@ import gdb
 import re
 import traceback
 
+
+vmmap_max_size = vdb.config.parameter("vdb-vmmap-visual-max-size", 128*128 )
+
 def show_region( addr, colorspec ):
     ga = gdb.parse_and_eval(f"(void*){addr}")
     print(ga)
@@ -93,7 +96,7 @@ def visual( argv ):
         res = 4096
 
         num,suf = vdb.util.num_suffix( e-s )
-        maxl = 128 * 128
+        maxl = vmmap_max_size.value
 
         while( (e-s)/res > maxl ):
             res *= 2
@@ -122,8 +125,14 @@ def visual( argv ):
             if( region is None ):
                 rep += " "
             else:
-                cs = vdb.color.color( "#", memc )
+                if( region.atype == vdb.memory.access_type.ACCESS_EX ):
+                    cs = vdb.color.color( "#",  [ memc,"#280028" ] )
+                elif( region.can_write is False ):
+                    cs = vdb.color.color( "#",  [ memc,"#300" ] )
+                else:
+                    cs = vdb.color.color( "#",  memc )
                 rep += cs
+        rep += "    "
 #        print("x = '%s'" % (x,) )
 #        print("cnt = '%s'" % (cnt,) )
         print(rep)
