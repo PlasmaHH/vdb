@@ -12,6 +12,8 @@ import re
 import traceback
 
 
+color_executable   = vdb.config.parameter("vdb-vmmap-colors-executable",       "#280028",        gdb_type = vdb.config.PARAM_COLOUR)
+color_readonly     = vdb.config.parameter("vdb-vmmap-colors-readonly",         "#303",        gdb_type = vdb.config.PARAM_COLOUR)
 vmmap_max_size = vdb.config.parameter("vdb-vmmap-visual-max-size", 128*128 )
 
 def show_region( addr, colorspec ):
@@ -125,10 +127,17 @@ def visual( argv ):
             if( region is None ):
                 rep += " "
             else:
+                ro_color = color_readonly.value
+                try:
+                    # This should throw if we are in a core file, where everything is readonly
+                    gdb.inferiors()[0].threads()[0].handle()
+                except:
+                    ro_color = None
+                    pass
                 if( region.atype == vdb.memory.access_type.ACCESS_EX ):
-                    cs = vdb.color.color( "#",  [ memc,"#280028" ] )
+                    cs = vdb.color.color( "#",  [ memc, color_executable.value ] )
                 elif( region.can_write is False ):
-                    cs = vdb.color.color( "#",  [ memc,"#300" ] )
+                    cs = vdb.color.color( "#",  [ memc, ro_color ] )
                 else:
                     cs = vdb.color.color( "#",  memc )
                 rep += cs
