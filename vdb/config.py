@@ -93,6 +93,14 @@ class parameter(gdb.Parameter):
         global registry
         registry[self.name] = self
 
+    def get( self ):
+        if( self.gdb_type == gdb.PARAM_INTEGER ):
+            if( self.value is None ):
+                return 0
+        if( self.is_float ):
+            return self.fvalue
+        return self.value
+
     def check_colour( self ):
         x = vdb.color.color("",self.value)
 

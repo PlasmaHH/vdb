@@ -7,14 +7,20 @@ import vdb.memory
 import vdb.command
 
 import gdb
+import intervaltree
 
 import re
 import traceback
+import shutil
 
 
-color_executable   = vdb.config.parameter("vdb-vmmap-colors-executable",       "#280028",        gdb_type = vdb.config.PARAM_COLOUR)
-color_readonly     = vdb.config.parameter("vdb-vmmap-colors-readonly",         "#303",        gdb_type = vdb.config.PARAM_COLOUR)
-vmmap_max_size = vdb.config.parameter("vdb-vmmap-visual-max-size", 128*128 )
+color_executable   = vdb.config.parameter("vdb-vmmap-colors-executable",       "#e0e",        gdb_type = vdb.config.PARAM_COLOUR)
+color_readonly     = vdb.config.parameter("vdb-vmmap-colors-readonly",         "#f03",        gdb_type = vdb.config.PARAM_COLOUR)
+vmmap_max_size     = vdb.config.parameter("vdb-vmmap-visual-max-size", 128*128 )
+vmmap_wrapat       = vdb.config.parameter("vdb-vmmap-wrapat", 0 )
+
+dpy_chars = vdb.config.parameter("vdb-vmmap-chars", " ░▒▓" )
+#dpy_chars = vdb.config.parameter("vdb-vmmap-chars", " #" )
 
 def show_region( addr, colorspec ):
     ga = gdb.parse_and_eval(f"(void*){addr}")
@@ -114,36 +120,64 @@ def visual( argv ):
 #        print("len(rep) = '%s'" % (len(rep),) )
 
         rep = ""
-#        cnt = 0
+        cnt = 0
+
+        mx = None
+        lx = None
+        wrapat = vmmap_wrapat.get()
+
+        if( wrapat is None or wrapat == 0 ):
+            wrapat=vdb.command.command.terminal_width
+
+        if( wrapat is None ):
+            wrapat = 80
 
         for ri in range(sp,ep):
-#            cnt+=1 
+            cnt+=1 
             rptr = ri * res
             ri -= sp
 #            print("ri = '%s'" % (ri,) )
             memc,region = vdb.memory.mmap.get_mcolor( rptr )
+
+
+            filled_char = dpy_chars.value[-1]
+#            x = vdb.memory.mmap.regions[s:e]
 #            print("memc = '%s'" % (memc,) )
 #            print("region = '%s'" % (region,) )
             if( region is None ):
-                rep += " "
+                rep += dpy_chars.value[0]
             else:
+#                if( lx != x ):
+#                    mx = intervaltree.IntervalTree(x)
+#                    mx.merge_overlaps()
+#                print("x = '%s'" % (x,) )
+#                for rx in x:
+#                    rx = rx[2]
+#                    print("rx.start = '%s'" % (rx.start,) )
+#                    print("rx.end = '%s'" % (rx.end,) )
                 ro_color = color_readonly.value
                 try:
                     # This should throw if we are in a core file, where everything is readonly
-                    gdb.inferiors()[0].threads()[0].handle()
+                    if( gdb.selected_inferior().connection.type == "core" ):
+                        ro_color = None
+#                    else:
+#                        gdb.inferiors()[0].threads()[0].handle()
                 except:
+#                    traceback.print_exc()
                     ro_color = None
                     pass
                 if( region.atype == vdb.memory.access_type.ACCESS_EX ):
-                    cs = vdb.color.color( "#",  [ memc, color_executable.value ] )
+                    cs = vdb.color.color( filled_char,  [ memc, color_executable.value ] )
                 elif( region.can_write is False ):
-                    cs = vdb.color.color( "#",  [ memc, ro_color ] )
+                    cs = vdb.color.color( filled_char,  [ memc, ro_color ] )
                 else:
-                    cs = vdb.color.color( "#",  memc )
+                    cs = vdb.color.color( filled_char,  memc )
                 rep += cs
-        rep += "    "
-#        print("x = '%s'" % (x,) )
-#        print("cnt = '%s'" % (cnt,) )
+            if( cnt > 0 and (cnt % wrapat) == 0 ):
+                print(rep)
+                rep = ""
+#        rep += vdb.color.color("XXX", "#f33,#3f3")
+
         print(rep)
         print()
 

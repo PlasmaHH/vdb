@@ -6,12 +6,15 @@ import vdb.config
 import gdb
 import traceback
 import sys
+import shutil
 
 profile_next = vdb.config.parameter("vdb-command-next-profile",False)
 
 command_registry = {}
 
 class command(gdb.Command):
+
+    terminal_width = 80
 
     def __init__ (self,n,t,c=None, replace = False, prefix = True):
         if( replace is not True ): # check if the command already exists
@@ -77,13 +80,13 @@ class command(gdb.Command):
     def invoke (self, arg, from_tty):
 #        print("arg = '%s'" % (arg,) )
 #        print("from_tty = '%s'" % (from_tty,) )
-#        gdb.execute("show commands",False,False)
+
+        tw = shutil.get_terminal_size().columns
+        if( tw is not None ):
+            command.terminal_width = tw
+
         if( self.repeat is not True and from_tty is True ):
-            lcmds = gdb.execute("show commands",False,True)
-            if( lcmds == self.last_commands ):
-                pass # doesn't work well together qith uniq history, disable for now
-#                return
-            self.last_commands = lcmds
+            super().dont_repeat()
 
         try:
 #            print("arg = '%s'" % (arg,) )

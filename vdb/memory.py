@@ -452,7 +452,7 @@ class memory_map:
 
     def section( self, start, end ):
         self.lazy_parse()
-        mskey = memory_region(start,end,None,None)
+#        mskey = memory_region(start,end,None,None)
         mms = self.regions[start:end]
 #        mm = bisect.bisect_left( self.regions,mskey )
 #        if( mm < 0 or mm >= len(self.regions) ):
