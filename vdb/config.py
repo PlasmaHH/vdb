@@ -33,7 +33,10 @@ def guess_gdb_type( p ):
     return gdb.PARAM_STRING
 
 def split_colors( cfg ):
-    cfg.elements = cfg.value.split(";")
+    ne = cfg.value.split(";")
+    for e in ne:
+        x = vdb.color.color("",e)
+    cfg.elements = ne
 
 registry = {}
 # In case the type is our artifical type colour, it will translate to gdb string and we check internally for a colour
@@ -59,6 +62,7 @@ class parameter(gdb.Parameter):
         self.is_colour = False
         self.is_float = False
         self.gdb_type = gdb_type
+        self.original_type = gdb_type
         if( gdb_type == PARAM_COLOR ):
             if( name.find("-colors-") == -1 ):
                 raise Exception("Colour names must have -colors- in their name, '%s' does not" % name )
@@ -76,6 +80,7 @@ class parameter(gdb.Parameter):
         elif( gdb_type is None ):
             gdb_type = guess_gdb_type(default)
             self.gdb_type = gdb_type
+            self.original_type = gdb_type
         if( gdb_type is  PARAM_FLOAT ):
             self.is_float = True
             self.fvalue = float(default)
@@ -92,6 +97,27 @@ class parameter(gdb.Parameter):
             pass
         global registry
         registry[self.name] = self
+
+    def append( self, val ):
+        try:
+            if( self.original_type == gdb.PARAM_STRING ):
+                self.value += val
+            elif( self.original_type == PARAM_COLOUR_LIST ):
+                print("len(self.elements) = '%s'" % (len(self.elements),) )
+                self.value += ";"
+                self.value += val
+                self.on_set(self)
+                print("len(self.elements) = '%s'" % (len(self.elements),) )
+            elif( self.original_type == PARAM_ARRAY ):
+                self.value += ","
+                self.value += val
+                self.on_set(self)
+            else:
+                print("Sorry, we do not support appending for %s" % vdb.util.gdb_type_code( self.original_type ) )
+        except:
+            traceback.print_exc()
+            self.value = self.previous_value
+        self.previous_value = self.value
 
     def get( self ):
         if( self.gdb_type == gdb.PARAM_INTEGER ):
@@ -259,5 +285,25 @@ def show_config( argv ):
         otbl.append( [ n, type_map.get(c.gdb_type,c.gdb_type), None, val ] )
 
     print( vdb.util.format_table(otbl) )
+
+def append( argv ):
+    vdb.util.bark() # print("BARK")
+    if( len(argv) == 0 ):
+        print("Set/a <vdb-config-parameter> [<value>]")
+        return
+    name = argv[0]
+    if( not name.startswith("vdb-") ):
+        print("We only support vdb config parameters that start with 'vdb-'")
+        return
+    val = None
+    if( len(argv) >= 1 ):
+        val = argv[1]
+    c=registry.get( name, None)
+    if( c is None ):
+        print(f"No vdb config value named {name}, check for spelling mistakes")
+        return
+    c.append( val )
+
+
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

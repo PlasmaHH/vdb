@@ -75,5 +75,5 @@ add_subcommand( [ "show", "subcommands" ], show )
 
 # a bit of a wrong place here but we need to avoid cyclic dependencies
 add_subcommand( [ "show", "config" ], vdb.config.show_config )
-
+add_subcommand( [ "set", "/a" ], vdb.config.append )
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
