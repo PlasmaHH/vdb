@@ -37,6 +37,20 @@ class subcommands:
             else:
                 sc(rest)
 
+    def get( self, args ):
+        s=args[0]
+        rest=args[1:]
+        sc = self.subcommands.get(s,None)
+        if( sc is None ):
+            return None
+        else:
+            if( isinstance(sc,subcommands) ):
+                if( len(rest) == 0 ):
+                    return None
+                return sc.get(rest)
+            else:
+                return sc
+
     def show( self, prefix = "" ):
         for k,s in self.subcommands.items():
             if( k[0] == "_" ):

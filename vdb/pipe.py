@@ -54,7 +54,12 @@ class cmd_wrap(vdb.command.command):
         arg = self.saved_arg
         from_tty = self.saved_from_tty
         try:
-            gdb.execute(f"{self.cmdname} {arg}",from_tty)
+            sc = vdb.subcommands.globals.get( [ self.cmdname ] + argv )
+#            print("sc = '%s'" % (sc,) )
+            if( sc is None ):
+                gdb.execute(f"{self.cmdname} {arg}",from_tty)
+            else:
+                vdb.subcommands.run_subcommand( [ self.cmdname ] + argv )
         except gdb.error as e:
             print(e)
         except:
