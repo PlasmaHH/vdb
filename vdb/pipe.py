@@ -58,12 +58,24 @@ class cmd_external(vdb.command.command):
             file_used = False
             if( use_arglist is True ):
                 for arg in self.arglist:
-                    narg = arg.format(file=file)
+                    if( file is not None ):
+                        narg = arg.format(file=file)
                     if( narg != arg ):
                         file_used = True
                     cmd.append(narg)
+
+            for i in range(0,len(argv)):
+                a = argv[i]
+                if( file is not None ):
+                    na = a.format(file=file)
+                if( na != a ):
+                    file_used = True
+                    argv[i] = na
+
+
             cmd += argv
-            if( not file_used ):
+            # When file is there use it, unless it is already used or /r 
+            if( not file_used and file is not None and use_arglist is True ):
                 cmd.append(file)
 #            print("self.cmdname = '%s'" % (self.cmdname,) )
 #            print("self.arglist = '%s'" % (self.arglist,) )
