@@ -6,8 +6,9 @@ import functools
 import subprocess
 import gdb
 
-commands = vdb.config.parameter("vdb-pipe-commands","grep,egrep,tee,head,tail,uniq,sort,less,cat,wc", gdb_type = vdb.config.PARAM_ARRAY )
-up_wraps = vdb.config.parameter("vdb-pipe-wrap","show,info,help,x,print,list,set,maint", gdb_type = vdb.config.PARAM_ARRAY )
+commands  = vdb.config.parameter("vdb-pipe-commands","grep,egrep,tee,head,tail,uniq,sort,less,cat,wc", gdb_type = vdb.config.PARAM_ARRAY )
+up_wraps  = vdb.config.parameter("vdb-pipe-wrap","show,info,help,x,print,list,set,maint", gdb_type = vdb.config.PARAM_ARRAY )
+externals = vdb.config.parameter("vdb-pipe-externals","binwalk,objdump", gdb_type = vdb.config.PARAM_ARRAY )
 
 pipe_commands = { }
 
@@ -27,13 +28,49 @@ class cmd_external(vdb.command.command):
     """Executes a some command"""
 
     def __init__ (self,cmdname):
-        super (cmd_external, self).__init__ (cmdname, gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        cmds = cmdname.split(":")
+        if( len(cmds) == 1 ):
+            self.cmdname = cmdname
+            self.arglist = [ ]
+        else:
+            self.cmdname= cmds[0]
+            self.arglist = cmds[1].split()
+        super (cmd_external, self).__init__ (self.cmdname, gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
     def do_invoke (self, argv):
         try:
-            print("argv = '%s'" % (argv,) )
-            # what did I want to do here? hmmm...
-#            call_cmd(argv)
+            infofile = gdb.execute("info file",False,True)
+            parse_next = False
+            file = None
+            use_arglist = True
+            if( len(argv) > 0 and argv[0] == "/r" ):
+                use_arglist = False
+                argv = argv[1:]
+
+            for l in infofile.split("\n"):
+                if( parse_next is True ):
+                    fs = l.split("'")
+                    file = fs[0].strip()[1:]
+                    break
+                if( l.startswith("Local exec file") ):
+                    parse_next = True
+            cmd = [ self.cmdname ]
+            file_used = False
+            if( use_arglist is True ):
+                for arg in self.arglist:
+                    narg = arg.format(file=file)
+                    if( narg != arg ):
+                        file_used = True
+                    cmd.append(narg)
+            cmd += argv
+            if( not file_used ):
+                cmd.append(file)
+#            print("self.cmdname = '%s'" % (self.cmdname,) )
+#            print("self.arglist = '%s'" % (self.arglist,) )
+            print("cmd = '%s'" % (cmd,) )
+#            print("file = '%s'" % (file,) )
+#            print("argv = '%s'" % (argv,) )
+            p = subprocess.run( cmd , encoding = "utf-8" )
         except:
             traceback.print_exc()
             raise
@@ -86,4 +123,10 @@ def wrap(cmd):
 
 for cmd in up_wraps.elements:
     wrap(cmd)
+
+def external(cmd):
+    cmd_external(cmd)
+
+for cmd in externals.elements:
+    external(cmd)
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
