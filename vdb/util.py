@@ -9,6 +9,7 @@ import itertools
 import time
 import types
 
+from enum import Enum,auto
 import os
 import sys
 
@@ -408,5 +409,236 @@ class silence:
 #        gdb.execute(f"set logging file {self.file}",False,True)
 #        print("ENABLED OUTPUT")
         sys.stdout.flush()
+
+
+
+
+
+def braille( num ) :
+    if( type(num) is int ):
+        return chr(10240 + num )
+    ret = ""
+    for b in num:
+        ret += braille(b)
+    return ret
+
+
+class spinner_types(Enum):
+    ascii    = auto()
+    braille1 = auto()
+    braille2 = auto()
+    braille3 = auto()
+    braille7 = auto()
+    bar      = auto()
+    bar_h    = auto()
+    block    = auto()
+    block_p  = auto()
+    pie      = auto()
+    circle   = auto()
+    test     = auto()
+    none     = auto()
+
+# braille( [ 0b1, 0b10, 0b100, 0b1000, 0b10000, 0b100000, 0b1000000,0b10000000] )
+# '⠁⠂⠄⠈⠐⠠⡀⢀' 
+available_spinners = {
+        spinner_types.braille1 : braille( [ 0b1, 0b10, 0b100, 0b1000000, 0b10000000, 0b100000, 0b10000, 0b1000 ][::-1] ),
+        spinner_types.braille2 : braille( [ 0b1000100, 0b110, 0b11, 0b1001, 0b11000, 0b110000, 0b10100000, 0b11000000 ]  ),
+        spinner_types.braille3 : braille( [ 0b1000110, 0b111, 0b1011, 0b11001, 0b111000, 0b10110000, 0b11100000, 0b11000100 ]  ),
+        spinner_types.braille7 : "⣾⣽⣻⢿⡿⣟⣯⣷"[::-1],
+        spinner_types.bar      : "▂▃▄▅▆▇█",
+        spinner_types.bar_h    : "█▉▊▋▌▍▎▏",
+        spinner_types.block    : "▘▝▗▖",
+        spinner_types.block_p  : "▚▞",
+        spinner_types.ascii    : "|/-\\",
+        spinner_types.pie      : "◴◵◶◷"[::-1],
+        spinner_types.circle   : "◜◝◞◟",
+        spinner_types.test     : "⡀⡁⡂⡃⡄⡅⡆⡇⡈⡉⡊⡋⡌⡍⡎⡏⡐⡑⡒⡓⡔⡕⡖⡗⡘⡙⡚⡛⡜⡝⡞⡟⡠⡡⡢⡣⡤⡥⡦⡧⡨⡩⡪⡫⡬⡭⡮⡯⡰⡱⡲⡳⡴⡵⡶⡷⡸⡹⡺⡻⡼⡽⡾⡿⢀⢁⢂⢃⢄⢅⢆⢇⢈⢉⢊⢋⢌⢍⢎⢏⢐⢑⢒⢓⢔⢕⢖⢗⢘⢙⢚⢛⢜⢝⢞⢟⢠⢡⢢⢣⢤⢥⢦⢧⢨⢩⢪⢫⢬⢭⢮⢯⢰⢱⢲⢳⢴⢵⢶⢷⢸⢹⢺⢻⢼⢽⢾⢿⣀⣁⣂⣃⣄⣅⣆⣇⣈⣉⣊⣋⣌⣍⣎⣏⣐⣑⣒⣓⣔⣕⣖⣗⣘⣙⣚⣛⣜⣝⣞⣟⣠⣡⣢⣣⣤⣥⣦⣧⣨⣩⣪⣫⣬⣭⣮⣯⣰⣱⣲⣳⣴⣵⣶⣷⣸⣹⣺⣻⣼⣽⣾⣿",
+#        spinner_types.none     : None,
+        }
+
+class spinner:
+
+    def __init__( self, kind, inverse = False, chars = "?.", cps = 2 ):
+        self.spinchars = available_spinners.get(kind,chars)
+        if( inverse is True ):
+            self.spinchars = self.spinchars[::-1]
+        self.index = 0
+        self.cps = cps
+
+    def char( self, ts = None ):
+        if( ts is None ):
+            return self.spinchars[self.index]
+        else:
+            ts *= self.cps
+            ix = int(ts) % len(self.spinchars)
+            return self.spinchars[ix]
+
+    def next( self ):
+        self.index += 1
+        self.index %= len(self.spinchars)
+        return self.char()
+
+
+class sliding_average:
+
+    def __init__( self, steps ):
+        self.sum = 0
+        self.num = 0
+        self.weightsum = 0
+        self.numbers = []
+        self.weights = []
+        self.steps = steps
+
+    def add( self, n, w = 1 ):
+        self.numbers.append(n)
+        self.weights.append(w)
+        self.sum += n
+        self.weightsum += w
+        self.num += 1
+        while( self.num > self.steps ):
+            self.sum -= self.numbers[0]
+            self.weightsum -= self.weights[0]
+            self.num -= 1
+            del self.numbers[0]
+            del self.weights[0]
+
+    def get( self ):
+        if( self.weightsum != 0 ):
+            return self.sum/self.weightsum
+        else:
+            return 0
+
+    def _dump( self ):
+        print("self.num = '%s'" % (self.num,) )
+        print("self.numbers = '%s'" % (self.numbers,) )
+        print("self.weightsum = '%s'" % (self.weightsum,) )
+        print("self.weights = '%s'" % (self.weights,) )
+        print("self.sum = '%s'" % (self.sum,) )
+
+class eta:
+
+    def __init__( self, total = 100, avg_steps = 50 ):
+        self.start_ts = None
+        self.last_pos = None
+        self.total = total
+        self.sa = sliding_average( avg_steps )
+
+    def get( self, total = None ):
+        if( total is None ):
+            total = self.total
+
+        remain = total - self.last_pos
+        return self.sa.get() * remain
+
+    def add( self, pos, now = None, total = None ):
+        if( self.start_ts is None ):
+            self.start_ts = time.time()
+            self.last_pos = pos
+            return None
+        if( now is None):
+            now = time.time()
+        elapsed = now - self.start_ts
+        num = pos - self.last_pos
+
+        self.sa.add( elapsed, num )
+
+        self.start_ts = now
+        self.last_pos = pos
+
+        return self.get(total)
+
+def eta_format( ts ):
+    ts = int(ts)
+    if( ts > 3600 ):
+        h = ts // 3600
+        m = ( ts // 60 ) % 60
+        return f"{h}h{m}m"
+    elif( ts > 60 ):
+        m = ts // 60
+        s = ts % 60
+        return f"{m}m{s}s"
+    else:
+        return f"{ts}s"
+
+class progress_indicator:
+
+    def __init__( self, text = "", start = 0, total = 100, width = 80, avg_steps = 50, spintype = spinner_types.ascii, spinverse = False, spinchars = None, use_eta = False, cps = 2 ):
+        self.spinner = spinner( spintype, spinverse, spinchars, cps )
+        self.eta = None
+        if( use_eta ):
+            self.eta = eta(total,avg_steps)
+        self.text = text
+        self.start = start
+        self.total = total
+        self.current_pos = start
+
+    def set( self, pos, now = None ):
+        if( self.eta is not None ):
+            self.eta.add( pos, now )
+        self.current_pos = pos
+
+    def get( self, pos = None, now = None, text = None, format = None ):
+        if( format is None ):
+            format = "{text0} {percentage}{bar} {text1} {eta}"
+        if( text is None ):
+            text = self.text
+        if( type(text) is list ):
+            text0 = text[0]
+            text1 = text[1]
+        else:
+            text0 = text
+            text1 = ""
+        if( pos is not None ):
+            self.set(pos)
+        else:
+            pos = self.current_pos
+
+
+        rnge = self.total - self.start
+        pct = rnge / 100
+        ppos = pos - self.start
+        ppos /= pct
+
+        percentage = ppos
+
+
+        percentage = f"{percentage:4.1f}%"
+
+        barchars = "[█ ]"
+        bw = 120
+        bfull = bw * ppos / 100
+        br = bfull % 1
+#        print("bfull = '%s'" % (bfull,) )
+        bfull = int(bfull)
+
+        be = bw - bfull
+        be -= 1
+
+#        print("bw = '%s'" % (bw,) )
+#        print("bfull = '%s'" % (bfull,) )
+#        print("br = '%s'" % (br,) )
+#        print("be = '%s'" % (be,) )
+        lastbar = "█▉▊▋▌▍▎▏"[::-1]
+        xbar = len(lastbar) * br
+        xbar = int(xbar)
+#        print()
+#        print("br = '%s'" % (br,) )
+#        print("len(lastbar) = '%s'" % (len(lastbar),) )
+#        print("xbar = '%s'" % (xbar,) )
+
+        spinner = self.spinner.char( time.time() )
+        bar = ""
+        bar += barchars[0]
+        bar += barchars[1] * bfull
+        bar += lastbar[xbar]
+        bar += spinner
+        bar += barchars[2] * be
+        bar += barchars[3]
+
+        eta = eta_format(self.eta.get())
+
+        out = format.format(**locals())
+        return out
+
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
