@@ -19,6 +19,7 @@ color_readonly     = vdb.config.parameter("vdb-vmmap-colors-readonly",         "
 vmmap_max_size     = vdb.config.parameter("vdb-vmmap-visual-max-size", 128*128 )
 vmmap_wrapat       = vdb.config.parameter("vdb-vmmap-wrapat", 0 )
 
+#dpy_chars = vdb.config.parameter("vdb-vmmap-chars", "⠀⣿" )
 dpy_chars = vdb.config.parameter("vdb-vmmap-chars", " ░▒▓" )
 #dpy_chars = vdb.config.parameter("vdb-vmmap-chars", " #" )
 
@@ -114,7 +115,7 @@ def visual( argv ):
 
         print(f"From 0x{s:08x} to 0x{e:08x} (size {num:.02f} {suf}B) @{rnum:.01f} {rsuf}B" )
         rep = " " * ((e-s)//res)
-        x = vdb.memory.mmap.regions[s:e]
+        xr = vdb.memory.mmap.regions[s:e]
         sp = s//res
         ep = (e+(res-1))//res
 #        print("len(rep) = '%s'" % (len(rep),) )
@@ -132,12 +133,52 @@ def visual( argv ):
         if( wrapat is None ):
             wrapat = 80
 
+#        xr = vdb.memory.mmap.regions[sp*res:ep*res]
+        print("len(xr) = '%s'" % (len(xr),) )
+        print("sp = '%s'" % (sp,) )
+        print("s = '%s'" % (s,) )
+        psp = sp * res
+        pep = ep * res
+        pbytes = 0
+        for x in sorted(xr):
+            x = x[2]
+            print("========")
+            print("psp = '%s'" % (psp,) )
+            print("(psp+res) = '%s'" % ((psp+res),) )
+            print("x.start = '0x%x'" % (x.start,) )
+            print("x.end = '0x%x'" % (x.end,) )
+            print("(x.end-x.start) = '%s'" % ((x.end-x.start),) )
+            if( x.start <= psp ):
+                while( (psp + res) <= x.end ):
+                    print(f"{psp:x} - {psp+res:x} FULL")
+                    rep += "F"
+                    psp += res
+                else:
+                    pbytes = x.end - psp
+            else:
+                print("x.start not at page start")
+                if( (psp+res) <= x.end ):
+                    pbytes += (psp+res)-x.start
+                    print(f"partial {pbytes}")
+                    psp += res
+                    pybtes = 0
+                else:
+                    print(f"pbytes+= {x.end-x.start}")
+                    pbytes += (x.end-x.start)
+
+
+            rep += "X"
+        rep += "\n"
+
+
         for ri in range(sp,ep):
             cnt+=1 
             rptr = ri * res
             ri -= sp
+            eptr = rptr + res - 1
 #            print("ri = '%s'" % (ri,) )
             memc,region = vdb.memory.mmap.get_mcolor( rptr )
+#            print("region = '%s'" % (region,) )
 
 
             filled_char = dpy_chars.value[-1]
@@ -147,14 +188,6 @@ def visual( argv ):
             if( region is None ):
                 rep += dpy_chars.value[0]
             else:
-#                if( lx != x ):
-#                    mx = intervaltree.IntervalTree(x)
-#                    mx.merge_overlaps()
-#                print("x = '%s'" % (x,) )
-#                for rx in x:
-#                    rx = rx[2]
-#                    print("rx.start = '%s'" % (rx.start,) )
-#                    print("rx.end = '%s'" % (rx.end,) )
                 ro_color = color_readonly.value
                 try:
                     # This should throw if we are in a core file, where everything is readonly
@@ -180,6 +213,7 @@ def visual( argv ):
 
         print(rep)
         print()
+        break
 
     pages = memsum / 4096
     print(f"Total pages occupied: {pages}")
@@ -251,8 +285,4 @@ vmmap <cspec> - uses this colorspec
         self.dont_repeat()
 
 cmd_vmmap()
-
-
-
-
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
