@@ -2,6 +2,40 @@
 # -*- coding: utf-8 -*-
 
 import shlex
+from enum import Enum
+
+
+TYPE_CODE_PTR = None
+TYPE_CODE_ARRAY = None
+TYPE_CODE_PTR = None
+TYPE_CODE_ARRAY = None
+TYPE_CODE_STRUCT = None
+TYPE_CODE_UNION = None
+TYPE_CODE_ENUM = None
+TYPE_CODE_FLAGS = None
+TYPE_CODE_FUNC = None
+TYPE_CODE_INT = None
+TYPE_CODE_FLT = None
+TYPE_CODE_VOID = None
+TYPE_CODE_SET = None
+TYPE_CODE_RANGE = None
+TYPE_CODE_STRING = None
+TYPE_CODE_BITSTRING = None
+TYPE_CODE_ERROR = None
+TYPE_CODE_METHOD = None
+TYPE_CODE_METHODPTR = None
+TYPE_CODE_MEMBERPTR = None
+TYPE_CODE_REF = None
+TYPE_CODE_RVALUE_REF = None
+TYPE_CODE_CHAR = None
+TYPE_CODE_BOOL = None
+TYPE_CODE_COMPLEX = None
+TYPE_CODE_TYPEDEF = None
+TYPE_CODE_NAMESPACE = None
+TYPE_CODE_DECFLOAT = None
+TYPE_CODE_INTERNAL_FUNCTION = None
+
+
 
 class Parameter:
     def __init__( self, *args, **kwargs ):
@@ -33,7 +67,28 @@ COMPLETE_EXPRESSION = 0
 PARAM_BOOLEAN = 0
 COMMAND_SUPPORT = 0
 PARAM_STRING = 0
+PARAM_INTEGER = 0
 
+class mock_event:
+    def connect( a ):
+        pass
+
+class events:
+    new_objfile = mock_event
+    new_thread = mock_event
+    stop = mock_event
+    before_prompt = mock_event
+
+class mock_type:
+
+    def __init__(self):
+        self.sizeof = 0
+
+    def pointer(self):
+        return mock_type()
+
+def lookup_type( a ):
+    return mock_type()
 
 def execute( *args, **kwargs ):
     args = args[0].split()
