@@ -44,7 +44,7 @@ def load_caches( force = False ):
         global ctags_task
         ctags_task = vdb.util.async_task( progress_refresh_locations )
         ctags_task.start()
-        print(f"Cache is {time.time() - cache_timestamp:5.1f}s old, refreshing")
+        print(f"Cache is {time.time() - cache_timestamp:5.1f}s old, refreshing in background")
     else:
         print(f"Cache is {time.time() - cache_timestamp:5.1f}s old, no need to refresh")
 
