@@ -1,4 +1,4 @@
-Breakpoint 2 at 0x7ffff7ad231e: file printf.c, line 28.
+Breakpoint 2 at 0x7ffff7.*: file printf.c, line 28.
 Continuing.
 
 Breakpoint 2, __printf (format=0x402010 "%d") at printf.c:28
