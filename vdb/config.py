@@ -21,6 +21,7 @@ PARAM_COLOUR_LIST = 0x802
 PARAM_COLOR_LIST = PARAM_COLOUR_LIST
 PARAM_ARRAY = 0x803
 
+execute_origin = None
 
 def guess_gdb_type( p ):
 #    print("Guess type of %s is %s" % (p,type(p)))
@@ -54,6 +55,7 @@ class parameter(gdb.Parameter):
         self.name = name
         self.default = default
         self.theme_default = None
+        self.origin = None
         self.set_doc = 'Set ' + showstring
 #        self.show_doc = docstring + ': %s'
         self.show_doc = self.docstring
@@ -130,7 +132,30 @@ class parameter(gdb.Parameter):
     def check_colour( self ):
         x = vdb.color.color("",self.value)
 
+    def record_origin( self ):
+        st = traceback.extract_stack()
+        wait_for_themes = False
+
+        if( execute_origin is not None ):
+            self.origin = execute_origin
+            return
+
+        if( st[0].name == "get_set_string" ):
+            self.origin = "command-line"
+            return
+
+        for i in range(0,len(st)):
+            if( st[i].name == "load_themes" ):
+                wait_for_themes = True
+                continue
+            if( wait_for_themes and st[i].filename.find("importlib") == -1 ):
+                self.origin = st[i].filename
+                break
+#            print("st[%s] = '%s'" % (i,st[i],) )
+
     def get_set_string(self):
+        self.record_origin()
+#        vdb.util.bark() # print("BARK")
 #        print("self.name = '%s'" % self.name )
 #        print("self.value = '%s'" % self.value )
         try:
@@ -228,12 +253,15 @@ def execute_iterable( l ):
     for i in l:
         execute_string(i)
 
-def execute( s ):
+def execute( s, origin = None ):
+    global execute_origin
+    execute_origin = origin
     if( isinstance(s,str) ):
         xs = s.splitlines()
         execute_iterable(xs)
     else:
         execute_iterable(s)
+    execute_origin = None
 
 
 def set_array_elements( cfg, d0 = ",", d1 = ":" ):
@@ -265,11 +293,20 @@ def set_array_elements( cfg, d0 = ",", d1 = ":" ):
 
 def show_config( argv ):
     cre = None
+    verbose = False
+    if( len(argv) > 0 ):
+        if( argv[0] == "/v" ):
+            argv = argv[1:]
+            verbose = True
+
     if( len(argv) > 0 ):
         cre = re.compile(argv[0])
 
     otbl = []
-    otbl.append( ["Name","Type","Hooked","Value"] )
+    hl = ["Name","Type","Hooked","Value" ]
+    if( verbose ):
+        hl.append("Origin")
+    otbl.append( hl )
     type_map = {
             PARAM_COLOR : "color",
             gdb.PARAM_STRING : "string",
@@ -282,7 +319,10 @@ def show_config( argv ):
     for n,c in registry.items():
         val = c.get_vdb_show_string()
 
-        otbl.append( [ n, type_map.get(c.gdb_type,c.gdb_type), None, val ] )
+        line = [ n, type_map.get(c.gdb_type,c.gdb_type), None, val ]
+        if( verbose ):
+            line.append(c.origin)
+        otbl.append( line )
 
     print( vdb.util.format_table(otbl) )
 
