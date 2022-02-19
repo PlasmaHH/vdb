@@ -16,11 +16,12 @@ import shutil
 
 color_executable   = vdb.config.parameter("vdb-vmmap-colors-executable",       "#e0e",        gdb_type = vdb.config.PARAM_COLOUR)
 color_readonly     = vdb.config.parameter("vdb-vmmap-colors-readonly",         "#f03",        gdb_type = vdb.config.PARAM_COLOUR)
-vmmap_max_size     = vdb.config.parameter("vdb-vmmap-visual-max-size", 128*128 )
+vmmap_max_size     = vdb.config.parameter("vdb-vmmap-visual-max-size", 64*128 )
 vmmap_wrapat       = vdb.config.parameter("vdb-vmmap-wrapat", 0 )
 
 #dpy_chars = vdb.config.parameter("vdb-vmmap-chars", "⠀⣿" )
-dpy_chars = vdb.config.parameter("vdb-vmmap-chars", " ░▒▓" )
+#dpy_chars = vdb.config.parameter("vdb-vmmap-chars", " ░▒▓" )
+dpy_chars = vdb.config.parameter("vdb-vmmap-chars", " ▂▃▄▅▆▇█" )
 #dpy_chars = vdb.config.parameter("vdb-vmmap-chars", " #" )
 
 def show_region( addr, colorspec ):
@@ -32,7 +33,24 @@ def show_region( addr, colorspec ):
         return None
     print( f"Address {ca} is in {str(mm)}" )
 
-def visual( argv ):
+def fill_char( num, res ):
+    ch = dpy_chars.value
+    
+    if( num == 0 ):
+        return ch[0]
+    if( num >= res ):
+        return ch[-1]
+    rb = res / (len(ch)-2)
+    ri = int(num / rb)
+#    print("num = '%s'" % (num,) )
+#    print("res = '%s'" % (res,) )
+#    print("ri = '%s'" % (ri,) )
+
+    return ch[ri+1]
+
+
+
+def visual( argv, regions = None ):
 
 #    mingapsize = 128*1024
     mingapsize = 8*1024
@@ -43,7 +61,10 @@ def visual( argv ):
     gapstartset = set()
 
     vdb.memory.print_legend(None)
-    sorted_regions = sorted(vdb.memory.mmap.regions)
+    if( regions is None ):
+        regions = vdb.memory.mmap.regions
+
+    sorted_regions = sorted(regions)
 #    print("len(sorted_regions) = '%s'" % (len(sorted_regions),) )
     for r in sorted_regions:
         r = r[2]
@@ -115,7 +136,7 @@ def visual( argv ):
 
         print(f"From 0x{s:08x} to 0x{e:08x} (size {num:.02f} {suf}B) @{rnum:.01f} {rsuf}B" )
         rep = " " * ((e-s)//res)
-        xr = vdb.memory.mmap.regions[s:e]
+        xr = regions[s:e]
         sp = s//res
         ep = (e+(res-1))//res
 #        print("len(rep) = '%s'" % (len(rep),) )
@@ -134,42 +155,95 @@ def visual( argv ):
             wrapat = 80
 
 #        xr = vdb.memory.mmap.regions[sp*res:ep*res]
-        print("len(xr) = '%s'" % (len(xr),) )
-        print("sp = '%s'" % (sp,) )
-        print("s = '%s'" % (s,) )
+#        print("len(xr) = '%s'" % (len(xr),) )
+#        print("sp = '%s'" % (sp,) )
+#        print("s = '%s'" % (s,) )
         psp = sp * res
         pep = ep * res
         pbytes = 0
+        memsum = 0
         for x in sorted(xr):
             x = x[2]
             print("========")
-            print("psp = '%s'" % (psp,) )
-            print("(psp+res) = '%s'" % ((psp+res),) )
+            print("psp = '0x%x'" % (psp,) )
+            print("(psp+res) = '0x%x'" % ((psp+res),) )
             print("x.start = '0x%x'" % (x.start,) )
             print("x.end = '0x%x'" % (x.end,) )
             print("(x.end-x.start) = '%s'" % ((x.end-x.start),) )
-            if( x.start <= psp ):
+            print("len(rep) = '%s'" % (len(rep),) )
+
+            if( (psp+res) < x.start ):
+#                print(f"next page but partial bytes {pbytes}")
+#                rep += "P"
+#                rep += f"{{{pbytes}}}"
+                rep += fill_char( pbytes, res )
+                memsum += pbytes
+                psp += res
+                pbytes = 0
+
+            while( (psp+res) <= x.start ):
+                print(f"GAP 0x{psp:x} - 0x{psp+res:x}")
+                psp += res
+                rep += fill_char(0,res)
+#                rep += "G"
+#            print("psp = '0x%x'" % (psp,) )
+#            print("(psp+res) = '0x%x'" % ((psp+res),) )
+            # a subsection that is part of a bigger section we have seen already
+            if( x.end <= psp ):
+#                pass
+                print(f"0x{x.start:x} - 0x{x.end:x} IGNORED (within previous segment)")
+
+            # The section started below or at our region of interest
+            elif( x.start <= psp ):
+                # mark all those pages that are completely filled due to this segment
                 while( (psp + res) <= x.end ):
                     print(f"{psp:x} - {psp+res:x} FULL")
-                    rep += "F"
+#                    rep += "F"
+                    rep += fill_char( res, res )
                     psp += res
+                    memsum += res
+                    pbytes = 0
+                # The rest gets into pbytes (maybe another segment will fill the rest of the page)
                 else:
                     pbytes = x.end - psp
+            # The section starts after our region of interest (there is a possibility for a gap)
             else:
-                print("x.start not at page start")
+                if( pbytes and (psp+res) < x.start ):
+                    print(f"partial filled:  {pbytes}")
+                    memsum += pbytes
+#                    rep += "P"
+#                    rep += f"{{{pbytes}}}"
+                    rep += fill_char( pbytes, res )
+                    pbytes = 0
+#                print("x.start not at page start")
+                # The end of our region is within the end of this segment
                 if( (psp+res) <= x.end ):
                     pbytes += (psp+res)-x.start
                     print(f"partial {pbytes}")
                     psp += res
-                    pybtes = 0
+                    rep += fill_char( pbytes, res )
+                while( (psp + res) <= x.end ):
+                    print(f"{psp:x} - {psp+res:x} FULL")
+#                    rep += "F"
+                    rep += fill_char( res, res )
+                    psp += res
+                    memsum += res
+                    pbytes = 0
+                # The end (and start) are within the segment and more could follow
                 else:
                     print(f"pbytes+= {x.end-x.start}")
                     pbytes += (x.end-x.start)
+#            print("pbytes = '%s'" % (pbytes,) )
+        if( pbytes > 0 ):
+#            rep += f"{{{pbytes}}}"
+            rep += fill_char( pbytes, res )
+            memsum += pbytes
 
 
-            rep += "X"
+#            rep += "X"
         rep += "\n"
 
+        rep += "CREP:\n"
 
         for ri in range(sp,ep):
             cnt+=1 
@@ -213,10 +287,10 @@ def visual( argv ):
 
         print(rep)
         print()
-        break
+#        break
 
-    pages = memsum / 4096
-    print(f"Total pages occupied: {pages}")
+        pages = memsum / res
+        print(f"Total blocks occupied: {pages}")
 
 #    print("x = '%s'" % (x,) )
 
@@ -285,4 +359,14 @@ vmmap <cspec> - uses this colorspec
         self.dont_repeat()
 
 cmd_vmmap()
+
+if __name__ == "__main__":
+    fr = [ (0x10,0x50), (0x100,0x200),(0x2000,0x3000),(0x2020,0x2800),(0x2a00,0x3100),(0x5000,0x5fff) ]
+    regions = intervaltree.IntervalTree()
+    for f in fr:
+        mr = vdb.memory.memory_region(f[0],f[1],"?","?")
+        regions[f[0]:f[1]+1] = mr
+
+    visual([],regions)
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

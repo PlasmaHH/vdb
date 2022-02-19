@@ -297,7 +297,6 @@ class unwind_dispatch(gdb.unwinder.Unwinder):
         self.unwinders = {}
         self.annotate_frames = True
 
-
     def do_annotate_frames( self, frame, tid = None ):
         return self.current_unwinder(tid).do_annotate_frames(frame)
 
