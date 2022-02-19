@@ -292,7 +292,8 @@ sourced into gdb when it exists. We will also read the
 one, or we reach ~/ (which we already loaded) or /.
 
 ## examine configuration
-The subcommand `vdb show config` can show all known vdb config objects nicely. It supports pipe commands.
+The subcommand `vdb show config` can show all known vdb config objects nicely. It supports pipe commands. In case the
+origins are recorded you can add `/v` to show the origin.
 
 ![](doc/img/vdb.config.show.png)
 
