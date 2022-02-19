@@ -125,7 +125,7 @@ def is_in_safe_path( pdir ):
 def load_init( vdb_init ):
     try:
         with open(vdb_init,"r") as f:
-            vdb.config.execute(f.read())
+            vdb.config.execute(f.read(),vdb_init)
     except FileNotFoundError:
         pass
 
