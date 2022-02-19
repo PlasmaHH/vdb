@@ -812,7 +812,7 @@ def run_start():
 
 # might be a bottleneck for some situations
 @vdb.event.stop()
-def maybe_refresh( ):
+def maybe_refresh( x ):
     global mmap
     global last_refresh_at
     if( last_refresh_at == last_run_start ):
