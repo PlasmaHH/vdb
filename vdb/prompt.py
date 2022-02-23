@@ -70,7 +70,7 @@ def get_progress_prompt():
         if( len(current_progress) > 0 ):
             cp = current_progress[0]()
             if( cp is None ):
-                current_progress = current_progress[:1]
+                current_progress = current_progress[1:]
             else:
                 return cp
     return ""
