@@ -25,6 +25,17 @@ header, or your own local creation for more convenience.
 Additionally we try to scan the systems include directory for all kinds of types and have it possible for them to omit
 the filename. This only works when ctags is installed.
 
+### `refresh` type cache
+
+Reruns ctags to populate the cache. The cache normally does this automatically after 
+```
+vdb-types-cache-max-age
+```
+
+seconds in the background. With this command you can force it to do that (unless `vdb-types-cache` is disabled). The
+command is run and processed in the  background. With the default fancy prompt you can watch the progress when the
+prompt refreshes.
+
 ### configuration
 ```
 vdb-types-ctags-cmd
