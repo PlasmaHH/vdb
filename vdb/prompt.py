@@ -60,10 +60,6 @@ def add_progress( pfunc ):
     global current_progress
     current_progress.append(pfunc)
 
-#def dummy_progress( ):
-#    return "99%"
-#current_progress = dummy_progress
-
 def get_progress_prompt():
     global current_progress
     if( prompt_progress.value is True ):
