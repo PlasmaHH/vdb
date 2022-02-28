@@ -100,6 +100,19 @@ class parameter(gdb.Parameter):
         global registry
         registry[self.name] = self
 
+    # This isn't quite right, we ideally would like to pass None while value is something else and have it check if None
+    # is the default
+    def is_default( self, val = registry ):
+        if( val is registry ):
+            val = self.value
+        if( val == self.default ):
+            return True
+        if( val == str(self.default) ):
+            return True
+        if( self.default is None and val == "" ):
+            return True
+        return False
+
     def append( self, val ):
         try:
             if( self.original_type == gdb.PARAM_STRING ):
@@ -294,13 +307,29 @@ def set_array_elements( cfg, d0 = ",", d1 = ":" ):
 def show_config( argv ):
     cre = None
     verbose = False
+    short = False
     if( len(argv) > 0 ):
         if( argv[0] == "/v" ):
             argv = argv[1:]
             verbose = True
+        if( argv[0] == "/s" ):
+            argv = argv[1:]
+            short = True
 
     if( len(argv) > 0 ):
         cre = re.compile(argv[0])
+
+    if( short ):
+        for n,c in registry.items():
+            if( cre is not None and cre.search(n) is None ):
+                continue
+            if( not c.is_default() ):
+#                print("c.value = '%s'" % (c.value,) )
+#                print("c.default = '%s'" % (c.default,) )
+#                print("type(c.value) = '%s'" % (type(c.value),) )
+#                print("type(c.default) = '%s'" % (type(c.default),) )
+                print(f'set {n} = "{c.value}"')
+        return
 
     otbl = []
     hl = ["Name","Type","Hooked","Value" ]
@@ -317,6 +346,8 @@ def show_config( argv ):
             PARAM_ARRAY : "array"
             }
     for n,c in registry.items():
+        if( cre is not None and cre.search(n) is None ):
+            continue
         val = c.get_vdb_show_string()
 
         line = [ n, type_map.get(c.gdb_type,c.gdb_type), None, val ]

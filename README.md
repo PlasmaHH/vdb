@@ -295,6 +295,11 @@ one, or we reach ~/ (which we already loaded) or /.
 The subcommand `vdb show config` can show all known vdb config objects nicely. It supports pipe commands. In case the
 origins are recorded you can add `/v` to show the origin.
 
+If you want to know which config values are not their default, use `/s` to show only those (in a format you can
+copy/pate into a `.gdbinit` file.
+
+All three versions accept an addition regexp as a parameter.
+
 ![](doc/img/vdb.config.show.png)
 
 ## Color settings
