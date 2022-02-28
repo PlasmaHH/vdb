@@ -5,9 +5,9 @@
 #2  0x00007ffff.* in __GI_raise \(sig="6"\) at ../sysdeps/posix/raise.c:26
 #3  0x00007ffff.* in __GI_abort \(\) at abort.c:79
 #4  0x00007ffff.* in __libc_message \(action="do_abort", fmt="0x7ffff.*"\) at ../sysdeps/posix/libc_fatal.c:155
-#5  0x00007ffff.* in malloc_printerr \(str="0x7ffff.* \\"double free or corruption \(out\)\\""\) at malloc.c:5543
-#6  0x00007ffff.* in _int_free \(av="0x7ffff.* <main_arena>", p="0x7fffffff.*", have_lock="<optimized out>"\) at malloc.c:4475
-#7  0x00007ffff.* in __GI___libc_free \(mem="<optimized out>"\) at malloc.c:3278
+#5  0x00007ffff.* in malloc_printerr \(str="0x7ffff.* \\"double free or corruption \(out\)\\""\) at malloc.c:[0-9]*
+#6  0x00007ffff.* in _int_free \(av="0x7ffff.* <main_arena>", p="0x7fffffff.*", have_lock="<optimized out>"\) at malloc.c:[0-9]*
+#7  0x00007ffff.* in __GI___libc_free \(mem="<optimized out>"\) at malloc.c:[0-9]*
 #8  0x000000000.* in rabbit<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*"\) at ftree.cxx:86
 #9  0x000000000.* in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*", level="0"\) at ftree.cxx:94
 #10 0x000000000.* in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*", level="1"\) at ftree.cxx:96
@@ -19,7 +19,7 @@
 #16 0x000000000.* in hole<node, std::map<int, int, std::less<int>, std::allocator<std::pair<int const, int> > > > \(t="0x0", x="0x7fffffff.*", level="7"\) at ftree.cxx:96
 #17 0x000000000.* in main \(argc="1", argv="0x7fffffff.*"\) at ftree.cxx:146
 #18 0x00007ffff.* in __libc_start_call_main \(main="0x4.* <main\(int, char const\*\*\)>", argc="1", argv="0x7fffffff.*"\) at ../sysdeps/nptl/libc_start_call_main.h:58
-#19 0x00007ffff.* in __libc_start_main_impl \(main="0x4.* <main\(int, char const\*\*\)>", argc="1", argv="0x7fffffff.*", init="<optimized out>", fini="<optimized out>", rtld_fini="<optimized out>", stack_end="0x7fffffff.*"\) at ../csu/libc-start.c:409
-#20 0x000000000.* in _start \(\) at ../sysdeps/x86_64/start.S:116
+#19 0x00007ffff.* in __libc_start_main_impl \(main="0x4.* <main\(int, char const\*\*\)>", argc="1", argv="0x7fffffff.*", init="<optimized out>", fini="<optimized out>", rtld_fini="<optimized out>", stack_end="0x7fffffff.*"\) at ../csu/libc-start.c:[0-9]*
+#20 0x000000000.* in _start \(\) at ../sysdeps/x86_64/start.S:[0-9]*
 
 Exiting vdb...
