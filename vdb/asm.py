@@ -142,10 +142,6 @@ def reg_set( possible_registers, regname, regval ):
     altname = vdb.register.altname( regname )
     if( altname is not None ):
         possible_registers[altname] = regval
-#    if( regname[0] == "e" ):
-#        possible_registers["r" + regname[1:]] = regval
-#    if( regname[0] == "r" and regname[-1] == "d" ):
-#        possible_registers[regname[:-1]] = regval
 
 def reg_reg( possible_registers, regfrom, regto ):
     try:
