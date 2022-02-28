@@ -312,7 +312,7 @@ class object_layout:
         baseidx = 1
         ef = self.extract_fields(atype)
         for f in ef:
-            if( f.bitpos is None ):
+            if( hasattr(f,"bitpos") and f.bitpos is None ):
                 basecnt += 1
 #        print("basecnt = '%s'" % (basecnt,) )
         for f in ef:

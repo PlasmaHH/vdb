@@ -43,14 +43,17 @@ def print_pahole( layout, condense ):
             bd.pahole_enttypename = enttypename
     for bd in layout.bytes:
         if( bd.prefix is None ):
-            ent = "<unused>"
+            ent = None
         else:
             ent = bd.name()
 #        print("ent = '%s'" % ent )
 
-        if( len(ent) > 2 and ent.startswith("::") ):
-            ent = ent[2:]
-        ent = vdb.shorten.symbol(ent)
+        if( ent is not None ):
+            if( len(ent) > 2 and ent.startswith("::") ):
+                ent = ent[2:]
+            ent = vdb.shorten.symbol(ent)
+        else:
+            ent = "<unused>"
 
         # XXX extra colour for empty
         if( ent != current_entity ):
