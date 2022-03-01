@@ -666,10 +666,13 @@ def async_load_typedefs( at ):
     lazy_task = None
 
 def load_typedefs( at ):
+    t0 = time.time()
     loaded_typedefs = True
     typelist = gdb.execute("info types",False,True)
 
-    candidates = set()
+    candidates = {}
+    targets = set()
+    multitarget = set()
     cnt = 0
 
     typelines = typelist.splitlines()
@@ -678,6 +681,7 @@ def load_typedefs( at ):
         cnt += 1
         # Want only typedefs of templates
         if( line.find("typedef") != -1 and line.find("<") != -1 ):
+            line = line.replace("(anonymous namespace)","__VDB_ANONYMOUS_NAMESPACE_PLACEHOLDER__")
             sl = line.split()
             # Rules out typdef members of templates
             if( sl[-1].find(">") != -1 ):
@@ -692,21 +696,36 @@ def load_typedefs( at ):
             if( to.endswith(";") ):
                 to = to[:-1]
             fr = " ".join(sl[:-1])
+            fr = fr.replace("__VDB_ANONYMOUS_NAMESPACE_PLACEHOLDER__","(anonymous namespace)")
+            to = to.replace("__VDB_ANONYMOUS_NAMESPACE_PLACEHOLDER__","(anonymous namespace)")
+#            if( to.find("::__") != -1 ):
+                # ignore possibly reserved names
+#                continue
             if( len(fr) > len(to) ):
-                candidates.add((fr,to))
+                xto = candidates.get(fr,None)
+                if( xto is None or len(xto) > len(to) ):
+                    candidates[fr] = to
+                    if( to in targets ):
+                        multitarget.add(to)
+                    targets.add( to )
         if( cnt % 100 == 0 ):
             at.set_progress( f"[ types {cnt}/{len(typelines)}({len(candidates)}) ]" )
 
 
     print("len(candidates) = '%s'" % (len(candidates),) )
-    for fr,to in candidates:
+#    print("multitarget = '%s'" % (multitarget,) )
+    for fr,to in candidates.items():
+        if( to in multitarget ):
+            continue
         if( verbosity.value > 2 ):
-            print("Shortening '%s' => '%s'" % (fr,to))
+            print(f"Shortening '{fr}'[{len(fr)}]' => '{to}'[{len(to)}]" )
         add_shorten(fr,to)
         # XXX Try to fully replicate the gdb provided type string, including all spaces
 #        pfr = parse_function(fr)
 #        add_shorten(str(pfr),to)
-    print(f"Loaded {cnt} type items, found {len(candidates)} for automatic typedef shortening")
+    t1 = time.time()
+    td = t1-t0
+    print(f"Loaded {cnt} type items in {td}s, found {len(candidates)} for automatic typedef shortening")
 
 
 symbol_cache = {}
