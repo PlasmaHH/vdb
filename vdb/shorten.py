@@ -647,12 +647,14 @@ def lazy_load_typedefs( x = None):
         return
 
     lazy_task = vdb.util.async_task( async_load_typedefs )
+    async_load_typedefs( lazy_task )
+    return
     lazy_task.start()
 
 def async_load_typedefs( at ):
     try:
         print("Loading typelist in background...")
-        print("WARNING! Due to gdb/python instabilities doing anything during that phase may lead to crashes")
+        print("WARNING! Due to gdb/python instabilities doing anything during that phase may lead to crashes. For the time being we don't do this in the background")
         at.set_progress("[ types #/# ]")
         load_typedefs( at )
         print("Finished loading typelist")
@@ -671,6 +673,7 @@ def load_typedefs( at ):
     cnt = 0
 
     typelines = typelist.splitlines()
+    print("len(typelines) = '%s'" % (len(typelines),) )
     for line in typelines:
         cnt += 1
         # Want only typedefs of templates
@@ -695,6 +698,7 @@ def load_typedefs( at ):
             at.set_progress( f"[ types {cnt}/{len(typelines)}({len(candidates)}) ]" )
 
 
+    print("len(candidates) = '%s'" % (len(candidates),) )
     for fr,to in candidates:
         if( verbosity.value > 2 ):
             print("Shortening '%s' => '%s'" % (fr,to))
