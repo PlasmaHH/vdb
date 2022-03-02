@@ -386,3 +386,4 @@ There are a lot of ideas and enhancements that are possible or need to be done. 
 * For the port output dashboards, maybe check if there is an easy way to find out what the connecting telnet is
   supporting
 * Highlighting hooks for plugins to make addresses stand out more that the user wants to know about
+* check if we can put probes to good use. They may be useful to integrate into the track mechanism

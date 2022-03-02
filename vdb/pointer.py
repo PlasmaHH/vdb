@@ -12,6 +12,7 @@ import gdb
 
 import string
 import re
+import math
 from enum import Enum,auto
 
 vdb.enabled_modules.append("pointer")
@@ -23,6 +24,7 @@ arrow_infinity = vdb.config.parameter("vdb-pointer-arrow-infinity", " ↔ " )
 ellipsis = vdb.config.parameter("vdb-pointer-ellipsis", "…" )
 
 min_ascii = vdb.config.parameter("vdb-pointer-min-ascii", 3 )
+max_exponents = vdb.config.parameter("vdb-pointer-max-exponents", "-6,15", gdb_type = vdb.config.PARAM_ARRAY )
 
 
 gdb_void     = None
@@ -72,33 +74,99 @@ def as_c_str( ptr, maxlen = 64 ):
         return None
 
 def annotate( ptr ):
-    mv=gdb.parse_and_eval("(void*)(%s)" % int(ptr) )
-    mv = str(mv)
-    pbs = mv.find("<")
-    if( pbs != -1 ):
-        mv = mv[pbs:]
-        return mv
+    try:
+        mv=gdb.parse_and_eval("(void*)(%s)" % int(ptr) )
+        mv = str(mv)
+        pbs = mv.find("<")
+        if( pbs != -1 ):
+            mv = mv[pbs:]
+            return mv
+    except:
+        pass
     return None
+
+def dereference( ptr ):
+    gptr = gdb.Value(ptr)
+#        print("gptr = '%s'" % gptr )
+#        print("gptr.type = '%s'" % gptr.type )
+#        xptr = gptr.cast(gdb_void_ptr)
+    xptr = gptr.cast(gdb.lookup_type("void").pointer())
+#        print("xptr = '%s'" % xptr )
+#        print("xptr.type = '%s'" % xptr.type )
+    xptr = gptr.cast(gdb_void_ptr)
+#        print("xptr = '%s'" % xptr )
+#        print("xptr.type = '%s'" % xptr.type )
+    nptr = gptr.cast(gdb_void_ptr_ptr)
+#        print("nptr = '%s'" % nptr )
+    gvalue = nptr.dereference()
+    return (nptr,gvalue)
+
+
+def escape_spaces( s ):
+    s = s.replace("\\","\\\\")
+    s = s.replace("\t","\\t")
+    s = s.replace("\n","\\n")
+    s = s.replace("\r","\\r")
+    s = s.replace("\v","\\v")
+    s = s.replace("\f","\\f")
+    return s
 
 # XXX move to util? pre-compile regex?
 def printable_str( s ):
+    l = len(s)
     ret = re.sub(f'[^{re.escape(string.printable)}]', '.', s)
-    ret = re.sub(f'[\t\n\r\v\f]', '.', ret)
-    return ret
+#    ret = re.sub(f'[\t\n\r\v\f]', '.', ret)
+    ret = escape_spaces(ret)
+    return (ret,l)
+
+def as_tailspec( ptr, minasc, spec ):
+#    vdb.util.bark() # print("BARK")
+#    print("ptr = '%x'" % (ptr,) )
+
+    for sp in spec:
+        if( sp == "a" ): # points to an ascii string
+            s = as_c_str(ptr)
+            if( s is not None ):
+                if( len(s) >= minasc ):
+                    s,l = printable_str(s)
+                    return f"[{l}]'{s}'"
+        elif( sp == "x" ): # points to executable memory
+            at = vdb.memory.mmap.get_atype( ptr )
+            if( at  == vdb.memory.access_type.ACCESS_EX ):
+                return vdb.asm.get_single(ptr)
+        elif( sp == "n" ): # points to a named object
+            a = annotate(ptr)
+            if( a is not None ):
+                # The caller will already have properly formatted the pointer with colors and name, so we point to
+                # really nothing, but since "None" means to chain more, lets try empty string here
+                return ""
+        elif( sp == "d"): # points to a double
+#            print("ptr = '%s'" % (ptr,) )
+            try: # might not point to anything valid
+                gptr = gdb.Value(ptr)
+#                print("gptr = '%s'" % (gptr,) )
+                dptr = gptr.cast(gdb.lookup_type("double").pointer())
+#                print("dptr = '%s'" % (dptr,) )
+                dvalue = dptr.dereference()
+                if( math.isnan(dvalue) ):
+                    continue
+#                print("dvalue = '%s'" % (dvalue,) )
+                m,e = math.frexp( dvalue )
+#                print("m = '%s'" % (m,) )
+#                print("e = '%s'" % (e,) )
+                if( e >= max_exponents.elements[0] and e <= max_exponents.elements[1] ):
+                    return f"(double){dvalue}"
+            except:
+                pass
+        else:
+            # for convenienve just ignore them for now
+            pass
+    print(f"No idea what 0x{int(ptr):x} points to really...")
+    return None
+
 
 def as_tail( ptr, minasc ):
-    s = as_c_str(ptr)
-    if( s is not None ):
-        if( len(s) >= minasc ):
-            s = printable_str(s)
-            return f"[{len(s)}]'{s}'"
-
-    at = vdb.memory.mmap.get_atype( ptr )
-#    print("at = '%s'" % at )
-    if( at  == vdb.memory.access_type.ACCESS_EX ):
-        return vdb.asm.get_single(ptr)
-#    if( mt == vdb.memory.memory_type.CODE ):
-    return None
+    return as_tailspec( ptr, minasc, "ax" )
 
 def color( ptr, archsize ):
     """Colorize the pointer according to the currently known memory situation"""
@@ -132,16 +200,7 @@ def color( ptr, archsize ):
 #    return ( ret, additional )
     return ( ret, additional, col, mm, rl )
 
-def escape_spaces( s ):
-    s = s.replace("\\","\\\\")
-    s = s.replace("\t","\\t")
-    s = s.replace("\n","\\n")
-    s = s.replace("\r","\\r")
-    s = s.replace("\v","\\v")
-    s = s.replace("\f","\\f")
-    return s
-
-def chain( ptr, archsize, maxlen = 8, test_for_ascii = True, minascii = None ):
+def chain( ptr, archsize, maxlen = 8, test_for_ascii = True, minascii = None, last = True, tailspec = None ):
     if( gdb_void == None ):
         update_types()
     if( maxlen == 0 ):
@@ -160,9 +219,13 @@ def chain( ptr, archsize, maxlen = 8, test_for_ascii = True, minascii = None ):
         pure = False
     if( minascii is None ):
         minascii = min_ascii.value
-    s = as_tail(ptr, minascii)
+    if( tailspec is not None ):
+        s = as_tailspec( ptr, minascii, tailspec )
+    else:
+        s = as_tail(ptr, minascii)
     if( s is not None ):
-        ret += f"{arrow_right.value}{s}"
+        if( len(s) > 0 ):
+            ret += f"{arrow_right.value}{s}"
         pure = False
         return (ret,pure)
     if( add is not None and test_for_ascii ):
@@ -171,24 +234,15 @@ def chain( ptr, archsize, maxlen = 8, test_for_ascii = True, minascii = None ):
         pure = False
         ret += f"   {ascstring}"
     try:
-        gptr = gdb.Value(ptr)
-#        print("gptr = '%s'" % gptr )
-#        print("gptr.type = '%s'" % gptr.type )
-#        xptr = gptr.cast(gdb_void_ptr)
-        xptr = gptr.cast(gdb.lookup_type("void").pointer())
-#        print("xptr = '%s'" % xptr )
-#        print("xptr.type = '%s'" % xptr.type )
-        xptr = gptr.cast(gdb_void_ptr)
-#        print("xptr = '%s'" % xptr )
-#        print("xptr.type = '%s'" % xptr.type )
-        nptr = gptr.cast(gdb_void_ptr_ptr)
-#        print("nptr = '%s'" % nptr )
-        gvalue = nptr.dereference()
+        nptr,gvalue = dereference( ptr )
         if( nptr == gvalue ):
             ret += arrow_infinity.value + color(gvalue,archsize)[0]
         else:
 #        print("gvalue = '%s'" % gvalue )
-            ret += arrow_right.value + chain(gvalue,archsize,maxlen-1)[0]
+            if( not last and maxlen == 1):
+                pass
+            else:
+                ret += arrow_right.value + chain(gvalue,archsize,maxlen-1,tailspec=tailspec)[0]
         pure = False
     except gdb.MemoryError as e:
 #        print("e = '%s'" % e )

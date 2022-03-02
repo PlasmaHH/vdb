@@ -33,8 +33,8 @@ vdb-asm-colors-namespace-dot        #d0d0f0
 vdb-asm-colors-next-marker-dot      #008000
 vdb-asm-colors-offset-dot           #909090
 vdb-asm-colors-prefix-dot           None
-vdb-asm-showspec-dot                maobnprT
-vdb-asm-showspec                    maodbnprT
+vdb-asm-showspec-dot                maobnpTr
+vdb-asm-showspec                    maodbnpTrjH
 # backtrace colours
 vdb-bt-address-colorspec	ma
 vdb-bt-showspec                     naFPS

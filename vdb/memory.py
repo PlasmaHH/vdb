@@ -539,6 +539,16 @@ class memory_map:
             return mm.mtype
         return None
 
+    def accessible( self, addr, mm = None ):
+        at = self.get_atype( addr, mm )
+#        print("addr = '%s'" % (addr,) )
+#        print("at = '%s'" % (at,) )
+        if( at is None ):
+            return False
+        if( at in [ access_type.ACCESS_INV, access_type.ACCESS_INACCESSIBLE, access_type.ACCESS_UNKNOWN ] ):
+            return False
+        return True
+
     def get_mcolor( self, addr, mm = None ):
         """
         Colour according to the m(emory)type

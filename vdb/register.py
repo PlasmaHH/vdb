@@ -20,6 +20,7 @@ reg_default = vdb.config.parameter("vdb-register-default","/e")
 flag_colour = vdb.config.parameter("vdb-register-colors-flags", "#adad00", gdb_type = vdb.config.PARAM_COLOUR)
 int_int = vdb.config.parameter("vdb-register-int-as-int",True)
 short_columns = vdb.config.parameter("vdb-register-short-columns",6)
+tailspec = vdb.config.parameter("vdb-register-tailspec", "axdn" )
 
 
 flag_descriptions = {
@@ -292,7 +293,7 @@ class Registers():
                     retvl = 21
 
             if( chained ):
-                retv += vdb.pointer.chain(val,self.archsize)[0]
+                retv += vdb.pointer.chain(val,self.archsize,tailspec=tailspec.value)[0]
                 # We need a nice way to adjust retl here, probably need to modify pointer.chain()
             else:
                 r,_,_,_,rl = vdb.pointer.color(val,self.archsize)

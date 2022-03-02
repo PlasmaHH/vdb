@@ -104,8 +104,9 @@ color_call_dot       = vdb.config.parameter("vdb-asm-colors-call-dot",       "#6
 nonfunc_bytes      = vdb.config.parameter("vdb-asm-nonfunction-bytes",16)
 history_limit      = vdb.config.parameter("vdb-asm-history-limit",4)
 tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
-asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnprTjh" )
-asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnprT" )
+asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnpTrjh" )
+asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnpTr" )
+asm_tailspec       = vdb.config.parameter("vdb-asm-tailspec", "axnd" )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
 
@@ -116,10 +117,13 @@ def wrap_shorten( fname ):
     return fname
     # we can get multiple things that are not function names, try to shorten only really for things that look like
     # templates
-    if( fname.startswith("<") and fname.endswith(">") ):
-        xfname = fname[1:-1]
-        if( xfname.find("<") != -1 ):
-            fname = "<" + vdb.shorten.symbol(xfname) + ">"
+    try:
+        if( fname.startswith("<") and fname.endswith(">") ):
+            xfname = fname[1:-1]
+            if( xfname.find("<") != -1 ):
+                fname = "<" + vdb.shorten.symbol(xfname) + ">"
+    except:
+        pass
     return fname
 
 def get_syscall( nr ):
@@ -177,6 +181,7 @@ class instruction( ):
         self.conditional_jump = False
         self.call = False
         self.return_ = False
+        self.constants = []
         self.target_name = None
 #        self.target_offset = None
         self.target_of = set()
@@ -785,6 +790,8 @@ ascii mockup:
                     aslen += self.maxargs + 1
 #                    line.append( vdb.color.color(f" {i.args:{self.maxargs}}",color_args.value))
                     line.append( (vdb.color.color(f"{i.args}",color_args.value),len(i.args)) )
+                else:
+                    line.append(None)
 #            maxlen = self.maxmnemoic+self.maxargs+2
 #            print("maxlen = '%s'" % maxlen )
 #            print("aslen = '%s'" % aslen )
@@ -1297,6 +1304,8 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
     movre = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
     leare = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
+    constre = re.compile("\$0x[0-9a-f]*")
+    hexre = re.compile("0x[0-9a-f]*$")
 
     if( fakeframe is not None ):
         frame = fakeframe
@@ -1315,6 +1324,14 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
             next = ins.next
         if( len(ins.possible_register_sets) > 0 ):
             possible_registers = ins.possible_register_sets[-1]
+
+        if( ins.args is not None ):
+            args = ins.args.split(",")
+            for a in args:
+                m = constre.match(a)
+                if( m is not None ):
+                    ins.constants.append(m.group(0)[1:])
+
 
         if( ins.mnemonic == "xor" ):
             args = ins.args.split(",")
@@ -1426,6 +1443,22 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
                 if( tgt is not None and tgt.passes < passlimit ):
                     flowstack.append(tgt)
                     tgt.possible_register_sets.append(possible_registers)
+
+        if( ins.reference is None ):
+            if( len(ins.constants) > 0 ):
+                for c in ins.constants:
+                    xc = vdb.util.xint(c)
+#                    print("vdb.memory.mmap.accessible(xc) = '%s'" % (vdb.memory.mmap.accessible(xc),) )
+                    if( vdb.memory.mmap.accessible(xc) ):
+                        ch = vdb.pointer.chain( xc, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
+                        ins.reference = ch[0]
+        else:
+            m = hexre.match( ins.reference )
+            if( m is not None ):
+                xr = vdb.util.xint(ins.reference)
+                if( vdb.memory.mmap.accessible(xr) ):
+                    ch = vdb.pointer.chain( xr, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
+                    ins.reference = ch[0]
 
 
         if( debug_registers.value ):
