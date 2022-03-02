@@ -150,6 +150,8 @@ def as_tailspec( ptr, minasc, spec ):
                 dvalue = dptr.dereference()
                 if( math.isnan(dvalue) ):
                     continue
+                if( dvalue == 0 ): # all 0 bytes result in this, most likely a false positive
+                    continue
 #                print("dvalue = '%s'" % (dvalue,) )
                 m,e = math.frexp( dvalue )
 #                print("m = '%s'" % (m,) )
