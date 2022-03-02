@@ -13,6 +13,7 @@ import gdb
 import string
 import re
 import math
+import struct
 from enum import Enum,auto
 
 vdb.enabled_modules.append("pointer")
@@ -158,6 +159,15 @@ def as_tailspec( ptr, minasc, spec ):
 #                print("e = '%s'" % (e,) )
                 if( e >= max_exponents.elements[0] and e <= max_exponents.elements[1] ):
                     return f"(double){dvalue}"
+            except:
+                pass
+        elif( sp == "D"): # Is itself possible a double value
+            try:
+                ba = struct.pack("q",int(ptr))
+                dv = struct.unpack("d",ba)
+                m,e = math.frexp( dv )
+                if( e >= max_exponents.elements[0] and e <= max_exponents.elements[1] ):
+                    return f"(double){dv}"
             except:
                 pass
         else:

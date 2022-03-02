@@ -106,7 +106,7 @@ history_limit      = vdb.config.parameter("vdb-asm-history-limit",4)
 tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
 asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnpTrjh" )
 asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnpTr" )
-asm_tailspec       = vdb.config.parameter("vdb-asm-tailspec", "axnd" )
+asm_tailspec       = vdb.config.parameter("vdb-asm-tailspec", "axndD" )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
 
