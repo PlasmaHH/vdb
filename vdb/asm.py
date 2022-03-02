@@ -1356,7 +1356,8 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #                print("sregv = '%s'" % (sregv,) )
                 if( sregv is None and ( sreg == "rbp" or sreg == "ebp" ) ):
                     sregv = frame.read_register(sreg)
-                    sregv = int(sregv)
+                    if( sregv is not None ):
+                        sregv = int(sregv)
 #                print("sregv = '%s'" % (sregv,) )
                 if( sregv is not None ):
                     expr = f"({offset} + {sregv})"
