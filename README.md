@@ -254,6 +254,7 @@ will not work generally. For an example see [examine configuration](#examine-con
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
 you suppress loading of the modules that load it.
+
 ## shorten
 There is a configurable way to shorten type names. We will have
 * replacements, which plainly replace one string by another. (For now this is string replace only, maybe we should use
@@ -261,6 +262,7 @@ There is a configurable way to shorten type names. We will have
 * template folding. We have a list of types (or maybe we should use regexes here too?) that we mark and then we fold the
   complete list of template parameters into one empty list (and colour that).
 
+[You can find detailed information about this module here](doc/SHORTEN.md)
 ## pointer (chaining)
 The submodule for pointer colouring supports chaining them as well, which will lead to a string of dereferenced pointers
 until a determined length is reached or something useful is found. You can find examples in the register commands. It
@@ -332,9 +334,10 @@ Each module has its own path in `~/.vdb/` where arbitrary python files can resid
 gdb setting, the files from that directory are imported. Similar to the `.vdbinit`, we search for a `.vdb` directory in
 the current one, and all above that and load all the file we find there, stopping with the search once we found it.
 
+Although we do not have a proper stable API yet, most of the modules can be imported and used and will likely work that
+way for a long time. If something breaks, usually there is a different way now to do it, it will be unlikely that we
+ever really remove functionality (unless gdb removes it)
 
-Note to self: should we maybe have a setting that determines if we stop or continue loading? maybe three modes? stop,
-forward and backward? So we can have global, project and subproject specific files that override each other?
 # Themes
 Themes are not really special files themselves, they are python plugins that provide a package of all the necessary code
 to change colours to a specific predetermined set. Unlike all the other plugins, themes are selectively loaded, thus you

@@ -596,18 +596,22 @@ def add_foldable( fld ):
     if( isinstance(fld,str) ):
         add_foldable(fld.splitlines())
     else:
+        global foldables
         for f in fld:
             f = f.strip()
             if( len(f) > 0 ):
                 foldables.append(f)
 
 def add_conditional( cond, fld = None ):
-    foldables = conditional_foldables.get(cond,[])
     if( isinstance(fld,str) ):
-        foldables.append(fld)
+        add_conditional( cond, fld.splitlines() )
     else:
+        global conditional_foldables
+        foldables = conditional_foldables.get(cond,[])
         for f in fld:
-            foldables.append(d )
+            f = f.strip()
+            if( len(f) > 0 ):
+                foldables.append( f )
 
 def add_foldable_v( argv ):
     if( len(argv) not in [1,2] ):
@@ -766,6 +770,9 @@ def symbol(fname):
 #    print("bef = '%s'" % (fun,) )
     fun.add_shorten(shortens)
     fun.fold_templates(foldables)
+    for con,folds in conditional_foldables.items():
+        if( re.search( con, infname ) is not None ):
+            fun.fold_templates(folds)
 
     # Do the shortens on the complete string type too
     fname=str(fun)
