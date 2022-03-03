@@ -274,6 +274,19 @@ You can change the left and right arrows, an ellipsis and an infinity arrow (for
 For the auto detection of ascii in pointer values, you can set the least amount of characters necessarys with
 `vdb-pointer-min-ascii` (default is 4)
 
+The value of `vdb-pointer-max-exponents` is a comma separated pair of exponents, for which the double detection
+heuristic of pointer tails assumes that things are a valid double.
+
+tailspec (means to stop pointer chaining here )
+
+* a points to ascii
+* x points to executable memory (shows instruction)
+* n points to named object
+* d points to double
+* D is a double value itself
+
+[You can find detailed information about this module here](doc/POINTER.md)
+
 ## memory layout
 Provides information about the memory layout gathered from various sources. Primary source of information for the vmmap
 command as well as the pointer colouring.

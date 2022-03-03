@@ -131,7 +131,24 @@ of calling. There are certain cases to distinguish:
   mark. We could still be wrong, e.g. because we did not see a jump from a totally different place, or the syscall
   returned and messed up the registers, but usually the values are right. Check for plausibility anyways.
 
+### function calls
+We plan to do the same we do with the syscalls with function calls, but its not yet usable.
+
 ### constants
+Whenever we load some constants into registers or similar, we annotate them as good as we can. Mostly this will be a
+pointer chain or similar, as well as using pointer colours. For this we make use of the tailspec, that is stored in the
+`vdb-asm-tailspec` configuration (see  documentation for pointer chaining)
+
+![](img/asm.constant.0.png)
+
+Here you can see how the `std::cout` object and the `argc = ` string are loaded into the registers and the `operator<<`
+is called, so you can see that this most likely amounts to the C++ code of `std::cout << "argc = "` possibly followed by
+more.
+
+![](img/asm.constant.1.png)
+
+Here you can see how a constant is loaded from a data section in a position independent way (using `rip` in the
+calculation). The heuristic detected that it is most likely a double of the value `43`.
 
 ## TODO
 
