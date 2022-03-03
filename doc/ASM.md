@@ -106,6 +106,33 @@ therefore we offer the following ways to influence things in the graph (besides 
 
 This calls the gdb disassembler without any formatting
 
+## Information enhancement functionality
+
+### syscall
+
+We can also try to display some syscall informations. Not all is functional yet as it requires a lot of information to
+be transferred and be kept up to date. Best is we just look at an example.
+
+![](img/dis.syscall.png)
+
+We have four syscalls displaying here. The code knows for each number (passed in `eax`) the name and some parameters.
+For a bunch of parameters it can also determine bitmasks or similar, as well as constants (see the code for more
+information. There you can also see how to potentially add to those structures from your own plugins).
+
+It tells you for each parameter in which register it should be, and what value it thinks the register has at the point
+of calling. There are certain cases to distinguish:
+
+* It is totally sure where the value comes from. You can see that for the `rt_sigprocmask`  syscall, how `edi` is filled
+  and `edx` is zeroed out. In that case no further marker is displayed.
+* `?` If the register value at that point is not totally known, it is marked with a question mark. The further away the
+  currently executed instruction is, the more likely it is that these values are wrong because they have been
+  overwritten. Be very careful.
+* `!` When we are very sure that the value in the register has not been overwritten yet, we mark it with an exclamation
+  mark. We could still be wrong, e.g. because we did not see a jump from a totally different place, or the syscall
+  returned and messed up the registers, but usually the values are right. Check for plausibility anyways.
+
+### constants
+
 ## TODO
 
 * document a few missing settings
