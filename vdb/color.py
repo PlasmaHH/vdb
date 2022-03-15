@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import colors
+import vdb.util
 
 def color( s, cs ):
     s=str(s)
@@ -14,6 +15,10 @@ def color( s, cs ):
     else:
         cs += ["","",""]
         return colors.color(s,fg=cs[0],bg=cs[1],style=cs[2])
+
+@vdb.util.memoize
+def mcolor( s, cs ):
+    return color(s,cs)
 
 def colorl( s, cs ):
     return ( color(s,cs),len(s))

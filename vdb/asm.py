@@ -16,6 +16,7 @@ import re
 import traceback
 import sys
 import os
+import time
 
 asm_colors = [
         ( "j.*", "#f0f" ),
@@ -332,7 +333,7 @@ ascii mockup:
 
         def acolor ( s, idx ):
             if( idx >= 0 ):
-                return vdb.color.color(s,color_list.elements[idx % len(color_list.elements) ] )
+                return vdb.color.mcolor(s,color_list.elements[idx % len(color_list.elements) ] )
             else:
                 return s
 
@@ -676,7 +677,8 @@ ascii mockup:
                 context_end = marked_line + context[1] + 1
         return ( context_start, context_end )
 
-
+    m_trans = str.maketrans("v^-|<>u#Q~T+","╭╰─│◄►┴├⥀◆┬┼" )
+    p_trans = str.maketrans("v^-|<>u#Q~T+","|  |   |  ||" )
 
     def to_str( self, showspec = "maodbnprT", context = None, marked = None ):
         self.lazy_finish()
@@ -747,12 +749,10 @@ ascii mockup:
             postarrows = None
             if( "d" in showspec ):
 #                mt=str.maketrans("v^-|<>+#Q~I","╭╰─│◄►┴├⥀◆↑" )
-                mt=str.maketrans("v^-|<>u#Q~T+","╭╰─│◄►┴├⥀◆┬┼" )
-                pt=str.maketrans("v^-|<>u#Q~T+","|  |   |  ||" )
                                     
                 if( len(i.jumparrows) ):
-                    ja=i.jumparrows.translate(mt)
-                    pa=i.jumparrows.translate(pt).translate(mt)
+                    ja=i.jumparrows.translate(self.m_trans)
+                    pa=i.jumparrows.translate(self.p_trans).translate(self.m_trans)
                     fillup = " " * (self.maxarrows - i.arrowwidth)
                     jumparrows = (f"{ja}{fillup}", self.maxarrows)
                     postarrows = (f"{pa}{fillup}", self.maxarrows)
@@ -1116,7 +1116,10 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
 #    print("arg = '%s'" % (arg,) )
     if( fakedata is None ):
+        t0 = time.time()
         dis = gdb.execute(f'disassemble/r {arg}',False,True)
+        t1 = time.time()
+        print("t1-t0 = '%s'" % (t1-t0,) )
     else:
         dis = fakedata
 #    print("dis = '%s'" % dis )

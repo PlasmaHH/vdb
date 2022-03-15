@@ -8,6 +8,7 @@ import traceback
 import itertools
 import time
 import types
+import functools
 
 from enum import Enum,auto
 import os
@@ -83,10 +84,10 @@ def unquote( s ):
 suffixes_iso = [ "", "k","M","G","T","P","E","Z","Y" ]
 suffixes_bin = [ "", "ki","Mi","Gi","Ti","Pi","Ei","Zi","Yi" ] 
 
-def bark( ):
+def bark( offset = 0 ):
     import traceback
     st = traceback.extract_stack()
-    st = st[-2]
+    st = st[-2+offset]
     print(f"{st.name}:{st.filename}:{st.lineno}")
 
 def num_suffix( num, iso = False, factor = 1.5 ):
@@ -639,6 +640,47 @@ class progress_indicator:
 
         out = format.format(**locals())
         return out
+
+class memoize:
+
+    def __init__( self, func, reset_events = [] ):
+        self.func = func
+        self.cache = {}
+        functools.update_wrapper(self,func)
+
+    def __call__( self, *args, **kwargs ):
+#        vdb.util.bark(-1) # print("BARK")
+#        vdb.util.bark() # print("BARK")
+#        print("args = '%s'" % (args,) )
+#        print("type(args) = '%s'" % (type(args),) )
+#        print("kwargs = '%s'" % (kwargs,) )
+#        print("type(kwargs) = '%s'" % (type(kwargs),) )
+        if( len(kwargs) > 0 ):
+#            vdb.util.bark(-1) # print("BARK")
+#            vdb.util.bark() # print("BARK")
+#            print("kwargs = '%s'" % (kwargs,) )
+            return self.func(*args,**kwargs)
+
+        val = self.cache.get(args, self )
+#        print("self.cache = '%s'" % (self.cache,) )
+#        print("val = '%s'" % (val,) )
+        if( val is self ):
+#            print("self.cache = '%s'" % (self.cache,) )
+#            print("type(args[0]) = '%s'" % (type(args[0]),) )
+#            print("type(args[1]) = '%s'" % (type(args[1]),) )
+#            print("args[0] = '%s'" % (args[0],) )
+#            print("args[1] = '%s'" % (args[1],) )
+#            print("args = '%s'" % (args,) )
+            val = self.func(*args)
+#            print("len(self.cache) = '%s'" % (len(self.cache),) )
+            self.cache[args] = val
+#            print("len(self.cache) = '%s'" % (len(self.cache),) )
+#            print("self.cache = '%s'" % (self.cache,) )
+#            xxx = {}
+#            xxx[args] = val
+#            print("xxx = '%s'" % (xxx,) )
+        return val
+
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

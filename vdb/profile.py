@@ -13,6 +13,8 @@ import re
 import traceback
 import time
 import datetime
+import os
+import pstats
 
 class cmd_profile (vdb.command.command):
     """Run a command under python profiling
@@ -26,10 +28,24 @@ class cmd_profile (vdb.command.command):
             if( len(arg) == 0 ):
                 self.usage()
                 return
-#            print("arg = '%s'" % (arg,) )
-#            gdb.execute( arg, from_tty )
+            argv = gdb.string_to_argv(arg)
+            filename = None
+            if( argv[0][0] == "/" ):
+                if( argv[0][1] == "d" ):
+                    filename="__vdb_profile.tmp"
+                    arg = arg[3:]
+                else:
+                    self.usage()
+                    return
+
             import cProfile
-            cProfile.runctx("gdb.execute(arg,from_tty)",globals(),locals())
+            cProfile.runctx("gdb.execute(arg,from_tty)",globals(),locals(),filename=filename,sort="tottime")
+            if( filename is not None ):
+                os.system(f"gprof2dot -f pstats {filename} -o __vdb_profile.dot")
+                os.system("nohup dot -Txlib __vdb_profile.dot &")
+                p = pstats.Stats(filename)
+                p.sort_stats("tottime").print_stats()
+
         except:
             traceback.print_exc()
             raise

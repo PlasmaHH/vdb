@@ -40,27 +40,25 @@ def update_types( ):
     gdb_void_ptr = gdb_void.pointer()
     gdb_void_ptr_ptr = gdb_void_ptr.pointer()
 
-def read( ptr ):
-    result = None
-    addr=ptr
-    count=1
-    try:
-        result = gdb.selected_inferior().read_memory(addr, count)
-    except gdb.error:
-        pass
-    return result
-
 def as_c_str( ptr, maxlen = 64 ):
     c_str = bytearray()
-    rptr = ptr
+#    rptr = ptr
 
-    for i in range(0,maxlen):
-        b = read(rptr)
+    data = vdb.memory.read(int(ptr),maxlen)
+    if( data is None ):
+        return None
+
+#    print("data = '%s'" % (data,) )
+#    for i in range(0,maxlen):
+    for b in data:
+#        print("b = '%s'" % (b,) )
+#        print("type(b) = '%s'" % (type(b),) )
+#        b = read(rptr)
         if( b is None ):
             break
-        b = b[0]
+#        b = b[0]
 #        print("type(b) = '%s'" % type(b) )
-        rptr += 1
+#        rptr += 1
         if( b == b'\x00' ):
             break
         ib = int.from_bytes(b,byteorder="little")

@@ -18,6 +18,8 @@ from enum import Enum,auto
 import time
 
 
+
+
 vdb.enabled_modules.append("memory")
 # Color concept:
 # - first more generic colours like for stack/heap/etc.
@@ -299,7 +301,13 @@ default_region_prefixes = [
         ( ".fini", memory_type.CODE ),
 ]
 
+@vdb.util.memoize
 def read( ptr, count = 1 ):
+#    vdb.util.bark(-2) # print("BARK")
+#    vdb.util.bark(-1) # print("BARK")
+#    print("type(ptr) = '%s'" % (type(ptr),) )
+#    print("type(count) = '%s'" % (type(count),) )
+#    print(f"read( 0x{int(ptr):x},{count} )")
     result = None
     if( isinstance(ptr,str) ):
         addr=vdb.util.gint(ptr)
