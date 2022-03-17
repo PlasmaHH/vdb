@@ -664,7 +664,10 @@ def parse_xml( fn = None ):
         fn = f"/usr/share/gdb/syscalls/{sarch}-linux.xml"
     calldict = syscalls[sarch]
 
-    from defusedxml.ElementTree import parse
+    try:
+        from defusedxml.ElementTree import parse
+    except:
+        from xml.etree.ElementTree import parse
     et = parse(fn)
 
     global syscall_db
