@@ -549,7 +549,10 @@ def do_backtrace( argv ):
             argv = argv[1:]
 
 
-        btoutput = gdb.execute("backtrace {} {} {}".format(full,frameargs," ".join(argv)),False,bf.enabled)
+        try:
+            btoutput = gdb.execute("backtrace {} {} {}".format(full,frameargs," ".join(argv)),False,bf.enabled)
+        except:
+            btoutput = gdb.execute("backtrace {}".format(" ".join(argv)),False,bf.enabled)
 
         if( btoutput is not None ):
             btoutput = re.sub( "warning: RTTI symbol not found for class '.*?'\n",vdb.color.color("RTTI",color_rtti.value),btoutput)
