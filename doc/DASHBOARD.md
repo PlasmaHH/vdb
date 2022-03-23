@@ -8,6 +8,7 @@ specific ttys on tmux panes.
 Without any special trigger, the command will be executed always before a prompt is being displayed. When registering
 the command via the API you can also call arbitrary python functions and display their return instead.
 
+![](img/dashboard.0.png)
 ## Ports
 `dashboard port <port> <command>`
 or
@@ -29,12 +30,18 @@ is, just execute `tty` on that terminal.
 
 The pane-name is a regex that will be applied to all tmux panes, and the first match is then taken, given it provides a
 tty.
-<!--
+
 For extra convenience we have a tmux command that will directly forward all parameters to a tmux call, thus you can do a
 `tmux list-panes` yourself easily to find a proper pane. We recommend though to have your (project specific) plugin
 directories contain the settings to setup a dashboard. We provide some examples in the example `.vdb` directory that
 will enable you to 
--->
+
+For example you can start a setup of tmux with
+```
+tmux new-session\; select-pane -T "disassembler" \; split-window -v\; select-pane -T "hexdump" \; split-window -h \; select-pane -T "registers"
+```
+
+and then use the example `.vdb/dashboard/tmux.py` file to fill it with commands to be executed.
 
 ## null target
 The special target `null` will just ignore any command output and basically makes sure the command is executed each

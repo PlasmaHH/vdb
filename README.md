@@ -30,6 +30,7 @@ under x86_64 Linux with gcc > 10.
 	* [hexdump](#hexdump)
 	* [asm](#asm)
 	* [pahole](#pahole)
+	* [dashboard](#dashboard)
 	* [ftree](#ftree)
 	* [hashtable](#hashtable)
 	* [ssh](#ssh)
@@ -175,6 +176,11 @@ inheritance and a possibly more useful layout display.
 ![](doc/img/pahole.f.c.png)
 [You can find detailed information about this module here](doc/PAHOLE.md)
 
+## dashboard
+![](doc/img/dashboard.0.png)
+With this module you can automatically execute commands and have them output to different targets than the current
+terminal.
+[You can find detailed information about this module here](doc/DASHBOARD.md)
 ## ftree
 The ftree module allows for creation of dotty files that create a tree (or directed graph) out of a datastructure.
 
@@ -250,6 +256,13 @@ vdb-pipe-wrap = show,info,help,x,print,list,set
 These wrappers create new commands with the same name but starting with an uppercase letter. These will behave more like
 vdb commands and support piping. Note that you always need to specify the full command, that is `pr` instead of `print`
 will not work generally. For an example see [examine configuration](#examine-configuration)
+
+```
+vdb-pipe-externals
+```
+This is an easy list of external commands. If not specified anything, the binary file name will be placed as an
+additional argument. You can place after a `:` additional default arguments and/or embed `{file}`  inside there. Ending
+the command just in `:`  will suppress the file passing. You can always put additional arguments.
 
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
