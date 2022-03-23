@@ -29,20 +29,20 @@ class cmd_external(vdb.command.command):
     """Executes a some command"""
 
     def __init__ (self,cmdname):
-        print("cmdname = '%s'" % (cmdname,) )
+#        print("cmdname = '%s'" % (cmdname,) )
         if( type(cmdname) == str ):
             cmds = cmdname.split(":")
         else:
             cmds = cmdname
-        print("cmds = '%s'" % (cmds,) )
+#        print("cmds = '%s'" % (cmds,) )
         if( len(cmds) == 1 ):
             self.cmdname = cmdname
             self.arglist = None
         else:
             self.cmdname= cmds[0]
             self.arglist = cmds[1].split()
-        print("self.cmdname = '%s'" % (self.cmdname,) )
-        print("self.arglist = '%s'" % (self.arglist,) )
+#        print("self.cmdname = '%s'" % (self.cmdname,) )
+#        print("self.arglist = '%s'" % (self.arglist,) )
         super (cmd_external, self).__init__ (self.cmdname, gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
     def do_invoke (self, argv):
@@ -148,7 +148,7 @@ for cmd in up_wraps.elements:
     wrap(cmd)
 
 def external(cmd):
-    print("cmd = '%s'" % (cmd,) )
+#    print("cmd = '%s'" % (cmd,) )
     cmd_external(cmd)
 
 for cmd in externals.elements:
