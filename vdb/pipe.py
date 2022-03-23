@@ -5,10 +5,11 @@ import vdb.config
 import functools
 import subprocess
 import gdb
+import traceback
 
 commands  = vdb.config.parameter("vdb-pipe-commands","grep,egrep,tee,head,tail,uniq,sort,less,cat,wc", gdb_type = vdb.config.PARAM_ARRAY )
 up_wraps  = vdb.config.parameter("vdb-pipe-wrap","show,info,help,x,print,list,set,maint", gdb_type = vdb.config.PARAM_ARRAY )
-externals = vdb.config.parameter("vdb-pipe-externals","binwalk,objdump", gdb_type = vdb.config.PARAM_ARRAY )
+externals = vdb.config.parameter("vdb-pipe-externals","binwalk,objdump,tmux:", gdb_type = vdb.config.PARAM_ARRAY )
 
 pipe_commands = { }
 
@@ -28,13 +29,20 @@ class cmd_external(vdb.command.command):
     """Executes a some command"""
 
     def __init__ (self,cmdname):
-        cmds = cmdname.split(":")
+        print("cmdname = '%s'" % (cmdname,) )
+        if( type(cmdname) == str ):
+            cmds = cmdname.split(":")
+        else:
+            cmds = cmdname
+        print("cmds = '%s'" % (cmds,) )
         if( len(cmds) == 1 ):
             self.cmdname = cmdname
-            self.arglist = [ ]
+            self.arglist = None
         else:
             self.cmdname= cmds[0]
             self.arglist = cmds[1].split()
+        print("self.cmdname = '%s'" % (self.cmdname,) )
+        print("self.arglist = '%s'" % (self.arglist,) )
         super (cmd_external, self).__init__ (self.cmdname, gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
     def do_invoke (self, argv):
@@ -56,7 +64,10 @@ class cmd_external(vdb.command.command):
                     parse_next = True
             cmd = [ self.cmdname ]
             file_used = False
-            if( use_arglist is True ):
+            if( self.arglist is not None and len(self.arglist) == 0 ):
+                use_arglist = False
+                
+            if( use_arglist is True and self.arglist is not None ):
                 for arg in self.arglist:
                     if( file is not None ):
                         narg = arg.format(file=file)
@@ -137,6 +148,7 @@ for cmd in up_wraps.elements:
     wrap(cmd)
 
 def external(cmd):
+    print("cmd = '%s'" % (cmd,) )
     cmd_external(cmd)
 
 for cmd in externals.elements:
