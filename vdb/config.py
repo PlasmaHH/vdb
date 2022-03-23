@@ -278,6 +278,7 @@ def execute( s, origin = None ):
 
 
 def set_array_elements( cfg, d0 = ",", d1 = ":" ):
+#    print("cfg.value = '%s'" % (cfg.value,) )
     cfg.elements = []
     elem = cfg.value.split(d0)
     for i in elem:
@@ -288,20 +289,26 @@ def set_array_elements( cfg, d0 = ",", d1 = ":" ):
             except:
                 cfg.elements.append(i[0])
         elif( len(i) == 2):
-            s=int(i[0])
-            e=int(i[1])
-            if( s > e ):
-                cfg.elements += list( range(s,e-1,-1) )
-            else:
-                cfg.elements += list( range(s,e+1) )
+            try:
+                s=int(i[0])
+                e=int(i[1])
+                if( s > e ):
+                    cfg.elements += list( range(s,e-1,-1) )
+                else:
+                    cfg.elements += list( range(s,e+1) )
+            except:
+                cfg.elements.append(i)
         else:
-            s=int(i[0])
-            e=int(i[1])
-            r=int(i[2])
-            if( s > e ):
-                cfg.elements += list( range(s,e-1,-r) )
-            else:
-                cfg.elements += list( range(s,e+1,r) )
+            try:
+                s=int(i[0])
+                e=int(i[1])
+                r=int(i[2])
+                if( s > e ):
+                    cfg.elements += list( range(s,e-1,-r) )
+                else:
+                    cfg.elements += list( range(s,e+1,r) )
+            except:
+                cfg.elements.append(i)
 #    print("cfg.elements = '%s'" % cfg.elements )
 
 def show_config( argv ):
