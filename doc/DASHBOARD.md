@@ -9,6 +9,7 @@ Without any special trigger, the command will be executed always before a prompt
 the command via the API you can also call arbitrary python functions and display their return instead.
 
 ![](img/dashboard.0.png)
+See later on how to setup this example with the tmux panes
 ## Ports
 `dashboard port <port> <command>`
 or
