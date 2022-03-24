@@ -66,6 +66,7 @@ next_mark_ptr     = vdb.config.parameter("vdb-asm-next-mark-pointer", True )
 shorten_header    = vdb.config.parameter("vdb-asm-shorten-header", False )
 prefer_linear_dot = vdb.config.parameter("vdb-asm-prefer-linear-dot",False)
 debug_registers = vdb.config.parameter("vdb-asm-debug-registers",False, on_set = invalidate_cache )
+debug = vdb.config.parameter("vdb-asm-debug-all",False, on_set = invalidate_cache )
 
 offset_fmt = vdb.config.parameter("vdb-asm-offset-format", "<{offset:<+{maxlen}}>:" )
 offset_txt_fmt = vdb.config.parameter("vdb-asm-text-offset-format", "<+{offset:<{maxlen}}>:" )
@@ -81,6 +82,8 @@ color_bytes    = vdb.config.parameter("vdb-asm-colors-bytes",       "#059", gdb_
 color_prefix   = vdb.config.parameter("vdb-asm-colors-prefix",      None,   gdb_type = vdb.config.PARAM_COLOUR)
 color_mnemonic = vdb.config.parameter("vdb-asm-colors-mnemonic",    None,   gdb_type = vdb.config.PARAM_COLOUR)
 color_args     = vdb.config.parameter("vdb-asm-colors-args",        "#99f", gdb_type = vdb.config.PARAM_COLOUR)
+color_var      = vdb.config.parameter("vdb-asm-colors-variable",    "#fc8", gdb_type = vdb.config.PARAM_COLOUR)
+color_location = vdb.config.parameter("vdb-asm-colors-location",    "#08a", gdb_type = vdb.config.PARAM_COLOUR)
 
 
 
@@ -177,7 +180,8 @@ class instruction( ):
     def __init__( self ):
         self.mnemonic = None
         self.args = None
-        self.reference = None
+        self.args_string = None
+        self.reference = []
         self.targets = set()
         self.conditional_jump = False
         self.call = False
@@ -206,6 +210,10 @@ class instruction( ):
 #        print(f"gen_extra({self.mnemonic}) {self}")
         for prs in self.possible_register_sets:
             self.add_extra(f"REG {prs}")
+
+    def _gen_debug( self ):
+        self.add_extra(self.args)
+        self.add_extra(self.constants)
 
     def add_extra( self, s ):
         self.extra.append( (s,1,1) )
@@ -788,8 +796,9 @@ ascii mockup:
             if( "p" in showspec ):
                 if( i.args is not None ):
                     aslen += self.maxargs + 1
+                    args = ",".join(i.args)
 #                    line.append( vdb.color.color(f" {i.args:{self.maxargs}}",color_args.value))
-                    line.append( (vdb.color.color(f"{i.args}",color_args.value),len(i.args)) )
+                    line.append( (vdb.color.color(f"{args}",color_args.value),len(args)) )
                 else:
                     line.append(None)
 #            maxlen = self.maxmnemoic+self.maxargs+2
@@ -804,8 +813,11 @@ ascii mockup:
 #                line.append( " " * fillup)
 
             if( "r" in showspec ):
-                if( i.reference is not None ):
-                    line.append( wrap_shorten(i.reference) )
+                f = ""
+                for r in i.reference:
+                    f += wrap_shorten(r) + " "
+                if( len(f) > 0 ):
+                    line.append(f)
 
             if( any((c in showspec) for c in "tT" ) ):
 #                if( i.targets is not None ):
@@ -925,8 +937,11 @@ ascii mockup:
                 tr.td_raw("&nbsp;")
 
         if( "r" in showspec ):
-            if( i.reference is not None ):
-                tr.td_raw(vdb.dot.color(wrap_shorten(i.reference),color_function_dot.value))
+            f = ""
+            for r in i.reference:
+                f += wrap_shorten(r) + " "
+            if( len(f) > 0 ):
+                tr.td_raw(vdb.dot.color(f,color_function_dot.value))
 
         if( any((c in showspec) for c in "tT" ) ):
             if( "T" in showspec ):
@@ -994,7 +1009,7 @@ ascii mockup:
         self.maxbytes = max(self.maxbytes,len(ins.bytes))
         if( ins.args is not None ):
             self.maxmnemoic = max(self.maxmnemoic,len(ins.prefix) + 1 + len(ins.mnemonic) )
-            self.maxargs = max(self.maxargs,len(ins.args))
+            self.maxargs = max(self.maxargs,len(ins.args_string))
         if( len(ins.prefix) > 0 ):
             ins.infix = " "
         self.by_addr[ins.address] = ins
@@ -1036,6 +1051,12 @@ class fake_frame:
     def read_register(self,reg):
         return None
 
+    def function( self ):
+        return None
+
+    def block( self ):
+        return []
+
 def fix_marker( ls, alt = None ):
 #    mark = vdb.util.gint("$rip")
     try:
@@ -1056,6 +1077,103 @@ def fix_marker( ls, alt = None ):
     return ls
 
 parse_cache = {}
+
+def split_args( in_args ):
+#    vdb.util.bark() # print("BARK")
+#    print("in_args = '%s'" % (in_args,) )
+    args = in_args.split(",")
+#    print("args = '%s'" % (args,) )
+    ret = []
+    in_brackets = False
+    for arg in args:
+        if( in_brackets ):
+            ret[-1] += "," + arg
+        else:
+            ret.append(arg)
+        # lets hope there is no nesting in any syntax, if yes we need full parsing
+        if( arg.find("(") != -1 or arg.find("[") != -1 or arg.find("{") != -1 ):
+            in_brackets = True
+        if( arg.find(")") != -1 or arg.find("]") != -1 or arg.find("}") != -1 ):
+            in_brackets = False
+
+#    print("ret = '%s'" % (ret,) )
+    if( ",".join(ret) != in_args ):
+        print("in_args = '%s'" % (in_args,) )
+        print("ret = '%s'" % (ret,) )
+    return ret
+
+def gather_vars( frame, lng, symlist, pval = None, prefix = "" ):
+    ret = ""
+
+    rbp = "rbp" # adapt for other archs
+    
+    rbpval = frame.read_register(rbp)
+    if( rbpval is not None ):
+        rbpval = int(rbpval)
+#    print("rbpval = '%s'" % (rbpval,) )
+
+    for b in symlist:
+        bval = None
+        baddr = None
+        try:
+            if( pval is None ):
+                bval = b.value(frame)
+                baddr= bval.address
+            else:
+#                print("prefix = '%s'" % (prefix,) )
+#                print("b.name = '%s'" % (b.name,) )
+#                print("pval = '%s'" % (pval,) )
+#                print("b.name = '%s'" % (b.name,) )
+                if( b.name is None ): # ignore anonymous structs/unions etc. for now
+                    continue
+                if( b.is_base_class ):
+                    continue
+                bval = pval[b.name]
+                baddr= bval.address
+        except:
+            traceback.print_exc()
+            pass
+
+        
+        try:
+            ret += gather_vars( frame, lng, b.type.fields(), bval, b.name + "." )
+#            for f in b.type.fields():
+#                print("f.name = '%s'" % (f.name,) )
+#                print("bval[f.name] = '%s'" % (bval[f.name],) )
+        except:
+#            traceback.print_exc()
+            pass
+
+#        print("prefix = '%s'" % (prefix,) )
+#        print("b.name = '%s'" % (b.name,) )
+#        print("baddr = '%s'" % (baddr,) )
+        if( baddr is not None ):
+            lng.var_addresses[int(baddr)] = prefix + b.name
+
+            boffset = int(baddr) - rbpval
+            expr = f"{boffset:#0x}(%{rbp})"
+            lng.var_expressions[expr] = prefix + b.name
+
+        try:
+            if( b.is_argument ):
+                ret += f" {b.name}"
+
+                try:
+                    ret += f"@{bval.address}"
+                    boffset = int(baddr) - rbpval
+                    ret += f"[{boffset:#0x}(%{rbp})]"
+                except:
+                    pass
+
+                if( bval is not None ):
+                    if( bval.type.tag is None ):
+                        ret += f" = {bval}"
+                    else:
+                        ret += " = <...>"
+                ret += ","
+        except:
+            pass
+    return ret
 
 
 def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached = True ):
@@ -1091,10 +1209,14 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     ret = None
     if( not debug_registers.value and cached ):
         ret = parse_cache.get(key,None)
+    ret = parse_cache.get(key,None)
 #    print("ret = '%s'" % ret )
     if( ret is not None and fakedata is None ):
         return fix_marker(ret,arg)
     ret = listing()
+    vdb.util.bark() # print("BARK")
+    print("key = '%s'" % (key,) )
+    print("parse_cache = '%s'" % (parse_cache,) )
 
 
     prefixes = x86_prefixes
@@ -1136,7 +1258,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     markers = 0
     possible_registers = {}
     oldins = None
-#    print("dis = '%s'" % dis )
+
     for line in dis.splitlines():
         ins = instruction()
         fm=re.search(funcre,line)
@@ -1146,9 +1268,6 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
             continue
         rr = re.search(rangere,line)
         if( rr ):
-#            print("rr.group(0) = '%s'" % rr.group(0) )
-#            print("rr.group(1) = '%s'" % rr.group(1) )
-#            print("rr.group(2) = '%s'" % rr.group(2) )
             continue
         if( line.startswith("Address range") ):
             continue
@@ -1215,13 +1334,14 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
             if( ins.mnemonic in return_mnemonics ):
                 ins.return_ = True
             if( len(tokens) > tpos ):
-                ins.args = tokens[tpos]
+                ins.args = split_args(tokens[tpos])
+                ins.args_string = tokens[tpos]
                 tpos += 1
 
             if( ins.mnemonic in conditional_jump_mnemonics ):
                 ins.conditional_jump = True
-            if( ins.mnemonic == "cmp" ):
-                m = re.search(cmpre,ins.args)
+            if( ins.mnemonic.startswith("cmp") ):
+                m = re.search(cmpre,ins.args_string)
 #                print("m = '%s'" % m )
                 if( m is not None ):
                     cmparg = m.group(1)
@@ -1231,7 +1351,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #                print("tokens = '%s'" % (tokens,) )
 #                print("tokens[tpos] = '%s'" % tokens[tpos] )
                 if( tokens[tpos] == "#" ):
-                    ins.reference = " ".join(tokens[tpos+1:])
+                    ins.reference.append( " ".join(tokens[tpos+1:]) )
 #                    print("ins.reference = '%s'" % ins.reference )
                 else:
                     if( ins.mnemonic not in unconditional_jump_mnemonics ):
@@ -1251,7 +1371,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
                     pass
             elif( ins.mnemonic in unconditional_jump_mnemonics ):
 #                print("UNCONDITIONAL JUMP? %s %s" % (ins.mnemonic, tokens ) )
-                m = re.search(jmpre,ins.args)
+                m = re.search(jmpre,ins.args_string)
                 if( m is not None ):
                     table = m.group(1)
                     cnt = 0
@@ -1268,7 +1388,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #                        print("last_cmp_immediate = '%s'" % last_cmp_immediate )
                         ins.targets.add(int(jmpval))
                         cnt += 1
-                    ins.reference = f"{len(ins.targets)} computed jump targets " # + str(ins.targets)
+                    ins.reference.append( f"{len(ins.targets)} computed jump targets " ) # + str(ins.targets)
 #                    print("jmpval = '%s'" % jmpval )
 #                    print("m = '%s'" % m )
 #                    print("m.group(1) = '%s'" % m.group(1) )
@@ -1299,16 +1419,6 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
         parse_cache[key] = ret
     if( markers == 0 ):
         ret = fix_marker(ret,arg)
-    # Try to follow execution path to figure out possible register values (and maybe later flags)
-    possible_registers = {}
-    ins = ret.instructions[0]
-#    for ins in ret.instructions:
-    flowstack = [None]
-
-    movre = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
-    leare = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
-    constre = re.compile("\$0x[0-9a-f]*")
-    hexre = re.compile("0x[0-9a-f]*$")
 
     if( fakeframe is not None ):
         frame = fakeframe
@@ -1317,6 +1427,61 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
             frame = gdb.selected_frame()
         except:
             frame = fake_frame()
+
+    fun = frame.function()
+    print("fun.name = '%s'" % (fun.name,) )
+    print("ret.function = '%s'" % (ret.function,) )
+#    print("fun.symtab = '%s'" % (fun.symtab,) )
+    # only extract names from the block when we disassemble the current frame
+    if( fun is not None and fun.name == ret.function ):
+        block = frame.block()
+    else:
+        block = []
+#    print("block = '%s'" % (block,) )
+#    for b in block:
+#        print("b = '%s'" % (b,) )
+#        print("b.is_argument = '%s'" % (b.is_argument,) )
+#        if( b.value(frame).type.tag is None ):
+#            print("b.value(frame) = '%s'" % (b.value(frame),) )
+#        print("b.value(frame).address = '%s'" % (b.value(frame).address,) )
+    ret.var_addresses = {}
+    ret.var_expressions = {}
+
+    if( fun is None ):
+        funhead = "????("
+    else:
+        funhead = fun.print_name + "("
+
+    funhead += gather_vars( frame, ret, block )
+
+    funhead = funhead[:-1]
+    funhead += ")"
+    print("funhead = '%s'" % (funhead,) )
+    print("var_addresses = '%s'" % (ret.var_addresses,) )
+    print("var_expressions = '%s'" % (ret.var_expressions,) )
+
+
+    register_flow(ret,frame)
+    return ret
+
+
+
+def register_flow( lng, frame ):
+    for i in lng.instructions:
+        i.passes = 0
+        i.possible_register_sets = []
+        i.extra = []
+
+    ins = lng.instructions[0]
+    # Try to follow execution path to figure out possible register values (and maybe later flags)
+    possible_registers = {}
+#    for ins in ret.instructions:
+    flowstack = [None]
+
+    movre = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
+    leare = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
+    constre = re.compile("\$0x[0-9a-f]*")
+    hexre = re.compile("0x[0-9a-f]*$")
 
     passlimit = 2
     while ins is not None:
@@ -1329,7 +1494,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
             possible_registers = ins.possible_register_sets[-1]
 
         if( ins.args is not None ):
-            args = ins.args.split(",")
+            args = ins.args #.split(",")
             for a in args:
                 m = constre.match(a)
                 if( m is not None ):
@@ -1337,7 +1502,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
 
         if( ins.mnemonic == "xor" ):
-            args = ins.args.split(",")
+            args = ins.args
             if( len(args) == 2 ):
                 # xor zeroeing out a register
                 if( args[0] == args[1] and args[0][0] == "%" ):
@@ -1345,7 +1510,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
                     reg_set( possible_registers,regname,0)
                     ins.possible_register_sets.append(possible_registers)
         elif( ins.mnemonic == "lea" ):
-            m = leare.match(ins.args)
+            m = leare.match(ins.args_string)
             if( m is not None ):
 #                print("m = '%s'" % (m,) )
 #                print("m.group(0) = '%s'" % (m.group(0),) )
@@ -1370,7 +1535,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
                     ins.possible_register_sets.append(possible_registers)
 
         elif( ins.mnemonic == "mov" ):
-            m = movre.match(ins.args)
+            m = movre.match(ins.args_string)
             if( m is not None ):
 #                print("m = '%s'" % (m,) )
 #                print("m.group(0) = '%s'" % (m.group(0),) )
@@ -1398,7 +1563,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
                         ins.possible_register_sets.append(possible_registers)
 #                        ins.add_extra(f"mem mov into {treg}")
             else:
-                args = ins.args.split(",")
+                args = ins.args #.split(",")
 #                print("len(args) = '%s'" % (len(args),) )
                 # do we get into trouble with at&t and intel syntax here?
                 if( len(args) == 2 ):
@@ -1443,30 +1608,45 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
             if( not ins.conditional_jump ):
                 next = None
             for tga in ins.targets:
-                tgt = ret.by_addr.get(tga,None)
+                tgt = lng.by_addr.get(tga,None)
                 if( tgt is not None and tgt.passes < passlimit ):
                     flowstack.append(tgt)
                     tgt.possible_register_sets.append(possible_registers)
 
-        if( ins.reference is None ):
-            if( len(ins.constants) > 0 ):
-                for c in ins.constants:
-                    xc = vdb.util.xint(c)
+        if( len(ins.constants) > 0 ):
+            for c in ins.constants:
+                xc = vdb.util.xint(c)
 #                    print("vdb.memory.mmap.accessible(xc) = '%s'" % (vdb.memory.mmap.accessible(xc),) )
-                    if( vdb.memory.mmap.accessible(xc) ):
-                        ch = vdb.pointer.chain( xc, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
-                        ins.reference = ch[0]
-        else:
-            m = hexre.match( ins.reference )
+                if( vdb.memory.mmap.accessible(xc) ):
+                    ch = vdb.pointer.chain( xc, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
+                    ins.reference.append(ch[0])
+        for ri in range(0,len(ins.reference)):
+            m = hexre.match( ins.reference[ri] )
             if( m is not None ):
-                xr = vdb.util.xint(ins.reference)
+                xr = vdb.util.xint(ins.reference[ri])
                 if( vdb.memory.mmap.accessible(xr) ):
                     ch = vdb.pointer.chain( xr, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
-                    ins.reference = ch[0]
+                    ins.reference[ri] = ch[0]
+
+        if( ins.args is not None ):
+            for a in ins.args:
+#                ins.add_extra(f"ARG {a}")
+                try:
+                    addr = int(a)
+                    av = lng.var_addresses.get(addr,None)
+                    if( av is not None ):
+                        ins.reference.append( vdb.color.color(av,color_var.value) + "@" + vdb.color.color(addr,color_location.value) )
+                except:
+                    av = lng.var_expressions.get(a,None)
+                    if( av is not None ):
+                        ins.reference.append( vdb.color.color(av,color_var.value) + "@" + vdb.color.color(a,color_location.value) )
+#                        ins.add_extra(f"EVAR {av}")
 
 
         if( debug_registers.value ):
             ins._gen_extra()
+        if( debug.value ):
+            ins._gen_debug()
         ins = next
         if( ins is None ):
             ins = flowstack.pop()
@@ -1477,7 +1657,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
 
 #    print(f"Returning for {key}")
-    return ret
+#    return ret
 
 def parse_from( arg, fakedata = None, context = None ):
     rng = arg.split(",")
