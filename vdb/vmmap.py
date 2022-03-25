@@ -29,7 +29,7 @@ def show_region( addr, colorspec ):
     print(ga)
     ca,mm,_,_ = vdb.memory.mmap.color(addr,colorspec = colorspec)
     if( mm is None ):
-        print(f"Nothing known about address 0x{addr:16x}")
+        print(f"Nothing known about address {addr:#016x}")
         return None
     print( f"Address {ca} is in {str(mm)}" )
 
@@ -134,7 +134,7 @@ def visual( argv, regions = None ):
 #        print("rng = '%s'" % (rng,) )
 #        print("maxl = '%s'" % (maxl,) )
 
-        print(f"From 0x{s:08x} to 0x{e:08x} (size {num:.02f} {suf}B) @{rnum:.01f} {rsuf}B" )
+        print(f"From {s:#08x} to {e:#08x} (size {num:.02f} {suf}B) @{rnum:.01f} {rsuf}B" )
         rep = " " * ((e-s)//res)
         xr = regions[s:e]
         sp = s//res
@@ -182,7 +182,7 @@ def visual( argv, regions = None ):
                 pbytes = 0
 
             while( (psp+res) <= x.start ):
-                print(f"GAP 0x{psp:x} - 0x{psp+res:x}")
+                print(f"GAP {psp:#0x} - {psp+res:#0x}")
                 psp += res
                 rep += fill_char(0,res)
 #                rep += "G"
@@ -191,7 +191,7 @@ def visual( argv, regions = None ):
             # a subsection that is part of a bigger section we have seen already
             if( x.end <= psp ):
 #                pass
-                print(f"0x{x.start:x} - 0x{x.end:x} IGNORED (within previous segment)")
+                print(f"{x.start:#0x} - {x.end:#0x} IGNORED (within previous segment)")
 
             # The section started below or at our region of interest
             elif( x.start <= psp ):

@@ -223,10 +223,10 @@ class instruction( ):
         if( len(self.targets) ):
             ta = ""
             for t in self.targets:
-                ta += f"0x{t:x}"
+                ta += f"{t:#0x}"
         to = "("
         for target in self.target_of:
-            to += f"0x{target:x}"
+            to += f"{target:#0x}"
         to += ")"
         a = self.address
         if( a is None ):
@@ -255,9 +255,9 @@ class listing( ):
     def color_address( self, addr, marked ):
         mlen = vdb.arch.pointer_size // 4
         if( next_mark_ptr and marked ):
-            return vdb.color.colorl(f"0x{addr:0{mlen}x}",color_marker.value)
+            return vdb.color.colorl(f"{addr:#0{mlen}x}",color_marker.value)
         elif( len(color_addr.value) > 0 ):
-            return vdb.color.colorl(f"0x{addr:0{mlen}x}",color_addr.value)
+            return vdb.color.colorl(f"{addr:#0{mlen}x}",color_addr.value)
         else:
             pv,_,_,_,pl = vdb.pointer.color(addr,vdb.arch.pointer_size)
             return ( pv, pl )
@@ -356,7 +356,7 @@ ascii mockup:
                 self.merger = None
 
             def __str__( self ):
-                return f"0x{self.fr:x} -> 0x{self.to:x}, c={self.coloridx},l={self.lines},r={self.rows},d={self.done}"
+                return f"{self.fr:#0x} -> {self.to:#0x}, c={self.coloridx},l={self.lines},r={self.rows},d={self.done}"
 
         def find_next( cl, ar ):
             clen = len(cl)
@@ -796,7 +796,8 @@ ascii mockup:
             if( "p" in showspec ):
                 if( i.args is not None ):
                     aslen += self.maxargs + 1
-                    args = ",".join(i.args)
+#                    args = ",".join(i.args)
+                    args = i.args_string
 #                    line.append( vdb.color.color(f" {i.args:{self.maxargs}}",color_args.value))
                     line.append( (vdb.color.color(f"{args}",color_args.value),len(args)) )
                 else:
@@ -817,6 +818,7 @@ ascii mockup:
                 for r in i.reference:
                     f += wrap_shorten(r) + " "
                 if( len(f) > 0 ):
+                    f = f[:-1]
                     line.append(f)
 
             if( any((c in showspec) for c in "tT" ) ):
@@ -868,7 +870,7 @@ ascii mockup:
 
 #        print("ret = '%s'" % ret )
         ret = vdb.util.format_table(ret,padbefore=" ",padafter="")
-        return f"Instructions in range 0x{self.start:x} - 0x{self.end:x} of {hf}\n" + ret
+        return f"Instructions in range {self.start:#0x} - {self.end:#0x} of {hf}\n" + ret
 #        return "\n".join(ret)
 
     def print( self, showspec = "maodbnprT", context = None, marked = None ):
@@ -900,7 +902,7 @@ ascii mockup:
                 tr.td_raw("&nbsp;")
 
         if( "a" in showspec ):
-            tr.td_raw(vdb.dot.color(f"0x{i.address:0{plen}x}",color_addr_dot.value))["port"] = str(i.address)
+            tr.td_raw(vdb.dot.color(f"{i.address:#0{plen}x}",color_addr_dot.value))["port"] = str(i.address)
 
         if( "o" in showspec ):
             try:
@@ -1429,8 +1431,8 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
             frame = fake_frame()
 
     fun = frame.function()
-    print("fun.name = '%s'" % (fun.name,) )
-    print("ret.function = '%s'" % (ret.function,) )
+#    print("fun.name = '%s'" % (fun.name,) )
+#    print("ret.function = '%s'" % (ret.function,) )
 #    print("fun.symtab = '%s'" % (fun.symtab,) )
     # only extract names from the block when we disassemble the current frame
     if( fun is not None and fun.name == ret.function ):
@@ -1670,7 +1672,7 @@ def parse_from( arg, fakedata = None, context = None ):
 #            print("to = '%x'" % to )
             if( to < fr ):
                 to = fr + to + 1
-            arg = f"0x{fr:x},0x{to:x}"
+            arg = f"{fr:#0x},{to:#0x}"
 
         except:
 #            print("rng = '%s'" % rng )
@@ -1760,7 +1762,7 @@ def get_single( bpos ):
     try:
         da=gdb.selected_frame().architecture().disassemble(int(bpos),count=1)
         da=da[0]
-        fake = f"0x{da['addr']:x} <+0>: {da['asm']}"
+        fake = f"{da['addr']:#0x} <+0>: {da['asm']}"
         li = parse_from_gdb("",fake)
         ret = li.to_str(asm_showspec.value.replace("a","").replace("o",""))
         ret = ret.splitlines()

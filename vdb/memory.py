@@ -389,7 +389,7 @@ class memory_region:
         s = ""
         plen = vdb.arch.pointer_size // 4
         sz,suf = vdb.util.num_suffix( self.size )
-        s += f"memory_region from 0x{self.start:0{plen}x} to 0x{self.end:0{plen}x} ({sz:.3f}{suf}Bytes):\n"
+        s += f"memory_region from {self.start:#0{plen}x} to {self.end:#0{plen}x} ({sz:.3f}{suf}Bytes):\n"
         s += vdb.util.ifset("Section '{}'\n",self.section)
         s += vdb.util.ifset("File '{}'\n", self.file)
         s += vdb.util.ifset("Memory Access : {}\n", self.atype )
@@ -619,7 +619,7 @@ class memory_map:
         if( s is None ):
 #            s = str(addr)
             plen = vdb.arch.pointer_size // 4
-            s = f"0x{addr:0{plen}x}"
+            s = f"{addr:#0{plen}x}"
         if( mm is None ):
             mm = self.find(addr)
         if( mm is None ):
@@ -799,8 +799,8 @@ class memory_map:
 
             xplen = 2 * ( ( r.end.bit_length() + 7 ) // 8 )
 
-            ms = vdb.color.colorl(f"0x{r.start:0{xplen}x}", col)
-            me = vdb.color.colorl(f"0x{r.end:0{xplen}x}", col)
+            ms = vdb.color.colorl(f"{r.start:#0{xplen}x}", col)
+            me = vdb.color.colorl(f"{r.end:#0{xplen}x}", col)
 
             size= r.end - r.start
             f = vdb.util.nstr(r.file)

@@ -217,7 +217,7 @@ class pointer:
         self.origin_td = origin_td
 
     def __str__( self ):
-        s=f"(@0x{int(self.val):x}:{self.src_port}, {self.obj})"
+        s=f"(@{int(self.val):#0x}:{self.src_port}, {self.obj})"
         return s
 
     def __repr__(self):
@@ -684,7 +684,7 @@ class ftree:
                 except:
                     traceback.print_exc()
                     rettd["bgcolor"] = color_invalid.value
-                rettd.content = "*" + "0x{:x}".format(int(fval))
+                rettd.content = "*" + "{:#0x}".format(int(fval))
             elif( real_type.code == gdb.TYPE_CODE_REF ):
                 try:
                     # This causes an attempt to read the value. If it is unreachable memory or so, it will throw
@@ -694,7 +694,7 @@ class ftree:
                     self.subobject_ports[int(fval.address)] = port
                     target = fval.referenced_value()
                     ptrlist.append( pointer( target.address, port, obj, rettd) )
-                    rettd.content = "@" + "0x{:x}".format(int(target.address))
+                    rettd.content = "@" + "{:#0x}".format(int(target.address))
                     rm=gdb.selected_inferior().read_memory(target.address,1)
                 except gdb.MemoryError:
                     rettd["bgcolor"] = color_invalid.value
@@ -867,7 +867,7 @@ class ftree:
 
     def try_member_cast(  self, val, path ):
         if( verbosity.value > 4 ):
-            print(f"try_member_cast( @0x{int(val.address):x}, {path})")
+            print(f"try_member_cast( @{int(val.address):#0x}, {path})")
         sw = vdb.util.stopwatch()
         sw.start()
 #        print("path = '%s'" % path )
@@ -887,7 +887,7 @@ class ftree:
         if( verbosity.value > 3 ):
             print("val.type = '%s'" % val.type )
             print("val.type.target() = '%s'" % val.type.target() )
-            print(f"try_node_downcast(0x{int(val):x}, {xtype})")
+            print(f"try_node_downcast({int(val):#0x}, {xtype})")
 #        print("path = '%s'" % path )
 #        print("val = '%s'" % val )
         for df,action in self.node_downcast_filter:
@@ -1020,7 +1020,7 @@ class ftree:
             self.nodes[ptrval:ptrval+int(val.type.target().sizeof)] = n
         # prepare header tr
         htr = vdb.dot.tr()
-        htd = htr.td("0x{:x}".format(int(val)))
+        htd = htr.td("{:#0x}".format(int(val)))
 
         ttr = vdb.dot.tr()
         ttd = ttr.td(self.shorten(xl.object.type.name))

@@ -110,7 +110,7 @@ def get_symbols( addr, xlen ):
 #        nm = ""
         nm = get_gdb_sym(xaddr)
         astr = f"(void*)({xaddr})"
-        xstr = f"0x{int(xaddr):x}"
+        xstr = f"{int(xaddr):#0x}"
 #        print("nm = '%s'" % (nm,) )
 #        nm = gdb.parse_and_eval(astr)
 #        print("nm = '%s'" % (nm,) )
@@ -180,7 +180,7 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
                 xlen -= 1
                 data = vdb.memory.read(addr,xlen)
     if( data is None ):
-        print(f"Can not access memory at 0x{addr:x}")
+        print(f"Can not access memory at {addr:#0x}")
         return
     xaddr = addr
 #    p,add,col,mm,_ = vdb.pointer.color(addr,vdb.arch.pointer_size)

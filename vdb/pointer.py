@@ -171,7 +171,7 @@ def as_tailspec( ptr, minasc, spec ):
         else:
             # for convenienve just ignore them for now
             pass
-    print(f"No idea what 0x{int(ptr):x} points to really...")
+    print(f"No idea what {int(ptr):#0x} points to really...")
     return None
 
 
