@@ -236,6 +236,7 @@ awkward way due to gdb limitations.
 ![](doc/img/history.0.png)
 ## profile
 Allows to profile python calls
+![](doc/img/profile.0.png)
 [You can find detailed information about this module here](doc/PROFILE.md)
 
 ## va

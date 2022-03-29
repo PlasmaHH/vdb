@@ -10,3 +10,4 @@ Runs the passed command as if it was executed on the command line and displays s
 Additionally starts a dotty graph to show more. Needs dot and gprof2dot installed. If thats not the case, there might be
 an error, or it will silently be ignored.
 
+![](img/profile.0.png)
