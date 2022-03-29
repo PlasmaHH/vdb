@@ -860,7 +860,7 @@ ascii mockup:
             if( len(i.extra) > 0 or i.file_line is not None ):
 #                print("prejump = '%s'" % (prejump,) )
 #                print("postjump = '%s'" % (postjump,) )
-                for ex in i.extra + [ i.file_line ]:
+                for ex in i.extra + [ ( i.file_line, 1, 1) ]:
                     pre = prejump * [None]
                     post = (postjump-1) * [None]
                     if( postarrows is None ):
@@ -1626,7 +1626,7 @@ def register_flow( lng, frame ):
                     qm = "?"
                     if( ins.marked or (ins.next and ins.next.marked) ):
                         qm="!"
-                    ins.add_extra( sc.to_str(possible_registers,qm,fakeframe) )
+                    ins.add_extra( sc.to_str(possible_registers,qm,frame) )
                     possible_registers = sc.clobber(possible_registers)
                 else:
                     ins.add_extra(f"syscall[{rax}]()")
