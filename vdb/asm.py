@@ -253,7 +253,7 @@ class listing( ):
         self.bt_q = []
 
     def color_address( self, addr, marked ):
-        mlen = vdb.arch.pointer_size // 4
+        mlen = 2 + vdb.arch.pointer_size // 4
         if( next_mark_ptr and marked ):
             return vdb.color.colorl(f"{addr:#0{mlen}x}",color_marker.value)
         elif( len(color_addr.value) > 0 ):
