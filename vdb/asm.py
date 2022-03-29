@@ -76,6 +76,7 @@ offset_txt_fmt_dot = vdb.config.parameter("vdb-asm-text-offset-format-dot", " <+
 color_ns       = vdb.config.parameter("vdb-asm-colors-namespace",   "#ddf", gdb_type = vdb.config.PARAM_COLOUR)
 color_function = vdb.config.parameter("vdb-asm-colors-function",    "#99f", gdb_type = vdb.config.PARAM_COLOUR)
 color_marker   = vdb.config.parameter("vdb-asm-colors-next-marker", "#0f0", gdb_type = vdb.config.PARAM_COLOUR)
+color_xmarker  = vdb.config.parameter("vdb-asm-colors-marker",      "#049", gdb_type = vdb.config.PARAM_COLOUR)
 color_addr     = vdb.config.parameter("vdb-asm-colors-addr",        None,   gdb_type = vdb.config.PARAM_COLOUR)
 color_offset   = vdb.config.parameter("vdb-asm-colors-offset",      "#444", gdb_type = vdb.config.PARAM_COLOUR)
 color_bytes    = vdb.config.parameter("vdb-asm-colors-bytes",       "#059", gdb_type = vdb.config.PARAM_COLOUR)
@@ -194,6 +195,7 @@ class instruction( ):
         self.offset = None
         self.bytes = None
         self.marked = False
+        self.xmarked = False
         self.prefix = ""
         self.infix = ""
         self.jumparrows = ""
@@ -252,11 +254,14 @@ class listing( ):
         self.current_branch = "a"
         self.bt_q = []
 
-    def color_address( self, addr, marked ):
+    def color_address( self, addr, marked, xmarked ):
         mlen = 2 + vdb.arch.pointer_size // 4
-        if( next_mark_ptr and marked ):
-            return vdb.color.colorl(f"{addr:#0{mlen}x}",color_marker.value)
-        elif( len(color_addr.value) > 0 ):
+        if( next_mark_ptr ):
+            if( marked ):
+                return vdb.color.colorl(f"{addr:#0{mlen}x}",color_marker.value)
+            if( xmarked ):
+                return vdb.color.colorl(f"{addr:#0{mlen}x}",color_xmarker.value)
+        if( len(color_addr.value) > 0 ):
             return vdb.color.colorl(f"{addr:#0{mlen}x}",color_addr.value)
         else:
             pv,_,_,_,pl = vdb.pointer.color(addr,vdb.arch.pointer_size)
@@ -708,6 +713,7 @@ ascii mockup:
         for i in self.instructions:
             if( marked is not None):
                 if( i.address == marked ):
+                    i.xmarked = True
                     extra_marker = cnt
                 elif( marked > i.address ):
                     if( (marked - i.address) < len(i.bytes) ):
@@ -722,12 +728,14 @@ ascii mockup:
                     line.append( ( vdb.color.color(next_marker.value,color_marker.value), len(next_marker.value) ) )
                     marked_line = cnt
                     context_start, context_end = self.compute_context(context,marked_line)
+                elif( i.xmarked ):
+                    line.append( ( vdb.color.color(next_marker.value,color_xmarker.value), len(next_marker.value) ) )
                 else:
                     line.append( "" )
 
             if( "a" in showspec ):
                 prejump += 1
-                line.append( self.color_address( i.address, i.marked ))
+                line.append( self.color_address( i.address, i.marked, i.xmarked ))
 
             if( "j" in showspec ):
                 prejump += 1
