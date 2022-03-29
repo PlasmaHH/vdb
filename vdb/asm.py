@@ -204,9 +204,12 @@ class instruction( ):
         self.history = None
         self.bt_idx = None
         self.extra = []
+        self.file_line = None
         self.possible_register_sets = []
         self.next = None
         self.passes = 0
+        self.file = None
+        self.line = None
 
     def _gen_extra( self ):
 #        print(f"gen_extra({self.mnemonic}) {self}")
@@ -693,7 +696,7 @@ ascii mockup:
     m_trans = str.maketrans("v^-|<>u#Q~T+","╭╰─│◄►┴├⥀◆┬┼" )
     p_trans = str.maketrans("v^-|<>u#Q~T+","|  |   |  ||" )
 
-    def to_str( self, showspec = "maodbnprT", context = None, marked = None ):
+    def to_str( self, showspec = "maodbnprT", context = None, marked = None, source = False ):
         self.lazy_finish()
         hf = self.function
         if( shorten_header.value ):
@@ -709,8 +712,19 @@ ascii mockup:
         otmap = {0:0}
 
         extra_marker = None
+        file_line = ""
 
         for i in self.instructions:
+            if( source ):
+                if( i.file is None ):
+                    i.file,i.line = info_line( i.address )
+                fl = f"{i.file}:{i.line}"
+                if( fl != file_line ):
+                    file_line = fl
+                    i.file_line = file_line
+            else:
+                i.file_line = None
+
             if( marked is not None):
                 if( i.address == marked ):
                     i.xmarked = True
@@ -842,10 +856,11 @@ ascii mockup:
 #            print("cnt = '%s'" % (cnt,) )
 #            print("len(otbl) = '%s'" % (len(otbl),) )
 
-            if( len(i.extra) > 0 ):
+#            print("i.file_line = '%s'" % (i.file_line,) )
+            if( len(i.extra) > 0 or i.file_line is not None ):
 #                print("prejump = '%s'" % (prejump,) )
 #                print("postjump = '%s'" % (postjump,) )
-                for ex in i.extra:
+                for ex in i.extra + [ i.file_line ]:
                     pre = prejump * [None]
                     post = (postjump-1) * [None]
                     if( postarrows is None ):
@@ -881,8 +896,8 @@ ascii mockup:
         return f"Instructions in range {self.start:#0x} - {self.end:#0x} of {hf}\n" + ret
 #        return "\n".join(ret)
 
-    def print( self, showspec = "maodbnprT", context = None, marked = None ):
-        print(self.to_str(showspec, context, marked))
+    def print( self, showspec = "maodbnprT", context = None, marked = None, source = False ):
+        print(self.to_str(showspec, context, marked,source))
 
     def color_dot_relist( self, s, l ):
         for r,c in l:
@@ -1185,6 +1200,17 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "" ):
             pass
     return ret
 
+
+ilinere = re.compile('Line ([0-9]*) of "(.*)"')
+
+@vdb.util.memoize
+def info_line( addr ):
+    il = gdb.execute(f"info line *{addr:#0x}",False,True)
+    m = ilinere.match(il)
+    if( m is not None ):
+        return ( m.group(2), m.group(1) )
+#    print("il = '%s'" % (il,) )
+    return (None,None)
 
 def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached = True ):
 
@@ -1713,36 +1739,48 @@ def disassemble( argv ):
     dotty = False
     context = None
     fakedata = None
+    source = False
 
     if( len(argv) > 0 ):
-#        print("argv = '%s'" % (argv,) )
         if( argv[0][0] == "/" ):
-            if( argv[0][1] == "+" and argv[0][2:].isdigit() ):
-                context = ( None, int(argv[0][2:]) )
-                argv=argv[1:]
-            elif( argv[0][1] == "-" and argv[0][2:].isdigit() ):
-                context = ( int(argv[0][2:]), None )
-                argv=argv[1:]
-            elif( argv[0][1:].isdigit() ):
-                context = int(argv[0][1:])
-                context = ( context, context )
-                argv=argv[1:]
-            elif( argv[0].find(",") != -1 ):
-                context = argv[0][1:].split(",")
-                context = ( int(context[0]), int(context[1]) )
-                argv=argv[1:]
-            elif( argv[0] == "/d" ):
-                dotty = True
-                argv=argv[1:]
-            elif( argv[0] == "/f" ):
-                with open (argv[1], 'r') as fakefile:
-                    fakedata = fakefile.read()
-                argv=["fake"]
-            elif( argv[0] == "/r" ):
-                argv=argv[1:]
-                gdb.execute("disassemble " + " ".join(argv))
-                return
+            argv0 = argv[0][1:]
+            argv=argv[1:]
 
+            while( len(argv0) > 0 ):
+                vdb.util.log("argv0={argv0}",argv0 = argv0)
+                if( argv0[0] == "d" ):
+                    dotty = True
+                    argv0 = argv0[1:]
+                elif( argv0[0] == "f" ):
+                    with open (argv[1], 'r') as fakefile:
+                        fakedata = fakefile.read()
+                    argv=["fake"]
+                    break
+                elif( argv0[0] == "r" ):
+                    gdb.execute("disassemble " + " ".join(argv))
+                    return
+                elif( argv0[0] == "s" ):
+                    source = True
+                    argv0 = argv0[1:]
+                elif( argv0[0] == "+" and argv0[1:].isdigit() ):
+                    context = ( None, int(argv0[1:]) )
+                    break
+                elif( argv0[0] == "-" and argv0[1:].isdigit() ):
+                    context = ( int(argv0[1:]), None )
+                    break
+                elif( argv0[0:].isdigit() ):
+                    context = int(argv0[0:])
+                    context = ( context, context )
+                    break
+                elif( argv0.find(",") != -1 ):
+                    context = argv0[0:].split(",")
+                    context = ( int(context[0]), int(context[1]) )
+                    break
+                else:
+                    break
+
+    print("context = '%s'" % (context,) )
+    print("argv = '%s'" % (argv,) )
 
     listing = parse_from(" ".join(argv),fakedata,context)
     marked = None
@@ -1758,7 +1796,7 @@ def disassemble( argv ):
             pass
 
 #    print("marked = '%s'" % (marked,) )
-    listing.print(asm_showspec.value, context,marked)
+    listing.print(asm_showspec.value, context,marked, source)
     if( dotty ):
         g = listing.to_dot(asm_showspec_dot.value)
         g.write("dis.dot")
