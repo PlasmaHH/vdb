@@ -30,8 +30,9 @@ class byte_descriptor:
         if( self.prefix is not None and len(self.prefix) > 0 ):
             return f"{self.prefix}{self.object.name}"
         else:
+            if( self.object is not None ):
 #        return f"{self.prefix}::{self.member_name}"
-            return f"{self.object.name}"
+                return f"{self.object.name}"
 """
 
 
@@ -342,6 +343,7 @@ class object_layout:
             so.parent = parent
             parent.subobjects.append(so)
 #            print(" . . . . . . . . . . . . . ")
+#            print("f.is_base_class = '%s'" % (f.is_base_class,) )
 #            print("so.name = '%s'" % so.name )
 #            print("so.type = '%s'" % so.type )
 #            print("so.type.strip_typedefs() = '%s'" % so.type.strip_typedefs() )
@@ -356,9 +358,10 @@ class object_layout:
                 so.byte_offset += offset
 #                print("so = '%s'" % so )
 #                print("offset = '%s'" % offset )
-                for i in range( so.byte_offset, so.byte_offset + so.size ):
-#                    print("i = '%s'" % i )
-                    self.bytes[i] = bd
+                if( not f.is_base_class ):
+                    for i in range( so.byte_offset, so.byte_offset + so.size ):
+#                        print("self.bytes[%s] = '%s' => '%s'" % (i,self.bytes[i].name(),bd.name()) )
+                        self.bytes[i] = bd
                 self.descriptors.append(bd)
             else:
 #                print("so = '%s'" % so )
