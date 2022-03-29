@@ -41,6 +41,7 @@ def print_pahole( layout, condense ):
 #            max_type_len = max(max_type_len,len(enttypename))
             max_type_len = max(max_type_len,len(vdb.color.colors.strip_color(enttypename)))
             bd.pahole_enttypename = enttypename
+    txtunused = "<unused>"
     for bd in layout.bytes:
         if( bd.prefix is None ):
             ent = None
@@ -53,7 +54,7 @@ def print_pahole( layout, condense ):
                 ent = ent[2:]
             ent = vdb.shorten.symbol(ent)
         else:
-            ent = "<unused>"
+            ent = txtunused
 
         # XXX extra colour for empty
         if( ent != current_entity ):
@@ -69,13 +70,16 @@ def print_pahole( layout, condense ):
             ename = vdb.color.color(f"{enttypename:>{max_type_len}}","#cc4400")
         else:
             ename = " " * max_type_len
-            ent = "<unused>"
+            ent = txtunused
         if( condense ):
             txt = f"{ename} {ent}"
             if( txt != previous_text ):
                 if( previous_text is not None ):
                     xcos = vdb.color.color(f"[{start:3d}-{end:3d}]",color_list.elements[cidx])
-                    print(f"{xcos} {previous_text}")
+                    if( previous_text.endswith(txtunused) ):
+                        print(f"{xcos} {previous_text} {1+end-start}")
+                    else:
+                        print(f"{xcos} {previous_text}")
                 start = cnt
                 previous_text = txt
         else:
