@@ -3,17 +3,17 @@ Instructions in range 0x4.* - 0x4.* of main\(int, char const\*\*\)\( argc@0x7f.*
      0x0000000000[0-9a-f]* 5  <\+1 >:     48 89 e5                mov   %rsp,%rbp
      0x0000000000[0-9a-f]* 4  <\+4 >:     53                      push  %rbx
      0x0000000000[0-9a-f]* 3  <\+5 >:     48 83 ec 48             sub   \$0x48,%rsp
-     0x0000000000[0-9a-f]* 2  <\+9 >:     89 7d bc                mov   %edi,-0x44\(%rbp\) .*
-     0x0000000000[0-9a-f]* 1  <\+12>:     48 89 75 b0             mov   %rsi,-0x50\(%rbp\) .*
-  →  0x0000000000[0-9a-f]* 0  <\+16>:     48 8d 45 c0             lea   -0x40\(%rbp\),%rax .*
+     0x0000000000[0-9a-f]* 2  <\+9 >:     89 7d bc                mov   %edi,-0x44\(%rbp\)      argc@-0x.*\(%rbp\)
+     0x0000000000[0-9a-f]* 1  <\+12>:     48 89 75 b0             mov   %rsi,-0x50\(%rbp\)      argv@-0x.*\(%rbp\)
+  →  0x0000000000[0-9a-f]* 0  <\+16>:     48 8d 45 c0             lea   -0x40\(%rbp\),%rax      s@-0x.*\(%rbp\)
      0x0000000000[0-9a-f]*    <\+20>:     48 89 c7                mov   %rax,%rdi
      0x0000000000[0-9a-f]*    <\+23>:     .. .. .. .. ..          call  0x4.*              <std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char> >::basic_string\(\)>
-     0x0000000000[0-9a-f]*    <\+28>:     48 c7 45 e8 40 63 40 00 movq  \$0x406340,-0x18\(%rbp\) .*
-     0x0000000000[0-9a-f]*    <\+36>:     be 04 30 40 00          mov   \$0x403004,%esi .*
-     0x0000000000[0-9a-f]*    <\+41>:     bf 00 61 40 00          mov   \$0x406100,%edi .*
+     0x0000000000[0-9a-f]*    <\+28>:     48 c7 45 e8 40 63 40 00 movq  \$0x406340,-0x18\(%rbp\) 0x.*
+     0x0000000000[0-9a-f]*    <\+36>:     be 04 30 40 00          mov   \$0x403004,%esi        0x00000000004.* → \[16\]'\(void\*\)vmbase = '
+     0x0000000000[0-9a-f]*    <\+41>:     bf 00 61 40 00          mov   \$0x406100,%edi        0x00000000004.* <std::cout@GLIBCXX_3.4>
      0x0000000000[0-9a-f]*    <\+46>:     .. .. .. .. ..          call  0x40.*              <std::basic_ostream<char,std::char_traits<char> >& std::operator<< <std::char_traits<char> >\(std::basic_ostream<char,std::char_traits<char> >&,char const\*\)@plt>
      0x0000000000[0-9a-f]*    <\+51>:     48 89 c2                mov   %rax,%rdx
-     0x0000000000[0-9a-f]*    <\+54>:     48 8b 45 e8             mov   -0x18\(%rbp\),%rax .*
+     0x0000000000[0-9a-f]*    <\+54>:     48 8b 45 e8             mov   -0x18\(%rbp\),%rax      vmbase@-0x.*\(%rbp\)
      0x0000000000[0-9a-f]*    <\+58>:     48 89 c6                mov   %rax,%rsi
      0x0000000000[0-9a-f]*    <\+61>:     48 89 d7                mov   %rdx,%rdi
      0x0000000000[0-9a-f]*    <\+64>:     .. .. .. .. ..          call  0x40.*              <std::ostream::operator<<\(void const\*\)@plt>
