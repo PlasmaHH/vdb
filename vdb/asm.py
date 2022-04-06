@@ -1757,7 +1757,7 @@ def disassemble( argv ):
                     dotty = True
                     argv0 = argv0[1:]
                 elif( argv0[0] == "f" ):
-                    with open (argv[1], 'r') as fakefile:
+                    with open (argv[0], 'r') as fakefile:
                         fakedata = fakefile.read()
                     argv=["fake"]
                     break
