@@ -296,9 +296,12 @@ class object_layout:
                     ret.append(f)
         except:
             self.object = object(self.type)
+#            print("self.object.name = '%s'" % (self.object.name,) )
             self.object.byte_offset = 0
             bd = byte_descriptor(None,None,None)
             bd.object = self.object
+            bd.object.final = True
+#            bd.prefix = ""
             self.descriptors.append(bd)
             self.final = True
 #            print("self = '%s'" % self )
