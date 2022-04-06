@@ -813,7 +813,7 @@ def symbol(fname):
             break
 
     symbol_cache[infname] = fname
-    print(f"[{len(symbol_cache)}]{infname} => {fname}")
+#    print(f"[{len(symbol_cache)}]{infname} => {fname}")
     return fname
 
 def symbol_cmd(args):
