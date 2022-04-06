@@ -417,3 +417,5 @@ There are a lot of ideas and enhancements that are possible or need to be done. 
   supporting
 * Highlighting hooks for plugins to make addresses stand out more that the user wants to know about
 * check if we can put probes to good use. They may be useful to integrate into the track mechanism
+* asm, shorten, pahole and hex annotate use all a bit of the object layout for nested structures. We need to unify this
+  properly to have repeatable names all around... 
