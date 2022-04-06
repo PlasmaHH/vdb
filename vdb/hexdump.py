@@ -338,10 +338,13 @@ def annotate_var( addr,gval, gtype, name ):
                 ent = bd.name()
                 if( len(ent) > 2 and ent.startswith("::") ):
                     ent = ent[2:]
+                print(f"{ent} => ")
                 ent = vdb.shorten.symbol(ent)
+                print(f"{ent}")
                 dotpos = ent.find(".")
                 if( dotpos != -1 and name is not None ):
                     ent = name + ent[dotpos:]
+                ent = vdb.shorten.symbol(ent)
 
                 addr = int(addr)
 #                print("name = '%s'" % (name,) )

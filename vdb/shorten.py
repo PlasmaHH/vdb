@@ -72,6 +72,7 @@ class type_or_function:
         self.type = None
         self.tail = ""
         self.cached_string = None
+        self.failed = False
 
     def to_dot( self, g ):
         n = g.node(f"{self.name}.{self.id}")
@@ -510,6 +511,7 @@ def parse_function( fun ):
         func.dump()
     elif( s0 != s1 ):
         vdb.log( f"Failed to properly parse {fun}, shortening not possible, recommend writing  a testcase", level = 2)
+        func.failed = True
 
 #	func.dump()
     return func
@@ -555,7 +557,20 @@ shortens = {
         "<unnamed enum>": "<enum>",
         }
 
+re_shortens = [
+        (r"std::_Vector_base<(.*), std::allocator<\1 *> >",
+           r"std::vector<\1>"),
+        (r"std::vector<(.*), std::allocator<\1 *> >",
+           r"std::vector<\1>")
+        ]
+
+cre_shortens = [ ]
+
+for rre,sub in re_shortens:
+    cre_shortens.append( (re.compile(rre), sub ) )
+
 def add_shorten( f, t ):
+    global shortens
     shortens[f] = t
 
 def add_shorten_v( argv ):
@@ -767,15 +782,20 @@ def symbol(fname):
 
 #    print("debug.value = '%s'" % (debug.value,) )
 #    print( f"'{fun}' =?= '{fname}'")
+    if( not fun.failed ):
+#    if( str(fun) == infname ):
 #    print("bef = '%s'" % (fun,) )
-    fun.add_shorten(shortens)
-    fun.fold_templates(foldables)
-    for con,folds in conditional_foldables.items():
-        if( re.search( con, infname ) is not None ):
-            fun.fold_templates(folds)
+        fun.add_shorten(shortens)
+        fun.fold_templates(foldables)
+        for con,folds in conditional_foldables.items():
+            if( re.search( con, infname ) is not None ):
+                fun.fold_templates(folds)
+        fname=str(fun)
+    else:
+        fname = infname
+
 
     # Do the shortens on the complete string type too
-    fname=str(fun)
 
     cnt = 0
     while True:
@@ -783,13 +803,17 @@ def symbol(fname):
         ofname = fname
         for old,new in shortens.items():
             fname = fname.replace(old,new)
+        for cre,sub in cre_shortens:
+#            print(f"{fname} => ",end="")
+            fname = cre.sub( sub, fname )
+#            print(f"{fname}")
         if( ofname == fname ):
             break
         if( cnt >= recursion_limit.value ):
             break
 
     symbol_cache[infname] = fname
-#    print(f"[{len(symbol_cache)}]{infname} => {fname}")
+    print(f"[{len(symbol_cache)}]{infname} => {fname}")
     return fname
 
 def symbol_cmd(args):
