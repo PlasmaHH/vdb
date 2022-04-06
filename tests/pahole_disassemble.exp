@@ -1,50 +1,50 @@
-Instructions in range 0x4.* - 0x4.* of main\(int, char const\*\*\)
+Instructions in range 0x4.* - 0x4.* of main\(int, char const\*\*\)\( argc@0x7f.*\[-0x.*\(%rbp\)\] = 1, argv@0x7ff.*\[-0x.*\(%rbp\)\] = 0x7ff.*\)
      0x0000000000[0-9a-f]* 6  <\+0 >:     55                      push  %rbp
      0x0000000000[0-9a-f]* 5  <\+1 >:     48 89 e5                mov   %rsp,%rbp
      0x0000000000[0-9a-f]* 4  <\+4 >:     53                      push  %rbx
      0x0000000000[0-9a-f]* 3  <\+5 >:     48 83 ec 48             sub   \$0x48,%rsp
-     0x0000000000[0-9a-f]* 2  <\+9 >:     89 7d bc                mov   %edi,-0x44\(%rbp\)
-     0x0000000000[0-9a-f]* 1  <\+12>:     48 89 75 b0             mov   %rsi,-0x50\(%rbp\)
-  →  0x0000000000[0-9a-f]* 0  <\+16>:     48 8d 45 c0             lea   -0x40\(%rbp\),%rax
+     0x0000000000[0-9a-f]* 2  <\+9 >:     89 7d bc                mov   %edi,-0x44\(%rbp\) .*
+     0x0000000000[0-9a-f]* 1  <\+12>:     48 89 75 b0             mov   %rsi,-0x50\(%rbp\) .*
+  →  0x0000000000[0-9a-f]* 0  <\+16>:     48 8d 45 c0             lea   -0x40\(%rbp\),%rax .*
      0x0000000000[0-9a-f]*    <\+20>:     48 89 c7                mov   %rax,%rdi
      0x0000000000[0-9a-f]*    <\+23>:     .. .. .. .. ..          call  0x4.*              <std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char> >::basic_string\(\)>
-     0x0000000000[0-9a-f]*    <\+28>:     48 c7 45 e8 40 63 40 00 movq  \$0x406340,-0x18\(%rbp\)
-     0x0000000000[0-9a-f]*    <\+36>:     be 04 30 40 00          mov   \$0x403004,%esi
-     0x0000000000[0-9a-f]*    <\+41>:     bf 00 61 40 00          mov   \$0x406100,%edi
+     0x0000000000[0-9a-f]*    <\+28>:     48 c7 45 e8 40 63 40 00 movq  \$0x406340,-0x18\(%rbp\) .*
+     0x0000000000[0-9a-f]*    <\+36>:     be 04 30 40 00          mov   \$0x403004,%esi .*
+     0x0000000000[0-9a-f]*    <\+41>:     bf 00 61 40 00          mov   \$0x406100,%edi .*
      0x0000000000[0-9a-f]*    <\+46>:     .. .. .. .. ..          call  0x40.*              <std::basic_ostream<char,std::char_traits<char> >& std::operator<< <std::char_traits<char> >\(std::basic_ostream<char,std::char_traits<char> >&,char const\*\)@plt>
      0x0000000000[0-9a-f]*    <\+51>:     48 89 c2                mov   %rax,%rdx
-     0x0000000000[0-9a-f]*    <\+54>:     48 8b 45 e8             mov   -0x18\(%rbp\),%rax
+     0x0000000000[0-9a-f]*    <\+54>:     48 8b 45 e8             mov   -0x18\(%rbp\),%rax .*
      0x0000000000[0-9a-f]*    <\+58>:     48 89 c6                mov   %rax,%rsi
      0x0000000000[0-9a-f]*    <\+61>:     48 89 d7                mov   %rdx,%rdi
      0x0000000000[0-9a-f]*    <\+64>:     .. .. .. .. ..          call  0x40.*              <std::ostream::operator<<\(void const\*\)@plt>
-     0x0000000000[0-9a-f]*    <\+69>:     be 15 30 40 00          mov   \$0x403015,%esi
+     0x0000000000[0-9a-f]*    <\+69>:     be 15 30 40 00          mov   \$0x403015,%esi .*
      0x0000000000[0-9a-f]*    <\+74>:     48 89 c7                mov   %rax,%rdi
      0x0000000000[0-9a-f]*    <\+77>:     .. .. .. .. ..          call  0x40.*              <std::basic_ostream<char,std::char_traits<char> >& std::operator<< <std::char_traits<char> >\(std::basic_ostream<char,std::char_traits<char> >&,char const\*\)@plt>
-     0x0000000000[0-9a-f]*    <\+82>:     48 c7 45 e0 54 63 40 00 movq  \$0x406354,-0x20\(%rbp\)
-     0x0000000000[0-9a-f]*    <\+90>:     be 17 30 40 00          mov   \$0x403017,%esi
-     0x0000000000[0-9a-f]*    <\+95>:     bf 00 61 40 00          mov   \$0x406100,%edi
+     0x0000000000[0-9a-f]*    <\+82>:     48 c7 45 e0 54 63 40 00 movq  \$0x406354,-0x20\(%rbp\) .*
+     0x0000000000[0-9a-f]*    <\+90>:     be 17 30 40 00          mov   \$0x403017,%esi .*
+     0x0000000000[0-9a-f]*    <\+95>:     bf 00 61 40 00          mov   \$0x406100,%edi .*
      0x0000000000[0-9a-f]*    <\+100>:    .. .. .. .. ..          call  0x40.*              <std::basic_ostream<char,std::char_traits<char> >& std::operator<< <std::char_traits<char> >\(std::basic_ostream<char,std::char_traits<char> >&,char const\*\)@plt>
      0x0000000000[0-9a-f]*    <\+105>:    48 89 c2                mov   %rax,%rdx
-     0x0000000000[0-9a-f]*    <\+108>:    48 8b 45 e0             mov   -0x20\(%rbp\),%rax
+     0x0000000000[0-9a-f]*    <\+108>:    48 8b 45 e0             mov   -0x20\(%rbp\),%rax .*
      0x0000000000[0-9a-f]*    <\+112>:    48 89 c6                mov   %rax,%rsi
      0x0000000000[0-9a-f]*    <\+115>:    48 89 d7                mov   %rdx,%rdi
      0x0000000000[0-9a-f]*    <\+118>:    .. .. .. .. ..          call  0x40.*              <std::ostream::operator<<\(void const\*\)@plt>
-     0x0000000000[0-9a-f]*    <\+123>:    be 15 30 40 00          mov   \$0x403015,%esi
+     0x0000000000[0-9a-f]*    <\+123>:    be 15 30 40 00          mov   \$0x403015,%esi .*
      0x0000000000[0-9a-f]*    <\+128>:    48 89 c7                mov   %rax,%rdi
      0x0000000000[0-9a-f]*    <\+131>:    .. .. .. .. ..          call  0x40.*              <std::basic_ostream<char,std::char_traits<char> >& std::operator<< <std::char_traits<char> >\(std::basic_ostream<char,std::char_traits<char> >&,char const\*\)@plt>
-     0x0000000000[0-9a-f]*    <\+136>:    be 23 30 40 00          mov   \$0x403023,%esi
-     0x0000000000[0-9a-f]*    <\+141>:    bf 00 61 40 00          mov   \$0x406100,%edi
+     0x0000000000[0-9a-f]*    <\+136>:    be 23 30 40 00          mov   \$0x403023,%esi .*
+     0x0000000000[0-9a-f]*    <\+141>:    bf 00 61 40 00          mov   \$0x406100,%edi .*
      0x0000000000[0-9a-f]*    <\+146>:    .. .. .. .. ..          call  0x40.*              <std::basic_ostream<char,std::char_traits<char> >& std::operator<< <std::char_traits<char> >\(std::basic_ostream<char,std::char_traits<char> >&,char const\*\)@plt>
      0x0000000000[0-9a-f]*    <\+151>:    48 89 c2                mov   %rax,%rdx
-     0x0000000000[0-9a-f]*    <\+154>:    48 8b 45 e0             mov   -0x20\(%rbp\),%rax
-     0x0000000000[0-9a-f]*    <\+158>:    48 2b 45 e8             sub   -0x18\(%rbp\),%rax
+     0x0000000000[0-9a-f]*    <\+154>:    48 8b 45 e0             mov   -0x20\(%rbp\),%rax .*
+     0x0000000000[0-9a-f]*    <\+158>:    48 2b 45 e8             sub   -0x18\(%rbp\),%rax .*
      0x0000000000[0-9a-f]*    <\+162>:    48 89 c6                mov   %rax,%rsi
      0x0000000000[0-9a-f]*    <\+165>:    48 89 d7                mov   %rdx,%rdi
      0x0000000000[0-9a-f]*    <\+168>:    .. .. .. .. ..          call  0x40.*              <std::ostream::operator<<\(void const\*\)@plt>
-     0x0000000000[0-9a-f]*    <\+173>:    be 15 30 40 00          mov   \$0x403015,%esi
+     0x0000000000[0-9a-f]*    <\+173>:    be 15 30 40 00          mov   \$0x403015,%esi .*
      0x0000000000[0-9a-f]*    <\+178>:    48 89 c7                mov   %rax,%rdi
      0x0000000000[0-9a-f]*    <\+181>:    .. .. .. .. ..          call  0x40.*              <std::basic_ostream<char,std::char_traits<char> >& std::operator<< <std::char_traits<char> >\(std::basic_ostream<char,std::char_traits<char> >&,char const\*\)@plt>
-     0x0000000000[0-9a-f]*    <\+186>:    48 8d 45 c0             lea   -0x40\(%rbp\),%rax
+     0x0000000000[0-9a-f]*    <\+186>:    48 8d 45 c0             lea   -0x40\(%rbp\),%rax .*
      0x0000000000[0-9a-f]*    <\+190>:    48 89 c7                mov   %rax,%rdi
      0x0000000000[0-9a-f]*    <\+193>:    .. .. .. .. ..          call  0x40.*              <std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char> >::~basic_string\(\)>
      0x0000000000[0-9a-f]*    <\+198>:    b8 00 00 00 00          mov   \$0x0,%eax
@@ -57,7 +57,7 @@ Instructions in range 0x4.* - 0x4.* of main\(int, char const\*\*\)
      0x0000000000[0-9a-f]*    <\+223>: │  48 89 c7                mov   %rax,%rdi
      0x0000000000[0-9a-f]*    <\+226>: │  .. .. .. .. ..          call  0x40.*              <_Unwind_Resume@plt>
      0x0000000000[0-9a-f]*    <\+231>: ╰► 48 8b 5d f8             mov   -0x8\(%rbp\),%rbx
-     0x0000000000[0-9a-f]*    <\+235>:    c9                      leave
-     0x0000000000[0-9a-f]*    <\+236>:    c3                      ret
+     0x0000000000[0-9a-f]*    <\+235>:    c9                      leave 
+     0x0000000000[0-9a-f]*    <\+236>:    c3                      ret   
 
 Exiting vdb...

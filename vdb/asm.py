@@ -1283,7 +1283,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
         t0 = time.time()
         dis = gdb.execute(f'disassemble/r {arg}',False,True)
         t1 = time.time()
-        print("t1-t0 = '%s'" % (t1-t0,) )
+#        print("t1-t0 = '%s'" % (t1-t0,) )
     else:
         dis = fakedata
 #    print("dis = '%s'" % dis )
@@ -1784,8 +1784,8 @@ def disassemble( argv ):
                 else:
                     break
 
-    print("context = '%s'" % (context,) )
-    print("argv = '%s'" % (argv,) )
+#    print("context = '%s'" % (context,) )
+#    print("argv = '%s'" % (argv,) )
 
     listing = parse_from(" ".join(argv),fakedata,context)
     marked = None
