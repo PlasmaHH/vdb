@@ -379,6 +379,15 @@ tests = [
                 "enabled" : True
             },
             {
+                    "name": "hexdump",
+                    "enabled": True,
+                    "file" : "paholetest.cxx",
+                    "expect" : "hexdump.exp",
+                    "commands": [
+                        "hexdump main"
+                        ]
+            },
+            {
                 "name": "shorten functions",
                 "enabled": True,
 #                "enabled_commands" : "0-4,45",
