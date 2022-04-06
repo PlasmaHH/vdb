@@ -302,37 +302,51 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
         print(f"Could only access {xlen} of {olen} requested bytes")
 
 def annotate_var( addr,gval, gtype, name ):
-    print("annotate_var( %s, %20s, %s, %s )" % (addr,gval,gtype,name) )
-    print("gtype = '%s'" % gtype )
+#    print("annotate_var( %s, %20s, %s, %s )" % (addr,gval,gtype,name) )
+#    print("gtype = '%s'" % gtype )
     gtype = gtype.strip_typedefs()
 #    gval = gval.cast(gtype)
-    print("gtype = '%s'" % gtype )
+#    print("gtype = '%s'" % gtype )
 #        print("gval = '%s'" % gval )
     ol = vdb.layout.object_layout( gtype, gval )
-    print("ol.type = '%s'" % (ol.type,) )
-    print("ol = '%s'" % ol )
-    print("ol.object = '%s'" % ol.object )
+#    print("ol.type = '%s'" % (ol.type,) )
+#    print("ol = '%s'" % ol )
+#    print("ol.object = '%s'" % ol.object )
         
+#    print("annotate_var .....")
     for bd in ol.descriptors:
-        print("bd.object = '%s'" % bd.object )
-        print("bd.object.final = '%s'" % (bd.object.final,) )
-        print("bd.object.byte_offset = '%s'" % (bd.object.byte_offset,) )
-        print("bd.object.size = '%s'" % (bd.object.size,) )
-        print("bd.object.type = '%s'" % (bd.object.type,) )
-        print("bd.object.type.code = '%s'" % vdb.util.gdb_type_code(bd.object.type.code) )
+#        print("name = '%s'" % (name,) )
+#        print("bd.name() = '%s'" % (bd.name(),) )
+#        print("bd.object = '%s'" % bd.object )
+#        print("bd.object.final = '%s'" % (bd.object.final,) )
+#        print("bd.object.byte_offset = '%s'" % (bd.object.byte_offset,) )
+#        print("bd.object.size = '%s'" % (bd.object.size,) )
+#        print("bd.prefix = '%s'" % (bd.prefix,) )
+#        print("bd.object.field = '%s'" % (bd.object.field,) )
+#        if( bd.object.field is not None ):
+#            print("bd.object.field.is_base_class = '%s'" % (bd.object.field.is_base_class,) )
+#        print("bd.object.type = '%s'" % (bd.object.type,) )
+#        print("bd.object.type.code = '%s'" % vdb.util.gdb_type_code(bd.object.type.code) )
         if( bd.object.final and bd.object.byte_offset >= 0 and bd.object.size > 0 ):
-            print("bd.prefix = '%s'" % (bd.prefix,) )
-            if( bd.prefix is None ):
+            if( bd.object.field is not None and bd.object.field.is_base_class ):
                 continue
-            ent = bd.name()
-            if( len(ent) > 2 and ent.startswith("::") ):
-                ent = ent[2:]
-            ent = vdb.shorten.symbol(ent)
-            dotpos = ent.find(".")
-            if( dotpos != -1 and name is not None ):
-                ent = name + ent[dotpos:]
+            if( bd.prefix is None ):
+                ent = name
+                addr = int(addr)
+#                print("bd.prefix = '%s'" % (bd.prefix,) )
+            else:
+                ent = bd.name()
+                if( len(ent) > 2 and ent.startswith("::") ):
+                    ent = ent[2:]
+                ent = vdb.shorten.symbol(ent)
+                dotpos = ent.find(".")
+                if( dotpos != -1 and name is not None ):
+                    ent = name + ent[dotpos:]
 
-            addr = int(addr)
+                addr = int(addr)
+#                print("name = '%s'" % (name,) )
+#                print("addr = '%s'" % (addr,) )
+#                print("ent = '%s'" % (ent,) )
 #            print("bd.object.size = '%s'" % bd.object.size )
 #            print("(addr+bd.object.byte_offset) = '%s'" % (addr+bd.object.byte_offset) )
 #            print("(addr+bd.object.byte_offset+bd.object.size) = '%s'" % (addr+bd.object.byte_offset+bd.object.size) )
@@ -346,10 +360,12 @@ def annotate_block( block ):
 #    print("block.is_global = '%s'" % (block.is_global,) )
 #    if( block.function is None ):
 #        return
-    print("block.function = '%s'" % (block.function,) )
-    print("block.superblock = '%s'" % (block.superblock,) )
+#    print("block.function = '%s'" % (block.function,) )
+#    print("block.superblock = '%s'" % (block.superblock,) )
     for i in block:
         try:
+#            print("i.is_argument = '%s'" % (i.is_argument,) )
+#            print("i.name = '%s'" % (i.name,) )
             v = gdb.selected_frame().read_var(i.name)
             if( v.address is not None ):
                 annotate_var( v.address,v, v.type, i.name )
@@ -378,7 +394,7 @@ def annotate( argv ):
     elif( len(argv) == 1 and argv[0] == "frame" ):
         fr = gdb.selected_frame()
         annotate_block( fr.block() )
-        print("annotation_tree = '%s'" % annotation_tree )
+#        print("annotation_tree = '%s'" % annotation_tree )
     elif( len(argv) == 1 ):
         print("Automatically annotating variable %s" % argv[0] )
         varname = argv[0]
