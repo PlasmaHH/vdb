@@ -1493,8 +1493,8 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     funhead = funhead[:-1]
     funhead += ")"
     print("funhead = '%s'" % (funhead,) )
-    print("var_addresses = '%s'" % (ret.var_addresses,) )
-    print("var_expressions = '%s'" % (ret.var_expressions,) )
+#    print("var_addresses = '%s'" % (ret.var_addresses,) )
+#    print("var_expressions = '%s'" % (ret.var_expressions,) )
 
 
     register_flow(ret,frame)
