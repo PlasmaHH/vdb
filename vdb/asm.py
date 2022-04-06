@@ -256,6 +256,9 @@ class listing( ):
         self.finished = False
         self.current_branch = "a"
         self.bt_q = []
+        self.var_addresses = None
+        self.var_expressions = None
+        self.function_header = None
 
     def color_address( self, addr, marked, xmarked ):
         mlen = 2 + vdb.arch.pointer_size // 4
@@ -893,7 +896,10 @@ ascii mockup:
 
 #        print("ret = '%s'" % ret )
         ret = vdb.util.format_table(ret,padbefore=" ",padafter="")
-        return f"Instructions in range {self.start:#0x} - {self.end:#0x} of {hf}\n" + ret
+        if( self.function_header is not None ):
+            hf = wrap_shorten(self.function_header)
+
+        return f"Instructions in range {self.start:#0x} - {self.end:#0x} of {hf}\n{ret}"
 #        return "\n".join(ret)
 
     def print( self, showspec = "maodbnprT", context = None, marked = None, source = False ):
@@ -1250,9 +1256,9 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     if( ret is not None and fakedata is None ):
         return fix_marker(ret,arg)
     ret = listing()
-    vdb.util.bark() # print("BARK")
-    print("key = '%s'" % (key,) )
-    print("parse_cache = '%s'" % (parse_cache,) )
+#    vdb.util.bark() # print("BARK")
+#    print("key = '%s'" % (key,) )
+#    print("parse_cache = '%s'" % (parse_cache,) )
 
 
     prefixes = x86_prefixes
@@ -1492,10 +1498,9 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
     funhead = funhead[:-1]
     funhead += ")"
-    print("funhead = '%s'" % (funhead,) )
+    ret.function_header = funhead
 #    print("var_addresses = '%s'" % (ret.var_addresses,) )
 #    print("var_expressions = '%s'" % (ret.var_expressions,) )
-
 
     register_flow(ret,frame)
     return ret
