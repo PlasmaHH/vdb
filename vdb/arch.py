@@ -29,7 +29,6 @@ def gather_info( ):
             xt = gdb.lookup_type(ct)
             if( xt.sizeof*8 == pointer_size ):
                 gdb_uintptr_t = xt
-#                print(f"Chosing {ct} for uintptr_t")
                 break
         except:
             pass

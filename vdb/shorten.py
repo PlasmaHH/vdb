@@ -379,7 +379,11 @@ def parse_fragment( frag, obj, level = 0 ):
 #            print("comma use_sofar '{sofar}'")
                 obj.name = use_sofar(sofar)
             return i
-        if( s == "<" ):
+        if( sofar in [ "operator", "operator<", "operator>" ] and s in "<>" ):
+            pass
+        elif( s == "<" ):
+#            print("frag[i:] = '%s'" % (frag[i:],) )
+#            print("sofar = '%s'" % (sofar,) )
             if( frag[i:].startswith(une) ):
                 sofar = une
                 i += len(une)
@@ -510,7 +514,7 @@ def parse_function( fun ):
         print("Expected:" + d1)
         func.dump()
     elif( s0 != s1 ):
-        vdb.log( f"Failed to properly parse {fun}, shortening not possible, recommend writing  a testcase", level = 2)
+        vdb.log( f"Failed to properly parse {fun}, shortening not possible, recommend writing a testcase", level = 2)
         func.failed = True
 
 #	func.dump()

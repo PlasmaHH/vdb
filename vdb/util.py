@@ -115,7 +115,10 @@ def maybe_logprint( level, msg ):
 
 def log(fmt, **more ):
     level = more.get("level",1)
-    maybe_logprint(level,fmt.format(**more))
+    try:
+        maybe_logprint(level,fmt.format(**more))
+    except IndexError:
+        maybe_logprint(level,fmt)
 
 def indent( i, fmt, **more ):
     log("  " * i + fmt, **more )
