@@ -87,6 +87,7 @@ segv_codes = {
 	5 : "SEGV_ACCADI",
 	6 : "SEGV_ADIDERR",
 	7 : "SEGV_ADIPERR",
+    0x80 : "SI_KERNEL"
 }
 
 
@@ -141,60 +142,62 @@ def get_siginfo( si, v = None ):
 
     if( signo in addr_signals ):
         fault=si["_sifields"]["_sigfault"]["si_addr"]
-        code=si["_sifields"]["_sigfault"]["si_addr"]
         mode="access"
         try:
+            # & 16 is instruction fetch
             mv=gdb.parse_and_eval("((ucontext_t*){})->uc_mcontext.gregs[19] & 2".format(v))
             mv=int(mv)
             if( mv == 0 ):
                 mode = "read"
-            elif( mv == 1 ):
+            elif( mv == 2 ):
                 mode = "write"
+            else:
+                mode = f"access ({mv})"
         except:
             pass
-        ret += " trying to {} {}".format(mode,fault)
+        if( si_code == 0x80 and int(fault) == 0 ):
+            ret += " (fault address not available due to SI_KERNEL)"
+        else:
+            ret += " trying to {} {}".format(mode,fault)
     return ret
 
 
 class SignalFrame():
 
-	def __init__(self,fobj):
-		self.fobj = fobj
-	
-	def inferior_frame( self ):
-#		print("BARK0")
-		return self.fobj.inferior_frame()
+    def __init__(self,fobj):
+        self.fobj = fobj
 
-	def function(self):
-		frame = self.fobj.inferior_frame()
-		sighandler = frame.newer()
-		try:
-			# signal handler first
-			si=sighandler.read_var("si")
-			v=sighandler.read_var("v")
-		except:
-			v=None
-			si=gdb.parse_and_eval("$_siginfo")
+    def inferior_frame( self ):
+        return self.fobj.inferior_frame()
 
-		ret = get_siginfo(si,v)
-		return ret
+    def function(self):
+        frame = self.fobj.inferior_frame()
+        sighandler = frame.newer()
+        try:
+            # signal handler first
+            si=sighandler.read_var("si")
+            v=sighandler.read_var("v")
 
-	def filename(self):
-#		print("BARK2")
-		return None
+            if( si.is_optimized_out ):
+                si=gdb.parse_and_eval("$_siginfo")
+        except:
+            v=None
+            si=gdb.parse_and_eval("$_siginfo")
 
-	def address(self):
-		return None
-#		print("BARK3")
-#		return self.fobj.address()
+        ret = get_siginfo(si,v)
+        return ret
 
-	def frame_args(self):
-#		print("BARK4")
-		return None
+    def filename(self):
+        return None
 
-	def line(self):
-#		print("BARK5")
-		return None
+    def address(self):
+        return None
+
+    def frame_args(self):
+        return None
+
+    def line(self):
+        return None
 
 class XValue(gdb.Value):
 
