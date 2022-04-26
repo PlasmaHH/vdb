@@ -144,13 +144,16 @@ def get_siginfo( si, v = None ):
         fault=si["_sifields"]["_sigfault"]["si_addr"]
         mode="access"
         try:
-            # & 16 is instruction fetch
-            mv=gdb.parse_and_eval("((ucontext_t*){})->uc_mcontext.gregs[19] & 2".format(v))
+            mv=gdb.parse_and_eval(f"((ucontext_t*){v})->uc_mcontext.gregs[REG_ERR] & 2")
+            mvi=gdb.parse_and_eval(f"((ucontext_t*){v})->uc_mcontext.gregs[REG_ERR] & 16")
             mv=int(mv)
-            if( mv == 0 ):
-                mode = "read"
+            mvi=int(mvi)
+            if( mvi == 16 ):
+                mode = "fetch instruction from"
+            elif( mv == 0 ):
+                mode = "read from"
             elif( mv == 2 ):
-                mode = "write"
+                mode = "write to"
             else:
                 mode = f"access ({mv})"
         except:
