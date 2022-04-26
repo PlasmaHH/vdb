@@ -112,6 +112,7 @@ tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
 asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnpTrjh" )
 asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnpTr" )
 asm_tailspec       = vdb.config.parameter("vdb-asm-tailspec", "axndD" )
+asm_sort           = vdb.config.parameter("vdb-asm-sort", True )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
 
@@ -259,6 +260,9 @@ class listing( ):
         self.var_addresses = None
         self.var_expressions = None
         self.function_header = None
+
+    def sort( self ):
+        self.instructions.sort( key = lambda x:( x.address, x ) )
 
     def color_address( self, addr, marked, xmarked ):
         mlen = 2 + vdb.arch.pointer_size // 4
@@ -1788,6 +1792,8 @@ def disassemble( argv ):
 #    print("argv = '%s'" % (argv,) )
 
     listing = parse_from(" ".join(argv),fakedata,context)
+    if( asm_sort.value ):
+        listing.sort()
     marked = None
     if( context is not None ):
         try:

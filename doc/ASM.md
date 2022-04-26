@@ -70,6 +70,10 @@ Sometimes the display gets a little bit complex:
 
 There isn't too much you can do, but adding more colours sometimes helps to distinguish the arrows better.
 
+Per default the instructions are sorted by address. You can disable that by setting `vdb-asm-sort` to `False` to make
+them appear in the order gdb produces them, which will however break jump arrows in case you have functions in multiple
+chunks and reverse order.
+
 ### `dis/<context>`
 This limits the displayed disassembly to the context of the passed amount of lines around the `$rip` marker. Should
 there be no such marker, this has no special effect. Note that the whole disassembly will be generated, filtered, and

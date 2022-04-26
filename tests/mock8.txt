@@ -6,3 +6,4 @@
    0x6 <+35>: ff jmpq     *0xa37d60(,%rax,8)
    0x8 <+37>: ff mov $3
    0xa <+37>: ff mov $3
+   0x7 <+37>: ff mov $4
