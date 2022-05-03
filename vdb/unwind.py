@@ -21,6 +21,7 @@ enable_unwinder = vdb.config.parameter("vdb-unwind-enable",False)
 
 hint_marker = vdb.config.parameter("vdb-unwind-hint-marker", "-----v")
 hint_context = vdb.config.parameter("vdb-unwind-hint-context","1,0")
+hint_default_range = vdb.config.parameter("vdb-unwind-hint-default-range", "-8,64", gdb_type = vdb.config.PARAM_ARRAY )
 
 hint_color = vdb.config.parameter("vdb-unwind-colors-hint",   "#f55", gdb_type = vdb.config.PARAM_COLOUR)
 hint_start_color = vdb.config.parameter("vdb-unwind-colors-hint-start",   "#ff8", gdb_type = vdb.config.PARAM_COLOUR)
@@ -346,9 +347,15 @@ unwinder = unwind_dispatch()
 flush_count=0
 
 def hint( argv ):
+    range_start = hint_default_range.elements[0]
+    range_stop = hint_default_range.elements[1]
+
     stack_base="$sp"
     if( len(argv) > 0 ):
-        stack_base = argv[0]
+        if( argv[0].startswith("+") ):
+            range_stop = int(argv[0])
+        else:
+            stack_base = argv[0]
 
     vptype = gdb.lookup_type("void").pointer()
     isym = gdb.execute("info symbol $pc",False,True)
@@ -367,7 +374,8 @@ def hint( argv ):
     ccallre = re.compile("call \*%") # computed calls
     # $rsp-16 is kinda the default position
     # for other archs we might search differently?
-    for i in range(-8,64):
+#    for i in range(-8,64):
+    for i in range(-8,range_stop):
         pos = f"{stack_base}+({vptype.sizeof}*{i})"
         mem=vdb.memory.read(pos,vptype.sizeof)
         val=gdb.Value(mem,vptype)
