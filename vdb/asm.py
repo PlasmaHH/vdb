@@ -109,12 +109,16 @@ color_call_dot       = vdb.config.parameter("vdb-asm-colors-call-dot",       "#6
 nonfunc_bytes      = vdb.config.parameter("vdb-asm-nonfunction-bytes",16)
 history_limit      = vdb.config.parameter("vdb-asm-history-limit",4)
 tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
-asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnpTrjh" )
+asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnpTrjhc" )
 asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnpTr" )
 asm_tailspec       = vdb.config.parameter("vdb-asm-tailspec", "axndD" )
 asm_sort           = vdb.config.parameter("vdb-asm-sort", True )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
+callgrind_events   = vdb.config.parameter("vdb-asm-callgrind-events", "Ir,CEst", gdb_type = vdb.config.PARAM_ARRAY )
+
+callgrind_eventmap = {} # name to index
+callgrind_data = {}
 
 
 color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,gdb_type = vdb.config.PARAM_COLOUR_LIST )
@@ -721,6 +725,14 @@ ascii mockup:
         extra_marker = None
         file_line = ""
 
+        cg_events = []
+        for evn in callgrind_events.elements:
+            ix = callgrind_eventmap.get(evn,None)
+            if( ix is not None ):
+                cg_events.append(ix)
+            else:
+                print(f"Specified callgrind event {evn} not present in any loaded file")
+
         for i in self.instructions:
             if( source ):
                 if( i.file is None ):
@@ -758,9 +770,11 @@ ascii mockup:
                 prejump += 1
                 line.append( self.color_address( i.address, i.marked, i.xmarked ))
 
+
             if( "j" in showspec ):
                 prejump += 1
                 line.append( i.bt )
+
 
             if( any((c in showspec) for c in "hH" ) ):
                 prejump += 1
@@ -781,6 +795,18 @@ ascii mockup:
                     line.append( vdb.color.colorl(offset_fmt.value.format(offset = io, maxlen = self.maxoffset ),color_offset.value))
                 except:
                     line.append( vdb.color.colorl(offset_txt_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value))
+
+            if( "c" in showspec ):
+                ci = callgrind_data.get( i.address, None )
+                if( ci is not None ):
+                    for cge in cg_events:
+                        cv = ci.event(cge)
+                        if( cv == 0 ):
+                            line.append( None )
+                        else:
+                            line.append( cv )
+                else:
+                    line += [None] * len(cg_events)
 
             jumparrows = None
             postarrows = None
@@ -1744,6 +1770,134 @@ def parse_from( arg, fakedata = None, context = None ):
 
     return ret
 
+
+
+class callgrind_instruction:
+
+    def __init__( self, line, previous ):
+        self.values = None
+        self.address = None
+        self.parse( line.split(), previous )
+#        self._dump()
+
+    def _dump( self ):
+        print(f"@{self.address:#08x} : {self.values}")
+
+    def event( self, evidx ):
+        val = self.values.get(evidx,0)
+        return val
+
+    def value( self, evname ):
+        evidx = callgrind_eventmap.get(evname,None)
+        if( evidx is not None ):
+            return self.event(evidx)
+        else:
+            return 0
+
+    def add_synth( self, name, elist ):
+        global callgrind_eventmap
+        nni = callgrind_eventmap.get(name,None)
+        if( nni is None ):
+#            print("callgrind_eventmap = '%s'" % (callgrind_eventmap,) )
+            nni = len(callgrind_eventmap) + 2
+            callgrind_eventmap[name] = nni
+#            print("callgrind_eventmap = '%s'" % (callgrind_eventmap,) )
+
+        val = 0
+        for e in elist:
+            eidx = callgrind_eventmap.get(e,None)
+            if( eidx is None ):
+                vdb.util.log(f"Could not synthesize event {name}, at least event {e} is unavailable",level=4)
+                return None
+            v = self.event(eidx)
+#            print("e = '%s'" % (e,) )
+#            print("v = '%s'" % (v,) )
+            val += v
+#        print("val = '%s'" % (val,) )
+        if( val ):
+            self.values[nni] = val
+        return val
+
+    def synthesize( self ):
+        self.add_synth( "L1m", [ "I1mr", "D1mr", "D1mw" ] )
+        self.add_synth( "L2m", [ "I2mr", "D2mr", "D2mw" ] )
+        self.add_synth( "LLm", [ "ILmr", "DLmr", "DLmw" ] )
+        self.add_synth( "Bm",  [ "Bim", "Bcm" ] )
+
+        global callgrind_eventmap
+        cidx = callgrind_eventmap.get("CEst",None)
+        if( cidx is None ):
+            cidx = len(callgrind_eventmap) + 2
+            callgrind_eventmap["CEst"] = cidx
+
+        cest = 0
+        cest += self.value( "Ir" )
+        cest += self.value( "Bm" )  * 10
+        cest += self.value( "L1m" ) * 10
+        cest += self.value( "Ge" )  * 20
+        cest += self.value( "L2m" ) * 100
+        cest += self.value( "LLm" ) * 100
+        if( cest ):
+            self.values[cidx] = cest
+
+
+
+
+
+
+    def parse( self, vec, previous ):
+        if( vec[0].startswith( "0x" ) ):
+            self.address = int(vec[0],16)
+        elif( vec[0].startswith( "+" ) ):
+            if( previous.address is not None ):
+                self.address = previous.address + int(vec[0][1:])
+        self.values = {}
+        for i in range(1,len(vec)):
+            val = vec[i]
+            if( val == "*" ):
+                val = previous.values[i]
+            elif( val.startswith("+") ):
+                add = int(val[1:])
+                val = previous.values[i] + add
+            else:
+                val = int(val)
+            self.values[i] = val
+        self.synthesize()
+
+
+def load_callgrind( argv ):
+#    print("argv = '%s'" % (argv,) )
+    global callgrind_data
+    global callgrind_eventmap
+    if( argv[0] == "clear" ):
+        callgrind_data = {}
+        print("Cleared callgrind database")
+        return None
+    current_instruction = None
+    with open( argv[0], "r" ) as cf:
+        for cfline in cf:
+            cfline = cfline.rstrip()
+            if( len(cfline) == 0 ):
+                continue
+
+            if( cfline.startswith("0x") or cfline[0] == "+" ):
+                current_instruction = callgrind_instruction( cfline, current_instruction )
+                callgrind_data[current_instruction.address] = current_instruction
+            elif( cfline.startswith("events:") ):
+                cfv = cfline.split()
+                for i in range( 1,len(cfv) ):
+                    callgrind_eventmap[cfv[i]] = i+1
+#                    print("cfv[i] = '%s'" % (cfv[i],) )
+            else:
+#                print("cfline = '%s'" % (cfline,) )
+                pass
+
+
+#        while( cfline := cf.readline().rstrip() ):
+#            print("cfline = '%s'" % (cfline,) )
+
+    print(f"Read information for {len(callgrind_data)} instructions from {argv[0]}")
+
 def disassemble( argv ):
     dotty = False
     context = None
@@ -1756,10 +1910,13 @@ def disassemble( argv ):
             argv=argv[1:]
 
             while( len(argv0) > 0 ):
-                vdb.util.log("argv0={argv0}",argv0 = argv0)
+                vdb.util.log("argv0={argv0}",argv0 = argv0, level = 4)
                 if( argv0[0] == "d" ):
                     dotty = True
                     argv0 = argv0[1:]
+                elif( argv0[0] == "c" ):
+                    load_callgrind( argv )
+                    return None
                 elif( argv0[0] == "f" ):
                     with open (argv[0], 'r') as fakefile:
                         fakedata = fakefile.read()

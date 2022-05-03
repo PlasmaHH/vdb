@@ -383,8 +383,12 @@ def hint( argv ):
         at = vdb.memory.mmap.get_atype(val)
         if( at == vdb.memory.access_type.ACCESS_EX ):
             cmd=f"dis/{hint_context.value} {int(val)}"
-#            print("cmd = '%s'" % (cmd,) )
-            dis=gdb.execute(cmd,False,True)
+            try:
+                dis=gdb.execute(cmd,False,True)
+            except:
+                print("Failed: cmd = '%s'" % (cmd,) )
+                traceback.print_exc()
+                dis=None
             dis = dis.splitlines()
 #            rng = dis[0]
             dis = dis[1:]
