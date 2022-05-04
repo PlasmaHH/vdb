@@ -111,6 +111,17 @@ therefore we offer the following ways to influence things in the graph (besides 
 
 This calls the gdb disassembler without any formatting
 
+## Configuration
+
+We have a variety of configurations that control how we output things
+
+* `vdb-asm-header-repeat` controls how and if a header should be printed
+ * `<0` only prints the header once at the top
+ * `0` disables printing the header
+ * `>0` prints the header every N lines
+* `vdb-asm-debug-registers` shows additional information about possible register values
+* `vdb-asm-debug-all` shows all sorts of debug information (may break formatting)
+
 ## Information enhancement functionality
 
 ### syscall
