@@ -203,12 +203,27 @@ def format_line( line, maxsz, padbefore, padafter ):
 #        ret += str(maxsz[cnt])
         ret += padbefore
         if isinstance(cell,tuple):
-            xpad = maxsz[cnt] - cell[1]
+            cval = cell[0]
+            clen = cell[1]
+            if( len(cell) > 2 ):
+                if( cell[2] == 0 ):  # truncate to max size
+                    cval = cval[0:maxsz[cnt]]
+            if( len(cell) > 1 ):
+                if( isinstance(clen,str) ):
+                    import vdb.color
+                    v=cell[0]
+                    c=cell[1]
+                    cell = vdb.color.colorl(cval,clen) + cell[2:]
+                    cval = cell[0]
+                    clen = cell[1]
+            if( clen == 0 ):
+                clen = len(cval)
+                xpad = maxsz[cnt] - clen
+            else:
+                xpad = maxsz[cnt] - clen
             if( cnt+1 == len(line) ):
                 xpad = 0
-#            ret += " %s " % xpad
-#            ret += " %s " % cell[1]
-            ret += f"{cell[0]}{' ' * xpad}"
+            ret += f"{cval}{' ' * xpad}"
         else:
             xmaxsz = maxsz[cnt]
             if( cnt+1 == len(line) ):
@@ -228,19 +243,26 @@ def format_table( tbl, padbefore = " ", padafter = " " ):
     for line in tbl:
 #        print("line = '%s'" % line )
         cnt = 0
-        for cell in line:
+#        for cell in line:
+        for cnt in range(0,len(line)):
+            cell = line[cnt]
             if( cell is None ):
                 cell=""
 #            print("cnt = '%s'" % cnt )
             if isinstance(cell,tuple):
                 if( len(cell) == 2 ):
-                    maxsz[cnt] = max(maxsz.get(cnt,0),cell[1])
+                    clen = cell[1]
+                    if( isinstance(clen,str) ):
+                        clen = len(cell[0])
+                    maxsz[cnt] = max(maxsz.get(cnt,0),clen)
+                elif( len(cell) > 3):
+                    maxsz[cnt] = max(maxsz.get(cnt,0),cell[3])
                 else:
                     # Ignore the size at that point
                     maxsz[cnt] = max(maxsz.get(cnt,0),1)
             else:
                 maxsz[cnt] = max(maxsz.get(cnt,0),len(str(cell)))
-            cnt += 1
+#            cnt += 1
 #    for x,y in maxsz.items():
 #        print("x = '%s'" % x )
 #        print("y = '%s'" % y )
