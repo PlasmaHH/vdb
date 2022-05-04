@@ -116,6 +116,7 @@ asm_sort           = vdb.config.parameter("vdb-asm-sort", True )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
 callgrind_events   = vdb.config.parameter("vdb-asm-callgrind-events", "Ir,CEst", gdb_type = vdb.config.PARAM_ARRAY )
+callgrind_jumps    = vdb.config.parameter("vdb-asm-callgrind-show-jumps", True )
 header_repeat      = vdb.config.parameter("vdb-asm-header-repeat", 50 )
 
 callgrind_eventmap = {} # name to index
@@ -753,8 +754,13 @@ ascii mockup:
         for sp,hf in headfields:
             if( any((s in showspec) for s in sp ) ):
                 header += hf
+
+        cg_columns = 0
+        if( "c" in showspec ):
+            cg_columns = len(cg_header)
                         
         for i in self.instructions:
+            cg_extra = []
             if( header_repeat.value is not None ):
                 if( header_repeat.value > 0 ):
                     if( cnt % header_repeat.value == 0 ):
@@ -825,8 +831,11 @@ ascii mockup:
                     line.append( vdb.color.colorl(offset_txt_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value))
 
             if( "c" in showspec ):
+
                 ci = callgrind_data.get( i.address, None )
                 if( ci is not None ):
+                    for _,jump in ci.jumps.items():
+                        cg_extra.append( (str(jump),1,1) )
                     for cge in cg_events:
                         cv = ci.event(cge)
                         if( cv == 0 ):
@@ -918,11 +927,15 @@ ascii mockup:
 #            print("len(otbl) = '%s'" % (len(otbl),) )
 
 #            print("i.file_line = '%s'" % (i.file_line,) )
-            if( len(i.extra) > 0 or i.file_line is not None ):
+            if( len(i.extra) > 0 or i.file_line is not None or len(cg_extra) > 0 ):
+                fll = []
+                if( i.file_line is not None ):
+                    fll.append( (i.file_line,1,1) )
 #                print("prejump = '%s'" % (prejump,) )
 #                print("postjump = '%s'" % (postjump,) )
-                for ex in i.extra + [ ( i.file_line, 1, 1) ]:
-                    pre = prejump * [None]
+                for ex in i.extra + fll + cg_extra:
+#                    print("ex = '%s'" % (ex,) )
+                    pre = ( prejump + cg_columns) * [None]
                     post = (postjump-1) * [None]
                     if( postarrows is None ):
                         el = pre + post
@@ -1741,6 +1754,7 @@ def register_flow( lng, frame ):
                         ins.reference.append( vdb.color.color(av,color_var.value) + "@" + vdb.color.color(a,color_location.value) )
 #                        ins.add_extra(f"EVAR {av}")
 
+        
 
         if( debug_registers.value ):
             ins._gen_extra()
@@ -1806,6 +1820,7 @@ class callgrind_instruction:
         self.values = None
         self.address = None
         self.parse( line.split(), previous )
+        self.jumps = {}
 #        self._dump()
 
     def _dump( self ):
@@ -1868,17 +1883,69 @@ class callgrind_instruction:
         if( cest ):
             self.values[cidx] = cest
 
+    class jump_info:
+
+        def __init__( self ):
+            self.target = None
+            self.executed = 0
+            self.jumped = None
+
+        def merge( self, other ):
+            if( self.target != other.target ):
+                raise RuntimeError(f"Can not merge jump info of different targets {self.target} and {other.target}")
+            self.executed += other.executed
+            if( self.jumped is not None ):
+                self.jumped += other.jumped
+
+        def __str__( self ):
+            if( self.jumped is None ):
+                return f"Jumped {self.executed} times to {self.target:#08x}"
+            else:
+                return f"Jumped {self.jumped} of {self.executed} times to {self.target:#08x}"
+
+    def add_jump( self, j, ex, target, raw = None ):
+#        outof = outof.split("/")
+#        print("outof = '%s'" % (outof,) )
+#        print("target = '%s'" % (target,) )
+#        print("self.address = '%s'" % (self.address,) )
+        ji = self.jump_info()
+        if( target[0] == "+" ):
+            offset = int(target[1:])
+            ji.target = self.address + offset
+        elif( target[0] == "-" ):
+            offset = int(target[1:])
+            ji.target = self.address - offset
+        elif( target == "*" ):
+            ji.target = self.address
+        else:
+            ji.target = int(target,16)
+        ji.executed = int(ex)
+        if( j is not None ):
+            ji.jumped  = int(j)
+        ji.raw = raw
+        si = self.jumps.get(ji.target,None)
+        if( si is not None ):
+            si.merge(ji)
+        else:
+            self.jumps[ji.target] = ji
 
 
-
-
+    # This is the "previous" we ask for the next addr
+    def parse_address( self, addrstr ):
+        if( addrstr.startswith( "0x" ) ):
+            return int(addrstr,16)
+        elif( addrstr.startswith( "+" ) ):
+            return self.address + int(addrstr[1:])
+        elif( addrstr.startswith( "-" ) ):
+            return self.address - int(addrstr[1:])
+        else:
+            raise RuntimeError("Invalid address string " + addrstr)
 
     def parse( self, vec, previous ):
-        if( vec[0].startswith( "0x" ) ):
-            self.address = int(vec[0],16)
-        elif( vec[0].startswith( "+" ) ):
-            if( previous.address is not None ):
-                self.address = previous.address + int(vec[0][1:])
+        if( previous is not None ):
+            self.address = previous.parse_address( vec[0] )
+        else:
+            self.address = self.parse_address( vec[0] )
         self.values = {}
         for i in range(1,len(vec)):
             val = vec[i]
@@ -1892,6 +1959,44 @@ class callgrind_instruction:
             self.values[i] = val
         self.synthesize()
 
+    def get_next( self, cline ):
+        vec = cline.split()
+        next_addr = self.parse_address( vec[0] )
+        return get_instruction( next_addr )
+
+    def merge( self, other ):
+        if( other.address != self.address ):
+            raise RuntimeError(f"Can not merge different addresses {self.address} and {other.address}")
+        for _,oj in other.jumps.items():
+            si = self.jumps.get(oj.target,None)
+            if( si is not None ):
+                si.merge(oj)
+            else:
+                self.jumps[oj.target] = oj
+
+        for oi,ov in other.values.items():
+            ov += self.values.get(oi,0)
+            self.values[oi] = ov
+
+        self.synthesize()
+
+def get_instruction( addr ):
+    global callgrind_data
+    ci = callgrind_data.get(addr,None)
+    return ci
+
+def get_next( cline, ci ):
+    if( ci is not None ):
+        pci = ci.get_next(cline)
+        if( pci is None ):
+            return callgrind_instruction( cline, ci )
+
+    ci = callgrind_instruction( cline, ci )
+    pci = get_instruction( ci.address )
+    if( pci is not None ):
+        pci.merge(ci)
+        return pci
+    return ci
 
 def load_callgrind( argv ):
 #    print("argv = '%s'" % (argv,) )
@@ -1908,14 +2013,27 @@ def load_callgrind( argv ):
             if( len(cfline) == 0 ):
                 continue
 
-            if( cfline.startswith("0x") or cfline[0] == "+" ):
-                current_instruction = callgrind_instruction( cfline, current_instruction )
+            if( cfline.startswith("0x") ):
+                current_instruction = get_next( cfline, current_instruction )
+                callgrind_data[current_instruction.address] = current_instruction
+            elif( cfline[0] == "+" or cfline[0] == "-" ):
+                current_instruction = get_next( cfline, current_instruction )
                 callgrind_data[current_instruction.address] = current_instruction
             elif( cfline.startswith("events:") ):
                 cfv = cfline.split()
                 for i in range( 1,len(cfv) ):
                     callgrind_eventmap[cfv[i]] = i+1
 #                    print("cfv[i] = '%s'" % (cfv[i],) )
+            elif( cfline.startswith( "jcnd=" ) ):
+                cfline = cfline[5:]
+                vec = cfline.split()
+                oo = vec[0]
+                oo = oo.split("/")
+                current_instruction.add_jump( oo[0], oo[1], vec[1], cfline )
+            elif( cfline.startswith( "jump=" ) ):
+                cfline = cfline[5:]
+                vec = cfline.split()
+                current_instruction.add_jump( None, vec[0], vec[1] )
             else:
 #                print("cfline = '%s'" % (cfline,) )
                 pass
