@@ -31,6 +31,7 @@ The order is fixed and the showspec entries mean the following:
 * `t` or `T` Shows for jump and call targets the target name, run through the standard shorten and colour mechanism
 * `j` shows a reconstructed possible history for the origin of the flow path
 * `h` or `H` shows a listing of the history of executed instructions when instruction recording was enabled. Using `vdb-asm-history-limit` you can chose the number of histories printed for each instruction
+* 'c' Shows a callgrind information column (see [callgrind](#callgrind) for details)
 
 
 The following settings control the colours
@@ -153,6 +154,56 @@ more.
 
 Here you can see how a constant is loaded from a data section in a position independent way (using `rip` in the
 calculation). The heuristic detected that it is most likely a double of the value `43`.
+
+### callgrind
+
+Using the `c` showspec and loading a callgrind output file via `dis/c callgrind.xxxx.out` will try to read in the
+callgrind output file and then display some information in an extra column. The file contents will be cached, reading
+the file in again will overwrite existing entried, however if there are no numbers in the new file and there have been
+in the old, those will still be displayed and may be confusing. Therefore it is recommended to do a 
+
+```
+dis/c clear
+```
+prior to loading a new file.
+
+Using the option 
+
+
+```
+vdb-asm-callgrind-events
+```
+
+one can specify a comma separated list of event columns to be displayed. These events are those from the `event:` line
+of the callgrind file. Typical events are (depening on whether callgrind ran with collecting them ):
+
+ * **Ir** Instruction Fetch
+ * **Dr** Data Read Access
+ * **Dw** Data Write Access
+ * **I1mr** L1 Instr. Fetch Miss
+ * **D1mr** L1 Data Read Miss
+ * **D1mw** L1 Data Write Miss
+ * **ILmr** LL Instr. Fetch Miss
+ * **DLmr** LL Data Read Miss
+ * **DLmw** LL Data Write Miss
+ * **ILdmr**
+ * **DLdmr**
+ * **DLdmw**
+ * **Bc** Conditional Branch
+ * **Bcm** Mispredicted Cond. Branch
+ * **Bi** Indirect Branch
+ * **Bim** Mispredicted Ind. Branch
+ * **Ge** Global Bus Event
+ * **Smp** Samples
+ * **Sys** System Time
+ * **User** User Time
+
+Additionally we have (the same way as kcachegrind) synthesized events:
+
+ * **L1m** L1 Miss Sum
+ * **LLm** Last-level Miss Sum
+ * **Bm** Mispredicted Branch
+ * **CEst** Cycle Estimation
 
 ## TODO
 
