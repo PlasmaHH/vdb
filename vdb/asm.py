@@ -116,6 +116,7 @@ asm_sort           = vdb.config.parameter("vdb-asm-sort", True )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
 callgrind_events   = vdb.config.parameter("vdb-asm-callgrind-events", "Ir,CEst", gdb_type = vdb.config.PARAM_ARRAY )
+header_repeat      = vdb.config.parameter("vdb-asm-header-repeat", 50 )
 
 callgrind_eventmap = {} # name to index
 callgrind_data = {}
@@ -753,8 +754,10 @@ ascii mockup:
             if( any((s in showspec) for s in sp ) ):
                 header += hf
                         
-        otbl.append( header )
         for i in self.instructions:
+            if( header_repeat.value is not None and cnt % header_repeat.value == 0 ):
+                otbl.append( header )
+
             if( source ):
                 if( i.file is None ):
                     i.file,i.line = info_line( i.address )
