@@ -216,6 +216,9 @@ Additionally we have (the same way as kcachegrind) synthesized events:
  * **Bm** Mispredicted Branch
  * **CEst** Cycle Estimation
 
+In case the jumps are recorded, they will be displayed when the `c` showspec for disassembly is active as well as the
+`vdb-asm-callgrind-show-jumps` setting is enabled.
+
 ## TODO
 
 * document a few missing settings
