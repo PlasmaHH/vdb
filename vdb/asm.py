@@ -726,13 +726,34 @@ ascii mockup:
         file_line = ""
 
         cg_events = []
+        cg_header = []
         for evn in callgrind_events.elements:
             ix = callgrind_eventmap.get(evn,None)
             if( ix is not None ):
                 cg_events.append(ix)
+                cg_header.append( (evn,",,bold",0) )
             else:
-                print(f"Specified callgrind event {evn} not present in any loaded file")
+                vdb.util.log(f"Specified callgrind event {evn} not present in any loaded file", level = 4)
 
+        headfields = [    ("m" ,[ ("Marker",",,bold",0,0) ])
+                        , ("a" ,[("Address",",,bold")])
+                        , ("j" ,[ ("History",",,bold",0,0)])
+                        , ("hH",[ ("History",",,bold",0,0) ])
+                        , ("o" ,[ ("Offset",",,bold",0,0)])
+                        , ("c" ,cg_header)
+                        , ("d" ,[ ("Jumps",",,bold",0,0) ])
+                        , ("b" ,[("Bytes",",,bold",0,0)])
+                        , ("n" ,[("Mnemonic",",,bold",0,0)])
+                        , ("p" ,[("Args",",,bold",0,0)])
+                        , ("r" ,[("Reference",",,bold",0,0) ])
+                        , ("tT",[("Target",",,bold",0,0) ])
+                        ]
+        header = []
+        for sp,hf in headfields:
+            if( any((s in showspec) for s in sp ) ):
+                header += hf
+                        
+        otbl.append( header )
         for i in self.instructions:
             if( source ):
                 if( i.file is None ):
@@ -1963,12 +1984,15 @@ def disassemble( argv ):
         except:
             pass
 
-#    print("marked = '%s'" % (marked,) )
-    listing.print(asm_showspec.value, context,marked, source)
-    if( dotty ):
-        g = listing.to_dot(asm_showspec_dot.value)
-        g.write("dis.dot")
-        os.system("nohup dot -Txlib dis.dot &")
+    try:
+        listing.print(asm_showspec.value, context,marked, source)
+        if( dotty ):
+            g = listing.to_dot(asm_showspec_dot.value)
+            g.write("dis.dot")
+            os.system("nohup dot -Txlib dis.dot &")
+    except:
+        traceback.print_exc()
+        pass
 
 
 def get_single( bpos ):
