@@ -755,8 +755,12 @@ ascii mockup:
                 header += hf
                         
         for i in self.instructions:
-            if( header_repeat.value is not None and cnt % header_repeat.value == 0 ):
-                otbl.append( header )
+            if( header_repeat.value is not None ):
+                if( header_repeat.value > 0 ):
+                    if( cnt % header_repeat.value == 0 ):
+                        otbl.append( header )
+                elif( cnt == 0 ):
+                    otbl.append( header )
 
             if( source ):
                 if( i.file is None ):
