@@ -31,7 +31,7 @@ The order is fixed and the showspec entries mean the following:
 * `t` or `T` Shows for jump and call targets the target name, run through the standard shorten and colour mechanism
 * `j` shows a reconstructed possible history for the origin of the flow path
 * `h` or `H` shows a listing of the history of executed instructions when instruction recording was enabled. Using `vdb-asm-history-limit` you can chose the number of histories printed for each instruction
-* 'c' Shows a callgrind information column (see [callgrind](#callgrind) for details)
+* `c` Shows a callgrind information column (see [callgrind](#callgrind) for details)
 
 
 The following settings control the colours
