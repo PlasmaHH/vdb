@@ -35,8 +35,8 @@ vdb-asm-colors-offset-dot           #909090
 vdb-asm-colors-prefix-dot           None
 vdb-asm-showspec-dot                maobnpTr
 vdb-asm-showspec                    maodbnpTrjHc
-vwd-asm-callgrind-events            Ir,CEst
-vwd-asm-header-repeat               50
+vdb-asm-callgrind-events            Ir,CEst
+vdb-asm-header-repeat               50
 # backtrace colours
 vdb-bt-address-colorspec	ma
 vdb-bt-showspec                     naFPS
@@ -82,7 +82,6 @@ vdb-memory-colors-writeonly         #ff5
 # pahole
 vdb-pahole-colors-members	#f00;#0f0;#00f;#ff0;#f0f;#0ff
 # The prompt
-vdb-prompt-colors-text	#ffff99
 # register view
 vdb-register-colors-names           #4c0
 # function/type shorten

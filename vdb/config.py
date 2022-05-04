@@ -179,7 +179,10 @@ class parameter(gdb.Parameter):
             elif( self.value == "default" ):
                 self.value = self.default
             if( self.is_colour ):
-                self.check_colour()
+                if( self.on_set is not None ):
+                    self.on_set(self)
+                else:
+                    self.check_colour()
             if( self.is_float ):
                 self.fvalue = float(self.value)
             if( self.on_set is not None ):
