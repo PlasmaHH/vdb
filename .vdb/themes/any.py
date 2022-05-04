@@ -34,7 +34,9 @@ vdb-asm-colors-next-marker-dot      #008000
 vdb-asm-colors-offset-dot           #909090
 vdb-asm-colors-prefix-dot           None
 vdb-asm-showspec-dot                maobnpTr
-vdb-asm-showspec                    maodbnpTrjH
+vdb-asm-showspec                    maodbnpTrjHc
+vwd-asm-callgrind-events            Ir,CEst
+vwd-asm-header-repeat               50
 # backtrace colours
 vdb-bt-address-colorspec	ma
 vdb-bt-showspec                     naFPS
@@ -72,7 +74,6 @@ vdb-memory-colors-mmap              #11c
 vdb-memory-colors-nullpage          #f33
 vdb-memory-colors-readonly          #99f
 vdb-memory-colors-readwrite         None
-
 vdb-memory-colors-shared            #15c
 vdb-memory-colors-stack-foreign     #f70
 vdb-memory-colors-stack-own         #070
