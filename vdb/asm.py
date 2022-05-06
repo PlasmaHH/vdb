@@ -224,8 +224,10 @@ class instruction( ):
             self.add_extra(f"REG {prs}")
 
     def _gen_debug( self ):
-        self.add_extra(self.args)
-        self.add_extra(self.constants)
+        self.add_extra( f"self.args      : '{self.args}'")
+        self.add_extra( f"self.constants : '{self.constants}'")
+        self.add_extra( f"self.targets   : '{self.targets}'")
+        self.add_extra( f"self.target_of : '{self.target_of}'")
 
     def add_extra( self, s ):
         self.extra.append( (s,1,1) )
@@ -352,9 +354,12 @@ ascii mockup:
 #        print("ins = '%s'" % ins )
         if( len(ins.targets) > 0  ):
             for tga in ins.targets:
+#                print("tga = '%s'" % (tga,) )
                 tgt = self.by_addr.get(tga,None)
+#                print("tgt = '%s'" % (tgt,) )
                 if( tgt is not None ):
                     tgt.target_of.add(ins.address)
+#                print("tgt = '%s'" % (tgt,) )
 
     def finish( self ):
         global ix
@@ -477,6 +482,10 @@ ascii mockup:
         current_lines = []
         adict = {}
 
+        # Seperate loop for the later needs all informaation always
+        for ins in self.instructions:
+            self.add_target(ins)
+
         for ins in self.instructions:
 #            print("INS_----------------------------------")
 #            print("ins = '%s'" % ins )
@@ -524,6 +533,10 @@ ascii mockup:
             ins.jumparrows = nj
 
         self.maxarrows = len(current_lines)+1
+
+        if( debug.value ):
+            for ins in self.instructions:
+                ins._gen_debug()
 
     def optimize_arrows( self ):
         start = -1
@@ -1758,8 +1771,6 @@ def register_flow( lng, frame ):
 
         if( debug_registers.value ):
             ins._gen_extra()
-        if( debug.value ):
-            ins._gen_debug()
         ins = next
         if( ins is None ):
             ins = flowstack.pop()
