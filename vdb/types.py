@@ -231,6 +231,7 @@ class cmd_types (vdb.command.command):
 
   create    - create a new type from scratch. Basically compiles the given code for the type name to be loaded.
   load      - load an existing type from a header. Header can be optionally specified.
+  symbolic  - creates a symbol with given name and address.
     """
 
     def __init__ (self):

@@ -25,6 +25,19 @@ header, or your own local creation for more convenience.
 Additionally we try to scan the systems include directory for all kinds of types and have it possible for them to omit
 the filename. This only works when ctags is installed.
 
+### `symbolic` creates a symbol
+
+Currently only as a proof of concept, this will create a symbol with the given address.
+
+```
+types symbolic foo 0x00007fffffffca98
+```
+
+will create a symbol named `foo` (of type `void*`) at that address. This will cause a .bss section to be created, which
+can mess up several other things so be careful.
+
+If all you want is this being shown at e.g. hexdump, see the annotation feature there.
+
 ### `refresh` type cache
 
 Reruns ctags to populate the cache. The cache normally does this automatically after 
