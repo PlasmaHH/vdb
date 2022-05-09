@@ -161,15 +161,16 @@ def refresh_locations( at ):
     vdb.log("Background type location refresh finished")
     save_caches()
 
-def compile( code ):
+def compile( code, extraoptions = "", addoptions = "0" ):
     cxx = tempfile.NamedTemporaryFile( suffix = ".cpp" )
     cxx.write(code.encode("utf-8"))
     cxx.flush()
+#    print("extraoptions = '%s'" % (extraoptions,) )
 #    print("cxx.name = '%s'" % (cxx.name,) )
     subprocess.check_output( f"cat {cxx.name}",shell = True)
-    subprocess.check_output( f"g++ -I. -w -std=gnu++2b -g -ggdb3 -c {cxx.name} -o {cxx.name}.o", shell = True )
+    subprocess.check_output( f"g++ -I. -w -std=gnu++2b -g -ggdb3 {extraoptions} -c {cxx.name} -o {cxx.name}.o", shell = True )
 #    subprocess.check_output( f"gcc -w -std=gnu++2b -g -ggdb3 -c {cxx.name} -o {cxx.name}.o", shell = True )
-    gdb.execute( f"add-symbol-file {cxx.name}.o 0", from_tty = False, to_string = True )
+    gdb.execute( f"add-symbol-file {cxx.name}.o {addoptions}", from_tty = False, to_string = True )
 
 def do_load( argv ):
     global type_locations
@@ -206,6 +207,19 @@ def do_create( argv ):
     """)
     print(f"Loaded type info for symbol {tname}")
 
+def do_symbolic( argv ):
+    symname = argv[0]
+    address = argv[1]
+    compile(f"""
+
+    void* {symname};
+    """,
+    f"-Wl,--defsym,{symname}={address}",
+    f"-s .bss {address}")
+    print(f"Loaded type info for symbol {symname} @{address}")
+
+
+
 def do_refresh( ):
     load_caches(True)
 
@@ -229,6 +243,8 @@ class cmd_types (vdb.command.command):
                     do_create(argv[1:])
                 elif( argv[0] == "load" ):
                     do_load(argv[1:])
+                elif( argv[0] == "symbolic" ):
+                    do_symbolic(argv[1:])
                 elif( argv[0] == "refresh" ):
                     do_refresh()
 
