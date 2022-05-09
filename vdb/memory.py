@@ -681,7 +681,8 @@ class memory_map:
 #        self.regions.sort()
         info_proc_mapping = gdb.execute("info proc mapping",False,True)
         mre = re.compile("(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(.*)")
-#        map_regions = []
+
+        
         for mapping in info_proc_mapping.splitlines():
             mapping=mapping.strip()
             m = mre.match(mapping)
@@ -691,9 +692,7 @@ class memory_map:
                 start=int(m.group(1),16)
                 end=int(m.group(2),16)
                 file=m.group(5)
-#                print(f"{start} {end} {file}")
                 mm = self.section(start,end)
-#                print("mm = '%s'" % mm )
                 size = end-start
                 if( ignore_empty.value and size == 0 ):
                     continue
@@ -705,13 +704,13 @@ class memory_map:
                     mm.file = file
                 if( file.startswith("/SYSV00000000 (deleted)") ):
                     mm.mtype = memory_type.SHM
-                elif( file == "[stack]" ):
+                elif( file.endswith( "[stack]") ):
                     mm.mtype = memory_type.FOREIGN_STACK
-                elif( file == "[heap]" ):
+                elif( file.endswith( "[heap]") ):
                     mm.mtype = memory_type.HEAP
-                elif( file == "[vsyscall]" ):
+                elif( file.endswith( "[vsyscall]") ):
                     mm.mtype = memory_type.CODE
-                elif( file == "[vdso]" ):
+                elif( file.endswith( "[vdso]") ):
                     mm.mtype = memory_type.CODE
 
 #        self.regions += map_regions
@@ -764,12 +763,13 @@ class memory_map:
                 thread.switch()
                 f = gdb.selected_frame()
                 sp = f.read_register("sp")
-#                print("sp = '%s'" % sp )
-                mm = self.find(int(sp))
-#                print("mm = '%s'" % mm )
-                if( mm ):
-                    mm.mtype = memory_type.FOREIGN_STACK
-                    mm.thread = thread
+#                mm = self.find(int(sp))
+                mms = self.regions[int(sp)]
+                for mm in mms:
+                    mm = mm[2]
+                    if( mm ):
+                        mm.mtype = memory_type.FOREIGN_STACK
+                        mm.thread = thread
         except:
             traceback.print_exc()
             pass
