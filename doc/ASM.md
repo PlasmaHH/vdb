@@ -219,6 +219,20 @@ Additionally we have (the same way as kcachegrind) synthesized events:
 In case the jumps are recorded, they will be displayed when the `c` showspec for disassembly is active as well as the
 `vdb-asm-callgrind-show-jumps` setting is enabled.
 
+## Troubleshooting
+
+### Slow output with lots of jumparrows
+
+When using pagination, gdb parses all the output and tries to properly word wrap. It does that even when word wrap is
+not necessary.
+Worse, somewhere around version 12 gdb started parsing all output always, even when pagination is not actiavted. This
+causes sometiems a factor of 120 of slowdown.
+
+To workaround this, one can enable the `vdb-asm-direct-output` setting to directly write things to stdout. This has one
+major drawback though, it means the output will not be captured by any string capture mechanism. We therefore try to do
+it only when the `dis` command does have `from_tty` set to true, but sometimes this doesn't work properly. In this case
+you might want to try disabling this workaround.
+
 ## TODO
 
 * document a few missing settings

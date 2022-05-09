@@ -118,9 +118,11 @@ dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Sourc
 callgrind_events   = vdb.config.parameter("vdb-asm-callgrind-events", "Ir,CEst", gdb_type = vdb.config.PARAM_ARRAY )
 callgrind_jumps    = vdb.config.parameter("vdb-asm-callgrind-show-jumps", True )
 header_repeat      = vdb.config.parameter("vdb-asm-header-repeat", 50 )
+direct_output      = vdb.config.parameter("vdb-asm-direct-output", True )
 
 callgrind_eventmap = {} # name to index
 callgrind_data = {}
+from_tty = None
 
 
 color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,gdb_type = vdb.config.PARAM_COLOUR_LIST )
@@ -987,7 +989,10 @@ ascii mockup:
 #        return "\n".join(ret)
 
     def print( self, showspec = "maodbnprT", context = None, marked = None, source = False ):
-        print(self.to_str(showspec, context, marked,source))
+        if( direct_output.value and from_tty ):
+            os.write(1,self.to_str(showspec, context, marked,source).encode("utf-8"))
+        else:
+            print(self.to_str(showspec, context, marked,source))
 
     def color_dot_relist( self, s, l ):
         for r,c in l:
@@ -2171,6 +2176,8 @@ part of a function, unlike the disassemble command those are right away disassem
     def do_invoke (self, argv ):
 
         try:
+            global from_tty
+            from_tty = self.from_tty
             disassemble( argv )
         except gdb.error as e:
             print("asm: %s" % e)

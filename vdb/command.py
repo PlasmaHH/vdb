@@ -37,6 +37,7 @@ class command(gdb.Command):
         command_registry[self.name] = self
         self.last_commands = None
         self.repeat = True
+        self.from_tty = None
 
     def dont_repeat( self ):
         self.repeat = False
@@ -78,6 +79,7 @@ class command(gdb.Command):
             self.do_invoke(argv)
 
     def invoke (self, arg, from_tty):
+        self.from_tty = from_tty
 #        print("arg = '%s'" % (arg,) )
 #        print("from_tty = '%s'" % (from_tty,) )
 
