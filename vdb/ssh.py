@@ -317,6 +317,8 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None, use_which = 
         if( len(xcsum) == 0 ):
             print("Timed out getting checksum. If the file is huge or the system slow, try increasing vdb-ssh-checksum-timeout-factor")
             return (None,None)
+        if( xcsum[0].startswith("md5sum") ):
+            raise RuntimeError( f"Can not generate md5sum: {xcsum}")
 #        if( len(xcsum) > 1 ):
 #            print(f"Format error, expected checksum, got:\n{ocsum}")
 #            return
@@ -350,8 +352,6 @@ def find_file( s, fname, tag, pid = 0, symlink=None, target = None, use_which = 
         os.symlink(fn,symlink)
 #        os.link(fn,symlink)
 
-#    sw.stop()
-#    print("sw.get() = '%s'" % sw.get() )
     return (fn,symlink)
 
 def run( s, argv ):
