@@ -534,7 +534,7 @@ class syscall_parameter:
         self.register = None
 
 def reg( r, rd, qm = "?", frame = None ):
-    ret = rd.get(r,None)
+    ret,r = rd.get(r,None)
     q = ""
     if( ret is None ):
         try:
@@ -545,7 +545,6 @@ def reg( r, rd, qm = "?", frame = None ):
         except:
             return (None,True)
         q = qm
-#    print(f"Register {r} not in {rd} ? {q}")
     return (str(ret),q)
 
 def param_str( syscall, val, ptype, pname, register, questionable ):
@@ -619,7 +618,7 @@ class syscall:
     def clobber( self, registers ):
         ret = registers
         for reg in self.clobbers:
-            ret.pop(reg,None)
+            ret.remove(reg)
             alt = vdb.register.altname(reg)
             if( alt is not None ):
                 ret.pop(alt,None)

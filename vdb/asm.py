@@ -227,6 +227,20 @@ class register_set:
                 return ( rv, rname )
         return ( altval, name )
 
+    def merge( self, other ):
+        for n,v in other.values.items():
+            self.set( n, v )
+
+    def copy( self, other, rlist ):
+        for rn in rlist:
+            rv,rn = other.get( rn )
+            if( rv is not None ):
+                self.set( rn,rv )
+
+    def remove( self, rname ):
+        for rname in reg_alts(rname):
+            self.values.pop(rname,None)
+
     def __str__( self ):
         ret = "{"
         for r,v in self.values.items():
@@ -286,14 +300,20 @@ class asm_arg( ):
     def value( self, registers ):
         if( self.register is not None ):
             val,_ = registers.get( self.register )
-            if( val is not None and self.offset != 0 ):
-                val += self.offset
-            return val
+            if( val is not None  ):
+                if( self.offset != 0 ):
+                    val += self.offset
+                if( self.dereference ):
+                    dval = vdb.memory.read(val,vdb.arch.pointer_size//8)
+                    if( dval is not None ):
+                        dval = dval.cast("P")[0]
+                    return ( dval, val )
+            return ( val, None )
 
         if( self.immediate is not None ):
-            return self.immediate
+            return ( self.immediate, None )
 
-        return None
+        return ( None, None )
 
     def __str__( self ):
         ret = ""
@@ -1275,6 +1295,8 @@ x86_return_mnemonics = set (["ret","retq","iret"])
 x86_call_mnemonics = set(["call","callq","int"])
 x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd" ])
 
+call_preserved_registers = [ "rbx", "rsp", "rbp", "r12", "r13", "r14", "r15" ]
+
 arm_conditional_suffixes = [ "eq","ne","cs","hs","cc","lo","mi","pl","vs","vc","hi","ls","ge","lt","gt","le" ]
 arm_unconditional_jump_mnemonics = set([ "b", "bl", "blx" ] )
 arm_conditional_jump_mnemonics = set()
@@ -1371,20 +1393,27 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None )
         rbpval = int(rbpval)
 #    print("rbpval = '%s'" % (rbpval,) )
 
-    lng.initial_registers = function_registers.get(frame.function().name,register_set() )
-    print("lng.initial_registers = '%s'" % (lng.initial_registers,) )
+    lng.initial_registers.merge( function_registers.get(frame.function().name,register_set() ) )
+#    print("lng.initial_registers = '%s'" % (lng.initial_registers,) )
 
     if( debug.value ):
         print("symlist = '%s'" % (symlist,) )
     for b in symlist:
         if( debug.value ):
             print("b = '%s'" % (b,) )
+            print("b.type = '%s'" % (b.type,) )
+            print("b.name = '%s'" % (b.name,) )
+            try:
+                print("b.type.fields() = '%s'" % (b.type.fields(),) )
+            except:
+                print("fields() failed")
         bval = None
         baddr = None
         try:
             if( pval is None ):
                 bval = b.value(frame)
                 baddr= bval.address
+#                print("bval = '%s'" % (bval,) )
             else:
                 if( b.name is None ): # ignore anonymous structs/unions etc. for now
                     continue
@@ -1396,19 +1425,26 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None )
             traceback.print_exc()
             pass
 
-        
         try:
-            ret += gather_vars( frame, lng, b.type.fields(), bval, b.name + ".", [] )
+            bval = bval.dereference()
+#            print("bval.type.fields() = '%s'" % (bval.type.fields(),) )
+            ret += gather_vars( frame, lng, bval.type.fields() , bval, b.name + "->", [] )
+        except:
+#            traceback.print_exc()
+            pass
+        try:
 #            for f in b.type.fields():
 #                print("f.name = '%s'" % (f.name,) )
 #                print("bval[f.name] = '%s'" % (bval[f.name],) )
+            ret += gather_vars( frame, lng, b.type.fields(), bval, b.name + ".", [] )
         except:
 #            traceback.print_exc()
             pass
 
-#        print("prefix = '%s'" % (prefix,) )
-#        print("b.name = '%s'" % (b.name,) )
-#        print("baddr = '%s'" % (baddr,) )
+        if( debug.value ):
+            print("prefix = '%s'" % (prefix,) )
+            print("b.name = '%s'" % (b.name,) )
+            print("baddr = '%s'" % (baddr,) )
         if( baddr is not None ):
             lng.var_addresses[int(baddr)] = prefix + b.name
 
@@ -1447,9 +1483,13 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None )
                         ret += " = <...>"
                 ret += ","
         except:
-            traceback.print_exc()
+#            traceback.print_exc()
             pass
+    if( debug.value ):
+        print("ret = '%s'" % (ret,) )
+        print("lng.var_addresses = '%s'" % (lng.var_addresses,) )
     return ret
+
 
 ilinere = re.compile('Line ([0-9]*) of "(.*)"')
 
@@ -1737,7 +1777,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #            print("b.value(frame) = '%s'" % (b.value(frame),) )
 #        print("b.value(frame).address = '%s'" % (b.value(frame).address,) )
     ret.var_addresses = function_vars.get( ret.function, {} )
-    print("ret.var_addresses = '%s'" % (ret.var_addresses,) )
+#    print("ret.var_addresses = '%s'" % (ret.var_addresses,) )
     ret.var_expressions = {}
 
     if( fun is None ):
@@ -1785,51 +1825,13 @@ def vt_flow_mov( ins, frame, possible_registers ):
         # the new register value will be...
         if( not to.dereference ):
             # We ignore any (initial frame setup) move of rsp to rbp to keep the value intact
+            # XXX if we do it that way we can also from here on (backwards?) assume rsp=rbp. (likely just after it we
+            # sub something from rsp, we should support basic calculations too)
             if( frm.register != "rsp" and to.register != "rbp" ):
-                frmval = frm.value( possible_registers )
+                frmval,_ = frm.value( possible_registers )
                 possible_registers.set( to.register, frmval )
-                ins.possible_register_sets.append(possible_registers)
-    else:
-        m = movre.match(ins.args_string)
-        if( m is not None ):
-            offset = m.group(1)
-            mreg = m.group(2)[1:]
-            treg = m.group(3)[1:]
-            mregv,_ = possible_registers.get(mreg)
-            print("mregv = '%s'" % (mregv,) )
-            if( mregv is None and ( mreg == "rbp" or mreg == "ebp" ) ):
-                mregv = frame.read_register(mreg)
-            if( mregv is not None ):
-                print("type(mregv) = '%s'" % (type(mregv),) )
-                print("mregv.type = '%s'" % (mregv.type,) )
-                if( treg[0] == "e" ):
-                    expr = f"*((uint32_t*)(({mregv.type})({offset} + {int(mregv)})))"
-                else:
-                    expr = f"*(({mregv.type}*)(({mregv.type})({offset} + {int(mregv)})))"
-                print("expr = '%s'" % (expr,) )
-                tval = gdb.parse_and_eval(expr)
-                print("tval = '%s'" % (tval,) )
-            if( tval is not None ):
-                    possible_registers.set( treg, tval )
-                    ins.possible_register_sets.append(possible_registers)
-                    if( debug_registers.value ):
-                        ins.add_extra(f"mem mov into {treg}")
-        else:
-            args = ins.args #.split(",")
-#                print("len(args) = '%s'" % (len(args),) )
-            # do we get into trouble with at&t and intel syntax here?
-            if( len(args) == 2 ):
-#                    print("args[0] = '%s'" % (args[0],) )
-#                    print("args[1] = '%s'" % (args[1],) )
-                if( args[0][0] == "$" and args[1][0] == "%" ):
-                    regname = args[1][1:]
-                    regval = vdb.util.xint(args[0][1:])
-                    possible_registers.set(regname,regval)
-                elif( args[0][0] == "%" and args[1][0] == "%" ):
-                    regfrom = args[0][1:]
-                    regto   = args[1][1:]
-                    reg_reg( possible_registers, regfrom, regto )
-                ins.possible_register_sets.append(possible_registers)
+        ins.possible_register_sets.append(possible_registers)
+ 
     if( debug.value ):
         print("possible_registers = '%s'" % (possible_registers,) )
         print("ins.possible_register_sets = '%s'" % (ins.possible_register_sets,) )
@@ -1842,7 +1844,7 @@ def register_flow( lng, frame ):
         i.extra = []
 
     ins = lng.instructions[0]
-    print("lng.var_addresses = '%s'" % (lng.var_addresses,) )
+#    print("lng.var_addresses = '%s'" % (lng.var_addresses,) )
     # Try to follow execution path to figure out possible register values (and maybe later flags)
 #    possible_registers = {}
     possible_registers = lng.initial_registers
@@ -1909,7 +1911,7 @@ def register_flow( lng, frame ):
                     possible_registers.set( treg, tval )
                     ins.possible_register_sets.append(possible_registers)
 
-        elif( ins.mnemonic == "mov" ):
+        elif( ins.mnemonic.startswith( "mov" )):
             vt_flow_mov( ins, frame, possible_registers )
         elif( ins.mnemonic == "syscall" ):
 #            print("possible_registers = '%s'" % (possible_registers,) )
@@ -1933,7 +1935,9 @@ def register_flow( lng, frame ):
         if( ins.mnemonic in set(["call","ret"]) ):
             if( ins.mnemonic == "call" ):
                 ins.possible_register_sets.append(possible_registers)
-            possible_registers = register_set()
+            npr = register_set()
+            npr.copy( possible_registers, call_preserved_registers )
+            possible_registers = npr
 #            ins.add_extra("DELETED PR")
 
         elif( len(ins.targets) > 0 ):
@@ -1961,38 +1965,31 @@ def register_flow( lng, frame ):
                     ch = vdb.pointer.chain( xr, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
                     ins.reference[ri] = ch[0]
 
-        if( ins.args is not None ):
+        printed_addrs = set()
+        if( len(ins.arguments) > 1 ):
             cnt = 0
-            for a in ins.args:
-#                ins.add_extra(f"ARG {a}")
+
+            for aidx in range(0,len(ins.args)):
+                a = ins.args[aidx]
+                arg = ins.arguments[aidx]
+
                 pre=""
+                av = lng.var_expressions.get(a,None)
+                if( av is not None ):
+                    if( cnt > 0 ):
+                        pre = ","
+                    ins.reference.append( pre + vdb.color.color(av,color_var.value) + "@" + vdb.color.color(a,color_location.value) )
+                    cnt += 1
+#                ins.add_extra(f"ARG {a}")
                 try:
-                    if( a[0] == "$" ):
-                        a = a[1:]
-                    if( a[0] == "%" ):
-                        pr = a[1:]
-#                        print("pr = '%s'" % (pr,) )
-                        prv = None
-                        for prs in ins.possible_register_sets:
-#                            print("prs = '%s'" % (prs,) )
-                            for alt in reg_alts(pr):
-#                                print("alt = '%s'" % (alt,) )
-                                prv = prs.get(alt,None)
-#                                print("prv = '%s'" % (prv,) )
-                                if( prv is not None ):
-#                                    print("prv = '%s'" % (prv,) )
-                                    break
-                            if( prv is not None ):
-                                break
-#                        print("ins.possible_register_sets = '%s'" % (ins.possible_register_sets,) )
-#                        print(f" {pr} = {prv}")
-#                        print("a = '%s'" % (a,) )
-                        if( prv is not None ):
-                            addr = int(prv)
-                    else:
-                        addr = vdb.util.rxint(a)
-#                    print("a = '%s'" % (a,) )
-#                    print("addr = '%s'" % (addr,) )
+                    for prs in ins.possible_register_sets:
+                        argval,argaddr= arg.value(prs)
+                        if( argval is not None or argaddr is not None ):
+                            break
+                    addr = argaddr
+                    if( addr in printed_addrs ):
+                        continue
+                    printed_addrs.add(addr)
 
                     av = lng.var_addresses.get(addr,None)
                     if( av is not None ):
@@ -2001,15 +1998,16 @@ def register_flow( lng, frame ):
                             pre=","
                         ins.reference.append( pre + vdb.color.color(av,color_var.value) + "@" + vdb.color.color(addr,color_location.value) )
                         cnt += 1
+                        if( argval is not None ):
+#                            print("argval = '%s'" % (argval,) )
+                            val = f"{argval:#0x}"
+                            if( cnt > 0 ):
+                                pre=","
+                            ins.reference.append( pre + vdb.color.color(av,color_var.value) + "=" + vdb.color.color(val,color_location.value) )
+                            cnt += 1
                 except:
-#                    traceback.print_exc()
-                    av = lng.var_expressions.get(a,None)
-                    if( av is not None ):
-                        if( cnt > 0 ):
-                            pre = ","
-                        ins.reference.append( pre + vdb.color.color(av,color_var.value) + "@" + vdb.color.color(a,color_location.value) )
-                        cnt += 1
-#                        ins.add_extra(f"EVAR {av}")
+                    traceback.print_exc()
+                    pass
 
         
 
