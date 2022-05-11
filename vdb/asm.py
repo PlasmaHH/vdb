@@ -270,6 +270,7 @@ class listing( ):
         self.var_addresses = None
         self.var_expressions = None
         self.function_header = None
+        self.initial_registers = {}
 
     def sort( self ):
         self.instructions.sort( key = lambda x:( x.address, x ) )
@@ -1223,6 +1224,8 @@ def split_args( in_args ):
     return ret
 
 def gather_vars( frame, lng, symlist, pval = None, prefix = "" ):
+#    vdb.util.bark() # print("BARK")
+#    vdb.util.bark(-1) # print("BARK")
     ret = ""
 
     rbp = "rbp" # adapt for other archs
@@ -1232,6 +1235,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "" ):
         rbpval = int(rbpval)
 #    print("rbpval = '%s'" % (rbpval,) )
 
+#    print("symlist = '%s'" % (symlist,) )
     for b in symlist:
         bval = None
         baddr = None
@@ -1240,10 +1244,6 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "" ):
                 bval = b.value(frame)
                 baddr= bval.address
             else:
-#                print("prefix = '%s'" % (prefix,) )
-#                print("b.name = '%s'" % (b.name,) )
-#                print("pval = '%s'" % (pval,) )
-#                print("b.name = '%s'" % (b.name,) )
                 if( b.name is None ): # ignore anonymous structs/unions etc. for now
                     continue
                 if( b.is_base_class ):
@@ -1395,6 +1395,12 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
         fm=re.search(funcre,line)
         if( fm ):
             ret.function = fm.group(1)
+            try:
+                # try to demangle
+                fsym = gdb.lookup_symbol(ret.function)
+                ret.function = fsym[0].name
+            except:
+                pass
             current_function = "<" + fm.group(1)
             continue
         rr = re.search(rangere,line)
@@ -1562,6 +1568,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     fun = frame.function()
 #    print("fun.name = '%s'" % (fun.name,) )
 #    print("ret.function = '%s'" % (ret.function,) )
+#    print("ret.function = '%s'" % (ret.function,) )
 #    print("fun.symtab = '%s'" % (fun.symtab,) )
     # only extract names from the block when we disassemble the current frame
     if( fun is not None and fun.name == ret.function ):
@@ -1603,6 +1610,7 @@ def register_flow( lng, frame ):
         i.extra = []
 
     ins = lng.instructions[0]
+    print("lng.var_addresses = '%s'" % (lng.var_addresses,) )
     # Try to follow execution path to figure out possible register values (and maybe later flags)
     possible_registers = {}
 #    for ins in ret.instructions:
