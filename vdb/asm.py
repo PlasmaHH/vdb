@@ -297,16 +297,26 @@ class asm_arg( ):
 
     # registers is a register_set object to possible get the value from
     # XXX At the moment we do not support prefixes
-    def value( self, registers ):
+    def value( self, registers, target = None ):
         if( self.register is not None ):
             val,_ = registers.get( self.register )
+#            print("self.register = '%s'" % (self.register,) )
+#            print("val = '%s'" % (val,) )
             if( val is not None  ):
                 if( self.offset != 0 ):
                     val += self.offset
                 if( self.dereference ):
-                    dval = vdb.memory.read(val,vdb.arch.pointer_size//8)
+                    castto = "P"
+                    if( target is None ):
+                        dval = vdb.memory.read(val,vdb.arch.pointer_size//8)
+                    else:
+                        if( target.register[0] == "r" ):
+                            dval = vdb.memory.read(val,8)
+                        else:
+                            dval = vdb.memory.read(val,4)
+                            castto = "I"
                     if( dval is not None ):
-                        dval = dval.cast("P")[0]
+                        dval = dval.cast(castto)[0]
                     return ( dval, val )
             return ( val, None )
 
@@ -1472,10 +1482,11 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None )
                     if( debug.value ):
                         print("regindex = '%s'" % (regindex,) )
                         print("reglist[regindex] = '%s'" % (reglist[regindex],) )
+                        print("bval = '%s'" % (bval,) )
                         print("bval.address = '%s'" % (bval.address,) )
                         print("type(lng.initial_registers) = '%s'" % (type(lng.initial_registers),) )
 #                    lng.initial_registers[reglist[regindex]] = int(bval.address)
-                    lng.initial_registers.set( reglist[regindex] , int(bval.address))
+                    lng.initial_registers.set( reglist[regindex] , int(bval))
                     if( debug.value ):
                         print("lng.initial_registers = '%s'" % (lng.initial_registers,) )
                     regindex += 1
@@ -1983,6 +1994,7 @@ def register_flow( lng, frame ):
         if( len(ins.arguments) > 1 ):
             cnt = 0
 
+            target = ins.arguments[1]
             for aidx in range(0,len(ins.args)):
                 a = ins.args[aidx]
                 arg = ins.arguments[aidx]
@@ -1997,7 +2009,7 @@ def register_flow( lng, frame ):
 #                ins.add_extra(f"ARG {a}")
                 try:
                     for prs in ins.possible_register_sets:
-                        argval,argaddr= arg.value(prs)
+                        argval,argaddr= arg.value(prs,target)
                         if( argval is not None or argaddr is not None ):
                             break
                     addr = argaddr
