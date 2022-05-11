@@ -49,6 +49,16 @@ def xint( s ):
             raise Exception("%s can not be parsed as integer, neither base 10 or 16" % s )
     return r
 
+def rxint( s ):
+    try:
+        r = int(s)
+    except:
+        try:
+            r = int(s,16)
+        except:
+            raise Exception("%s can not be parsed as integer, neither base 10 or 16" % s )
+    return r
+
 class hexint(int):
 
     def __new__(cls,val):
