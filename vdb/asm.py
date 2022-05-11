@@ -376,6 +376,18 @@ class instruction( ):
 #        print(f"gen_extra({self.mnemonic}) {self}")
         for prs in self.possible_register_sets:
             self.add_extra(f"REG {prs}")
+            args = ""
+            for a in self.arguments:
+                av,aa = a.value(prs)
+                if( av is not None ):
+                    av = f"{av:#0x}"
+                if( aa is not None ):
+                    aa = f"{aa:#0x}"
+                args += f",({av},@{aa})"
+                if( a.target ):
+                    args += "T"
+
+            self.add_extra(f"ARG {args}")
 
     def _gen_debug( self ):
         self.add_extra( f"self.args      : '{self.args}'")
@@ -1821,16 +1833,17 @@ def vt_flow_mov( ins, frame, possible_registers ):
     frm = ins.arguments[0]
     to  = ins.arguments[1]
 
-    if( True ):
-        # the new register value will be...
-        if( not to.dereference ):
-            # We ignore any (initial frame setup) move of rsp to rbp to keep the value intact
-            # XXX if we do it that way we can also from here on (backwards?) assume rsp=rbp. (likely just after it we
-            # sub something from rsp, we should support basic calculations too)
-            if( frm.register != "rsp" and to.register != "rbp" ):
-                frmval,_ = frm.value( possible_registers )
-                possible_registers.set( to.register, frmval )
-        ins.possible_register_sets.append(possible_registers)
+    # the new register value will be...
+    if( not to.dereference ):
+        # We ignore any (initial frame setup) move of rsp to rbp to keep the value intact
+        # XXX if we do it that way we can also from here on (backwards?) assume rsp=rbp. (likely just after it we
+        # sub something from rsp, we should support basic calculations too)
+        if( frm.register != "rsp" and to.register != "rbp" ):
+            frmval,_ = frm.value( possible_registers )
+            possible_registers.set( to.register, frmval )
+    if( ins.next is not None ):
+        possible_registers.set( "pc", ins.next.address )
+    ins.possible_register_sets.append(possible_registers)
  
     if( debug.value ):
         print("possible_registers = '%s'" % (possible_registers,) )
@@ -1992,16 +2005,24 @@ def register_flow( lng, frame ):
                     printed_addrs.add(addr)
 
                     av = lng.var_addresses.get(addr,None)
-                    if( av is not None ):
+
+#                    print("arg = '%s'" % (arg,) )
+#                    print("addr = '%s'" % (addr,) )
+#                    print("argval = '%s'" % (argval,) )
+                    if( addr is not None ):
                         addr = f"{addr:#0x}"
                         if( cnt > 0 ):
                             pre=","
+                        if( av is None ):
+                            pre = ""
+                            av = ""
                         ins.reference.append( pre + vdb.color.color(av,color_var.value) + "@" + vdb.color.color(addr,color_location.value) )
                         cnt += 1
-                        if( argval is not None ):
+                        if( argval is not None and not arg.target):
+#                        if( argval is not None ):
 #                            print("argval = '%s'" % (argval,) )
                             val = f"{argval:#0x}"
-                            if( cnt > 0 ):
+                            if( cnt > 0 and len(av) > 0 ):
                                 pre=","
                             ins.reference.append( pre + vdb.color.color(av,color_var.value) + "=" + vdb.color.color(val,color_location.value) )
                             cnt += 1
@@ -2317,13 +2338,13 @@ def add_variable( argv ):
     if( fv is None ):
         fv = register_set()
         function_vars[fun] = fv
-    fv[vaddr] = vname
+    fv.set(vname,vaddr)
 
     fr = function_registers.get(fun,None)
     if( fr is None ):
         fr = register_set()
         function_registers[fun] = fr
-    fr[vreg] = vaddr
+    fr.set(vreg, vaddr)
 
     print("function_vars = '%s'" % (function_vars,) )
     print("function_registers = '%s'" % (function_registers,) )
