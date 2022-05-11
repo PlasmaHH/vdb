@@ -424,6 +424,7 @@ enable <id>           - enables the (previously disabled) board with <id>
 disable <id>          - disables the board with <id> (no longer outputs, but keeps connection)
 cls <id>              - Enables clearing screen (^L) before sending everything
 nocls <id>            - Don't cleare screen before sending
+modify <id> <command> - change the command of the given ID
 show                  - Show an overview over the existing dashboards and their targets
 
 The command will be run before displaying a prompt and then output to the dashboard chosen

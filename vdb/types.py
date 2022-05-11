@@ -210,9 +210,15 @@ def do_create( argv ):
 def do_symbolic( argv ):
     symname = argv[0]
     address = argv[1]
+    typ = None
+    if( len(argv) > 2 ):
+        typ = " ".join(argv[2:])
+    else:
+        typ = "void*";
+
     compile(f"""
 
-    void* {symname};
+    {typ} {symname};
     """,
     f"-Wl,--defsym,{symname}={address}",
     f"-s .bss {address}")
