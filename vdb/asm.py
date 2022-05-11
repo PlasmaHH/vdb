@@ -1793,14 +1793,15 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     ret.var_expressions = {}
 
     if( fun is None ):
-        funhead = "????("
+        funhead = "????"
     else:
-        funhead = fun.print_name + "("
+        funhead = ret.function
 
-    funhead += gather_vars( frame, ret, block )
+    gv = gather_vars( frame, ret, block )
 
-    funhead = funhead[:-1]
-    funhead += ")"
+    if( len(gv) > 0 ):
+        funhead += "(" + gv + ")"
+
     ret.function_header = funhead
 #    print("var_addresses = '%s'" % (ret.var_addresses,) )
 #    print("var_expressions = '%s'" % (ret.var_expressions,) )
@@ -2336,9 +2337,10 @@ def add_variable( argv ):
     
     fv = function_vars.get(fun,None)
     if( fv is None ):
-        fv = register_set()
+        fv = {}
         function_vars[fun] = fv
-    fv.set(vname,vaddr)
+#    fv.set(vname,vaddr)
+    fv[vaddr] = vname
 
     fr = function_registers.get(fun,None)
     if( fr is None ):
