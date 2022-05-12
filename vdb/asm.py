@@ -1879,8 +1879,15 @@ def vt_flow_mov( ins, frame, possible_registers ):
         if( ins.previous is not None ):
             print("ins.previous.possible_register_sets = '%s'" % (ins.previous.possible_register_sets,) )
 
+def gen_vtable( ):
+    global flow_vtable
+    flow_vtable["mov"] = vt_flow_mov
 
 def register_flow( lng, frame ):
+    global flow_vtable
+    if( len(flow_vtable) == 0 ):
+        gen_vtable()
+
     for i in lng.instructions:
         i.passes = 0
         i.possible_register_sets = []
@@ -1926,8 +1933,11 @@ def register_flow( lng, frame ):
                 if( m is not None ):
                     ins.constants.append(m.group(0)[1:])
 
-
-        if( ins.mnemonic == "xor" ):
+        fun = flow_vtable.get(ins.mnemonic,None)
+        if( fun is not None ):
+            fun( ins, frame, possible_registers )
+        ## START CONVERT VTABLE
+        elif( ins.mnemonic == "xor" ):
             args = ins.args
             if( len(args) == 2 ):
                 # xor zeroeing out a register
@@ -1960,8 +1970,8 @@ def register_flow( lng, frame ):
                     possible_registers.set( treg, tval )
                     ins.possible_register_sets.append(possible_registers)
 
-        elif( ins.mnemonic.startswith( "mov" )):
-            vt_flow_mov( ins, frame, possible_registers )
+#        elif( ins.mnemonic.startswith( "mov" )):
+#            vt_flow_mov( ins, frame, possible_registers )
         elif( ins.mnemonic == "syscall" ):
 #            print("possible_registers = '%s'" % (possible_registers,) )
 #            ins._gen_extra()
@@ -1979,6 +1989,14 @@ def register_flow( lng, frame ):
                 else:
                     ins.add_extra(f"syscall[{rax}]()")
 #                    ins.add_extra(f"{possible_registers}")
+        else:
+            for mn,fun in flow_vtable.items():
+                if( ins.mnemonic.startswith(mn) ):
+#                    print(f"{mn} => {ins.mnemonic}")
+                    flow_vtable[ins.mnemonic] = fun
+                    fun( ins, frame, possible_registers )
+                    break
+        ## END CONVERT VTABLE
         # make sure to do this after syscall is handled
 #        print("ins.mnemonic = '%s'" % (ins.mnemonic,) )
         if( ins.mnemonic in set(["call","ret"]) ):
