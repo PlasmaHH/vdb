@@ -314,6 +314,8 @@ def read( ptr, count = 1 ):
     else:
         addr=ptr
     try:
+        if( addr < 0 ):
+            addr += 2** vdb.arch.pointer_size
         result = gdb.selected_inferior().read_memory(addr, count)
     except gdb.error:
         pass

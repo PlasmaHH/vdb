@@ -198,6 +198,11 @@ class register_set:
     def __init__( self ):
         self.values = {}
 
+    def clone( self ):
+        ret = register_set()
+        ret.values = self.values.copy()
+        return ret
+
     # Sets the value of a register, possible removing all alternative names that may be present
     def set( self, name, value, remove_alts = True ):
         if( remove_alts ):
@@ -302,12 +307,14 @@ class asm_arg( ):
             val,_ = registers.get( self.register )
 #            print("self.register = '%s'" % (self.register,) )
 #            print("val = '%s'" % (val,) )
+#            print("self.offset = '%s'" % (self.offset,) )
             if( val is not None  ):
                 if( self.offset != 0 ):
                     val += self.offset
                 if( self.dereference ):
                     castto = "P"
                     if( target is None ):
+#                        print("val = '%s'" % (val,) )
                         dval = vdb.memory.read(val,vdb.arch.pointer_size//8)
                     else:
                         if( target.register[0] == "r" ):
@@ -378,6 +385,7 @@ class instruction( ):
         self.file_line = None
         self.possible_register_sets = []
         self.next = None
+        self.previous = None
         self.passes = 0
         self.file = None
         self.line = None
@@ -1761,6 +1769,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
             if( oldins is not None and oldins.mnemonic != "ret" ):
                 oldins.next = ins
+                ins.previous = oldins
             oldins = ins
             continue
         if( line in set(["End of assembler dump."]) ):
@@ -1841,6 +1850,9 @@ def vt_flow_mov( ins, frame, possible_registers ):
         print("ins.arguments = '%s'" % (ins.arguments,) )
 
         print("possible_registers = '%s'" % (possible_registers,) )
+        print("ins.possible_register_sets = '%s'" % (ins.possible_register_sets,) )
+        if( ins.previous is not None ):
+            print("ins.previous.possible_register_sets = '%s'" % (ins.previous.possible_register_sets,) )
 
     frm = ins.arguments[0]
     to  = ins.arguments[1]
@@ -1860,6 +1872,8 @@ def vt_flow_mov( ins, frame, possible_registers ):
     if( debug.value ):
         print("possible_registers = '%s'" % (possible_registers,) )
         print("ins.possible_register_sets = '%s'" % (ins.possible_register_sets,) )
+        if( ins.previous is not None ):
+            print("ins.previous.possible_register_sets = '%s'" % (ins.previous.possible_register_sets,) )
 
 
 def register_flow( lng, frame ):
@@ -1872,28 +1886,34 @@ def register_flow( lng, frame ):
 #    print("lng.var_addresses = '%s'" % (lng.var_addresses,) )
     # Try to follow execution path to figure out possible register values (and maybe later flags)
 #    possible_registers = {}
-    possible_registers = lng.initial_registers
+    possible_registers = lng.initial_registers.clone()
     
     rbp = frame.read_register("rbp")
     if( rbp  is not None ):
         possible_registers.set( "rbp", rbp )
 
 #    for ins in ret.instructions:
-    flowstack = [None]
+    flowstack = [ (None,None) ]
 
     leare = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
     constre = re.compile("\$0x[0-9a-f]*")
     hexre = re.compile("0x[0-9a-f]*$")
 
+
     passlimit = 2
+    next = None
+    previous = None
+
     while ins is not None:
         ins.passes += 1
         if( ins.passes >= passlimit ):
             next = None
         else:
             next = ins.next
-        if( len(ins.possible_register_sets) > 0 ):
-            possible_registers = ins.possible_register_sets[-1]
+
+        if( previous is not None ):
+            if( len(previous.possible_register_sets) > 0 ):
+                possible_registers = previous.possible_register_sets[-1].clone()
 
         if( ins.args is not None ):
             args = ins.args #.split(",")
@@ -1972,7 +1992,7 @@ def register_flow( lng, frame ):
             for tga in ins.targets:
                 tgt = lng.by_addr.get(tga,None)
                 if( tgt is not None and tgt.passes < passlimit ):
-                    flowstack.append(tgt)
+                    flowstack.append( (tgt,ins) )
                     tgt.possible_register_sets.append(possible_registers)
 
         if( len(ins.constants) > 0 ):
@@ -2008,7 +2028,9 @@ def register_flow( lng, frame ):
                     cnt += 1
 #                ins.add_extra(f"ARG {a}")
                 try:
-                    for prs in ins.possible_register_sets:
+                    # use the register set for the previous one, because they are the instructions outcome and we want
+                    # to check for the parameters that get into the instruction
+                    for prs in ins.previous.possible_register_sets:
                         argval,argaddr= arg.value(prs,target)
                         if( argval is not None or argaddr is not None ):
                             break
@@ -2040,16 +2062,20 @@ def register_flow( lng, frame ):
                             ins.reference.append( pre + vdb.color.color(av,color_var.value) + "=" + vdb.color.color(val,color_location.value) )
                             cnt += 1
                 except:
-                    traceback.print_exc()
+                    if( debug.value ):
+                        traceback.print_exc()
                     pass
 
         
 
         if( debug_registers.value ):
             ins._gen_extra()
+
+        previous = ins
         ins = next
+
         if( ins is None ):
-            ins = flowstack.pop()
+            ins,previous = flowstack.pop()
 
 #        print("ins.address = '%s'" % (ins.address,) )
 #        print("ins.passes = '%s'" % (ins.passes,) )
@@ -2334,6 +2360,7 @@ def load_callgrind( argv ):
 function_vars = {}
 function_registers = {}
 
+# XXX determine the type (or pass it along) and descend into subfields
 def add_variable( argv ):
     if( len(argv) != 3 ):
         print("Format is: dis/v <vname> <register> <vaddr>")
