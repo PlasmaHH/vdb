@@ -1407,6 +1407,16 @@ def split_args( in_args ):
         print("ret = '%s'" % (ret,) )
     return ret
 
+class fake_symbol( gdb.Value ):
+
+    def __init__( self, val, name ):
+        super().__init__( val )
+        self.name = name
+        self.is_base_class = False
+
+    def value( self, frame ):
+        return frame.read_var( self.name )
+
 def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None ):
     ret = ""
     regindex = -1
@@ -1808,7 +1818,9 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #        if( b.value(frame).type.tag is None ):
 #            print("b.value(frame) = '%s'" % (b.value(frame),) )
 #        print("b.value(frame).address = '%s'" % (b.value(frame).address,) )
-    ret.var_addresses = function_vars.get( ret.function, {} )
+    
+    va = function_vars.get( ret.function, {} ).copy()
+    ret.var_addresses = va.copy()
 #    print("ret.var_addresses = '%s'" % (ret.var_addresses,) )
     ret.var_expressions = {}
 
@@ -1816,6 +1828,24 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
         funhead = "????"
     else:
         funhead = ret.function
+
+#    print("va = '%s'" % (va,) )
+    for a,n in va.items():
+#        print("a = '%s'" % (a,) )
+        try:
+            vv = frame.read_var(n)
+#            print("vv = '%s'" % (vv,) )
+#            print("vv.type = '%s'" % (vv.type,) )
+            # XXX do we want to output this anywhere? 
+#            gather_vars( frame, ret, vv.type.fields(), vv, n + "." )
+            gather_vars( frame, ret, [ fake_symbol(vv,n) ], None, n + "." )
+
+        except TypeError:
+            pass
+        except ValueError:
+#            print(f"{n} not found in frame")
+            # variable not recognized
+            pass
 
     gv = gather_vars( frame, ret, block )
 
@@ -1879,9 +1909,13 @@ def vt_flow_mov( ins, frame, possible_registers ):
         if( ins.previous is not None ):
             print("ins.previous.possible_register_sets = '%s'" % (ins.previous.possible_register_sets,) )
 
+def vt_flow_sub( ins, frame, possible_registers ):
+    pass
+
 def gen_vtable( ):
     global flow_vtable
     flow_vtable["mov"] = vt_flow_mov
+    flow_vtable["sub"] = vt_flow_sub
 
 def register_flow( lng, frame ):
     global flow_vtable
