@@ -191,6 +191,32 @@ def next_index( ):
     ix += 1
     return ix
 
+# similar to register_set a wrapper around a dict that stores possible flag values
+class flag_set:
+
+    def __init__( self ):
+        self.flags = {}
+
+    def set( self, name, value ):
+        self.flags[name] = value
+
+    def get( self, name ):
+        return self.flags.get(name,None)
+
+    def clone( self ):
+        ret = flag_set()
+        ret.flags = self.flags.copy()
+        return ret
+
+    def __str__( self ):
+        ret = "{"
+        for f,v in self.flags.items():
+            ret += f"{f}={v},"
+        ret += "}"
+        return ret
+
+    def __repr__( self ):
+        return str(self)
 
 # a wrapper around a register dict that can deal with alternative register names
 class register_set:
@@ -265,16 +291,20 @@ class asm_arg( ):
         self.immediate = None
         self.dereference = None
         self.prefix = None
-        self.offset = 0
+        self.offset = None
         self.target = target
         self.jmp_target = None
+        self.multiplier = None
+        self.add_register = None
         try:
             self.parse(arg)
         except:
+            traceback.print_exc()
             print("Failed to parse " + arg)
             raise
 
     def parse( self, arg ):
+#        print("arg = '%s'" % (arg,) )
         oarg = arg
         if( arg[-1] == ")" ):
             self.dereference = True
@@ -282,13 +312,30 @@ class asm_arg( ):
                 arg = arg[1:-1]
             else:
                 argv = arg.split("(")
+#                print("argv = '%s'" % (argv,) )
                 po = argv[0]
+#                print("po = '%s'" % (po,) )
                 if( po[0] == "%" ):
                     if( po[-1] == ":" ):
                         self.prefix = po[1:-1]
                 else:
                     self.offset = vdb.util.rxint(po)
+#                    print("self.offset = '%s'" % (self.offset,) )
                 arg = argv[1][:-1]
+#                print("arg = '%s'" % (arg,) )
+                marg = arg.split(",")
+#                print("marg = '%s'" % (marg,) )
+                if( len(marg) == 2 ):
+                    self._check(oarg)
+                    pass
+                elif( len(marg) == 3):
+                    if( len(marg[0]) > 0 ):
+                        self.add_register = marg[0][1:]
+#                        print("self.add_register = '%s'" % (self.add_register,) )
+                    self.register = marg[1][1:]
+                    self.multiplier = vdb.util.rxint(marg[2])
+                    self._check(oarg)
+                    return
 
         if( arg[0] == "%" ):
             self.register = arg[1:]
@@ -298,13 +345,14 @@ class asm_arg( ):
 
         if( arg.startswith("0x") ):
             self.jmp_target = vdb.util.rxint( arg )
+        self._check(oarg)
 
-
+    def _check(self,oarg):
         if( str(self) != oarg ):
             print("oarg = '%s'" % (oarg,) )
-            print("arg = '%s'" % (arg,) )
             print("str(self) = '%s'" % (str(self),) )
             self._dump()
+            raise RuntimeError("Parser self check failed")
 
     # registers is a register_set object to possible get the value from
     # XXX At the moment we do not support prefixes
@@ -315,7 +363,7 @@ class asm_arg( ):
 #            print("val = '%s'" % (val,) )
 #            print("self.offset = '%s'" % (self.offset,) )
             if( val is not None  ):
-                if( self.offset != 0 ):
+                if( self.offset is not None ):
                     val += self.offset
                 if( self.dereference ):
                     castto = "P"
@@ -342,10 +390,18 @@ class asm_arg( ):
         ret = ""
         if( self.prefix is not None ):
             ret += f"%{self.prefix}:"
-        if( self.offset != 0 ):
+        if( self.offset is not None ):
             ret += f"{self.offset:#0x}"
         if( self.dereference ):
-            ret += "(%" + self.register + ")"
+            ret += "("
+            if( self.multiplier is not None ):
+                if( self.add_register is not None ):
+                    ret += "%" + self.add_register
+                ret += ","
+            ret += "%" + self.register
+            if( self.multiplier is not None ):
+                ret += f",{self.multiplier}"
+            ret += ")"
         elif( self.register is not None ):
             ret += "%" + self.register
         if( self.immediate is not None ):
@@ -359,7 +415,7 @@ class asm_arg( ):
 
 
     def _dump( self ):
-        print(f"arg %{self.register}, ${self.immediate}, ({self.dereference}), {self.offset:#0x},,, T{self.target} :{self.prefix}:: {self}")
+        print(f"arg %{self.register}, ${self.immediate}, ({self.dereference}), {self.offset:#0x},,, T{self.target} :{self.prefix}:: {self.multiplier}*REG + {self.add_register} => {self}")
 
 class instruction( ):
 
@@ -392,6 +448,7 @@ class instruction( ):
         self.extra = []
         self.file_line = None
         self.possible_register_sets = []
+        self.possible_flag_sets = []
         self.next = None
         self.previous = None
         self.passes = 0
@@ -414,6 +471,8 @@ class instruction( ):
                     args += "T"
 
             self.add_extra(f"ARG {args}")
+        for pfs in self.possible_flag_sets:
+            self.add_extra(f"FLG {pfs}")
 
     def _gen_debug( self ):
         self.add_extra( f"self.args      : '{self.args}'")
@@ -1871,7 +1930,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 flow_vtable = {}
 
 movre = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
-def vt_flow_mov( ins, frame, possible_registers ):
+def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     if( debug.value ):
         print()
         vdb.util.bark() # print("BARK")
@@ -1914,7 +1973,7 @@ def vt_flow_mov( ins, frame, possible_registers ):
         if( ins.previous is not None ):
             print("ins.previous.possible_register_sets = '%s'" % (ins.previous.possible_register_sets,) )
 
-def vt_flow_sub( ins, frame, possible_registers ):
+def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
 #    vdb.util.bark() # print("BARK")
 #    print("ins.previous = '%s'" % (ins.previous,) )
 #    print("ins = '%s'" % (ins,) )
@@ -1932,10 +1991,23 @@ def vt_flow_sub( ins, frame, possible_registers ):
         possible_registers.set( ins.arguments[1].register, nv )
     ins.possible_register_sets.append(possible_registers)
 
+def vt_flow_test( ins, frame, possible_registers, possible_flags ):
+    print("ins = '%s'" % (ins,) )
+    a0,_ = ins.arguments[0].value( possible_registers )
+    a1,_ = ins.arguments[1].value( possible_registers )
+    print("a0 = '%s'" % (a0,) )
+    print("a1 = '%s'" % (a1,) )
+    if( a0 is not None and a1 is not None ):
+        t = a0 & a1
+        possible_flags.set("ZF",t == 0 )
+        # XXX add SF and PF support as soon as some other place needs it
+        ins.possible_flag_sets.append( possible_flags )
+
 def gen_vtable( ):
     global flow_vtable
     flow_vtable["mov"] = vt_flow_mov
     flow_vtable["sub"] = vt_flow_sub
+    flow_vtable["test"] = vt_flow_test
 
 def register_flow( lng, frame ):
     global flow_vtable
@@ -1952,6 +2024,7 @@ def register_flow( lng, frame ):
     # Try to follow execution path to figure out possible register values (and maybe later flags)
 #    possible_registers = {}
     possible_registers = lng.initial_registers.clone()
+    possible_flags = flag_set()
     
     rbp = frame.read_register("rbp")
     if( rbp  is not None ):
@@ -1979,6 +2052,8 @@ def register_flow( lng, frame ):
         if( previous is not None ):
             if( len(previous.possible_register_sets) > 0 ):
                 possible_registers = previous.possible_register_sets[-1].clone()
+            if( len(previous.possible_flag_sets) > 0 ):
+                possible_flags = previous.possible_flag_sets[-1].clone()
 
         if( ins.args is not None ):
             args = ins.args #.split(",")
@@ -1995,7 +2070,7 @@ def register_flow( lng, frame ):
 
         fun = flow_vtable.get(ins.mnemonic,None)
         if( fun is not None ):
-            fun( ins, frame, possible_registers )
+            fun( ins, frame, possible_registers, possible_flags )
         ## START CONVERT VTABLE
         elif( ins.mnemonic == "xor" ):
             args = ins.args
@@ -2052,7 +2127,7 @@ def register_flow( lng, frame ):
                 if( ins.mnemonic.startswith(mn) ):
 #                    print(f"{mn} => {ins.mnemonic}")
                     flow_vtable[ins.mnemonic] = fun
-                    fun( ins, frame, possible_registers )
+                    fun( ins, frame, possible_registers, possible_flags )
                     break
         ## END CONVERT VTABLE
         # make sure to do this after syscall is handled
