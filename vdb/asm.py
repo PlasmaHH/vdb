@@ -267,6 +267,7 @@ class asm_arg( ):
         self.prefix = None
         self.offset = 0
         self.target = target
+        self.jmp_target = None
         try:
             self.parse(arg)
         except:
@@ -295,9 +296,14 @@ class asm_arg( ):
         if( arg[0] == "$" ):
             self.immediate = vdb.util.rxint( arg[1:] )
 
+        if( arg.startswith("0x") ):
+            self.jmp_target = vdb.util.rxint( arg )
+
+
         if( str(self) != oarg ):
             print("oarg = '%s'" % (oarg,) )
             print("arg = '%s'" % (arg,) )
+            print("str(self) = '%s'" % (str(self),) )
             self._dump()
 
     # registers is a register_set object to possible get the value from
@@ -344,6 +350,8 @@ class asm_arg( ):
             ret += "%" + self.register
         if( self.immediate is not None ):
             ret += f"${self.immediate:#0x}"
+        if( self.jmp_target is not None ):
+            ret += f"{self.jmp_target:#0x}"
         return ret
 
     def __repr__( self ):
@@ -1867,11 +1875,8 @@ def vt_flow_mov( ins, frame, possible_registers ):
     if( debug.value ):
         print()
         vdb.util.bark() # print("BARK")
-    target = False
 
-    for a in ins.args:
-        ins.arguments.append( asm_arg(target,a) )
-        target = True
+
     if( debug.value ):
         print("ins = '%s'" % (ins,) )
         print("ins.mnemonic = '%s'" % (ins.mnemonic,) )
@@ -1910,7 +1915,22 @@ def vt_flow_mov( ins, frame, possible_registers ):
             print("ins.previous.possible_register_sets = '%s'" % (ins.previous.possible_register_sets,) )
 
 def vt_flow_sub( ins, frame, possible_registers ):
-    pass
+#    vdb.util.bark() # print("BARK")
+#    print("ins.previous = '%s'" % (ins.previous,) )
+#    print("ins = '%s'" % (ins,) )
+#    print("ins.next = '%s'" % (ins.next,) )
+#    print("frame = '%s'" % (frame,) )
+#    print("possible_registers = '%s'" % (possible_registers,) )
+#    print("ins.arguments[0] = '%s'" % (ins.arguments[0],) )
+    sub,_ = ins.arguments[0].value( possible_registers )
+#    print("sub = '%s'" % (sub,) )
+#    print("ins.arguments[1] = '%s'" % (ins.arguments[1],) )
+    tgtv,_ = ins.arguments[1].value( possible_registers )
+#    print("tgtv = '0x%x'" % (tgtv,) )
+    if( tgtv is not None and sub is not None):
+        nv = tgtv - sub
+        possible_registers.set( ins.arguments[1].register, nv )
+    ins.possible_register_sets.append(possible_registers)
 
 def gen_vtable( ):
     global flow_vtable
@@ -1967,6 +1987,12 @@ def register_flow( lng, frame ):
                 if( m is not None ):
                     ins.constants.append(m.group(0)[1:])
 
+        if( ins.args is not None ):
+            target = False
+            for a in ins.args:
+                ins.arguments.append( asm_arg(target,a) )
+                target = True
+
         fun = flow_vtable.get(ins.mnemonic,None)
         if( fun is not None ):
             fun( ins, frame, possible_registers )
@@ -2004,8 +2030,6 @@ def register_flow( lng, frame ):
                     possible_registers.set( treg, tval )
                     ins.possible_register_sets.append(possible_registers)
 
-#        elif( ins.mnemonic.startswith( "mov" )):
-#            vt_flow_mov( ins, frame, possible_registers )
         elif( ins.mnemonic == "syscall" ):
 #            print("possible_registers = '%s'" % (possible_registers,) )
 #            ins._gen_extra()
