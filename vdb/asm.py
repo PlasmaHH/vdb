@@ -1865,6 +1865,10 @@ def vt_flow_mov( ins, frame, possible_registers ):
         if( frm.register != "rsp" and to.register != "rbp" ):
             frmval,_ = frm.value( possible_registers )
             possible_registers.set( to.register, frmval )
+        if( frm.register == "rsp" and to.register == "rbp" ):
+            toval,_ = to.value( possible_registers )
+            if( toval is not None ):
+                possible_registers.set( "rsp", toval )
     if( ins.next is not None ):
         possible_registers.set( "pc", ins.next.address )
     ins.possible_register_sets.append(possible_registers)
