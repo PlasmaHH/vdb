@@ -54,103 +54,6 @@ class sym_location:
         self.end = 0
         self.name = ""
 
-sym_cache = intervaltree.IntervalTree()
-
-symre=re.compile("0x[0-9a-fA-F]* <([^+]*)(\+[0-9]*)*>")
-def get_gdb_sym( addr ):
-    ret = intervaltree.IntervalTree()
-    addr = int(addr)
-    global sym_cache
-    xs = sym_cache[addr]
-    if( len(xs) > 0 ):
-        print("xs = '%s'" % xs )
-        for x in xs:
-            print("x = '%s'" % x )
-    else:
-        xaddr = addr
-        nm = gdb.parse_and_eval(f"(void*)({xaddr})")
-        m=symre.match(str(nm))
-        if( m ):
-            symsize = 1
-            ssz = m.group(2)
-            if( ssz is not None ):
-                symsize = int(ssz[1:])
-            eaddr = xaddr
-            xaddr -= symsize + 1
-            saddr = eaddr - symsize
-#            print("saddr = 0x%x" % saddr )
-#            print("eaddr = 0x%x" % eaddr )
-#            ret.append( ( saddr, eaddr, m.group(1) ) )
-            ret[saddr:eaddr+1] = m.group(1)
-
-
-pe_cache = {}
-
-def parse_and_eval_cached( ex, override = False ):
-    global pe_cache
-    if( override ):
-        cv = None
-    else:
-        cv = pe_cache.get( ex,None)
-    if( cv is not None ):
-        return cv
-
-    res = gdb.parse_and_eval( ex )
-    pe_cache[ex] = res
-    return res
-
-
-
-def get_symbols( addr, xlen ):
-    ret = intervaltree.IntervalTree()
-    xaddr = addr+xlen
-
-    recnt = 0
-    while xaddr > addr:
-#        nm = ""
-        nm = get_gdb_sym(xaddr)
-        astr = f"(void*)({xaddr})"
-        xstr = f"{int(xaddr):#0x}"
-#        print("nm = '%s'" % (nm,) )
-#        nm = gdb.parse_and_eval(astr)
-#        print("nm = '%s'" % (nm,) )
-        if( nm is None ):
-            nm = parse_and_eval_cached( astr )
-
-        m = None
-        nm = str(nm)
-        if( len(nm) != len(xstr) ):
-            recnt += 1
-#            print("len(nm) = '%s'" % (len(nm),) )
-#            print("len(xstr) = '%s'" % (len(xstr),) )
-#            print("RE")
-            m=symre.match(str(nm))
-#        print("xstr = '%s'" % (xstr,) )
-#        print("astr = '%s'" % (astr,) )
-#        print("nm = '%s'" % (nm,) )
-#        print("m = '%s'" % (m,) )
-        if( m ):
-#            print("m = '%s'" % m )
-#            print("m.group(1) = '%s'" % m.group(1) )
-#            print("m.group(1) = '%s'" % m.group(2) )
-            symsize = 1
-            ssz = m.group(2)
-            if( ssz is not None ):
-                symsize = int(ssz[1:])
-            eaddr = xaddr
-            xaddr -= symsize + 1
-            saddr = eaddr - symsize
-#            print("saddr = 0x%x" % saddr )
-#            print("eaddr = 0x%x" % eaddr )
-#            ret.append( ( saddr, eaddr, m.group(1) ) )
-            ret[saddr:eaddr+1] = m.group(1)
-        else:
-            xaddr -= 1
-#    print(" recnt = '%s'" % ( recnt,) )
-#    ret.reverse()
-#    print("ret = '%s'" % ret )
-    return ret
-
 annotation_tree = intervaltree.IntervalTree()
 default_sizes = { }
 
@@ -166,7 +69,7 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
     if( xlen == -1):
         xlen = default_sizes.get(addr,default_len.value)
     if( symbols ):
-        symtree = get_symbols(addr,xlen)
+        symtree = vdb.memory.get_symbols(addr,xlen)
     else:
         symtree = intervaltree.IntervalTree()
     olen = xlen

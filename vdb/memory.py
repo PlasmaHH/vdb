@@ -843,4 +843,100 @@ def maybe_refresh( x ):
     print("Automatically refreshed memory map in %.4fs" % (t1-t0) )
     last_refresh_at = last_run_start
 
+
+sym_cache = intervaltree.IntervalTree()
+
+symre=re.compile("0x[0-9a-fA-F]* <([^+]*)(\+[0-9]*)*>")
+
+# addr in, ( start, size, string ) out...
+
+def is_sym_at( addr, symbol ):
+    nm = gdb.parse_and_eval(f"(void*)({addr})")
+#    print("nm = '%s'" % (nm,) )
+    m=symre.match(str(nm))
+    if( m ):
+        if( m.group(1) == symbol ):
+            return True
+    return False
+
+def get_gdb_sym( addr ):
+#    vdb.util.bark() # print("BARK")
+#    print("addr = '%s'" % (addr,) )
+
+    addr = int(addr)
+    global sym_cache
+    xs = sym_cache[addr]
+    if( len(xs) > 0 ):
+#        print("xs = '%s'" % xs )
+        for x in xs:
+#            print("x = '%s'" % (x,) )
+            return x[2]
+    else:
+        xaddr = addr
+        nm = gdb.parse_and_eval(f"(void*)({xaddr})")
+#        print("nm = '%s'" % (nm,) )
+        m=symre.match(str(nm))
+#        print("m = '%s'" % (m,) )
+        if( m ):
+#            print("m.group(0) = '%s'" % (m.group(0),) )
+#            print("m.group(1) = '%s'" % (m.group(1),) )
+#            print("m.group(2) = '%s'" % (m.group(2),) )
+            symbol = m.group(1)
+            symsize = 1
+            ssz = m.group(2)
+            if( ssz is not None ):
+                symsize = int(ssz[1:]) + 1
+            start_addr = xaddr - ( symsize - 1 )
+#            print("xaddr = '0x%x'" % (xaddr,) )
+#            print("start_addr = '0x%x'" % (start_addr,) )
+#            print("symsize = '%s'" % (symsize,) )
+
+            # Now we are at the beginning of the symbol and know to the passed address where it is, but we don't really
+            # know where the end is
+            last_addr = start_addr + symsize - 1 # last known address that belongs to the symbol
+            # This is a bit slow but we cache things, maybe thats ok then
+            offset = 8
+            # Start with bigger steps for functions
+            if( symbol.find("(") != -1 ):
+                offset += 64
+
+            while( offset > 0 ):
+                while( is_sym_at( last_addr + offset, symbol ) ):
+                    last_addr += offset
+                offset //= 2
+            symsize = (last_addr - start_addr) + 1
+
+#            print("start_addr = '0x%x'" % (start_addr,) )
+#            print("last_addr = '0x%x'" % (last_addr,) )
+#            print("symsize = '%s'" % (symsize,) )
+#            print("symbol = '%s'" % (symbol,) )
+#            print("is_sym_at(start_addr,symbol) = '%s'" % (is_sym_at(start_addr,symbol),) )
+            tpl = ( start_addr, symsize, symbol )
+            sym_cache[start_addr:start_addr+symsize] = tpl
+#            print("sym_cache = '%s'" % (sym_cache,) )
+            return tpl
+    return (None,None,None)
+
+def get_symbols( addr, xlen ):
+    ret = intervaltree.IntervalTree()
+    xaddr = addr+xlen
+
+    recnt = 0
+    while xaddr > addr:
+        start,size,name = get_gdb_sym(xaddr)
+#        print("start = '%s'" % (start,) )
+#        print("size = '%s'" % (size,) )
+#        print("name = '%s'" % (name,) )
+        if( start is None ):
+            xaddr -= 1
+        else:
+            ret[start:start+size] = name
+            xaddr = start - 1
+#        print("xaddr = '%s'" % (xaddr,) )
+#    print("ret = '%s'" % (ret,) )
+    return ret
+
+
+
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
