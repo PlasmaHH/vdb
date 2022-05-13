@@ -539,6 +539,20 @@ def core( s, argv ):
         copy_libraries(s,xlibset,libdir,cwd)
         gdb.execute("set solib-search-path .")
 
+def cached( argv ):
+    print("argv = '%s'" % (argv,) )
+    file = argv[0]
+    core = argv[1]
+    libdir = file + ".lib"
+    cwd=os.getcwd()
+
+    print(f"Loading cached binary {file} and libdir {libdir} for core file {core}")
+
+    gdb.execute(f"add-auto-load-safe-path {cwd}/{libdir}")
+    gdb.execute(f"set solib-absolute-prefix {cwd}/{libdir}")
+    gdb.execute(f"add-auto-load-scripts-directory {cwd}/{libdir}")
+    gdb.execute(f"file {file}")
+    gdb.execute(f"core {core}")
 
 def call_ssh( argv ):
 #    print("argv = '%s'" % argv )
@@ -546,13 +560,19 @@ def call_ssh( argv ):
     if( len(argv) == 0 ):
         print(cmd_ssh.__doc__)
         return
-    host = argv[0]
-    cmd = argv[1]
-    moreargv = argv[2:]
+
+    if( argv[0] == "cached" ):
+        host = None
+        cmd = argv[0]
+        moreargv = argv[1:]
+    else:
+        host = argv[0]
+        cmd = argv[1]
+        moreargv = argv[2:]
 
     extrassh = []
 
-    while( cmd not in ["attach","core","run" ] ):
+    while( cmd not in ["attach","core","run", "cached" ] ):
         extrassh.append(cmd)
         argv = argv[1:]
         cmd = argv[1]
@@ -572,6 +592,8 @@ def call_ssh( argv ):
     elif( cmd == "run" ):
         s = ssh(host, extrassh)
         run( s, moreargv )
+    elif( cmd == "cached" ):
+        cached( moreargv )
     elif( cmd == "core" ):
         s = ssh(host, extrassh)
         try:

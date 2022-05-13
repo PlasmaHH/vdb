@@ -296,6 +296,7 @@ class asm_arg( ):
         self.jmp_target = None
         self.multiplier = None
         self.add_register = None
+        self.asterisk = False
         try:
             self.parse(arg)
         except:
@@ -306,6 +307,10 @@ class asm_arg( ):
     def parse( self, arg ):
 #        print("arg = '%s'" % (arg,) )
         oarg = arg
+        if( arg[0] == "*" ):
+            self.asterisk = True
+            arg = arg[1:]
+
         if( arg[-1] == ")" ):
             self.dereference = True
             if( arg[0] == "(" ):
@@ -388,6 +393,8 @@ class asm_arg( ):
 
     def __str__( self ):
         ret = ""
+        if( self.asterisk ):
+            ret +=  "*"
         if( self.prefix is not None ):
             ret += f"%{self.prefix}:"
         if( self.offset is not None ):
