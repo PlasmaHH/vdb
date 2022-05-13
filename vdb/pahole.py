@@ -143,3 +143,4 @@ pahole/e - expanded output, showing each byte on one line (the default)
             traceback.print_exc()
 
 cmd_pahole()
+# vim: tabstop=4 shiftwidth=4 expandtab ft=python
