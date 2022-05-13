@@ -53,11 +53,12 @@ def expand_fields( fields, keys ):
         fields = ret
     return ret
 
-def show_list( argv ):
+def show_list( argv, bidirectional ):
     var = argv[0]
     next = argv[1]
     additional_fields = []
     previous = None
+
 
     expansions = {}
     for af in argv[2:]:
@@ -100,9 +101,31 @@ def show_list( argv ):
 
     cnt = 0
     pvar = None
+
+    if( bidirectional and  previous is None ):
+            print("Cannot use bidirectional/backwards mode with no prev= pointer given")
+            bidirectional = False
+
+    # Just go backwards as far as we can and pretend we started there already (will break in the case of the forward
+    # pointers being broken, try to detect that later )
+    if( bidirectional ):
+        bvar = gvar
+        cnt = 1
+        prevar = None
+        while( bvar is not None ):
+#            print("bvar = '%s'" % (bvar,) )
+            p = get_next( bvar, previous )
+#            print("p = '%s'" % (p,) )
+            if( p is None ):
+                gvar = prevar
+                break
+            prevar = bvar
+            bvar = p
+            cnt -= 1
+
 #    indices[0x0000000127de9f80] = 5
     while gvar is not None:
-        indices[int(gvar.address)] = cnt
+        indices[int(gvar)] = cnt
 
         line = []
         otable.append(line)
@@ -183,12 +206,15 @@ llist <list> <next>    - Output the <list> by using member <next> as the next it
 
     def do_invoke (self, argv ):
 
-#        if( argv[0] == "/c" ):
-#            argv=argv[1:]
-
+        bidirectional = False
+        argv0 = argv[0]
+        if( argv0[0] == "/" ):
+            argv = argv[1:]
+            if( "b" in argv0 ):
+                bidirectional = True
 
         try:
-            show_list( argv )
+            show_list( argv, bidirectional )
         except gdb.error as e:
             traceback.print_exc()
             pass
