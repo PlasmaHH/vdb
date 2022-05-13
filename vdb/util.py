@@ -281,6 +281,11 @@ def format_table( tbl, padbefore = " ", padafter = " " ):
         ret += "\n"
     return ret
 
+def print_table ( tbl, padbefore = " ", padafter = " " ):
+    ret = format_table( tbl, padbefore, padafter )
+    print(ret)
+    return ret
+
 class stopwatch:
 
     def __init__( self ):

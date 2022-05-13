@@ -33,6 +33,7 @@ gdb_void     = None
 gdb_void_ptr = None
 gdb_void_ptr_ptr = None
 
+@vdb.event.new_objfile()
 def update_types( ):
     global gdb_void
     global gdb_void_ptr

@@ -195,6 +195,55 @@ def show_list( argv, bidirectional ):
     outp = vdb.util.format_table(otable)
     print(outp)
 
+def chainlen( addr, offset, bidirectional ):
+    cnt = 0
+    seen = set()
+    while( addr ):
+        if( int(addr) in seen ):
+            break
+        seen.add(int(addr))
+        cnt += 1
+        ptrbytes = vdb.arch.pointer_size // 8
+        naddr = addr + offset * ptrbytes
+        try:
+            nval = naddr.cast(vdb.pointer.gdb_void_ptr_ptr).dereference()
+            nval.fetch_lazy()
+        except gdb.MemoryError:
+            nval = None
+        except:
+            traceback.print_exc()
+            nval = None
+        addr = nval
+#    print("cnt = '%s'" % (cnt,) )
+    return cnt
+
+
+def scan( argv, bidirectional ):
+    vdb.util.bark() # print("BARK")
+    start = gdb.parse_and_eval( argv[0] )
+    size = gdb.parse_and_eval( argv[1] )
+    ptrbytes = vdb.arch.pointer_size // 8
+
+    results = []
+
+    for offset in range( 0,4 ):
+        for sadd in range( 0,size,ptrbytes ):
+            cl = chainlen( start + sadd, offset, bidirectional )
+            results.append( (cl, start+sadd, offset ) )
+    results.sort(reverse=True)
+   
+    otable = []
+    otable.append( [ ( "Chainlen", ",,bold" ), ("Start", ",,bold" ), ("Offset", ",,bold") ] )
+    for i in range(0,min(5,len(results))):
+        line = []
+        otable.append(line)
+        res = results[i]
+        line.append( res[0] )
+        line.append( vdb.pointer.colors( res[1] ) )
+        line.append( res[2] )
+
+    vdb.util.print_table( otable )
+
 class cmd_llist(vdb.command.command):
     """Handle (mostly output) linked list like structures
 
@@ -208,12 +257,14 @@ llist <list> <next>    - Output the <list> by using member <next> as the next it
 
         bidirectional = False
         argv0 = argv[0]
-        if( argv0[0] == "/" ):
-            argv = argv[1:]
-            if( "b" in argv0 ):
-                bidirectional = True
-
         try:
+            if( argv0[0] == "/" ):
+                argv = argv[1:]
+                if( "b" in argv0 ):
+                    bidirectional = True
+                elif( "s" in argv0 ):
+                    return scan( argv, bidirectional )
+
             show_list( argv, bidirectional )
         except gdb.error as e:
             traceback.print_exc()
