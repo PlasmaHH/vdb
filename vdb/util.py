@@ -716,6 +716,22 @@ class memoize:
 #            print("xxx = '%s'" % (xxx,) )
         return val
 
+pe_cache = {}
+
+def parse_and_eval_cached( ex, override = False ):
+    global pe_cache
+    if( override ):
+        cv = None
+    else:
+        cv = pe_cache.get( ex,None)
+    if( cv is not None ):
+        return cv
+
+    res = gdb.parse_and_eval( ex )
+    pe_cache[ex] = res
+    return res
+
+
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
