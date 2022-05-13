@@ -7,6 +7,7 @@ import vdb.color
 import vdb.vmmap
 import vdb.util
 import vdb.asm
+import vdb.arch
 
 import gdb
 
@@ -178,8 +179,11 @@ def as_tailspec( ptr, minasc, spec ):
 def as_tail( ptr, minasc ):
     return as_tailspec( ptr, minasc, "ax" )
 
-def color( ptr, archsize ):
+def color( ptr, archsize = None ):
     """Colorize the pointer according to the currently known memory situation"""
+
+    if( archsize is None ):
+        archsize = vdb.arch.pointer_size
 
     ptr=vdb.util.xint(ptr)
     plen = archsize // 4
@@ -209,6 +213,10 @@ def color( ptr, archsize ):
         ret,rl = vdb.color.colorl(f"0x{ptr:0{plen}x}",col)
 #    return ( ret, additional )
     return ( ret, additional, col, mm, rl )
+
+def colors( ptr, archsize = None ):
+    cc,_,_,_,cl = color(ptr,archsize)
+    return (cc,cl)
 
 def chain( ptr, archsize, maxlen = 8, test_for_ascii = True, minascii = None, last = True, tailspec = None ):
     if( gdb_void == None ):
