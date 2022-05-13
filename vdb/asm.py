@@ -1992,16 +1992,17 @@ def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     ins.possible_register_sets.append(possible_registers)
 
 def vt_flow_test( ins, frame, possible_registers, possible_flags ):
-    print("ins = '%s'" % (ins,) )
+#    print("ins = '%s'" % (ins,) )
     a0,_ = ins.arguments[0].value( possible_registers )
     a1,_ = ins.arguments[1].value( possible_registers )
-    print("a0 = '%s'" % (a0,) )
-    print("a1 = '%s'" % (a1,) )
+#    print("a0 = '%s'" % (a0,) )
+#    print("a1 = '%s'" % (a1,) )
     if( a0 is not None and a1 is not None ):
         t = a0 & a1
         possible_flags.set("ZF",t == 0 )
         # XXX add SF and PF support as soon as some other place needs it
         ins.possible_flag_sets.append( possible_flags )
+    # No changes in registers, so just
 
 def gen_vtable( ):
     global flow_vtable
@@ -2129,6 +2130,8 @@ def register_flow( lng, frame ):
                     flow_vtable[ins.mnemonic] = fun
                     fun( ins, frame, possible_registers, possible_flags )
                     break
+            else:
+                pass
         ## END CONVERT VTABLE
         # make sure to do this after syscall is handled
 #        print("ins.mnemonic = '%s'" % (ins.mnemonic,) )
@@ -2148,7 +2151,7 @@ def register_flow( lng, frame ):
                 tgt = lng.by_addr.get(tga,None)
                 if( tgt is not None and tgt.passes < passlimit ):
                     flowstack.append( (tgt,ins) )
-                    tgt.possible_register_sets.append(possible_registers)
+#                    tgt.possible_register_sets.append(possible_registers)
 
         if( len(ins.constants) > 0 ):
             for c in ins.constants:
