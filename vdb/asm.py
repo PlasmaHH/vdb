@@ -119,6 +119,7 @@ callgrind_events   = vdb.config.parameter("vdb-asm-callgrind-events", "Ir,CEst",
 callgrind_jumps    = vdb.config.parameter("vdb-asm-callgrind-show-jumps", True )
 header_repeat      = vdb.config.parameter("vdb-asm-header-repeat", 50 )
 direct_output      = vdb.config.parameter("vdb-asm-direct-output", True )
+gv_limit           = vdb.config.parameter("vdb-asm-variable-expansion-limit", 3 )
 
 callgrind_eventmap = {} # name to index
 callgrind_data = {}
@@ -981,7 +982,7 @@ ascii mockup:
     m_trans = str.maketrans("v^-|<>u#Q~T+","╭╰─│◄►┴├⥀◆┬┼" )
     p_trans = str.maketrans("v^-|<>u#Q~T+","|  |   |  ||" )
 
-    def to_str( self, showspec = "maodbnprT", context = None, marked = None, source = False ):
+    def to_str( self, showspec = "maodbnprT", context = None, marked = None, source = False, suppress_header = False ):
         self.lazy_finish()
         hf = self.function
         if( shorten_header.value ):
@@ -1033,7 +1034,7 @@ ascii mockup:
                         
         for i in self.instructions:
             cg_extra = []
-            if( header_repeat.value is not None ):
+            if( header_repeat.value is not None and suppress_header != True ):
                 if( header_repeat.value > 0 ):
                     if( cnt % header_repeat.value == 0 ):
                         otbl.append( header )
@@ -1491,7 +1492,10 @@ class fake_symbol( gdb.Value ):
     def value( self, frame ):
         return frame.read_var( self.name )
 
-def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None ):
+def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, level = 0 ):
+    if( level >= gv_limit.value ):
+        return ""
+    level += 1
     ret = ""
     regindex = -1
     if( reglist is None ):
@@ -1542,7 +1546,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None )
         try:
             bval = bval.dereference()
 #            print("bval.type.fields() = '%s'" % (bval.type.fields(),) )
-            ret += gather_vars( frame, lng, bval.type.fields() , bval, b.name + "->", [] )
+            ret += gather_vars( frame, lng, bval.type.fields() , bval, prefix + b.name + "->", [], level )
         except:
 #            traceback.print_exc()
             pass
@@ -1550,7 +1554,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None )
 #            for f in b.type.fields():
 #                print("f.name = '%s'" % (f.name,) )
 #                print("bval[f.name] = '%s'" % (bval[f.name],) )
-            ret += gather_vars( frame, lng, b.type.fields(), bval, b.name + ".", [] )
+            ret += gather_vars( frame, lng, b.type.fields(), bval, prefix + b.name + ".", [], level )
         except:
 #            traceback.print_exc()
             pass
@@ -2644,7 +2648,7 @@ def get_single( bpos ):
         da=da[0]
         fake = f"{da['addr']:#0x} <+0>: {da['asm']}"
         li = parse_from_gdb("",fake)
-        ret = li.to_str(asm_showspec.value.replace("a","").replace("o",""))
+        ret = li.to_str(asm_showspec.value.replace("a","").replace("o",""),suppress_header = True)
         ret = ret.splitlines()
         ret = ret[1]
     except:
