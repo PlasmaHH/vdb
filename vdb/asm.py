@@ -502,6 +502,7 @@ class instruction( ):
             self.add_extra(f"OUTFLG {pfs}")
 
     def _gen_debug( self ):
+        self.add_extra( f"self.line      : '{self.line}'")
         self.add_extra( f"self.args      : '{self.args}'")
         self.add_extra( f"self.targets   : '{self.targets}'")
         self.add_extra( f"self.target_of : '{self.target_of}'")
@@ -1534,7 +1535,11 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
         rbpval = int(rbpval)
 #    print("rbpval = '%s'" % (rbpval,) )
 
-    lng.initial_registers.merge( function_registers.get(frame.function().name,register_set() ) )
+    if( frame.function() is not None ):
+        fname = frame.function().name
+    else:
+        fname = "__anonymous__"
+    lng.initial_registers.merge( function_registers.get(fname,register_set() ) )
 #    print("lng.initial_registers = '%s'" % (lng.initial_registers,) )
 
     if( debug.value ):
@@ -1790,6 +1795,10 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #            print("ins.offset = '%s'" % ins.offset )
             tpos = 1
             ibytes = []
+#            print("tpos = '%s'" % (tpos,) )
+#            print("tokens = '%s'" % (tokens,) )
+            if( len(ins.offset) == 0 ):
+                tpos -= 1
             while( tpos < len(tokens) ):
                 tpos += 1
                 tok = tokens[tpos]
@@ -1797,6 +1806,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
                     ibytes.append( tok )
                 else:
                     break
+#            print("ibytes= '%s'" % (ibytes,) )
             ins.bytes = ibytes
             tokens = tokens[tpos:]
             tpos = 0
@@ -2044,7 +2054,7 @@ def vt_flow_test( ins, frame, possible_registers, possible_flags ):
         t = a0 & a1
         possible_flags.set("ZF",t == 0 )
         # XXX add SF and PF support as soon as some other place needs it
-        ins.possible_flag_sets.append( possible_flags )
+#        ins.possible_flag_sets.append( possible_flags )
     # No changes in registers, so just
     return ( possible_registers, possible_flags )
 
@@ -2307,7 +2317,7 @@ def register_flow( lng, frame ):
                                 ins.reference.append( pre + vdb.color.color(av,color_var.value) + "=" + vdb.color.color(val,color_location.value) )
                                 cnt += 1
 #                    vdb.util.bark() # print("BARK")
-                    if( addr is None and argval not in printed_addrs ):
+                    if( addr is None and argval is not None and argval not in printed_addrs ):
                         printed_addrs.add(argval)
                         _,_,symbol = vdb.memory.get_gdb_sym( argval )
                         if( symbol is not None ):
