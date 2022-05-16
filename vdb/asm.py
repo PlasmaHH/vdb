@@ -290,6 +290,7 @@ class asm_arg( ):
     def __init__( self, target, arg ):
         self.register = None
         self.immediate = None
+        self.immediate_hex = False
         self.dereference = None
         self.prefix = None
         self.offset = None
@@ -347,6 +348,8 @@ class asm_arg( ):
             self.register = arg[1:]
 
         if( arg[0] == "$" ):
+            if( arg.startswith("$0x") ):
+                self.immediate_hex = True
             self.immediate = vdb.util.rxint( arg[1:] )
 
         if( arg.startswith("0x") ):
@@ -413,7 +416,10 @@ class asm_arg( ):
         elif( self.register is not None ):
             ret += "%" + self.register
         if( self.immediate is not None ):
-            ret += f"${self.immediate:#0x}"
+            if( self.immediate_hex ):
+                ret += f"${self.immediate:#0x}"
+            else:
+                ret += f"${self.immediate}"
         if( self.jmp_target is not None ):
             ret += f"{self.jmp_target:#0x}"
         return ret
@@ -423,7 +429,11 @@ class asm_arg( ):
 
 
     def _dump( self ):
-        print(f"arg %{self.register}, ${self.immediate}, ({self.dereference}), {self.offset:#0x},,, T{self.target} :{self.prefix}:: {self.multiplier}*REG + {self.add_register} => {self}")
+        if( self.offset is None ):
+            offset = "None"
+        else:
+            offset = f"{self.offset:#0x}"
+        print(f"arg %{self.register}, ${self.immediate}, ({self.dereference}), {self.offset},,, T{self.target} :{self.prefix}:: {self.multiplier}*REG + {self.add_register} => {self}")
 
 class instruction( ):
 
@@ -437,7 +447,6 @@ class instruction( ):
         self.conditional_jump = False
         self.call = False
         self.return_ = False
-        self.constants = []
         self.target_name = None
 #        self.target_offset = None
         self.target_of = set()
@@ -455,18 +464,20 @@ class instruction( ):
         self.bt_idx = None
         self.extra = []
         self.file_line = None
-        self.possible_register_sets = []
-        self.possible_flag_sets = []
+        self.possible_in_register_sets = []
+        self.possible_out_register_sets = []
+
+        self.possible_in_flag_sets = []
+        self.possible_out_flag_sets = []
         self.next = None
         self.previous = None
         self.passes = 0
         self.file = None
         self.line = None
 
-    def _gen_extra( self ):
-#        print(f"gen_extra({self.mnemonic}) {self}")
-        for prs in self.possible_register_sets:
-            self.add_extra(f"REG {prs}")
+    def _gen_extra_regs( self, name, rs ):
+        for prs in rs:
+            self.add_extra(f"{name} {prs}")
             args = ""
             for a in self.arguments:
                 av,aa = a.value(prs)
@@ -477,14 +488,19 @@ class instruction( ):
                 args += f",({av},@{aa})"
                 if( a.target ):
                     args += "T"
-
             self.add_extra(f"ARG {args}")
-        for pfs in self.possible_flag_sets:
-            self.add_extra(f"FLG {pfs}")
+
+
+    def _gen_extra( self ):
+        self._gen_extra_regs( "INREG", self.possible_in_register_sets )
+        self._gen_extra_regs( "OUTREG", self.possible_out_register_sets )
+        for pfs in self.possible_in_flag_sets:
+            self.add_extra(f"INFLG {pfs}")
+        for pfs in self.possible_out_flag_sets:
+            self.add_extra(f"OUTFLG {pfs}")
 
     def _gen_debug( self ):
         self.add_extra( f"self.args      : '{self.args}'")
-        self.add_extra( f"self.constants : '{self.constants}'")
         self.add_extra( f"self.targets   : '{self.targets}'")
         self.add_extra( f"self.target_of : '{self.target_of}'")
 
@@ -1425,6 +1441,11 @@ pc_list = [ "rip", "eip", "ip", "pc" ]
 last_working_pc = ""
 
 class fake_frame:
+
+    class fake_function:
+        def __init__( self ):
+            self.name = "__fake_function__"
+        
     def __init__( self ):
         pass
 
@@ -1432,7 +1453,7 @@ class fake_frame:
         return None
 
     def function( self ):
-        return None
+        return self.fake_function()
 
     def block( self ):
         return []
@@ -1941,6 +1962,16 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 flow_vtable = {}
 
 movre = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
+
+def vt_flow_push( ins, frame, possible_registers, possible_flags ):
+    vl,rname = possible_registers.get("sp")
+    if( vl is not None ):
+        vl = int(vl) - ( vdb.arch.pointer_size // 8 )
+        possible_registers.set(rname,vl)
+
+    return ( possible_registers, possible_flags )
+
+
 def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     if( debug.value ):
         print()
@@ -1955,9 +1986,8 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
         print("ins.arguments = '%s'" % (ins.arguments,) )
 
         print("possible_registers = '%s'" % (possible_registers,) )
-        print("ins.possible_register_sets = '%s'" % (ins.possible_register_sets,) )
-        if( ins.previous is not None ):
-            print("ins.previous.possible_register_sets = '%s'" % (ins.previous.possible_register_sets,) )
+        print("ins.possible_in_register_sets = '%s'" % (ins.possible_in_register_sets,) )
+        print("ins.possible_out_register_sets = '%s'" % (ins.possible_out_register_sets,) )
 
     frm = ins.arguments[0]
     to  = ins.arguments[1]
@@ -1974,8 +2004,6 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
             toval,_ = to.value( possible_registers )
             if( toval is not None ):
                 possible_registers.set( "rsp", toval )
-    if( ins.next is not None ):
-        possible_registers.set( "pc", ins.next.address )
     ins.possible_register_sets.append(possible_registers)
  
     if( debug.value ):
@@ -1983,6 +2011,7 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
         print("ins.possible_register_sets = '%s'" % (ins.possible_register_sets,) )
         if( ins.previous is not None ):
             print("ins.previous.possible_register_sets = '%s'" % (ins.previous.possible_register_sets,) )
+    return ( possible_registers, possible_flags )
 
 def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
 #    vdb.util.bark() # print("BARK")
@@ -2001,6 +2030,7 @@ def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
         nv = tgtv - sub
         possible_registers.set( ins.arguments[1].register, nv )
     ins.possible_register_sets.append(possible_registers)
+    return ( possible_registers, possible_flags )
 
 def vt_flow_test( ins, frame, possible_registers, possible_flags ):
 #    print("ins = '%s'" % (ins,) )
@@ -2014,12 +2044,91 @@ def vt_flow_test( ins, frame, possible_registers, possible_flags ):
         # XXX add SF and PF support as soon as some other place needs it
         ins.possible_flag_sets.append( possible_flags )
     # No changes in registers, so just
+    return ( possible_registers, possible_flags )
+
+def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
+    args = ins.args
+    if( len(args) == 2 ):
+        # xor zeroeing out a register
+        if( args[0] == args[1] and args[0][0] == "%" ):
+            regname = args[0][1:]
+            possible_registers.set(regname,0)
+            ins.possible_register_sets.append(possible_registers)
+    return ( possible_registers, possible_flags )
+    return ( None, None )
+
+leare = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
+def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
+    m = leare.match(ins.args_string)
+    if( m is not None ):
+#                print("m = '%s'" % (m,) )
+#                print("m.group(0) = '%s'" % (m.group(0),) )
+#                print("m.group(1) = '%s'" % (m.group(1),) )
+#                print("m.group(2) = '%s'" % (m.group(2),) )
+#                print("m.group(3) = '%s'" % (m.group(3),) )
+        offset = m.group(1)
+        sreg = m.group(2)[1:]
+        treg = m.group(3)[1:]
+        sregv,_ = possible_registers.get(sreg,None)
+#                print("sregv = '%s'" % (sregv,) )
+        if( sregv is None and ( sreg == "rbp" or sreg == "ebp" ) ):
+            sregv = frame.read_register(sreg)
+            if( sregv is not None ):
+                sregv = int(sregv)
+#                print("sregv = '%s'" % (sregv,) )
+        if( sregv is not None ):
+            expr = f"({offset} + {sregv})"
+#                    print("expr = '%s'" % (expr,) )
+            tval = gdb.parse_and_eval(expr)
+            possible_registers.set( treg, tval )
+            ins.possible_register_sets.append(possible_registers)
+    return ( possible_registers, possible_flags )
+
+def vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
+#            print("possible_registers = '%s'" % (possible_registers,) )
+#            ins._gen_extra()
+    rax,_ = possible_registers.get("rax",None)
+    if( rax is not None ):
+        sc = get_syscall( rax )
+#                    print("rax = '%s'" % (rax,) )
+#                    print("sc = '%s'" % (sc,) )
+        if( sc is not None ):
+            qm = "?"
+            if( ins.marked or (ins.next and ins.next.marked) ):
+                qm="!"
+            ins.add_extra( sc.to_str(possible_registers,qm,frame) )
+            possible_registers = sc.clobber(possible_registers)
+        else:
+            ins.add_extra(f"syscall[{rax}]()")
+#                    ins.add_extra(f"{possible_registers}")
+    return ( possible_registers, possible_flags )
+
+def vt_flow_call( ins, frame, possible_registers, possible_flags ):
+    ins.possible_register_sets.append(possible_registers)
+    npr = register_set()
+    npr.copy( possible_registers, call_preserved_registers )
+    possible_registers = npr
+    return ( possible_registers, possible_flags )
+
+def vt_flow_ret( ins, frame, possible_registers, possible_flags ):
+    npr = register_set()
+    npr.copy( possible_registers, call_preserved_registers )
+    possible_registers = npr
+    return ( possible_registers, possible_flags )
+
 
 def gen_vtable( ):
+    vdb.util.bark() # print("BARK")
     global flow_vtable
-    flow_vtable["mov"] = vt_flow_mov
-    flow_vtable["sub"] = vt_flow_sub
-    flow_vtable["test"] = vt_flow_test
+    thismodule = sys.modules[__name__]
+    for funname in dir(thismodule):
+        if( funname.startswith("vt_flow_") ):
+            fun = getattr( thismodule, funname )
+            funname = funname[8:]
+            flow_vtable[funname] = fun
+#    print("flow_vtable = '%s'" % (flow_vtable,) )
+
+gen_vtable()
 
 def register_flow( lng, frame ):
     global flow_vtable
@@ -2045,116 +2154,68 @@ def register_flow( lng, frame ):
 #    for ins in ret.instructions:
     flowstack = [ (None,None) ]
 
-    leare = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
-    constre = re.compile("\$0x[0-9a-f]*")
     hexre = re.compile("0x[0-9a-f]*$")
-
 
     passlimit = 2
     next = None
     previous = None
 
+    # XXX make it perhaps possible to pre-populate it by an option so we can disable handling this way?
+    unhandled_mnemonics = set()
+
     while ins is not None:
+        # Simple protection against any kinds of endless loops
+        # XXX Better would be to check (additionally?) if the register and flag sets are the same as in previous runs
         ins.passes += 1
         if( ins.passes >= passlimit ):
             next = None
         else:
             next = ins.next
 
-        if( previous is not None ):
-            if( len(previous.possible_register_sets) > 0 ):
-                possible_registers = previous.possible_register_sets[-1].clone()
-            if( len(previous.possible_flag_sets) > 0 ):
-                possible_flags = previous.possible_flag_sets[-1].clone()
-
-        if( ins.args is not None ):
-            args = ins.args #.split(",")
-            for a in args:
-                m = constre.match(a)
-                if( m is not None ):
-                    ins.constants.append(m.group(0)[1:])
-
+        # Assumes the last one is the target, might be different for different archs
         if( ins.args is not None ):
             target = False
             for a in ins.args:
                 ins.arguments.append( asm_arg(target,a) )
                 target = True
 
+        # As per convention, rip on x86 as an argument is the next instruction
+        if( ins.next is not None ):
+            possible_registers.set( "pc", ins.next.address )
+        elif( len(ins.bytes) > 0 ):
+            possible_registers.set( "pc", ins.address + len(ins.bytes) )
+
+        # Check if we have a special function handling more than the basics
         fun = flow_vtable.get(ins.mnemonic,None)
         if( fun is not None ):
-            fun( ins, frame, possible_registers, possible_flags )
-        ## START CONVERT VTABLE
-        elif( ins.mnemonic == "xor" ):
-            args = ins.args
-            if( len(args) == 2 ):
-                # xor zeroeing out a register
-                if( args[0] == args[1] and args[0][0] == "%" ):
-                    regname = args[0][1:]
-                    possible_registers.set(regname,0)
-                    ins.possible_register_sets.append(possible_registers)
-        elif( ins.mnemonic == "lea" ):
-            m = leare.match(ins.args_string)
-            if( m is not None ):
-#                print("m = '%s'" % (m,) )
-#                print("m.group(0) = '%s'" % (m.group(0),) )
-#                print("m.group(1) = '%s'" % (m.group(1),) )
-#                print("m.group(2) = '%s'" % (m.group(2),) )
-#                print("m.group(3) = '%s'" % (m.group(3),) )
-                offset = m.group(1)
-                sreg = m.group(2)[1:]
-                treg = m.group(3)[1:]
-                sregv,_ = possible_registers.get(sreg,None)
-#                print("sregv = '%s'" % (sregv,) )
-                if( sregv is None and ( sreg == "rbp" or sreg == "ebp" ) ):
-                    sregv = frame.read_register(sreg)
-                    if( sregv is not None ):
-                        sregv = int(sregv)
-#                print("sregv = '%s'" % (sregv,) )
-                if( sregv is not None ):
-                    expr = f"({offset} + {sregv})"
-#                    print("expr = '%s'" % (expr,) )
-                    tval = gdb.parse_and_eval(expr)
-                    possible_registers.set( treg, tval )
-                    ins.possible_register_sets.append(possible_registers)
-
-        elif( ins.mnemonic == "syscall" ):
-#            print("possible_registers = '%s'" % (possible_registers,) )
-#            ins._gen_extra()
-            rax,_ = possible_registers.get("rax",None)
-            if( rax is not None ):
-                sc = get_syscall( rax )
-#                    print("rax = '%s'" % (rax,) )
-#                    print("sc = '%s'" % (sc,) )
-                if( sc is not None ):
-                    qm = "?"
-                    if( ins.marked or (ins.next and ins.next.marked) ):
-                        qm="!"
-                    ins.add_extra( sc.to_str(possible_registers,qm,frame) )
-                    possible_registers = sc.clobber(possible_registers)
-                else:
-                    ins.add_extra(f"syscall[{rax}]()")
-#                    ins.add_extra(f"{possible_registers}")
+            ins.possible_in_register_sets.append( possible_registers.clone() )
+            ins.possible_in_flag_sets.append( possible_flags.clone() )
+            # clone of registers and flags from the last instruction output register set, returns a clone of the ins
+            # output sets
+            (possible_registers, possible_flags) = fun( ins, frame, possible_registers, possible_flags )
+            ins.possible_out_register_sets.append( possible_registers.clone() )
+            ins.possible_out_flag_sets.append( possible_flags.clone() )
+        # There is none, check if there is any that can be synthesized from the table
         else:
-            for mn,fun in flow_vtable.items():
-                if( ins.mnemonic.startswith(mn) ):
-#                    print(f"{mn} => {ins.mnemonic}")
-                    flow_vtable[ins.mnemonic] = fun
-                    fun( ins, frame, possible_registers, possible_flags )
-                    break
-            else:
-                pass
-        ## END CONVERT VTABLE
+            if( ins.mnemonic not in unhandled_mnemonics ):
+                for mn,fun in flow_vtable.items():
+                    if( ins.mnemonic.startswith(mn) ):
+                        print(f"{mn} => {ins.mnemonic}")
+                        flow_vtable[ins.mnemonic] = fun
+                        ins.possible_in_register_sets.append( possible_registers.clone() )
+                        ins.possible_in_flag_sets.append( possible_flags.clone() )
+                        (possible_registers, possible_flags) = fun( ins, frame, possible_registers, possible_flags )
+                        ins.possible_out_register_sets.append( possible_registers.clone() )
+                        ins.possible_out_flag_sets.append( possible_flags.clone() )
+                        break
+                else:
+                    # Store for later to be quicker
+                    unhandled_mnemonics.add( ins.mnemonic )
+
         # make sure to do this after syscall is handled
-#        print("ins.mnemonic = '%s'" % (ins.mnemonic,) )
-        if( ins.mnemonic in set(["call","ret"]) ):
-            if( ins.mnemonic == "call" ):
-                ins.possible_register_sets.append(possible_registers)
-            npr = register_set()
-            npr.copy( possible_registers, call_preserved_registers )
-            possible_registers = npr
 #            ins.add_extra("DELETED PR")
 
-        elif( len(ins.targets) > 0 ):
+        if( len(ins.targets) > 0 ):
 #            ins.add_extra(f"targets {ins.targets}")
             if( not ins.conditional_jump ):
                 next = None
@@ -2164,13 +2225,13 @@ def register_flow( lng, frame ):
                     flowstack.append( (tgt,ins) )
 #                    tgt.possible_register_sets.append(possible_registers)
 
-        if( len(ins.constants) > 0 ):
-            for c in ins.constants:
-                xc = vdb.util.xint(c)
+#        if( len(ins.constants) > 0 ):
+#            for c in ins.constants:
+#                xc = vdb.util.xint(c)
 #                    print("vdb.memory.mmap.accessible(xc) = '%s'" % (vdb.memory.mmap.accessible(xc),) )
-                if( vdb.memory.mmap.accessible(xc) ):
-                    ch = vdb.pointer.chain( xc, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
-                    ins.reference.append(ch[0])
+#                if( vdb.memory.mmap.accessible(xc) ):
+#                    ch = vdb.pointer.chain( xc, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
+#                    ins.reference.append(ch[0])
         for ri in range(0,len(ins.reference)):
             m = hexre.match( ins.reference[ri] )
             if( m is not None ):
@@ -2246,13 +2307,8 @@ def register_flow( lng, frame ):
         if( ins is None ):
             ins,previous = flowstack.pop()
 
-#        print("ins.address = '%s'" % (ins.address,) )
-#        print("ins.passes = '%s'" % (ins.passes,) )
-#        print("len(flowstack) = '%s'" % (len(flowstack),) )
-
-
-#    print(f"Returning for {key}")
-#    return ret
+    # while(ins) done
+    print("unhandled_mnemonics = '%s'" % (unhandled_mnemonics,) )
 
 def parse_from( arg, fakedata = None, context = None ):
     rng = arg.split(",")
