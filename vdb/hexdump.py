@@ -290,7 +290,7 @@ def annotate( argv ):
         global default_sizes
         default_sizes[addr] = gtype.sizeof
         gval = gdb.parse_and_eval(f"*({ttype}*)({addr})")
-        annotate_var( addr,gval,gtype)
+        annotate_var( addr,gval,gtype,"")
 
     elif( len(argv) == 3):
         addr = vdb.util.gint( argv[0] )
