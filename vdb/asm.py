@@ -231,6 +231,8 @@ class register_set:
         return ret
 
     # Sets the value of a register, possible removing all alternative names that may be present
+    # XXX We need to be able to handle in an easy way specifcations like %al and %ah, best would be through some extra
+    # layer that can easily expanded for other archs
     def set( self, name, value, remove_alts = True ):
         if( remove_alts ):
             for rname in reg_alts(name):

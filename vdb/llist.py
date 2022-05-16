@@ -28,7 +28,7 @@ def get_next( var, next ):
 #    print("n = '%s'" % (n,) )
     return n
 
-assignre = re.compile("([a-zA-Z0-9]*)=(.*)")
+assignre = re.compile("(-?)([a-zA-Z0-9]*)=(.*)")
 
 # XXX Think of a way we can have this as a generic util funcion...
 def expand_fields( fields, keys ):
@@ -38,7 +38,7 @@ def expand_fields( fields, keys ):
     while(expanded):
         expanded = False
         ret = []
-        for a,f,v in fields:
+        for a,f,v,s in fields:
 #            print("a = '%s'" % (a,) )
 #            print("f = '%s'" % (f,) )
 #            print("v = '%s'" % (v,) )
@@ -49,7 +49,7 @@ def expand_fields( fields, keys ):
                 if( na.find("{var}") != -1 ):
                     v = True
 #            print(f"{a} => {na}")
-            ret.append( ( na,f,v ) )
+            ret.append( ( na,f,v,s ) )
         fields = ret
     return ret
 
@@ -68,14 +68,18 @@ def show_list( argv, bidirectional ):
             expansions["prev"] = af
         m = assignre.match(af)
         fn = af
+        suppress = False
         if( m is not None ):
-            fn = m.group(1)
-            af = m.group(2)
+            neg = m.group(1)
+            if( neg == "-" ):
+                suppress = True
+            fn = m.group(2)
+            af = m.group(3)
             expansions[fn] = af
         if( af.find("{var}") != -1 ):
-            additional_fields.append((af,fn,True))
+            additional_fields.append((af,fn,True,suppress))
         else:
-            additional_fields.append((af,fn,False))
+            additional_fields.append((af,fn,False,suppress))
 
 #    print("additional_fields = '%s'" % (additional_fields,) )
 #    print("expansions = '%s'" % (expansions,) )
@@ -92,8 +96,9 @@ def show_list( argv, bidirectional ):
 
     header = [ ("No",",,bold"), ("Address",",,bold"), (next,",,bold") ]
 
-    for af,fn,_ in additional_fields:
-        header.append( ( fn, ",,bold" ) )
+    for af,fn,_,sup in additional_fields:
+        if( not sup ):
+            header.append( ( fn, ",,bold" ) )
     header.append( ("Comment",",,bold",0,0) )
     otable.append( header )
 
@@ -141,8 +146,10 @@ def show_list( argv, bidirectional ):
         else:
             line.append( "…" )
 
-        for af,fn,fmt in additional_fields:
+        for af,fn,fmt,sup in additional_fields:
             try:
+                if( sup ):
+                    continue
                 if( fmt ):
                     varstr = f"(({gvar.type}){gvar})"
                     pae = af.format(var=varstr)
