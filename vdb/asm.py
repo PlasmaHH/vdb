@@ -1726,6 +1726,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
     for line in dis.splitlines():
         ins = instruction()
+        ins.line = line
         fm=re.search(funcre,line)
         if( fm ):
             ret.function = fm.group(1)
@@ -2054,10 +2055,12 @@ def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
             possible_registers.set(regname,0)
 
     return ( possible_registers, possible_flags )
-    return ( None, None )
 
 leare = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
 def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
+#    print("ins.line = '%s'" % (ins.line,) )
+#    print("ins = '%s'" % (ins,) )
+#    print("ins.args_string = '%s'" % (ins.args_string,) )
     m = leare.match(ins.args_string)
     if( m is not None ):
 #                print("m = '%s'" % (m,) )
@@ -2100,6 +2103,13 @@ def vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
         else:
             ins.add_extra(f"syscall[{rax}]()")
 #                    ins.add_extra(f"{possible_registers}")
+    return ( possible_registers, possible_flags )
+
+def vt_flow_leave( ins, frame, possible_registers, possible_flags ):
+    rbp,_ = possible_registers.get("rbp",None)
+    if( rbp is not None ):
+        possible_registers.set("rsp",rbp)
+    # XXX do the "pop rbp" too
     return ( possible_registers, possible_flags )
 
 def vt_flow_call( ins, frame, possible_registers, possible_flags ):
@@ -2211,12 +2221,12 @@ def register_flow( lng, frame ):
                     # Store for later to be quicker
                     unhandled_mnemonics.add( ins.mnemonic )
 
-        # make sure to do this after syscall is handled
-#            ins.add_extra("DELETED PR")
-
         if( len(ins.targets) > 0 ):
+#            print("ins.targets = '%s'" % (ins.targets,) )
+#            print("ins.conditional_jump = '%s'" % (ins.conditional_jump,) )
+#            print("ins.call = '%s'" % (ins.call,) )
 #            ins.add_extra(f"targets {ins.targets}")
-            if( not ins.conditional_jump ):
+            if( not ins.conditional_jump and not ins.call ):
                 next = None
             for tga in ins.targets:
                 tgt = lng.by_addr.get(tga,None)
@@ -2301,7 +2311,8 @@ def register_flow( lng, frame ):
                         if( symbol is not None ):
                             symbol = symbol.split("@")
                             symbol = vdb.color.color(symbol[0],color_var.value) + "@" + "@".join(symbol[1:])
-                            ins.reference.append(symbol + "@" + vdb.color.color( argval, color_location.value ) )
+                            fav = f"{argval:#0x}"
+                            ins.reference.append(symbol + "@" + vdb.color.color( fav, color_location.value ) )
                         else:
 #                            vdb.util.bark() # print("BARK")
 #                            print("arg = '%s'" % (arg,) )
@@ -2323,7 +2334,7 @@ def register_flow( lng, frame ):
         if( debug_registers.value ):
             ins._gen_extra()
 
-        print(f"{ins} ===> {next}    ({ins.next})")
+#        print(f"{ins} ===> {next}    ({ins.next})")
         previous = ins
         ins = next
 
