@@ -2170,7 +2170,8 @@ def register_flow( lng, frame ):
     
     rbp = frame.read_register("rbp")
     if( rbp  is not None ):
-        possible_registers.set( "rbp", rbp )
+        if( vdb.memory.mmap.accessible(rbp) ):
+            possible_registers.set( "rbp", rbp )
 
 #    for ins in ret.instructions:
     flowstack = [ (None,None) ]
