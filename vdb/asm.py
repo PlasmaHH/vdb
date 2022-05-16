@@ -2074,33 +2074,14 @@ def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
 
     return ( possible_registers, possible_flags )
 
-leare = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
 def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
 #    print("ins.line = '%s'" % (ins.line,) )
-#    print("ins = '%s'" % (ins,) )
-#    print("ins.args_string = '%s'" % (ins.args_string,) )
-    m = leare.match(ins.args_string)
-    if( m is not None ):
-#                print("m = '%s'" % (m,) )
-#                print("m.group(0) = '%s'" % (m.group(0),) )
-#                print("m.group(1) = '%s'" % (m.group(1),) )
-#                print("m.group(2) = '%s'" % (m.group(2),) )
-#                print("m.group(3) = '%s'" % (m.group(3),) )
-        offset = m.group(1)
-        sreg = m.group(2)[1:]
-        treg = m.group(3)[1:]
-        sregv,_ = possible_registers.get(sreg,None)
-#                print("sregv = '%s'" % (sregv,) )
-        if( sregv is None and ( sreg == "rbp" or sreg == "ebp" ) ):
-            sregv = frame.read_register(sreg)
-            if( sregv is not None ):
-                sregv = int(sregv)
-#                print("sregv = '%s'" % (sregv,) )
-        if( sregv is not None ):
-            expr = f"({offset} + {sregv})"
-#                    print("expr = '%s'" % (expr,) )
-            tval = gdb.parse_and_eval(expr)
-            possible_registers.set( treg, tval )
+    a0 = ins.arguments[0]
+    a1 = ins.arguments[1]
+    fv,fa = a0.value(possible_registers)
+    if( fa is not None ):
+        if( not a1.dereference and a1.register is not None):
+            possible_registers.set( a1.register, fa )
 
     return ( possible_registers, possible_flags )
 
