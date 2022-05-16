@@ -2004,13 +2004,12 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
             toval,_ = to.value( possible_registers )
             if( toval is not None ):
                 possible_registers.set( "rsp", toval )
-    ins.possible_register_sets.append(possible_registers)
- 
+
     if( debug.value ):
         print("possible_registers = '%s'" % (possible_registers,) )
-        print("ins.possible_register_sets = '%s'" % (ins.possible_register_sets,) )
-        if( ins.previous is not None ):
-            print("ins.previous.possible_register_sets = '%s'" % (ins.previous.possible_register_sets,) )
+        print("ins.possible_in_register_sets = '%s'" % (ins.possible_in_register_sets,) )
+        print("ins.possible_out_register_sets = '%s'" % (ins.possible_out_register_sets,) )
+
     return ( possible_registers, possible_flags )
 
 def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
@@ -2029,7 +2028,7 @@ def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     if( tgtv is not None and sub is not None):
         nv = tgtv - sub
         possible_registers.set( ins.arguments[1].register, nv )
-    ins.possible_register_sets.append(possible_registers)
+
     return ( possible_registers, possible_flags )
 
 def vt_flow_test( ins, frame, possible_registers, possible_flags ):
@@ -2053,7 +2052,7 @@ def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
         if( args[0] == args[1] and args[0][0] == "%" ):
             regname = args[0][1:]
             possible_registers.set(regname,0)
-            ins.possible_register_sets.append(possible_registers)
+
     return ( possible_registers, possible_flags )
     return ( None, None )
 
@@ -2081,7 +2080,7 @@ def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
 #                    print("expr = '%s'" % (expr,) )
             tval = gdb.parse_and_eval(expr)
             possible_registers.set( treg, tval )
-            ins.possible_register_sets.append(possible_registers)
+
     return ( possible_registers, possible_flags )
 
 def vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
@@ -2104,7 +2103,6 @@ def vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 def vt_flow_call( ins, frame, possible_registers, possible_flags ):
-    ins.possible_register_sets.append(possible_registers)
     npr = register_set()
     npr.copy( possible_registers, call_preserved_registers )
     possible_registers = npr
@@ -2112,10 +2110,8 @@ def vt_flow_call( ins, frame, possible_registers, possible_flags ):
 
 def vt_flow_ret( ins, frame, possible_registers, possible_flags ):
     npr = register_set()
-    npr.copy( possible_registers, call_preserved_registers )
     possible_registers = npr
     return ( possible_registers, possible_flags )
-
 
 def gen_vtable( ):
     vdb.util.bark() # print("BARK")
@@ -2137,7 +2133,10 @@ def register_flow( lng, frame ):
 
     for i in lng.instructions:
         i.passes = 0
-        i.possible_register_sets = []
+        i.possible_in_register_sets = []
+        i.possible_out_register_sets = []
+        i.possible_in_flag_sets = []
+        i.possible_out_flag_sets = []
         i.extra = []
 
     ins = lng.instructions[0]
@@ -2223,7 +2222,6 @@ def register_flow( lng, frame ):
                 tgt = lng.by_addr.get(tga,None)
                 if( tgt is not None and tgt.passes < passlimit ):
                     flowstack.append( (tgt,ins) )
-#                    tgt.possible_register_sets.append(possible_registers)
 
 #        if( len(ins.constants) > 0 ):
 #            for c in ins.constants:
@@ -2240,10 +2238,11 @@ def register_flow( lng, frame ):
                     ch = vdb.pointer.chain( xr, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
                     ins.reference[ri] = ch[0]
 
+#        vdb.util.bark() # print("BARK")
         printed_addrs = set()
+        # Check if we can output a bit more info about the register values used in this 
         if( len(ins.arguments) > 1 ):
             cnt = 0
-
             target = ins.arguments[1]
             for aidx in range(0,len(ins.args)):
                 a = ins.args[aidx]
@@ -2258,40 +2257,63 @@ def register_flow( lng, frame ):
                     cnt += 1
 #                ins.add_extra(f"ARG {a}")
                 try:
-                    # use the register set for the previous one, because they are the instructions outcome and we want
-                    # to check for the parameters that get into the instruction
-                    for prs in ins.previous.possible_register_sets:
+                    # If its a target we want to use the value after the instruction executed
+                    regset = ins.possible_in_register_sets
+                    if( arg.target ):
+                        regset = ins.possible_out_register_sets
+                    # Check via the possible register sets the value of the register
+                    for prs in regset:
                         argval,argaddr= arg.value(prs,target)
+#                        if( argval is not None ):
+#                            print(f"argval = {int(argval):#0x}")
+#                        if( argaddr is not None ):
+#                            print(f"argaddr = {int(argaddr):#0x}")
                         if( argval is not None or argaddr is not None ):
                             break
                     addr = argaddr
-                    if( addr in printed_addrs ):
-                        continue
-                    printed_addrs.add(addr)
+                    if( addr is not None and addr not in printed_addrs ):
+                        printed_addrs.add(addr)
 
-                    av = lng.var_addresses.get(addr,None)
+                        av = lng.var_addresses.get(addr,None)
 
-#                    print("arg = '%s'" % (arg,) )
-#                    print("addr = '%s'" % (addr,) )
-#                    print("argval = '%s'" % (argval,) )
-                    if( addr is not None ):
-                        addr = f"{addr:#0x}"
-                        if( cnt > 0 ):
-                            pre=","
-                        if( av is None ):
-                            pre = ""
-                            av = ""
-                        ins.reference.append( pre + vdb.color.color(av,color_var.value) + "@" + vdb.color.color(addr,color_location.value) )
-                        cnt += 1
-                        if( argval is not None and not arg.target):
+#                        print("arg = '%s'" % (arg,) )
+                        if( addr is not None ):
+                            addr = f"{addr:#0x}"
+                            if( cnt > 0 ):
+                                pre=","
+                            if( av is None ):
+                                pre = ""
+                                av = ""
+                            ins.reference.append( pre + vdb.color.color(av,color_var.value) + "@" + vdb.color.color(addr,color_location.value) )
+                            cnt += 1
+                            if( argval is not None and not arg.target):
 #                        if( argval is not None ):
 #                            print("argval = '%s'" % (argval,) )
-                            val = f"{argval:#0x}"
-                            if( cnt > 0 and len(av) > 0 ):
-                                pre=","
-                            ins.reference.append( pre + vdb.color.color(av,color_var.value) + "=" + vdb.color.color(val,color_location.value) )
-                            cnt += 1
+                                val = f"{argval:#0x}"
+                                if( cnt > 0 and len(av) > 0 ):
+                                    pre=","
+                                ins.reference.append( pre + vdb.color.color(av,color_var.value) + "=" + vdb.color.color(val,color_location.value) )
+                                cnt += 1
+#                    vdb.util.bark() # print("BARK")
+                    if( addr is None and argval not in printed_addrs ):
+                        printed_addrs.add(argval)
+                        _,_,symbol = vdb.memory.get_gdb_sym( argval )
+                        if( symbol is not None ):
+                            symbol = symbol.split("@")
+                            symbol = vdb.color.color(symbol[0],color_var.value) + "@" + "@".join(symbol[1:])
+                            ins.reference.append(symbol + "@" + vdb.color.color( argval, color_location.value ) )
+                        else:
+#                            vdb.util.bark() # print("BARK")
+#                            print("arg = '%s'" % (arg,) )
+#                            print(f"argval = {int(argval):#0x}")
+#                            print("vdb.memory.mmap.accessible(argval) = '%s'" % (vdb.memory.mmap.accessible(argval),) )
+                            if( vdb.memory.mmap.accessible(argval) ):
+#                                vdb.util.bark() # print("BARK")
+                                ch = vdb.pointer.chain( argval, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
+#                                print("ch = '%s'" % (ch,) )
+                                ins.reference.append(ch[0])
                 except:
+
                     if( debug.value ):
                         traceback.print_exc()
                     pass
@@ -2301,6 +2323,7 @@ def register_flow( lng, frame ):
         if( debug_registers.value ):
             ins._gen_extra()
 
+        print(f"{ins} ===> {next}    ({ins.next})")
         previous = ins
         ins = next
 
