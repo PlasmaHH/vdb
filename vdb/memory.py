@@ -314,8 +314,15 @@ def read( ptr, count = 1 ):
     else:
         addr=ptr
     try:
-        if( addr < 0 ):
+#        print("addr = '%s'" % (addr,) )
+        while( addr < 0 ):
             addr += 2** vdb.arch.pointer_size
+        if( addr.bit_length() > vdb.arch.pointer_size ):
+            addr &= ( 2 ** vdb.arch.pointer_size - 1 )
+            
+#        print("addr = '%s'" % (addr,) )
+#        print("count = '%s'" % (count,) )
+#        print("addr.bit_length() = '%s'" % (addr.bit_length(),) )
         result = gdb.selected_inferior().read_memory(addr, count)
     except gdb.error:
         pass

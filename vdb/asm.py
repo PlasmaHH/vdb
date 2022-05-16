@@ -168,24 +168,6 @@ def reg_alts( reg ):
         gen_altlist()
     return reg_altlists.get(reg,[reg])
 
-def reg_reg( possible_registers, regfrom, regto ):
-    try:
-        if( regfrom.startswith("fs:0") ):
-            add = regfrom[3:]
-            oldmem = vdb.memory.read(f"$fs_base + {add}",vdb.arch.pointer_size//8)
-            oldmem = oldmem.cast("P")
-            oldval = oldmem[0]
-        else:
-            oldval,_ = possible_registers.get(regfrom,None)
-            if( oldval is None ):
-                oldval,_ = possible_registers.get(vdb.register.altname(regfrom),None)
-
-        if( oldval is not None ):
-            possible_registers.set( regto, oldval )
-    except:
-#        traceback.print_exc()
-        pass
-
 ix = -1
 def next_index( ):
     global ix
@@ -311,6 +293,13 @@ class asm_arg( ):
     def parse( self, arg ):
 #        print("arg = '%s'" % (arg,) )
         oarg = arg
+        if( arg.find(":") != -1 ):
+            pf = arg.split(":")
+            arg = pf[1]
+            self.prefix = pf[0][1:]
+#        print("self.prefix = '%s'" % (self.prefix,) )
+#        print("arg = '%s'" % (arg,) )
+
         if( arg[0] == "*" ):
             self.asterisk = True
             arg = arg[1:]
@@ -348,6 +337,7 @@ class asm_arg( ):
 
         if( arg[0] == "%" ):
             self.register = arg[1:]
+#            print("self.register = '%s'" % (self.register,) )
 
         if( arg[0] == "$" ):
             if( arg.startswith("$0x") ):
@@ -356,6 +346,7 @@ class asm_arg( ):
 
         if( arg.startswith("0x") ):
             self.jmp_target = vdb.util.rxint( arg )
+#        print("self.jmp_target = '%s'" % (self.jmp_target,) )
         self._check(oarg)
 
     def _check(self,oarg):
@@ -368,18 +359,30 @@ class asm_arg( ):
     # registers is a register_set object to possible get the value from
     # XXX At the moment we do not support prefixes
     def value( self, registers, target = None ):
+        prefixval = 0
+        if( self.prefix is not None ):
+            preg = self.prefix + "_base"
+            pv = vdb.register.read(preg)
+            if( pv is not None ):
+                prefixval = int(pv)
+#        print("prefixval = '%s'" % (prefixval,) )
+#        print("self.register = '%s'" % (self.register,) )
+#        print("self.immediate = '%s'" % (self.immediate,) )
+#        print("self.jmp_target = '%s'" % (self.jmp_target,) )
+
         if( self.register is not None ):
             val,_ = registers.get( self.register )
+#            print("self.prefix = '%s'" % (self.prefix,) )
 #            print("self.register = '%s'" % (self.register,) )
 #            print("val = '%s'" % (val,) )
 #            print("self.offset = '%s'" % (self.offset,) )
             if( val is not None  ):
+                val += prefixval
                 if( self.offset is not None ):
                     val += self.offset
                 if( self.dereference ):
                     castto = "P"
                     if( target is None ):
-#                        print("val = '%s'" % (val,) )
                         dval = vdb.memory.read(val,vdb.arch.pointer_size//8)
                     else:
                         if( target.register[0] == "r" ):
@@ -393,7 +396,10 @@ class asm_arg( ):
             return ( val, None )
 
         if( self.immediate is not None ):
-            return ( self.immediate, None )
+            return ( self.immediate + prefixval, None )
+
+        if( self.jmp_target is not None ):
+            return ( self.jmp_target + prefixval, None )
 
         return ( None, None )
 
@@ -487,7 +493,7 @@ class instruction( ):
                     av = f"{av:#0x}"
                 if( aa is not None ):
                     aa = f"{aa:#0x}"
-                args += f",({av},@{aa})"
+                args += f",({av},@{aa} [{a}])"
                 if( a.target ):
                     args += "T"
             self.add_extra(f"ARG {args}")
