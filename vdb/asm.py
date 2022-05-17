@@ -1990,6 +1990,13 @@ def vt_flow_push( ins, frame, possible_registers, possible_flags ):
 
     return ( possible_registers, possible_flags )
 
+def vt_flow_pop( ins, frame, possible_registers, possible_flags ):
+    vl,rname = possible_registers.get("sp")
+    if( vl is not None ):
+        vl = int(vl) + ( vdb.arch.pointer_size // 8 )
+        possible_registers.set(rname,vl)
+
+    return ( possible_registers, possible_flags )
 
 def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     if( debug.value ):

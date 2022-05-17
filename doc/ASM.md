@@ -166,6 +166,71 @@ more.
 Here you can see how a constant is loaded from a data section in a position independent way (using `rip` in the
 calculation). The heuristic detected that it is most likely a double of the value `43`.
 
+### Variables
+
+As long as the frame setup is still in tact, we can extract some useful information about the local variables and
+function parameters and try to display it alongside all the other information. Compare the stock disassembly of the
+following test program with the vdb enhanced version. The information displayed is to give you a rough overview, keep in
+mind that due to various circumstances (especially those leading to data corruption crashes) the displayed information
+may be wrong.
+
+Especially when you use optimized binaries, a lot of assumptions we make will not always hold, and the quality of the
+recovered information is lower, especially if there is no frame setup and `rbp` is used as a general purpose register.
+
+```
+#include <iostream>
+
+struct bar {
+        int x;
+        int y;
+};
+struct abc {
+        double d;
+        double f;
+};
+void foo( void* xu, int xyz, abc* a ) {
+        bar* b = (bar*)xu;
+        std::cout << "xu = " << xu << "\n";
+        b->y = xyz;
+
+        char* c = (char*)xu;
+        *c = 0x42;
+}
+int main(int argc, const char *argv[]) {
+        abc a;
+        foo((void*)argc,78,&a);
+}
+```
+![](img/asm.var.0.png)
+![](img/asm.var.1.png)
+
+While usually gdb demangles the function name, this time it didn't, we fixed that. We also added the registers and/or
+stack storage information of the passed parameters. The detail information you can find here are:
+
+
+* Function parameters. `xu@` tells at which address on the stack the variable is stored (or None if this has been
+  optimized away) as well as its value ( `= 0x1` ). Additionally the rbp expression to access this variable
+* Local Variables. You can see that `b` is stored at `-0x8(%rbp)` and its actual address.
+* Immediates and call setup. One can see how `%esi` is filled from a constant to point to the string `'xu = '` and then
+  `std::cout`is put into the next parameter and then `operator<<` is called, which we can clearly find in the source be
+  the output of that string. The same for the value of the `xu` pointer as well as the final `'\n'` string.
+* Variable accesses. Marked in green is the current instruction that crashed. We can see that vdb identified it as an
+  access to `b->y` and says that this would access `@0x5` which we can see in the backtrace segfault message being the
+  address that caused the crash.
+
+Usually (here too) variables values after the current instruction are displayed wrong, since we read them right out of
+the memory and the instructions writing the correct values to the memory have not been executed yet.
+
+#### debugging the register tracing
+
+How do we do this? Internally we try to recover and follow the register values. This does not always work fine, values
+may not be available or we make mistakes. Therefore you can set `vdb-asm-debug-registers` to on, to show a lot more of
+the information about which registers we think have which values.
+
+There is also a special `dis/v <varname> <register> <value>` command that you can use to specify the value (and
+association to a variable) of a register at the start of the currently selected frames function. Use this mostly when
+core gdb itself was unable to provide the information about that variable (i.e. it is not part of `info locals`)
+
 ### callgrind
 
 Using the `c` showspec and loading a callgrind output file via `dis/c callgrind.xxxx.out` will try to read in the
