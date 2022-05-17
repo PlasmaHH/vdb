@@ -219,7 +219,9 @@ def colors( ptr, archsize = None ):
     cc,_,_,_,cl = color(ptr,archsize)
     return (cc,cl)
 
-def chain( ptr, archsize, maxlen = 8, test_for_ascii = True, minascii = None, last = True, tailspec = None ):
+def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = None, last = True, tailspec = None ):
+    if( archsize is None ):
+        archsize = vdb.arch.pointer_size
     if( gdb_void == None ):
         update_types()
     if( maxlen == 0 ):

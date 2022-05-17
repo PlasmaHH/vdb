@@ -40,6 +40,7 @@ under x86_64 Linux with gcc > 10.
 	* [history](#history)
 	* [profile](#profile)
 	* [va](#va)
+	* [llist linked list tools](#llist-linked-list-tools)
 	* [pipe](#pipe)
 * [global functionality](#global-functionality)
 	* [shorten](#shorten)
@@ -242,6 +243,10 @@ Allows to profile python calls
 ## va
 Allows you to inspect variable argument functions
 [You can find detailed information about this module here](doc/VA.md)
+## llist linked list tools
+A command and toolset to go through linked lists of various kinds and show the content of given structures in a concise
+way.
+[You can find detailed information about this module here](doc/LLIST.md)
 ## pipe
 The pipe module offers the possibility to pass the output of our commands to external tools via simple shell piping
 syntax. Currently enabled commands are

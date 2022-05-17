@@ -16,6 +16,11 @@ import re
 
 default_limit = vdb.config.parameter("vdb-llist-default-list-limit", 128 )
 
+scan_offset  = vdb.config.parameter("vdb-llist-scan-max-offset", 4 )
+scan_results = vdb.config.parameter("vdb-llist-scan-max-results", 5 )
+
+verbose = False
+
 def get_next( var, next ):
 #    vdb.util.bark() # print("BARK")
 #    print("var = '%s'" % (var,) )
@@ -205,9 +210,11 @@ def show_list( argv, bidirectional ):
 def chainlen( addr, offset, bidirectional ):
     cnt = 0
     seen = set()
+    chain = []
     while( addr ):
         if( int(addr) in seen ):
             break
+        chain.append(int(addr))
         seen.add(int(addr))
         cnt += 1
         ptrbytes = vdb.arch.pointer_size // 8
@@ -222,32 +229,56 @@ def chainlen( addr, offset, bidirectional ):
             nval = None
         addr = nval
 #    print("cnt = '%s'" % (cnt,) )
-    return cnt
+    return ( cnt, chain )
 
 
 def scan( argv, bidirectional ):
     vdb.util.bark() # print("BARK")
     start = gdb.parse_and_eval( argv[0] )
-    size = gdb.parse_and_eval( argv[1] )
+    if( argv[1].startswith("0x") ):
+        end = gdb.parse_and_eval( argv[1] )
+        size = end-start
+    else:
+        size = gdb.parse_and_eval( argv[1] )
+
     ptrbytes = vdb.arch.pointer_size // 8
 
     results = []
 
-    for offset in range( 0,4 ):
+    for offset in range( 0, scan_offset.value ):
         for sadd in range( 0,size,ptrbytes ):
-            cl = chainlen( start + sadd, offset, bidirectional )
-            results.append( (cl, start+sadd, offset ) )
+            cl,cn = chainlen( start + sadd, offset, bidirectional )
+            results.append( (cl, cn, start+sadd, offset ) )
     results.sort(reverse=True)
    
     otable = []
-    otable.append( [ ( "Chainlen", ",,bold" ), ("Start", ",,bold" ), ("Offset", ",,bold") ] )
-    for i in range(0,min(5,len(results))):
+    h2 = "Start"
+    if( verbose ):
+        h2 = "Chain"
+
+    otable.append( [ ( "Chainlen", ",,bold" ), (h2, ",,bold" ), ("Offset", ",,bold") ] )
+    for i in range(0,min(scan_results.value,len(results))):
         line = []
         otable.append(line)
-        res = results[i]
-        line.append( res[0] )
-        line.append( vdb.pointer.colors( res[1] ) )
-        line.append( res[2] )
+        cl,cn,st,of = results[i]
+        line.append( cl )
+        if( verbose ):
+            total = 0
+            res = ""
+            arrow = vdb.pointer.arrow_right.value
+            first = True
+            for c in cn:
+                if( not first ):
+                    res += arrow
+                    total += len(arrow)
+                s,l = vdb.pointer.colors( c )
+                res += s
+                total += l
+                first = False
+            line.append( (res,total) )
+        else:
+            line.append( vdb.pointer.colors( st ) )
+        line.append( of )
 
     vdb.util.print_table( otable )
 
@@ -265,11 +296,15 @@ llist <list> <next>    - Output the <list> by using member <next> as the next it
         bidirectional = False
         argv0 = argv[0]
         try:
+            global verbose
+            verbose = False
             if( argv0[0] == "/" ):
                 argv = argv[1:]
+                if( "v" in argv0 ):
+                    verbose = True
                 if( "b" in argv0 ):
                     bidirectional = True
-                elif( "s" in argv0 ):
+                if( "s" in argv0 ):
                     return scan( argv, bidirectional )
 
             show_list( argv, bidirectional )
