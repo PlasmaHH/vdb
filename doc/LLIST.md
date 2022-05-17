@@ -35,7 +35,7 @@ through the address space given, and for each pointer it will test if there is a
 counting the chain length. It does that `vdb-llist-scan-max-offset` times, each time assuming the given offset of the
 next pointer in a node structure.
 
-![](img/llist.0.png)
+![](img/llist.2.png)
 
 Here (with increased output limit) we can find the previously mentioned `std::list` too, just as raw pointers. There are
 also other appearant linked lists present, even with bigger chain lengths, so you might need to look aroud more when
