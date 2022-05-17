@@ -207,10 +207,11 @@ def show_list( argv, bidirectional ):
     outp = vdb.util.format_table(otable)
     print(outp)
 
-def chainlen( addr, offset, bidirectional ):
+def chainlen( addr, offset, bdoffset, bidirectional ):
     cnt = 0
     seen = set()
     chain = []
+    backchain = []
     while( addr ):
         if( int(addr) in seen ):
             break
@@ -227,10 +228,40 @@ def chainlen( addr, offset, bidirectional ):
         except:
             traceback.print_exc()
             nval = None
+        # in the bidirectional case, check if the object at nval has a previous pointer, pointing back
+        if( bidirectional and nval is not None ):
+            baddr = nval - bdoffset * ptrbytes
+            try:
+                bval = baddr.cast(vdb.pointer.gdb_void_ptr_ptr).dereference()
+                bval.fetch_lazy()
+            except gdb.MemoryError:
+                bval = None
+            except:
+                traceback.print_exc()
+                bval = None
+            if( bval is None or bval != addr ):
+                nval = None
+            else:
+                backchain.append( baddr )
+#                print(f"[{offset},{bdoffset}] {int(addr):#0x} points to {int(baddr):#0x} and {int(bval):#0x} points back to {int(addr):#0x} => {nval}")
         addr = nval
 #    print("cnt = '%s'" % (cnt,) )
-    return ( cnt, chain )
+    return ( cnt, chain, backchain )
 
+def chainstring( chain ):
+    total = 0
+    res = ""
+    arrow = vdb.pointer.arrow_right.value
+    first = True
+    for c in chain:
+        if( not first ):
+            res += arrow
+            total += len(arrow)
+        s,l = vdb.pointer.colors( c )
+        res += s
+        total += l
+        first = False
+    return (res,total)
 
 def scan( argv, bidirectional ):
     vdb.util.bark() # print("BARK")
@@ -245,10 +276,14 @@ def scan( argv, bidirectional ):
 
     results = []
 
-    for offset in range( 0, scan_offset.value ):
-        for sadd in range( 0,size,ptrbytes ):
-            cl,cn = chainlen( start + sadd, offset, bidirectional )
-            results.append( (cl, cn, start+sadd, offset ) )
+    bdrange = scan_offset.value
+    if( not bidirectional ):
+        bdrange = 1
+    for bdoffset in range( 0, bdrange ):
+        for offset in range( 0, scan_offset.value ):
+            for sadd in range( 0,size,ptrbytes ):
+                cl,cn,bcn = chainlen( start + sadd, offset, bdoffset, bidirectional )
+                results.append( (cl, cn, bcn, start+sadd, offset, bdoffset ) )
     results.sort(reverse=True)
    
     otable = []
@@ -256,29 +291,24 @@ def scan( argv, bidirectional ):
     if( verbose ):
         h2 = "Chain"
 
-    otable.append( [ ( "Chainlen", ",,bold" ), (h2, ",,bold" ), ("Offset", ",,bold") ] )
+    header = [ ( "Chainlen", ",,bold" ), (h2, ",,bold" ), ("Offset", ",,bold") ]
+    if( bidirectional ):
+        header.append( ("Back Offset", ",,bold") )
+    otable.append( header )
     for i in range(0,min(scan_results.value,len(results))):
         line = []
         otable.append(line)
-        cl,cn,st,of = results[i]
+        cl,cn,bcn, st,of,bdo = results[i]
         line.append( cl )
         if( verbose ):
-            total = 0
-            res = ""
-            arrow = vdb.pointer.arrow_right.value
-            first = True
-            for c in cn:
-                if( not first ):
-                    res += arrow
-                    total += len(arrow)
-                s,l = vdb.pointer.colors( c )
-                res += s
-                total += l
-                first = False
-            line.append( (res,total) )
+            line.append( chainstring( cn ) )
         else:
             line.append( vdb.pointer.colors( st ) )
         line.append( of )
+        if( bidirectional ):
+            line.append( bdo )
+            if( verbose ):
+                otable.append( [ "", chainstring(bcn) ] )
 
     vdb.util.print_table( otable )
 

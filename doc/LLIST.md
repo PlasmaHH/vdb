@@ -46,6 +46,10 @@ You can then use the typ module to create an artifical type and then the standar
 datastructures. Strictly speaking you can probably hack together gdb expressions for the standard llist command too that
 cast and do the same things...
 
+This scan mode also supports bidirectional scanning, which makes additionally sure for each found node that it has a
+back pointer. Due to the inability of distinguishing which is next and which is prev, this will often lead to the
+pointers being mixed up though. The scanning however is only ever done in the forward direction.
+
 ## configuration
 
 * `vdb-llist-default-list-limit` is the max number of members that will be displayed in the result list
