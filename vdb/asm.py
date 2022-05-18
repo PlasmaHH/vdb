@@ -2339,6 +2339,7 @@ def register_flow( lng, frame ):
                     regset = ins.possible_in_register_sets
                     if( arg.target ):
                         regset = ins.possible_out_register_sets
+                    argval = None
                     # Check via the possible register sets the value of the register
                     for prs in regset:
                         argval,argaddr= arg.value(prs,target)
