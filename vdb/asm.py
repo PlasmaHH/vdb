@@ -55,6 +55,7 @@ pre_colors_dot = [
         ( "rep.*","#f02090" ),
         ]
 
+@vdb.event.start()
 def invalidate_cache( c ):
     global parse_cache
     parse_cache = {}
