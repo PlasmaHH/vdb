@@ -2058,6 +2058,9 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
 
     return ( possible_registers, possible_flags )
 
+def vt_flow_jmp( ins, frame, possible_registers, possible_flags ):
+    return ( register_set(), flag_set() )
+
 def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     sub,_ = ins.arguments[0].value( possible_registers )
     tgtv,_ = ins.arguments[1].value( possible_registers )
@@ -2210,13 +2213,12 @@ def register_flow( lng, frame ):
             possible_registers.set( "rbp", rbp )
 
 #    for ins in ret.instructions:
-    flowstack = [ (None,None) ]
+    flowstack = [ (None,None,None) ]
 
     hexre = re.compile("0x[0-9a-f]*$")
 
     passlimit = 2
     next = None
-    previous = None
 
     # XXX make it perhaps possible to pre-populate it by an option so we can disable handling this way?
     unhandled_mnemonics = set()
@@ -2283,7 +2285,7 @@ def register_flow( lng, frame ):
             for tga in ins.targets:
                 tgt = lng.by_addr.get(tga,None)
                 if( tgt is not None and tgt.passes < passlimit ):
-                    flowstack.append( (tgt,ins) )
+                    flowstack.append( (tgt,possible_registers.clone(), possible_flags.clone()) )
 
 #        if( len(ins.constants) > 0 ):
 #            for c in ins.constants:
@@ -2411,11 +2413,10 @@ def register_flow( lng, frame ):
             ins._gen_extra()
 
 #        print(f"{ins} ===> {next}    ({ins.next})")
-        previous = ins
         ins = next
 
         if( ins is None ):
-            ins,previous = flowstack.pop()
+            ins,possible_registers,possible_flags = flowstack.pop()
 
     # while(ins) done
     print("unhandled_mnemonics = '%s'" % (unhandled_mnemonics,) )
