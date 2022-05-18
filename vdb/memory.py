@@ -301,7 +301,7 @@ default_region_prefixes = [
         ( ".fini", memory_type.CODE ),
 ]
 
-@vdb.util.memoize
+@vdb.util.memoize( gdb.events.stop )
 def read( ptr, count = 1 ):
 #    vdb.util.bark(-2) # print("BARK")
 #    vdb.util.bark(-1) # print("BARK")

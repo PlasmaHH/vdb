@@ -499,6 +499,7 @@ class instruction( ):
         self.file = None
         self.line = None
         self.unhandled = False
+        self.parsed_reference = None
 
     def _gen_extra_regs( self, name, rs ):
         for prs in rs:
@@ -573,6 +574,7 @@ class listing( ):
         self.var_expressions = None
         self.function_header = None
         self.initial_registers = register_set()
+        self.marker = None
 
     def sort( self ):
         self.instructions.sort( key = lambda x:( x.address, x ) )
@@ -790,6 +792,8 @@ ascii mockup:
         # Seperate loop for the later needs all informaation always
         for ins in self.instructions:
             self.add_target(ins)
+            if( ins.marked ):
+                self.marker = int(ins.address)
 
         for ins in self.instructions:
 #            print("INS_----------------------------------")
@@ -952,6 +956,7 @@ ascii mockup:
 
 
     def do_backtrack( self ):
+        vdb.util.bark() # print("BARK")
         self.ins_map = {}
         idx = 0
         midx = None
@@ -1487,7 +1492,7 @@ class fake_frame:
     def block( self ):
         return []
 
-def fix_marker( ls, alt = None ):
+def fix_marker( ls, alt = None, frame = None ):
 #    mark = vdb.util.gint("$rip")
     try:
         mark = vdb.util.gint(f"${last_working_pc}")
@@ -1497,6 +1502,11 @@ def fix_marker( ls, alt = None ):
         except:
             mark = None
 
+    if( ls.marker == mark ):
+        return ls
+
+    if( mark is not None ):
+        ls.marker = int(mark)
     for i in ls.instructions:
 #            print("%s == %s ? %s " % (i.address,mark,(i.address == mark)))
         if( i.address == mark ):
@@ -1504,6 +1514,7 @@ def fix_marker( ls, alt = None ):
         else:
             i.marked = False
     ls.do_backtrack()
+    register_flow(ls,frame)
     return ls
 
 parse_cache = {}
@@ -1709,9 +1720,18 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     if( not debug_registers.value and cached ):
         ret = parse_cache.get(key,None)
     ret = parse_cache.get(key,None)
+
+    if( fakeframe is not None ):
+        frame = fakeframe
+    else:
+        try:
+            frame = gdb.selected_frame()
+        except:
+            frame = fake_frame()
+
 #    print("ret = '%s'" % ret )
     if( ret is not None and fakedata is None ):
-        return fix_marker(ret,arg)
+        return fix_marker(ret,arg,frame)
     ret = listing()
 #    vdb.util.bark() # print("BARK")
 #    print("key = '%s'" % (key,) )
@@ -1928,16 +1948,10 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #			print("m = '%s'" % m )
     if( fakedata is None ):
         parse_cache[key] = ret
-    if( markers == 0 ):
-        ret = fix_marker(ret,arg)
 
-    if( fakeframe is not None ):
-        frame = fakeframe
-    else:
-        try:
-            frame = gdb.selected_frame()
-        except:
-            frame = fake_frame()
+
+    if( markers == 0 ):
+        ret = fix_marker(ret,arg,frame)
 
     fun = frame.function()
 #    print("fun.name = '%s'" % (fun.name,) )
@@ -2111,6 +2125,26 @@ def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
 
     return ( possible_registers, possible_flags )
 
+def vt_flow_and( ins, frame, possible_registers, possible_flags ):
+    args = ins.arguments
+
+    # We only do it when not writing to memory
+    if( not args[1].dereference ):
+        v0,_ = args[0].value( possible_registers )
+        v1,_ = args[1].value( possible_registers )
+        if( v0 is not None and v1 is not None ):
+            possible_registers.set( args[1].register, v0 & v1 )
+        else: # no idea about the outcome, don't set it
+            possible_registers.remove( args[1].register )
+
+    return ( possible_registers, possible_flags )
+
+def vt_flow_movz( ins, frame, possible_registers, possible_flags ):
+    return ( possible_registers, possible_flags )
+
+def vt_flow_movs( ins, frame, possible_registers, possible_flags ):
+    return ( possible_registers, possible_flags )
+
 def vt_flow_neg( ins, frame, possible_registers, possible_flags ):
     ins.arguments[0].target = True
     val,_ = ins.arguments[0].value(  possible_registers )
@@ -2199,6 +2233,11 @@ def register_flow( lng, frame ):
         i.possible_in_flag_sets = []
         i.possible_out_flag_sets = []
         i.extra = []
+
+        # Will copy only ever on the very first call where we did not have a user defined reference
+        if( i.parsed_reference is None ):
+            i.parsed_reference = i.reference.copy()
+        i.reference = i.parsed_reference.copy()
 
     ins = lng.instructions[0]
 #    print("lng.var_addresses = '%s'" % (lng.var_addresses,) )

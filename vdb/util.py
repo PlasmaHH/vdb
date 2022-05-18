@@ -681,45 +681,38 @@ class progress_indicator:
         out = format.format(**locals())
         return out
 
-class memoize:
 
-    def __init__( self, func, reset_events = [] ):
-        self.func = func
-        self.cache = {}
-        functools.update_wrapper(self,func)
+def memoize( reset_events = [] ):
+    class memoize_cache:
+        def __init__( self, func ):
+#            bark() # print("BARK")
+            self.func = func
+            self.cache = {}
+            functools.update_wrapper(self,func)
+            from collections.abc import Iterable
+            if( not isinstance(reset_events,Iterable)  ):
+                rel = [ reset_events ]
+            else:
+                rel = reset_events
 
-    def __call__( self, *args, **kwargs ):
-#        vdb.util.bark(-1) # print("BARK")
-#        vdb.util.bark() # print("BARK")
-#        print("args = '%s'" % (args,) )
-#        print("type(args) = '%s'" % (type(args),) )
-#        print("kwargs = '%s'" % (kwargs,) )
-#        print("type(kwargs) = '%s'" % (type(kwargs),) )
-        if( len(kwargs) > 0 ):
-#            vdb.util.bark(-1) # print("BARK")
-#            vdb.util.bark() # print("BARK")
-#            print("kwargs = '%s'" % (kwargs,) )
-            return self.func(*args,**kwargs)
+            for re in rel:
+                re.connect( self.reset )
 
-        val = self.cache.get(args, self )
-#        print("self.cache = '%s'" % (self.cache,) )
-#        print("val = '%s'" % (val,) )
-        if( val is self ):
-#            print("self.cache = '%s'" % (self.cache,) )
-#            print("type(args[0]) = '%s'" % (type(args[0]),) )
-#            print("type(args[1]) = '%s'" % (type(args[1]),) )
-#            print("args[0] = '%s'" % (args[0],) )
-#            print("args[1] = '%s'" % (args[1],) )
-#            print("args = '%s'" % (args,) )
-            val = self.func(*args)
-#            print("len(self.cache) = '%s'" % (len(self.cache),) )
-            self.cache[args] = val
-#            print("len(self.cache) = '%s'" % (len(self.cache),) )
-#            print("self.cache = '%s'" % (self.cache,) )
-#            xxx = {}
-#            xxx[args] = val
-#            print("xxx = '%s'" % (xxx,) )
-        return val
+        def reset( self, xxx = None ):
+#            bark() # print("BARK")
+            self.cache = {}
+
+        def __call__( self, *args, **kwargs ):
+#            bark() # print("BARK")
+            if( len(kwargs) > 0 ):
+                return self.func(*args,**kwargs)
+
+            val = self.cache.get(args, self )
+            if( val is self ):
+                val = self.func(*args)
+                self.cache[args] = val
+            return val
+    return memoize_cache
 
 pe_cache = {}
 
