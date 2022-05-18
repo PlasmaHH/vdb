@@ -178,6 +178,15 @@ def next_index( ):
     ix += 1
     return ix
 
+# to be able to put it into lists and modify later for output reasons
+class string_ref:
+
+    def __init__( self, value ):
+        self.value = value
+
+    def __str__( self ):
+        return self.value
+
 # similar to register_set a wrapper around a dict that stores possible flag values
 class flag_set:
 
@@ -2304,15 +2313,21 @@ def register_flow( lng, frame ):
 #        vdb.util.bark() # print("BARK")
         printed_addrs = set()
         # Check if we can output a bit more info about the register values used in this 
-        if( len(ins.arguments) > 1 ):
+        if( len(ins.arguments) > 0 ):
             cnt = 0
-            target = ins.arguments[1]
+            target = None
+            if( len(ins.arguments) > 1 ):
+                target = ins.arguments[1]
             for aidx in range(0,len(ins.args)):
                 a = ins.args[aidx]
                 arg = ins.arguments[aidx]
+                extra = string_ref(f"ARG[{aidx}] = {arg}")
+                if( debug_registers.value ):
+                    ins.add_extra(extra)
 
                 pre=""
                 av = lng.var_expressions.get(a,None)
+                extra.value += f", av = {av}"
                 if( av is not None ):
                     if( cnt > 0 ):
                         pre = ","
@@ -2334,10 +2349,12 @@ def register_flow( lng, frame ):
                         if( argval is not None or argaddr is not None ):
                             break
                     addr = argaddr
+                    extra.value += f", argval = {argval}, addr = {addr}"
                     if( addr is not None and addr not in printed_addrs ):
                         printed_addrs.add(addr)
 
                         av = lng.var_addresses.get(addr,None)
+                        extra.value += f", ava = {av}"
 
 #                        print("arg = '%s'" % (arg,) )
                         if( addr is not None ):
@@ -2361,11 +2378,13 @@ def register_flow( lng, frame ):
                     if( addr is None and argval is not None and argval not in printed_addrs ):
                         printed_addrs.add(argval)
                         _,_,symbol = vdb.memory.get_gdb_sym( argval )
+                        extra.value += f", sym = {symbol}"
                         if( symbol is not None ):
                             symbol = symbol.split("@")
                             symbol = vdb.color.color(symbol[0],color_var.value) + "@" + "@".join(symbol[1:])
                             fav = f"{argval:#0x}"
                             ins.reference.append(symbol + "@" + vdb.color.color( fav, color_location.value ) )
+                            ins.target_name = None # The plaintext name has been replaced by the symbol expression
                         else:
 #                            vdb.util.bark() # print("BARK")
 #                            print("arg = '%s'" % (arg,) )
@@ -2376,6 +2395,10 @@ def register_flow( lng, frame ):
                                 ch = vdb.pointer.chain( argval, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
 #                                print("ch = '%s'" % (ch,) )
                                 ins.reference.append(ch[0])
+                            else:
+                                if( not arg.immediate ):
+                                    fav = f"{argval:#0x}"
+                                    ins.reference.append( "%=" + vdb.color.color(fav,color_location.value) )
                 except:
 
                     if( debug.value ):
