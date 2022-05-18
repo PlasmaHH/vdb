@@ -279,8 +279,8 @@ def scan( argv, bidirectional ):
     bdrange = scan_offset.value
     if( not bidirectional ):
         bdrange = 1
-    for bdoffset in range( 0, bdrange ):
-        for offset in range( 0, scan_offset.value ):
+    for offset in range( 0, scan_offset.value ):
+        for bdoffset in range( 0, bdrange ):
             for sadd in range( 0,size,ptrbytes ):
                 cl,cn,bcn = chainlen( start + sadd, offset, bdoffset, bidirectional )
                 results.append( (cl, cn, bcn, start+sadd, offset, bdoffset ) )

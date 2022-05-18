@@ -354,7 +354,7 @@ class asm_arg( ):
             print("oarg = '%s'" % (oarg,) )
             print("str(self) = '%s'" % (str(self),) )
             self._dump()
-            raise RuntimeError("Parser self check failed")
+            raise RuntimeError(f"Parser self check failed ({str(self)} != {oarg})")
 
     # registers is a register_set object to possible get the value from
     # XXX At the moment we do not support prefixes
@@ -1423,7 +1423,7 @@ x86_conditional_jump_mnemonics = set([ "jo", "jno", "js", "jns", "je", "jz", "jn
 x86_unconditional_jump_mnemonics = set([ "jmp", "jmpq" ] )
 x86_return_mnemonics = set (["ret","retq","iret"])
 x86_call_mnemonics = set(["call","callq","int"])
-x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd" ])
+x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd", "cs", "ss", "ds", "es", "fs", "gs" ])
 
 call_preserved_registers = [ "rbx", "rsp", "rbp", "r12", "r13", "r14", "r15" ]
 
