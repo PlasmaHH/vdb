@@ -187,6 +187,9 @@ class flag_set:
     def set( self, name, value ):
         self.flags[name] = value
 
+    def unset( self, name ):
+        self.flags.pop(name,None)
+
     def get( self, name ):
         return self.flags.get(name,None)
 
@@ -329,7 +332,6 @@ class asm_arg( ):
 #                print("marg = '%s'" % (marg,) )
                 if( len(marg) == 2 ):
                     self._check(oarg)
-                    pass
                 elif( len(marg) == 3):
                     if( len(marg[0]) > 0 ):
                         self.add_register = marg[0][1:]
@@ -487,6 +489,7 @@ class instruction( ):
         self.passes = 0
         self.file = None
         self.line = None
+        self.unhandled = False
 
     def _gen_extra_regs( self, name, rs ):
         for prs in rs:
@@ -511,6 +514,9 @@ class instruction( ):
             self.add_extra(f"INFLG {pfs}")
         for pfs in self.possible_out_flag_sets:
             self.add_extra(f"OUTFLG {pfs}")
+        if( self.unhandled ):
+            self.add_extra("UNHANDLED")
+#        self.add_extra(f"NEXT = {self.next}")
 
     def _gen_debug( self ):
         self.add_extra( f"self.line      : '{self.line}'")
@@ -2094,6 +2100,20 @@ def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
 
     return ( possible_registers, possible_flags )
 
+def vt_flow_neg( ins, frame, possible_registers, possible_flags ):
+    ins.arguments[0].target = True
+    val,_ = ins.arguments[0].value(  possible_registers )
+    if( val is not None ):
+        val = 0 - val
+        possible_registers.set( ins.arguments[0].register, val )
+        if( val == 0 ):
+            possible_flags.set("CF",0)
+        else:
+            possible_flags.set("CF",1)
+    else:
+        possible_flags.unset("CF")
+    return ( possible_registers, possible_flags )
+
 def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
 #    print("ins.line = '%s'" % (ins.line,) )
     a0 = ins.arguments[0]
@@ -2239,8 +2259,11 @@ def register_flow( lng, frame ):
                         ins.possible_out_flag_sets.append( possible_flags.clone() )
                         break
                 else:
+                    ins.unhandled = True
                     # Store for later to be quicker
                     unhandled_mnemonics.add( ins.mnemonic )
+            else:
+                ins.unhandled = True
 
         if( len(ins.targets) > 0 ):
 #            print("ins.targets = '%s'" % (ins.targets,) )
