@@ -2059,20 +2059,19 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
-#    vdb.util.bark() # print("BARK")
-#    print("ins.previous = '%s'" % (ins.previous,) )
-#    print("ins = '%s'" % (ins,) )
-#    print("ins.next = '%s'" % (ins.next,) )
-#    print("frame = '%s'" % (frame,) )
-#    print("possible_registers = '%s'" % (possible_registers,) )
-#    print("ins.arguments[0] = '%s'" % (ins.arguments[0],) )
     sub,_ = ins.arguments[0].value( possible_registers )
-#    print("sub = '%s'" % (sub,) )
-#    print("ins.arguments[1] = '%s'" % (ins.arguments[1],) )
     tgtv,_ = ins.arguments[1].value( possible_registers )
-#    print("tgtv = '0x%x'" % (tgtv,) )
     if( tgtv is not None and sub is not None):
         nv = tgtv - sub
+        possible_registers.set( ins.arguments[1].register, nv )
+
+    return ( possible_registers, possible_flags )
+
+def vt_flow_add( ins, frame, possible_registers, possible_flags ):
+    add,_ = ins.arguments[0].value( possible_registers )
+    tgtv,_ = ins.arguments[1].value( possible_registers )
+    if( tgtv is not None and add is not None):
+        nv = tgtv + add
         possible_registers.set( ins.arguments[1].register, nv )
 
     return ( possible_registers, possible_flags )
