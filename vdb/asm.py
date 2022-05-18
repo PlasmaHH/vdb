@@ -2268,6 +2268,15 @@ def register_flow( lng, frame ):
                 if( vdb.memory.mmap.accessible(xr) ):
                     ch = vdb.pointer.chain( xr, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
                     ins.reference[ri] = ch[0]
+            else:
+                try:
+                    xr = vdb.util.xint(ins.reference[ri].split()[0])
+                    if( vdb.memory.mmap.accessible(xr) ):
+                        ch = vdb.pointer.chain( xr, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
+                    ins.reference[ri] = ch[0]
+                except:
+                    pass
+
 
 #        vdb.util.bark() # print("BARK")
         printed_addrs = set()
