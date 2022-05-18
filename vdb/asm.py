@@ -161,6 +161,9 @@ def gen_altlist( ):
                 nl.remove(rn)
                 nl = [rn] + nl
                 reg_altlists[rn] = nl
+        elif( pr[0] == "r" ):
+            reg_altlists[pr] = [ pr, pr + "d" ]
+            reg_altlists[pr + "d"] = [ pr + "d", pr ]
 #    print("reg_altlists = '%s'" % (reg_altlists,) )
 
 def reg_alts( reg ):
