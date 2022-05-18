@@ -358,6 +358,7 @@ class asm_arg( ):
 
     # registers is a register_set object to possible get the value from
     # XXX At the moment we do not support prefixes
+    # In case we read the value from memory, the second tuple element contains its address
     def value( self, registers, target = None ):
         prefixval = 0
         if( self.prefix is not None ):
@@ -2072,12 +2073,20 @@ def vt_flow_test( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
-    args = ins.args
-    if( len(args) == 2 ):
-        # xor zeroeing out a register
-        if( args[0] == args[1] and args[0][0] == "%" ):
-            regname = args[0][1:]
-            possible_registers.set(regname,0)
+    args = ins.arguments
+
+    # We only do it when not writing to memory
+    if( not args[1].dereference ):
+        v0,_ = args[0].value( possible_registers )
+        v1,_ = args[1].value( possible_registers )
+        if( v0 is not None and v1 is not None ):
+            possible_registers.set( args[1].register, v0 ^ v1 )
+        else: # no idea about the outcome, don't set it
+            possible_registers.remove( args[1].register )
+        if( len(args) == 2 ):
+            # xor zeroeing out a register
+            if( args[0].register == args[1].register ):
+                possible_registers.set( args[1].register ,0)
 
     return ( possible_registers, possible_flags )
 
@@ -2086,6 +2095,7 @@ def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
     a0 = ins.arguments[0]
     a1 = ins.arguments[1]
     fv,fa = a0.value(possible_registers)
+    possible_registers.remove( a1.register )
     if( fa is not None ):
         if( not a1.dereference and a1.register is not None):
             possible_registers.set( a1.register, fa )
