@@ -16,7 +16,7 @@ def color( s, cs ):
         cs += ["","",""]
         return colors.color(s,fg=cs[0],bg=cs[1],style=cs[2])
 
-@vdb.util.memoize
+@vdb.util.memoize()
 def mcolor( s, cs ):
     return color(s,cs)
 

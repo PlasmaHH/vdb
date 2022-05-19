@@ -1683,7 +1683,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
 
 ilinere = re.compile('Line ([0-9]*) of "(.*)"')
 
-@vdb.util.memoize
+@vdb.util.memoize()
 def info_line( addr ):
     il = gdb.execute(f"info line *{addr:#0x}",False,True)
     m = ilinere.match(il)
