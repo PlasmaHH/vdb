@@ -2552,7 +2552,8 @@ def register_flow( lng, frame ):
             ins,possible_registers,possible_flags = flowstack.pop()
 
     # while(ins) done
-    print("unhandled_mnemonics = '%s'" % (unhandled_mnemonics,) )
+    if( debug.value ):
+        print("unhandled_mnemonics = '%s'" % (unhandled_mnemonics,) )
 
 def parse_from( arg, fakedata = None, context = None ):
     rng = arg.split(",")
