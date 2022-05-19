@@ -377,6 +377,20 @@ class asm_arg( ):
             self._dump()
             raise RuntimeError(f"Parser self check failed ({str(self)} != {oarg})")
 
+    def _fixup_value( self, val ):
+        if( val is None ):
+            return val
+        while( val < 0 ):
+            val += 2** vdb.arch.pointer_size
+        if( val.bit_length() > vdb.arch.pointer_size ):
+            val &= ( 2 ** vdb.arch.pointer_size - 1 )
+        return val
+
+    def _fixup_values( self, dval, val ):
+        dval = self._fixup_value(dval)
+        val = self._fixup_value(val)
+        return (dval,val)
+
     # registers is a register_set object to possible get the value from
     # XXX At the moment we do not support prefixes
     # In case we read the value from memory, the second tuple element contains its address
@@ -414,16 +428,16 @@ class asm_arg( ):
                             castto = "I"
                     if( dval is not None ):
                         dval = dval.cast(castto)[0]
-                    return ( dval, val )
-            return ( val, None )
+                    return self._fixup_values( dval, val )
+            return self._fixup_values( val, None )
 
         if( self.immediate is not None ):
-            return ( self.immediate + prefixval, None )
+            return self._fixup_values( self.immediate + prefixval, None )
 
         if( self.jmp_target is not None ):
-            return ( self.jmp_target + prefixval, None )
+            return self._fixup_values( self.jmp_target + prefixval, None )
 
-        return ( None, None )
+        return self._fixup_values( None, None )
 
     def __str__( self ):
         ret = ""
@@ -478,6 +492,7 @@ class instruction( ):
         self.call = False
         self.return_ = False
         self.target_name = None
+        self.parsed_target_name = None
 #        self.target_offset = None
         self.target_of = set()
         self.address = None
@@ -2022,6 +2037,9 @@ flow_vtable = {}
 
 movre = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
 
+def vt_flow_j( ins, frame, possible_registers, possible_flags ):
+    return ( possible_registers, possible_flags )
+
 def vt_flow_push( ins, frame, possible_registers, possible_flags ):
     vl,rname = possible_registers.get("sp")
     if( vl is not None ):
@@ -2087,6 +2105,8 @@ def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     if( tgtv is not None and sub is not None):
         nv = tgtv - sub
         possible_registers.set( ins.arguments[1].register, nv )
+    else:
+        ins.arguments[0].argspec = ""
 
     return ( possible_registers, possible_flags )
 
@@ -2169,6 +2189,10 @@ def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
 #    print("ins.line = '%s'" % (ins.line,) )
     a0 = ins.arguments[0]
     a1 = ins.arguments[1]
+
+    # the value is unintresting, lea only computes the address
+    a0.argspec = a0.argspec.replace("=","")
+
     fv,fa = a0.value(possible_registers)
     possible_registers.remove( a1.register )
     if( fa is not None ):
@@ -2244,7 +2268,7 @@ def extra_info( vname, spc, addr, extra ):
         if( spc != "@" ):
             spc += "@"
         extra.value += ",access"
-        addrstr,pure = vdb.pointer.chain( addr, 32, 1, True, 1, False, asm_tailspec.value, annotate = False )
+        addrstr,pure = vdb.pointer.chain( addr, 32, 1, True, 1, False, asm_tailspec.value, do_annotate = False )
         if( not pure ):
             return (symbol, vdb.color.color(vname,color_var.value) + symbol + spc + addrstr )
         extra.value += ",pure"
@@ -2270,7 +2294,7 @@ def register_flow( lng, frame ):
         # Will copy only ever on the very first call where we did not have a user defined reference
         if( i.parsed_reference is None ):
             i.parsed_reference = i.reference.copy()
-        i.reference = i.parsed_reference.copy()
+        i.reference = []
 
     ins = lng.instructions[0]
 #    print("lng.var_addresses = '%s'" % (lng.var_addresses,) )
@@ -2286,8 +2310,6 @@ def register_flow( lng, frame ):
 
 #    for ins in ret.instructions:
     flowstack = [ (None,None,None) ]
-
-    hexre = re.compile("0x[0-9a-f]*$")
 
     passlimit = 2
     next = None
@@ -2347,6 +2369,10 @@ def register_flow( lng, frame ):
             else:
                 ins.unhandled = True
 
+        if( ins.unhandled ):
+            ins.possible_in_register_sets.append( possible_registers.clone() )
+            ins.possible_in_flag_sets.append( possible_flags.clone() )
+
         if( len(ins.targets) > 0 ):
 #            print("ins.targets = '%s'" % (ins.targets,) )
 #            print("ins.conditional_jump = '%s'" % (ins.conditional_jump,) )
@@ -2366,25 +2392,11 @@ def register_flow( lng, frame ):
 #                if( vdb.memory.mmap.accessible(xc) ):
 #                    ch = vdb.pointer.chain( xc, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
 #                    ins.reference.append(ch[0])
-        for ri in range(0,len(ins.reference)):
-            m = hexre.match( ins.reference[ri] )
-            if( m is not None ):
-                xr = vdb.util.xint(ins.reference[ri])
-                if( vdb.memory.mmap.accessible(xr) ):
-                    ch = vdb.pointer.chain( xr, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
-                    ins.reference[ri] = ch[0]
-            else:
-                try:
-                    xr = vdb.util.xint(ins.reference[ri].split()[0])
-                    if( vdb.memory.mmap.accessible(xr) ):
-                        ch = vdb.pointer.chain( xr, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
-                    ins.reference[ri] = ch[0]
-                except:
-                    pass
+        printed_addrs = set()
+
 
 
 #        vdb.util.bark() # print("BARK")
-        printed_addrs = set()
         # Check if we can output a bit more info about the register values used in this 
         if( len(ins.arguments) > 0 ):
             cnt = 0
@@ -2447,6 +2459,14 @@ def register_flow( lng, frame ):
                         extra.value += "!addr&argval"
                         printed_addrs.add(argval)
                         if( "%" in arg.argspec ):
+                            if( av is None ):
+                                if( ins.parsed_target_name is None ):
+                                    ins.parsed_target_name = ins.target_name
+                                av = ins.parsed_target_name
+                                if( av[0] == "<" and av[-1] == ">" ):
+                                    av = av[1:-1]
+                                ins.target_name = None
+                                extra.value += f", av={av}"
                             sym,ei = extra_info( av, "%=", argval, extra )
                             ins_references.append( ei )
                             if( sym is not None and len(sym) != 0 ):
@@ -2477,6 +2497,7 @@ def register_flow( lng, frame ):
                                     ins_references.append( "%=" + vdb.color.color(fav,color_location.value) )
                 except:
                     extra.value += "EXCEPTION"
+#                    traceback.print_exc()
 
                     if( debug.value ):
                         traceback.print_exc()
@@ -2485,6 +2506,18 @@ def register_flow( lng, frame ):
                 ins_references[irx] = ins_references[irx] + ","
             ins.reference += ins_references
 
+        for pr in ins.parsed_reference:
+            try:
+                prv = pr.split()
+                xr = vdb.util.xint(prv[0])
+                if xr not in printed_addrs:
+                    sym,ei = extra_info(None, "~", xr, extra )
+                    if( sym is None or len(sym) == 0 ):
+                        ei += prv[1:]
+                    ins.reference.append(ei)
+            except:
+                traceback.print_exc()
+                pass
         
 
         if( debug_registers.value ):
