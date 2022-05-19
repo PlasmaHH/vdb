@@ -112,7 +112,7 @@ history_limit      = vdb.config.parameter("vdb-asm-history-limit",4)
 tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
 asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnpTrjhc" )
 asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnpTr" )
-asm_tailspec       = vdb.config.parameter("vdb-asm-tailspec", "axndD" )
+asm_tailspec       = vdb.config.parameter("vdb-asm-tailspec", "andD" )
 asm_sort           = vdb.config.parameter("vdb-asm-sort", True )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
 
@@ -121,6 +121,7 @@ callgrind_jumps    = vdb.config.parameter("vdb-asm-callgrind-show-jumps", True )
 header_repeat      = vdb.config.parameter("vdb-asm-header-repeat", 50 )
 direct_output      = vdb.config.parameter("vdb-asm-direct-output", True )
 gv_limit           = vdb.config.parameter("vdb-asm-variable-expansion-limit", 3 )
+default_argspec    = vdb.config.parameter("vdb-asm-default-argspec", "i@%=,o@%" )
 
 callgrind_eventmap = {} # name to index
 callgrind_data = {}
@@ -181,7 +182,7 @@ def next_index( ):
 # to be able to put it into lists and modify later for output reasons
 class string_ref:
 
-    def __init__( self, value ):
+    def __init__( self, value = "" ):
         self.value = value
 
     def __str__( self ):
@@ -299,6 +300,11 @@ class asm_arg( ):
         self.multiplier = None
         self.add_register = None
         self.asterisk = False
+        asp = default_argspec.value.split(",")
+        if( target ):
+            self.argspec = asp[1]
+        else:
+            self.argspec = asp[0]
         try:
             self.parse(arg)
         except:
@@ -511,7 +517,7 @@ class instruction( ):
                     av = f"{av:#0x}"
                 if( aa is not None ):
                     aa = f"{aa:#0x}"
-                args += f",({av},@{aa} [{a}])"
+                args += f",[{a.argspec}]({av},@{aa} [{a}])"
                 if( a.target ):
                     args += "T"
             self.add_extra(f"ARG {args}")
@@ -956,7 +962,7 @@ ascii mockup:
 
 
     def do_backtrack( self ):
-        vdb.util.bark() # print("BARK")
+#        vdb.util.bark() # print("BARK")
         self.ins_map = {}
         idx = 0
         midx = None
@@ -1949,6 +1955,10 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     if( fakedata is None ):
         parse_cache[key] = ret
 
+    va = function_vars.get( ret.function, {} ).copy()
+    ret.var_addresses = va.copy()
+#    print("ret.var_addresses = '%s'" % (ret.var_addresses,) )
+    ret.var_expressions = {}
 
     if( markers == 0 ):
         ret = fix_marker(ret,arg,frame)
@@ -1971,10 +1981,6 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #            print("b.value(frame) = '%s'" % (b.value(frame),) )
 #        print("b.value(frame).address = '%s'" % (b.value(frame).address,) )
     
-    va = function_vars.get( ret.function, {} ).copy()
-    ret.var_addresses = va.copy()
-#    print("ret.var_addresses = '%s'" % (ret.var_addresses,) )
-    ret.var_expressions = {}
 
     if( fun is None ):
         funhead = "????"
@@ -2221,6 +2227,33 @@ def gen_vtable( ):
 
 gen_vtable()
 
+def extra_info( vname, spc, addr, extra ):
+    symbol = ""
+    if( vname is None ):
+        _,_,symbol = vdb.memory.get_gdb_sym( addr )
+        if( symbol is not None ):
+            extra.value += f", esym = {symbol}"
+            symbol = symbol.split("@")
+            symbol[0] = vdb.shorten.symbol(symbol[0])
+            symbol = vdb.color.color(symbol[0],color_var.value) + "@" + "@".join(symbol[1:])
+        else:
+            symbol = ""
+        vname = ""
+
+    if( vdb.memory.mmap.accessible(addr) ):
+        if( spc != "@" ):
+            spc += "@"
+        extra.value += ",access"
+        addrstr,pure = vdb.pointer.chain( addr, 32, 1, True, 1, False, asm_tailspec.value, annotate = False )
+        if( not pure ):
+            return (symbol, vdb.color.color(vname,color_var.value) + symbol + spc + addrstr )
+        extra.value += ",pure"
+    else:
+        addrstr = f"{addr:#0x}"
+
+    return (symbol, vdb.color.color(vname,color_var.value) + symbol + spc + vdb.color.color(addrstr,color_location.value))
+
+
 def register_flow( lng, frame ):
     global flow_vtable
     if( len(flow_vtable) == 0 ):
@@ -2358,73 +2391,75 @@ def register_flow( lng, frame ):
             target = None
             if( len(ins.arguments) > 1 ):
                 target = ins.arguments[1]
+            ins_references = []
             for aidx in range(0,len(ins.args)):
                 a = ins.args[aidx]
                 arg = ins.arguments[aidx]
-                extra = string_ref(f"ARG[{aidx}] = {arg}")
+                extra = string_ref(f"ARG[{aidx}]({arg.argspec}) = {arg}")
                 if( debug_registers.value ):
                     ins.add_extra(extra)
 
-                pre=""
+                # regardless of argspec we always output based on expression (since that works even if we don't have any
+                # register values)
                 av = lng.var_expressions.get(a,None)
                 extra.value += f", av = {av}"
                 if( av is not None ):
-                    if( cnt > 0 ):
-                        pre = ","
-                    ins.reference.append( pre + vdb.color.color(av,color_var.value) + "@" + vdb.color.color(a,color_location.value) )
-                    cnt += 1
-#                ins.add_extra(f"ARG {a}")
+                    ins_references.append(  vdb.color.color(av,color_var.value) + "@" + vdb.color.color(a,color_location.value) )
+
                 try:
                     # If its a target we want to use the value after the instruction executed
-                    regset = ins.possible_in_register_sets
-                    if( arg.target ):
+                    if( "i" in arg.argspec ):
+                        regset = ins.possible_in_register_sets
+                    elif( "o" in arg.argspec ):
                         regset = ins.possible_out_register_sets
+                    else:
+                        # No register set specified, no value available
+                        continue
                     argval = None
                     # Check via the possible register sets the value of the register
                     for prs in regset:
                         argval,argaddr= arg.value(prs,target)
-#                        if( argval is not None ):
-#                            print(f"argval = {int(argval):#0x}")
-#                        if( argaddr is not None ):
-#                            print(f"argaddr = {int(argaddr):#0x}")
                         if( argval is not None or argaddr is not None ):
                             break
                     addr = argaddr
                     extra.value += f", argval = {argval}, addr = {addr}"
+
+                    # We have a an address, which means the value from the argument was located at some memory
                     if( addr is not None and addr not in printed_addrs ):
                         printed_addrs.add(addr)
 
+                        # Check if the memory address is known to host some (local) variable
                         av = lng.var_addresses.get(addr,None)
                         extra.value += f", ava = {av}"
 
-#                        print("arg = '%s'" % (arg,) )
                         if( addr is not None ):
-                            addr = f"{addr:#0x}"
-                            if( cnt > 0 ):
-                                pre=","
-                            if( av is None ):
-                                pre = ""
-                                av = ""
-                            ins.reference.append( pre + vdb.color.color(av,color_var.value) + "@" + vdb.color.color(addr,color_location.value) )
-                            cnt += 1
-                            if( argval is not None and not arg.target):
-#                        if( argval is not None ):
-#                            print("argval = '%s'" % (argval,) )
-                                val = f"{argval:#0x}"
-                                if( cnt > 0 and len(av) > 0 ):
-                                    pre=","
-                                ins.reference.append( pre + vdb.color.color(av,color_var.value) + "=" + vdb.color.color(val,color_location.value) )
-                                cnt += 1
-#                    vdb.util.bark() # print("BARK")
+                            if( "@" in arg.argspec ):
+                                _,ei = extra_info( av, "@", addr, extra )
+                                ins_references.append(ei)
+#                                ins_references.append(  vdb.color.color(av,color_var.value) + "@" + vdb.color.color(addr,color_location.value) )
+                            if( argval is not None ):
+                                if( "=" in arg.argspec ):
+                                    _,ei = extra_info( av, "=", argval, extra ) 
+                                    ins_references.append( ei )
+#                                    ins_references.append(  vdb.color.color(av,color_var.value) + "=" + vdb.color.color(val,color_location.value) )
+                    # No address means its the value of a register or result of an operation
                     if( addr is None and argval is not None and argval not in printed_addrs ):
+                        extra.value += "!addr&argval"
                         printed_addrs.add(argval)
+                        if( "%" in arg.argspec ):
+                            sym,ei = extra_info( av, "%=", argval, extra )
+                            ins_references.append( ei )
+                            if( sym is not None and len(sym) != 0 ):
+                                ins.target_name = None # The plaintext name has been replaced by the symbol expression
+                        continue
                         _,_,symbol = vdb.memory.get_gdb_sym( argval )
                         extra.value += f", sym = {symbol}"
                         if( symbol is not None ):
+                            symbol = vdb.shorten.symbol(symbol)
                             symbol = symbol.split("@")
                             symbol = vdb.color.color(symbol[0],color_var.value) + "@" + "@".join(symbol[1:])
                             fav = f"{argval:#0x}"
-                            ins.reference.append(symbol + "@" + vdb.color.color( fav, color_location.value ) )
+                            ins_references.append(symbol + "@" + vdb.color.color( fav, color_location.value ) )
                             ins.target_name = None # The plaintext name has been replaced by the symbol expression
                         else:
 #                            vdb.util.bark() # print("BARK")
@@ -2435,16 +2470,20 @@ def register_flow( lng, frame ):
 #                                vdb.util.bark() # print("BARK")
                                 ch = vdb.pointer.chain( argval, vdb.arch.pointer_size, 1, True, 1, False, asm_tailspec.value )
 #                                print("ch = '%s'" % (ch,) )
-                                ins.reference.append(ch[0])
+                                ins_references.append(ch[0])
                             else:
                                 if( not arg.immediate ):
                                     fav = f"{argval:#0x}"
-                                    ins.reference.append( "%=" + vdb.color.color(fav,color_location.value) )
+                                    ins_references.append( "%=" + vdb.color.color(fav,color_location.value) )
                 except:
+                    extra.value += "EXCEPTION"
 
                     if( debug.value ):
                         traceback.print_exc()
                     pass
+            for irx in range(0,len(ins_references)-1):
+                ins_references[irx] = ins_references[irx] + ","
+            ins.reference += ins_references
 
         
 
@@ -2858,6 +2897,7 @@ def get_single( bpos ):
         ret = ret.splitlines()
         ret = ret[1]
     except:
+        traceback.print_exc()
         pass
     return ret
 
