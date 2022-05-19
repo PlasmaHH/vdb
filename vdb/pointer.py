@@ -219,7 +219,7 @@ def colors( ptr, archsize = None ):
     cc,_,_,_,cl = color(ptr,archsize)
     return (cc,cl)
 
-def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = None, last = True, tailspec = None ):
+def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = None, last = True, tailspec = None, annotate = True ):
     if( archsize is None ):
         archsize = vdb.arch.pointer_size
     if( gdb_void == None ):
@@ -232,10 +232,13 @@ def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = N
     ret,add,_,_,_ = color(ptr,archsize)
     pure = True
 
-    an = annotate( ptr )
+    if( annotate ):
+        an = annotate( ptr )
+    else:
+        an = None
     plen = archsize // 4
     plen += 4
-    if( an ):
+    if( an is not None ):
         ret += f" {an:<{plen}}"
         pure = False
     if( minascii is None ):
@@ -247,8 +250,8 @@ def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = N
     if( s is not None ):
         if( len(s) > 0 ):
             ret += f"{arrow_right.value}{s}"
-        pure = False
-        return (ret,pure)
+            pure = False
+            return (ret,pure)
     if( add is not None and test_for_ascii ):
         ascstring = add[1]
         ascstring = escape_spaces(ascstring)
@@ -258,13 +261,14 @@ def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = N
         nptr,gvalue = dereference( ptr )
         if( nptr == gvalue ):
             ret += arrow_infinity.value + color(gvalue,archsize)[0]
+            pure = False
         else:
 #        print("gvalue = '%s'" % gvalue )
             if( not last and maxlen == 1):
                 pass
             else:
                 ret += arrow_right.value + chain(gvalue,archsize,maxlen-1,tailspec=tailspec)[0]
-        pure = False
+                pure = False
     except gdb.MemoryError as e:
 #        print("e = '%s'" % e )
         pass
