@@ -312,6 +312,12 @@ class asm_arg( ):
             print("Failed to parse " + arg)
             raise
 
+    def specfilter( self, sp ):
+        if( sp is None ):
+            self.argspec = ""
+        else:
+            self.argspec = self.argspec.replace(sp,"")
+
     def parse( self, arg ):
 #        print("arg = '%s'" % (arg,) )
         oarg = arg
@@ -2081,13 +2087,14 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
         # We ignore any (initial frame setup) move of rsp to rbp to keep the value intact
         # XXX if we do it that way we can also from here on (backwards?) assume rsp=rbp. (likely just after it we
         # sub something from rsp, we should support basic calculations too)
-        if( frm.register != "rsp" and to.register != "rbp" ):
+        if( frm.register != "rsp" or to.register != "rbp" ):
             frmval,_ = frm.value( possible_registers )
             possible_registers.set( to.register, frmval )
         if( frm.register == "rsp" and to.register == "rbp" ):
             toval,_ = to.value( possible_registers )
             if( toval is not None ):
                 possible_registers.set( "rsp", toval )
+    to.specfilter("=")
 
     if( debug.value ):
         print("possible_registers = '%s'" % (possible_registers,) )
@@ -2191,7 +2198,7 @@ def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
     a1 = ins.arguments[1]
 
     # the value is unintresting, lea only computes the address
-    a0.argspec = a0.argspec.replace("=","")
+    a0.specfilter("=")
 
     fv,fa = a0.value(possible_registers)
     possible_registers.remove( a1.register )
@@ -2435,6 +2442,7 @@ def register_flow( lng, frame ):
                             break
                     addr = argaddr
                     extra.value += f", argval = {argval}, addr = {addr}"
+                    extra.value += f", argspec = {arg.argspec}"
 
                     # We have a an address, which means the value from the argument was located at some memory
                     if( addr is not None and addr not in printed_addrs ):
@@ -2450,7 +2458,8 @@ def register_flow( lng, frame ):
                                 ins_references.append(ei)
 #                                ins_references.append(  vdb.color.color(av,color_var.value) + "@" + vdb.color.color(addr,color_location.value) )
                             if( argval is not None ):
-                                if( "=" in arg.argspec ):
+                                if( "=" in arg.argspec and argval not in printed_addrs ):
+                                    printed_addrs.add(argval)
                                     _,ei = extra_info( av, "=", argval, extra ) 
                                     ins_references.append( ei )
 #                                    ins_references.append(  vdb.color.color(av,color_var.value) + "=" + vdb.color.color(val,color_location.value) )
@@ -2463,8 +2472,9 @@ def register_flow( lng, frame ):
                                 if( ins.parsed_target_name is None ):
                                     ins.parsed_target_name = ins.target_name
                                 av = ins.parsed_target_name
-                                if( av[0] == "<" and av[-1] == ">" ):
-                                    av = av[1:-1]
+                                if( av is not None ):
+                                    if( av[0] == "<" and av[-1] == ">" ):
+                                        av = av[1:-1]
                                 ins.target_name = None
                                 extra.value += f", av={av}"
                             sym,ei = extra_info( av, "%=", argval, extra )
@@ -2504,6 +2514,11 @@ def register_flow( lng, frame ):
                     pass
             for irx in range(0,len(ins_references)-1):
                 ins_references[irx] = ins_references[irx] + ","
+            if( ins.passes > 1 ):
+                if( ins.reference == ins_references ):
+                    ins.reference = []
+                else:
+                    ins.reference.append("ALT:")
             ins.reference += ins_references
 
         for pr in ins.parsed_reference:
