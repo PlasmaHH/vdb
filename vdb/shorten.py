@@ -26,6 +26,7 @@ verbosity = vdb.config.parameter("vdb-shorten-verbosity",1)
 debug = vdb.config.parameter("vdb-shorten-debug",False)
 cache = vdb.config.parameter("vdb-shorten-cache",True)
 lazy  = vdb.config.parameter("vdb-shorten-lazy-load-typedefs",False)
+spacdeiff = vdb.config.parameter("vdb-shorten-accept-space-diffs", True )
 
 
 def log(fmt, *more ):
@@ -479,7 +480,7 @@ def parse_fragment( frag, obj, level = 0 ):
 
 
 
-def parse_function( fun ):
+def parse_function( fun, silent = False ):
 #    print("fun = '%s'" % fun )
     func = type_or_function()
     rest = fun
@@ -489,7 +490,7 @@ def parse_function( fun ):
 
 
 
-    if( i != len(rest) ):
+    if( i != len(rest) and not silent ):
         print(f"Consumed {i} out of {len(rest)} bytes, parser doesn't know about the rest")
 
     sf = str(func)
@@ -497,7 +498,15 @@ def parse_function( fun ):
     s1 = fun.replace(" ","")
     s0 = sf
     s1 = fun
-    if( debug.value and s0 != s1 ):
+
+    if( spacdeiff.value ):
+        s0s = s0.replace(" ","")
+        s1s = s1.replace(" ","")
+    else:
+        s0s = s0
+        s1s = s1
+
+    if( debug.value and s0s != s1s ):
         #		func.dump()
         print("Recreating the function signature leads a difference (%s,%s)" % (len(s0),len(s1)))
         print("fun = '%s'" % fun )
@@ -513,8 +522,10 @@ def parse_function( fun ):
         print("Found   :" + d0)
         print("Expected:" + d1)
         func.dump()
-    elif( s0 != s1 ):
-        vdb.log( f"Failed to properly parse {fun}, shortening not possible, recommend writing a testcase", level = 2)
+        func.failed = True
+    elif( s0s != s1s ):
+        if( not silent ):
+            vdb.log( f"Failed to properly parse '{fun}', shortening not possible, recommend writing a testcase", level = 2)
         func.failed = True
 
 #	func.dump()
@@ -755,7 +766,7 @@ symbol_cache = {}
 
 lazy_hint = True
 
-def symbol(fname):
+def symbol(fname,silent = False):
 
     global lazy_hint
 
@@ -778,7 +789,7 @@ def symbol(fname):
     else:
         symbol_cache = {}
 
-    fun = parse_function(fname)
+    fun = parse_function(fname,silent)
     if( debug.value ):
         g = vdb.dot.graph("function")
         fun.to_dot(g)

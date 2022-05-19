@@ -121,6 +121,7 @@ We have a variety of configurations that control how we output things
   * `>0` prints the header every N lines
 * `vdb-asm-debug-registers` shows additional information about possible register values
 * `vdb-asm-debug-all` shows all sorts of debug information (may break formatting)
+* `vdb-asm-variable-expansion-limit` Limits the depth of subobject expansions for local variables.
 
 ## Information enhancement functionality
 
@@ -220,6 +221,18 @@ stack storage information of the passed parameters. The detail information you c
 
 Usually (here too) variables values after the current instruction are displayed wrong, since we read them right out of
 the memory and the instructions writing the correct values to the memory have not been executed yet.
+
+### Argument output specification
+Setting `vdb-asm-default-argspec` controls a bit in which way the assembler instructions output their register values.
+Some mnemonics can override this default. It is a comma seperated entry, first for the registers that are deemed input,
+second registers that are deemed output of the instruction.
+
+Valid values are:
+* `i` Says to use the possible input registers of this instruction
+* `o` Says to use the output registers instead
+* `@` For an instruction that dereferences some address, this will show the address
+* `=` This will show the value of the dereferenced address
+* `%` When the target is a register, this will display its value
 
 #### debugging the register tracing
 

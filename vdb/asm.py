@@ -2258,18 +2258,25 @@ def gen_vtable( ):
 
 gen_vtable()
 
+def short_color( symbol ):
+    symbol = symbol.split("@")
+    symbol[0] = vdb.shorten.symbol(symbol[0],not debug.value )
+    symbol = vdb.color.color(symbol[0],color_var.value) + "@" + "@".join(symbol[1:])
+    return symbol
+
 def extra_info( vname, spc, addr, extra ):
     symbol = ""
     if( vname is None ):
         _,_,symbol = vdb.memory.get_gdb_sym( addr )
         if( symbol is not None ):
             extra.value += f", esym = {symbol}"
-            symbol = symbol.split("@")
-            symbol[0] = vdb.shorten.symbol(symbol[0])
-            symbol = vdb.color.color(symbol[0],color_var.value) + "@" + "@".join(symbol[1:])
+            symbol = short_color(symbol)
         else:
             symbol = ""
         vname = ""
+    else:
+        vname = short_color(vname)
+    
 
     if( vdb.memory.mmap.accessible(addr) ):
         if( spc != "@" ):
@@ -2507,7 +2514,7 @@ def register_flow( lng, frame ):
                                     ins_references.append( "%=" + vdb.color.color(fav,color_location.value) )
                 except:
                     extra.value += "EXCEPTION"
-#                    traceback.print_exc()
+                    traceback.print_exc()
 
                     if( debug.value ):
                         traceback.print_exc()
