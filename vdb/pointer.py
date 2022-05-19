@@ -220,7 +220,7 @@ def colors( ptr, archsize = None ):
     return (cc,cl)
 
 # @return pure means it is just the pointer, no additional text (but maybe additional colouring)
-def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = None, last = True, tailspec = None, annotate = True ):
+def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = None, last = True, tailspec = None, do_annotate = True ):
     if( archsize is None ):
         archsize = vdb.arch.pointer_size
     if( gdb_void == None ):
@@ -233,7 +233,7 @@ def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = N
     ret,add,_,_,_ = color(ptr,archsize)
     pure = True
 
-    if( annotate ):
+    if( do_annotate ):
         an = annotate( ptr )
     else:
         an = None
