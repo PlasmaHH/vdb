@@ -595,7 +595,7 @@ class listing( ):
         self.start = 0
         self.end = 0
         self.finished = False
-        self.current_branch = "a"
+        self.current_branch = 0
         self.bt_q = []
         self.var_addresses = None
         self.var_expressions = None
@@ -957,8 +957,12 @@ ascii mockup:
         self.finish()
 
     def next_backtrack( self ):
-        ret = self.current_branch
-        self.current_branch = chr(ord(ret)+1)
+        btsym = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        if( self.current_branch >= len(btsym) ):
+            ret = f"({self.current_branch})"
+        else:
+            ret = btsym[self.current_branch]
+        self.current_branch += 1
         return ret
 
     def q_backtrack_next( self, idx, bt, limit ):
@@ -987,7 +991,7 @@ ascii mockup:
         self.ins_map = {}
         idx = 0
         midx = None
-        self.current_branch = "a"
+        self.current_branch = 0
 #        if( any((c in showspec) for c in "hH" ) ):
         rec = gdb.current_recording()
 #        else:

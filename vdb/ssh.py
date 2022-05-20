@@ -637,6 +637,8 @@ class cmd_ssh (vdb.command.command):
 
     def __init__ (self):
         super (cmd_ssh, self).__init__ ("ssh", gdb.COMMAND_RUNNING)
+        self.current_ssh = None
+        self.current_ssh_parameters = None
 
     def do_invoke (self, argv):
         try:
@@ -663,6 +665,9 @@ class cmd_ssh (vdb.command.command):
         if( self.current_word(word,argv) >1 ):
             if( len( set(subcommands) & set(argv) ) == 0 ):
                 return self.matches(word,subcommands)
+        if( self.current_word(word,argv) > 2 ):
+            path = argv[-1]
+            return self.matches(word,["var","cores","ls"])
         # next step: for each subcommand figure out possible parameters (likely by looking it up on the other host and
         # caching things maybe for 10 seconds? also cache a connection and figure out a way to disable that after N
         # seconds being unused )
