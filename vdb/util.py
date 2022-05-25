@@ -501,7 +501,7 @@ available_spinners = {
         spinner_types.braille3 : braille( [ 0b1000110, 0b111, 0b1011, 0b11001, 0b111000, 0b10110000, 0b11100000, 0b11000100 ]  ),
         spinner_types.braille7 : "⣾⣽⣻⢿⡿⣟⣯⣷"[::-1],
         spinner_types.bar      : "▂▃▄▅▆▇█",
-        spinner_types.bar_h    : "█▉▊▋▌▍▎▏",
+        spinner_types.bar_h    : "█▉▊▋▌▍▎▏"[::-1],
         spinner_types.block    : "▘▝▗▖",
         spinner_types.block_p  : "▚▞",
         spinner_types.ascii    : "|/-\\",

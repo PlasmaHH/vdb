@@ -18,6 +18,7 @@ default_limit = vdb.config.parameter("vdb-llist-default-list-limit", 128 )
 
 scan_offset  = vdb.config.parameter("vdb-llist-scan-max-offset", 4 )
 scan_results = vdb.config.parameter("vdb-llist-scan-max-results", 5 )
+scan_spintype = vdb.config.parameter("vdb-llist-progress-spinner", "ascii" )
 
 verbose = False
 
@@ -26,7 +27,17 @@ def get_next( var, next ):
 #    print("var = '%s'" % (var,) )
 #    print("next = '%s'" % (next,) )
     try:
-        n = var[next]
+        try:
+            nx = int(next)
+#            print("var = '%s'" % (var,) )
+#            print("nx = '%s'" % (nx,) )
+            var = var.cast( vdb.pointer.gdb_void_ptr_ptr )
+            n = var + nx
+#            print("n = '%s'" % (n,) )
+            n = n.dereference()
+#            print("n = '%s'" % (n,) )
+        except:
+            n = var[next]
         n.fetch_lazy()
     except gdb.MemoryError:
         n = None
@@ -272,7 +283,7 @@ def chainstring( chain ):
     return (res,total)
 
 def scan( argv, bidirectional ):
-    vdb.util.bark() # print("BARK")
+#    vdb.util.bark() # print("BARK")
     start = gdb.parse_and_eval( argv[0] )
     if( argv[1].startswith("0x") ):
         end = gdb.parse_and_eval( argv[1] )
@@ -287,11 +298,23 @@ def scan( argv, bidirectional ):
     bdrange = scan_offset.value
     if( not bidirectional ):
         bdrange = 1
+
+    work = scan_offset.value * bdrange * ( size / ptrbytes )
+    txt = f"Scanning address range {int(start):#0x} - {int(start+size):#0x} ( %s/{work} lists )"
+    spin = vdb.util.spinner_types.get(scan_spintype.value,vdb.util.spinner_types.ascii) 
+    pi = vdb.util.progress_indicator( txt, total = work, use_eta = True, avg_steps = 100, spintype = spin )
+
+    cnt = 0
     for offset in range( 0, scan_offset.value ):
         for bdoffset in range( 0, bdrange ):
             for sadd in range( 0,size,ptrbytes ):
                 cl,cn,bcn = chainlen( start + sadd, offset, bdoffset, bidirectional )
                 results.append( (cl, cn, bcn, start+sadd, offset, bdoffset ) )
+                cnt += 1
+                if( cnt % 10000 == 0 ):
+                    ps = pi.get(pos = cnt, text = txt % cnt )
+                    print(f"\r{ps}",end="",flush=True)
+
     results.sort(reverse=True)
    
     otable = []
