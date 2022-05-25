@@ -15,7 +15,7 @@ import re
 
 
 default_limit = vdb.config.parameter("vdb-llist-default-list-limit", 128 )
-
+min_chain    = vdb.config.parameter("vdb-llist-min-chain-len", 2 )
 scan_offset  = vdb.config.parameter("vdb-llist-scan-max-offset", 4 )
 scan_results = vdb.config.parameter("vdb-llist-scan-max-results", 5 )
 scan_spintype = vdb.config.parameter("vdb-llist-progress-spinner", "ascii" )
@@ -300,20 +300,25 @@ def scan( argv, bidirectional ):
         bdrange = 1
 
     work = scan_offset.value * bdrange * ( size / ptrbytes )
-    txt = f"Scanning address range {int(start):#0x} - {int(start+size):#0x} ( %s/{work} lists )"
+    txt = f"Scanning address range {int(start):#0x} - {int(start+size):#0x} ( %s/{work} lists, %s found )"
     spin = vdb.util.spinner_types.get(scan_spintype.value,vdb.util.spinner_types.ascii) 
     pi = vdb.util.progress_indicator( txt, total = work, use_eta = True, avg_steps = 100, spintype = spin )
 
-    cnt = 0
-    for offset in range( 0, scan_offset.value ):
-        for bdoffset in range( 0, bdrange ):
-            for sadd in range( 0,size,ptrbytes ):
-                cl,cn,bcn = chainlen( start + sadd, offset, bdoffset, bidirectional )
-                results.append( (cl, cn, bcn, start+sadd, offset, bdoffset ) )
-                cnt += 1
-                if( cnt % 10000 == 0 ):
-                    ps = pi.get(pos = cnt, text = txt % cnt )
-                    print(f"\r{ps}",end="",flush=True)
+    try:
+        cnt = 0
+        for offset in range( 0, scan_offset.value ):
+            for bdoffset in range( 0, bdrange ):
+                for sadd in range( 0,size,ptrbytes ):
+                    cl,cn,bcn = chainlen( start + sadd, offset, bdoffset, bidirectional )
+                    if( cl >= min_chain.value ):
+                        results.append( (cl, cn, bcn, start+sadd, offset, bdoffset ) )
+                    cnt += 1
+                    if( cnt % 10000 == 0 ):
+                        ps = pi.get(pos = cnt, text = txt % (cnt,len(results)) )
+                        print(f"\r{ps}",end="",flush=True)
+    except KeyboardInterrupt:
+        print()
+        print(f"Stopping scan, displaying {len(results)} partial results")
 
     results.sort(reverse=True)
    
