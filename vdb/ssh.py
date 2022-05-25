@@ -641,6 +641,10 @@ class cmd_ssh (vdb.command.command):
         self.current_ssh_parameters = None
 
     def do_invoke (self, argv):
+        if( self.current_ssh ):
+            self.current_ssh.detach()
+            self.current_ssh = None
+            self.current_ssh_parameters = None
         try:
             call_ssh(argv)
         except:
@@ -657,17 +661,76 @@ class cmd_ssh (vdb.command.command):
         if( len(text) == 0 ):
             self.message("user@host",text)
             return []
-        argv=text.split()
+#        argv=text.split()
+        argv = gdb.string_to_argv(text)
+        current_word = self.current_word(word,argv)
+#        print("current_word = '%s'" % (current_word,) )
 #        print("len(argv) = '%s'" % (len(argv),) )
+#        print("argv = '%s'" % (argv,) )
 #        print("text = '%s'" % (text,) )
 #        print("word = '%s'" % (word,) )
 #        print("self.current_word(word,argv) = '%s'" % (self.current_word(word,argv),) )
         if( self.current_word(word,argv) >1 ):
             if( len( set(subcommands) & set(argv) ) == 0 ):
                 return self.matches(word,subcommands)
-        if( self.current_word(word,argv) > 2 ):
-            path = argv[-1]
-            return self.matches(word,["var","cores","ls"])
+
+        if( len(argv) <= 1 ):
+            return []
+
+        host = argv[0]
+        cmd  = argv[1]
+
+
+        if( cmd not in [ "core", "run" ] ):
+            return None
+
+#        print()
+#        print("host = '%s'" % (host,) )
+#        print("cmd = '%s'" % (cmd,) )
+        # How could we possibly support extra (jumphost etc.) commands here?
+        if( self.current_ssh is not None and self.current_ssh_parameters == host ):
+            s = self.current_ssh
+        else:
+            s = ssh( host )
+            self.current_ssh = s
+            self.current_ssh_parameters = host
+
+#        print("s = '%s'" % (s,) )
+#        print(f"\nSSH completion connection to {host}")
+
+        if( len(argv) == 2 ):
+            path = "~/"
+        else:
+            path = " ".join(argv[2:])
+
+#        print("path = '%s'" % (path,) )
+        if( not path.endswith("/") ):
+            pv = os.path.split(path)
+#            print("pv[:-1] = '%s'" % (pv[:-1],) )
+#            print("pv = '%s'" % (pv,) )
+            path = os.path.join(*pv[:-1])
+
+#        print("path = '%s'" % (path,) )
+        s.write(f"ls -AFL {path}\n")
+        s.fill(2)
+        paths = s.read()
+        paths = paths.split("\n")
+        np = []
+        for s in paths:
+            if( len(s) != 0 ):
+                if( s.endswith("*") ):
+                    s = s[:-1]
+                np.append(s)
+        paths = np
+#        print("paths = '%s'" % (paths,) )
+        return self.matches(word,paths)
+#        print("s.check(True) = '%s'" % (s.check(True),) )
+
+
+#        print("\nSOMETHING")
+#        return [ "", " "]
+#        print("path = '%s'" % (path,) )
+
         # next step: for each subcommand figure out possible parameters (likely by looking it up on the other host and
         # caching things maybe for 10 seconds? also cache a connection and figure out a way to disable that after N
         # seconds being unused )
