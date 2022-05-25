@@ -136,7 +136,7 @@ class tty(target):
         if( f is None ):
             f = self.try_open("/dev/" + tty_name)
         if( f is None ):
-            raise gdb.error(f"Could not open {tty_name} ({fn})")
+            raise gdb.error(f"Could not open {tty_name} ({tty_name})")
         self.file = f
 
     def write( self, output ):

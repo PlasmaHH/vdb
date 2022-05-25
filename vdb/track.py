@@ -872,6 +872,7 @@ class delete_track_action:
 
     def action( self,now ):
 #        print("delete action()")
+        global track_storage
         store = track_storage.setdefault( self.map_key, {} )
 #        print("self.map_key = '%s'" % (self.map_key,) )
 #        print("store = '%s'" % (store,) )
@@ -880,7 +881,7 @@ class delete_track_action:
             storeset = store.get(self.storage_map,None)
 #            print("storeset = '%s'" % (storeset,) )
             if( storeset is not None ):
-                val = self.get( self.expression )
+                val = storeset.get( self.expression )
 #                print("val = '%s'" % (val,) )
 #                print("storeset = '%s'" % (storeset,) )
                 storeset.discard( val )

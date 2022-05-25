@@ -15,6 +15,7 @@ import os
 import pathlib
 import sys
 import string
+import abc
 
 
 
@@ -31,6 +32,14 @@ case_sensitive = vdb.config.parameter("vdb-history-match-case-sensitive",True)
 class raw_input:
 
     def __init__( self ):
+        pass
+
+    @abc.abstractmethod
+    def nextchar( self, c ):
+        pass
+
+    @abc.abstractmethod
+    def after_loop( self, valid ):
         pass
 
     def loop( self ):

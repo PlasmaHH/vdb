@@ -73,7 +73,7 @@ class command(gdb.Command):
         self.do_invoke(argv)
 
     def invoke_or_pipe( self, arg,argv ):
-        if( sys.modules.get("vdb.pipe",None) != None ):
+        if( sys.modules.get("vdb.pipe",None) is not None ):
             self.pipe(arg,argv)
         else:
             self.do_invoke(argv)

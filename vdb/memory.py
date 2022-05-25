@@ -757,9 +757,9 @@ class memory_map:
 #                    print("LOAD mm.mtype = '%s'" % mm.mtype )
                 if( "CODE" in rest ):
 #                    print("CODE mm.mtype = '%s'" % mm.mtype )
-                    if( mm.atype == None and "READONLY" in rest ):
+                    if( mm.atype is None and "READONLY" in rest ):
                         mm.atype = access_type.ACCESS_EX
-                if( ( mm.atype == None or mm.atype == access_type.ACCESS_RW ) and "READONLY" in rest ):
+                if( ( mm.atype is None or mm.atype == access_type.ACCESS_RW ) and "READONLY" in rest ):
                     mm.atype = access_type.ACCESS_RO
 #                    mm.mtype = memory_type.HEAP
 #        print("sec_regions = '%s'" % sec_regions )

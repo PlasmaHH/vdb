@@ -133,7 +133,7 @@ class ssh_connection:
     def detach( self ):
         self.pipe.terminate()
         try:
-            self.wait(0.1)
+            self.pie.wait(0.1)
         except:
             self.pipe.kill()
 

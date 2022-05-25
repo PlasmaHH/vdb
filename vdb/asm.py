@@ -566,7 +566,7 @@ class instruction( ):
 
     def __str__( self ):
         ta = "None"
-        if( len(self.targets) ):
+        if( len(self.targets) != 0 ):
             ta = ""
             for t in self.targets:
                 ta += f"{t:#0x}"
@@ -1115,7 +1115,7 @@ ascii mockup:
                         
         for i in self.instructions:
             cg_extra = []
-            if( header_repeat.value is not None and suppress_header != True ):
+            if( header_repeat.value is not None and not suppress_header ):
                 if( header_repeat.value > 0 ):
                     if( cnt % header_repeat.value == 0 ):
                         otbl.append( header )
@@ -1725,7 +1725,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     key = arg
 
     if( len(arg) == 0 ):
-        if( gdb.selected_thread() == None ):
+        if( gdb.selected_thread() is None ):
             return listing()
 
 #        gdb.execute(f"p $rip")

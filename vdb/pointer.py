@@ -223,7 +223,7 @@ def colors( ptr, archsize = None ):
 def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = None, last = True, tailspec = None, do_annotate = True ):
     if( archsize is None ):
         archsize = vdb.arch.pointer_size
-    if( gdb_void == None ):
+    if( gdb_void is None ):
         update_types()
     if( maxlen == 0 ):
         return (ellipsis.value,True)

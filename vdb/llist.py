@@ -124,8 +124,8 @@ def show_list( argv, bidirectional ):
     pvar = None
 
     if( bidirectional and  previous is None ):
-            print("Cannot use bidirectional/backwards mode with no prev= pointer given")
-            bidirectional = False
+        print("Cannot use bidirectional/backwards mode with no prev= pointer given")
+        bidirectional = False
 
     # Just go backwards as far as we can and pretend we started there already (will break in the case of the forward
     # pointers being broken, try to detect that later )

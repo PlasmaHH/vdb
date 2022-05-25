@@ -1017,7 +1017,7 @@ We recommend having an alias reg = registers in your .gdbinit
                 else:
                     self.usage()
             else:
-                print("Invalid argument(s) to registers: '%s'" % arg )
+                print("Invalid argument(s) to registers: '%s'" % argv )
                 self.usage()
         except Exception as e:
             traceback.print_exc()

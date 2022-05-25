@@ -864,6 +864,9 @@ def test_all(args):
         cnt += 1
     print(f"Tested {cnt} type strings...")
 
+def path( fname ):
+    return fname
+
 vdb.subcommands.add_subcommand( [ "_test_all_shorten"] , test_all )
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

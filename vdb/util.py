@@ -92,7 +92,7 @@ def unquote( s ):
     return s
 
 suffixes_iso = [ "", "k","M","G","T","P","E","Z","Y" ]
-suffixes_bin = [ "", "ki","Mi","Gi","Ti","Pi","Ei","Zi","Yi" ] 
+suffixes_bin = [ "", "ki","Mi","Gi","Ti","Pi","Ei","Zi","Yi" ]
 
 def bark( offset = 0 ):
     import traceback
@@ -404,11 +404,6 @@ def parse_vars( argv ):
 
     return ( retargv, retvars )
 
-
-
-    print("retargv = '%s'" % (retargv,) )
-    print("retvars = '%s'" % (retvars,) )
-
 class silence:
 
     def __init__( self ):
@@ -494,7 +489,7 @@ class spinner_types(Enum):
 
 
 # braille( [ 0b1, 0b10, 0b100, 0b1000, 0b10000, 0b100000, 0b1000000,0b10000000] )
-# '⠁⠂⠄⠈⠐⠠⡀⢀' 
+# '⠁⠂⠄⠈⠐⠠⡀⢀'
 available_spinners = {
         spinner_types.braille1 : braille( [ 0b1, 0b10, 0b100, 0b1000000, 0b10000000, 0b100000, 0b10000, 0b1000 ][::-1] ),
         spinner_types.braille2 : braille( [ 0b1000100, 0b110, 0b11, 0b1001, 0b11000, 0b110000, 0b10100000, 0b11000000 ]  ),
