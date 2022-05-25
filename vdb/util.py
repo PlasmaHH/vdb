@@ -452,8 +452,12 @@ class silence:
         sys.stdout.flush()
 
 
-
-
+def gdb_numeric( val ):
+    if( type(val) != gdb.Value ):
+        return val
+    if( val.type.code == gdb.TYPE_CODE_FLT ):
+        return float(val)
+    return int(val)
 
 def braille( num ) :
     if( type(num) is int ):
@@ -463,6 +467,15 @@ def braille( num ) :
         ret += braille(b)
     return ret
 
+class Enum(Enum):
+
+    @classmethod
+    def get( cls, s , default = None ):
+        try:
+            return cls[s]
+        except:
+            traceback.print_exc()
+            return default
 
 class spinner_types(Enum):
     ascii    = auto()
@@ -478,6 +491,7 @@ class spinner_types(Enum):
     circle   = auto()
     test     = auto()
     none     = auto()
+
 
 # braille( [ 0b1, 0b10, 0b100, 0b1000, 0b10000, 0b100000, 0b1000000,0b10000000] )
 # '⠁⠂⠄⠈⠐⠠⡀⢀' 
@@ -607,11 +621,11 @@ class progress_indicator:
         self.spinner = spinner( spintype, spinverse, spinchars, cps )
         self.eta = None
         if( use_eta ):
-            self.eta = eta(total,avg_steps)
+            self.eta = eta(gdb_numeric(total),gdb_numeric(avg_steps))
         self.text = text
-        self.start = start
-        self.total = total
-        self.current_pos = start
+        self.start = gdb_numeric(start)
+        self.total = gdb_numeric(total)
+        self.current_pos = gdb_numeric(start)
 
     def set( self, pos, now = None ):
         if( self.eta is not None ):
@@ -676,7 +690,10 @@ class progress_indicator:
         bar += barchars[2] * be
         bar += barchars[3]
 
-        eta = eta_format(self.eta.get())
+        if( self.eta is not None ):
+            eta = eta_format(self.eta.get())
+        else:
+            eta = ""
 
         out = format.format(**locals())
         return out
