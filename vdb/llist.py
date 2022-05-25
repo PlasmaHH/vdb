@@ -152,11 +152,14 @@ def show_list( argv, bidirectional ):
             line.append( "…" )
 
         for af,fn,fmt,sup in additional_fields:
+            pae = None
             try:
                 if( sup ):
                     continue
                 if( fmt ):
-                    varstr = f"(({gvar.type}){gvar})"
+#                    print("type(gvar) = '%s'" % (type(gvar),) )
+#                    print("gvar = '%s'" % (gvar,) )
+                    varstr = f"(({gvar.type}){int(gvar)})"
                     pae = af.format(var=varstr)
                     afv = gdb.parse_and_eval(pae)
                 else:
@@ -178,7 +181,7 @@ def show_list( argv, bidirectional ):
                 else:
                     line.append( str(afv) )
             except Exception as e:
-#                print("pae = '%s'" % (pae,) )
+                print("pae = '%s'" % (pae,) )
                 traceback.print_exc()
                 line.append( f"<{type(e).__module__}.{type(e).__name__}>")
 
