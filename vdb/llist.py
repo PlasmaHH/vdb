@@ -135,6 +135,11 @@ def show_list( argv, bidirectional ):
 
 #    indices[0x0000000127de9f80] = 5
     while gvar is not None:
+        try:
+            gvar.fetch_lazy()
+        except gdb.MemoryError:
+            gvar = None
+            break
         indices[int(gvar)] = cnt
 
         line = []
