@@ -44,15 +44,15 @@ def prefix( i, msg, end = None ):
 
 class namespace:
 
-	def __init__(self,name,parent=None):
-		self.name = name
-		self.parent = parent
+    def __init__(self,name,parent=None):
+        self.name = name
+        self.parent = parent
 
-	def __str__(self):
-		ret = self.name
-		if( self.parent ):
-			ret = self.parent.__str__() + "::" + ret
-		return ret
+    def __str__(self):
+        ret = self.name
+        if( self.parent ):
+            ret = self.parent.__str__() + "::" + ret
+        return ret
 
 class type_or_function:
 
@@ -538,26 +538,26 @@ def parse_function( fun, silent = False ):
 
 
 def template_fold(fname,template):
-	start = fname.find(template)
-	if( start == -1 ):
-		return fname
-	start += len(template)
-	prefix=fname[0:start]
+    start = fname.find(template)
+    if( start == -1 ):
+        return fname
+    start += len(template)
+    prefix=fname[0:start]
 #	print("start = '%s'" % start )
 #	print("fname = '%s'" % fname )
 #	print("prefix = '%s'" % prefix )
-	level = 0
-	for i in range(start,len(fname)):
-		if( fname[i] == "<" ):
-			level+=1
-		elif( fname[i] == ">" ):
-			level-=1
-		if( level == 0 ):
-			suffix=fname[i+1:]
-			suffix=template_fold(suffix,template)
-			fname = prefix + vdb.color.color("<…>",color_shorten.value) + suffix
-			break
-	return fname
+    level = 0
+    for i in range(start,len(fname)):
+        if( fname[i] == "<" ):
+            level+=1
+        elif( fname[i] == ">" ):
+            level-=1
+        if( level == 0 ):
+            suffix=fname[i+1:]
+            suffix=template_fold(suffix,template)
+            fname = prefix + vdb.color.color("<…>",color_shorten.value) + suffix
+            break
+    return fname
 
 
 

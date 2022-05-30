@@ -214,7 +214,7 @@ def do_symbolic( argv ):
     if( len(argv) > 2 ):
         typ = " ".join(argv[2:])
     else:
-        typ = "void*";
+        typ = "void*"
 
     compile(f"""
 

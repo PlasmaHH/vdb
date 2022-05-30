@@ -249,7 +249,7 @@ class Registers():
     def parse_register( self,frame,reg,regs):
         if( len(reg) == 0 ):
             regs[reg] = (None,None)
-            return
+            return None
         try:
             v = frame.read_register(reg)
 #			print("reg = '%s'" % reg )

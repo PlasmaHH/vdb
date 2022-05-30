@@ -907,7 +907,7 @@ class hexdump_track_action( track_action ):
         ps,pu = vdb.pointer.chain( self.buffer, vdb.arch.pointer_size, 3, test_for_ascii = True )
 #        print("ps = '%s'" % (ps,) )
 #        print("pu = '%s'" % (pu,) )
-        print(f"{self.location} : {self.buffer_expression} = {ps}, {self.size_expression} = {self.size}");
+        print(f"{self.location} : {self.buffer_expression} = {ps}, {self.size_expression} = {self.size}")
         vdb.hexdump.hexdump( self.buffer, self.size )
     # called on breakpoint hit
     # 
