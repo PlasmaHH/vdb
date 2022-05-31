@@ -245,7 +245,7 @@ class register_set:
             value.fetch_lazy()
         except AttributeError: # not a gdb.Value
             pass
-        except gdb.MemoryError: 
+        except gdb.MemoryError:
             # a lazy values memory access failed, don't save anything, in fact since we don't konw what it could have
             # been, its better to pretend its unknown
             self.values.pop(name,None)
@@ -1056,7 +1056,7 @@ ascii mockup:
                 context_start = marked_line - context[0]
                 context_end = marked_line + 1
             elif( context[1] is not None ):
-                context_start = marked_line 
+                context_start = marked_line
                 context_end = marked_line + context[1] + 1
         return ( context_start, context_end )
 
@@ -1112,7 +1112,7 @@ ascii mockup:
         cg_columns = 0
         if( "c" in showspec ):
             cg_columns = len(cg_header)
-                        
+
         for i in self.instructions:
             cg_extra = []
             if( header_repeat.value is not None and not suppress_header ):
@@ -1203,7 +1203,7 @@ ascii mockup:
             postarrows = None
             if( "d" in showspec ):
 #                mt=str.maketrans("v^-|<>+#Q~I","╭╰─│◄►┴├⥀◆↑" )
-                                    
+
                 if( len(i.jumparrows) ):
                     ja=i.jumparrows.translate(self.m_trans)
                     pa=i.jumparrows.translate(self.p_trans).translate(self.m_trans)
@@ -1510,7 +1510,7 @@ class fake_frame:
     class fake_function:
         def __init__( self ):
             self.name = "__fake_function__"
-        
+
     def __init__( self ):
         pass
 
@@ -1597,7 +1597,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
     # TODO support float/double registers and vectors
 
     rbp = "rbp" # adapt for other archs
-    
+
     rbpval = frame.read_register(rbp)
     if( rbpval is not None ):
         rbpval = int(rbpval)
@@ -2005,7 +2005,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #        if( b.value(frame).type.tag is None ):
 #            print("b.value(frame) = '%s'" % (b.value(frame),) )
 #        print("b.value(frame).address = '%s'" % (b.value(frame).address,) )
-    
+
 
     if( fun is None ):
         funhead = "????"
@@ -2019,7 +2019,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
             vv = frame.read_var(n)
 #            print("vv = '%s'" % (vv,) )
 #            print("vv.type = '%s'" % (vv.type,) )
-            # XXX do we want to output this anywhere? 
+            # XXX do we want to output this anywhere?
 #            gather_vars( frame, ret, vv.type.fields(), vv, n + "." )
             gather_vars( frame, ret, [ fake_symbol(vv,n) ], None, n + "." )
 
@@ -2280,7 +2280,7 @@ def extra_info( vname, spc, addr, extra ):
         vname = ""
     else:
         vname = short_color(vname)
-    
+
 
     if( vdb.memory.mmap.accessible(addr) ):
         if( spc != "@" ):
@@ -2320,7 +2320,7 @@ def register_flow( lng, frame ):
 #    possible_registers = {}
     possible_registers = lng.initial_registers.clone()
     possible_flags = flag_set()
-    
+
     rbp = frame.read_register("rbp")
     if( rbp  is not None ):
         if( vdb.memory.mmap.accessible(rbp) ):
@@ -2415,7 +2415,7 @@ def register_flow( lng, frame ):
 
 
 #        vdb.util.bark() # print("BARK")
-        # Check if we can output a bit more info about the register values used in this 
+        # Check if we can output a bit more info about the register values used in this
         if( len(ins.arguments) > 0 ):
             cnt = 0
             target = None
@@ -2471,7 +2471,7 @@ def register_flow( lng, frame ):
                             if( argval is not None ):
                                 if( "=" in arg.argspec and argval not in printed_addrs ):
                                     printed_addrs.add(argval)
-                                    _,ei = extra_info( av, "=", argval, extra ) 
+                                    _,ei = extra_info( av, "=", argval, extra )
                                     ins_references.append( ei )
 #                                    ins_references.append(  vdb.color.color(av,color_var.value) + "=" + vdb.color.color(val,color_location.value) )
                     # No address means its the value of a register or result of an operation
@@ -2544,7 +2544,7 @@ def register_flow( lng, frame ):
             except:
                 traceback.print_exc()
                 pass
-        
+
 
         if( debug_registers.value ):
             ins._gen_extra()
@@ -2847,7 +2847,7 @@ def add_variable( argv ):
 
     global function_vars
     global function_registers
-    
+
     fv = function_vars.get(fun,None)
     if( fv is None ):
         fv = {}
