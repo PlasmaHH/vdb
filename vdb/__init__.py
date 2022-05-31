@@ -65,7 +65,7 @@ texe = None
 keep_running = True
 
 def overrides(method):
-    # actually can't do this because a method is really just a function while inside a class def'n  
+    # actually can't do this because a method is really just a function while inside a class def'n
     #assert(inspect.ismethod(method))
 
     stack = inspect.stack()
@@ -74,7 +74,7 @@ def overrides(method):
     # handle multiple inheritance
     base_classes = [s.strip() for s in base_classes.split(',')]
     if not base_classes:
-        raise ValueError('overrides decorator: unable to determine base class') 
+        raise ValueError('overrides decorator: unable to determine base class')
 
     # stack[0]=overrides, stack[1]=inside class def'n, stack[2]=outside class def'n
     derived_class_locals = stack[2][0].f_locals
