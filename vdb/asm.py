@@ -1796,7 +1796,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
         dis = fakedata
 #    print("dis = '%s'" % dis )
 #    linere = re.compile("^(=>)*\s*(0x[0-9a-f]*)\s*<\+([0-9]*)>:\s*([^<]*)(<[^+]*(.*)>)*")
-    linere = re.compile("^(=>)*\s*(0x[0-9a-f]*)(\s*<\+([0-9]*)>:)*\s*([^<]*)(<[^+]*(.*)>)*")
+    linere = re.compile(r"^(=>)*\s*(0x[0-9a-f]*)(\s*<\+([0-9]*)>:)*\s*([^<]*)(<[^+]*(.*)>)*")
     funcre = re.compile("for function (.*):")
     rangere = re.compile("Dump of assembler code from (0x[0-9a-f]*) to (0x[0-9a-f]*):")
     bytere = re.compile("^[0-9a-fA-F][0-9a-fA-F]$")
@@ -2045,7 +2045,6 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
 flow_vtable = {}
 
-movre = re.compile("([-]0x[0-9a-f]*)\((%[a-z]*)\),(%[a-z]*)")
 
 def vt_flow_j( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
@@ -2893,7 +2892,7 @@ def disassemble( argv ):
                     break
                 elif( argv0[0] == "r" ):
                     gdb.execute("disassemble " + " ".join(argv))
-                    return
+                    return None
                 elif( argv0[0] == "s" ):
                     source = True
                     argv0 = argv0[1:]
@@ -2913,16 +2912,16 @@ def disassemble( argv ):
                     break
                 elif( argv0[0] == "v" ):
                     add_variable( argv )
-                    return
+                    return None
                 else:
                     break
 
 #    print("context = '%s'" % (context,) )
 #    print("argv = '%s'" % (argv,) )
 
-    listing = parse_from(" ".join(argv),fakedata,context)
+    asm_listing = parse_from(" ".join(argv),fakedata,context)
     if( asm_sort.value ):
-        listing.sort()
+        asm_listing.sort()
     marked = None
     if( context is not None ):
         try:
@@ -2936,14 +2935,15 @@ def disassemble( argv ):
             pass
 
     try:
-        listing.print(asm_showspec.value, context,marked, source)
+        asm_listing.print(asm_showspec.value, context,marked, source)
         if( dotty ):
-            g = listing.to_dot(asm_showspec_dot.value)
+            g = asm_listing.to_dot(asm_showspec_dot.value)
             g.write("dis.dot")
             os.system("nohup dot -Txlib dis.dot &")
     except:
         traceback.print_exc()
         pass
+    return None
 
 
 def get_single( bpos ):
@@ -2982,7 +2982,7 @@ part of a function, unlike the disassemble command those are right away disassem
 """
 
     def __init__ (self):
-        super (Dis, self).__init__ ("dis", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION, replace = True)
+        super ().__init__ ("dis", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION, replace = True)
 
     def do_invoke (self, argv ):
 

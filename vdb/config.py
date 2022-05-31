@@ -9,8 +9,6 @@ import vdb.util
 
 import gdb
 
-import sys
-import types
 import traceback
 import re
 
@@ -36,7 +34,7 @@ def guess_gdb_type( p ):
 def split_colors( cfg ):
     ne = cfg.value.split(";")
     for e in ne:
-        x = vdb.color.color("",e)
+        _ = vdb.color.color("",e)
     cfg.elements = ne
 
 registry = {}
