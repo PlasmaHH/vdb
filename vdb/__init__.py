@@ -14,6 +14,8 @@ import importlib
 import traceback
 import concurrent.futures
 import atexit
+import inspect
+import re
 
 
 
@@ -62,15 +64,60 @@ vdb_init = None
 texe = None
 keep_running = True
 
+def overrides(method):
+    # actually can't do this because a method is really just a function while inside a class def'n  
+    #assert(inspect.ismethod(method))
 
+    stack = inspect.stack()
+    base_classes = re.search(r'class.+\((.+)\)\s*\:', stack[2][4][0]).group(1)
+
+    # handle multiple inheritance
+    base_classes = [s.strip() for s in base_classes.split(',')]
+    if not base_classes:
+        raise ValueError('overrides decorator: unable to determine base class') 
+
+    # stack[0]=overrides, stack[1]=inside class def'n, stack[2]=outside class def'n
+    derived_class_locals = stack[2][0].f_locals
+
+    # replace each class name in base_classes with the actual class type
+    for i, base_class in enumerate(base_classes):
+
+        if '.' not in base_class:
+            base_classes[i] = derived_class_locals[base_class]
+
+        else:
+            components = base_class.split('.')
+
+            # obj is either a module or a class
+            obj = derived_class_locals[components[0]]
+
+            for c in components[1:]:
+                assert(inspect.ismodule(obj) or inspect.isclass(obj))
+                obj = getattr(obj, c)
+
+            base_classes[i] = obj
+
+
+    if not ( any( hasattr(cls, method.__name__) for cls in base_classes ) ):
+        raise NotImplementedError(f"Method {method.__name__} marked override, but not preset in any base: {base_classes}")
+    return method
+
+def xoverrides(interface_class):
+    def overrider(method):
+#        print("method.__name__ = '%s'" % (method.__name__,) )
+#        print("dir(interface_class) = '%s'" % (dir(interface_class),) )
+        assert(method.__name__ in dir(interface_class))
+        return method
+    return overrider
 
 class cmd_vdb (vdb.command.command):
     """Show vdb status information, start vdb and call subcommands"""
 
     def __init__ (self):
-        super (cmd_vdb, self).__init__ ("vdb", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        super ().__init__ ("vdb", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.dont_repeat()
 
+    @overrides
     def do_invoke (self, argv ):
         if( len(argv) > 0 ):
             if( argv[0] == "start" ):
@@ -107,8 +154,6 @@ def is_in_safe_path( pdir ):
     datadir = gdb.execute("show data-directory",False,True)
     datadir = datadir.split('"')[1]
 
-    global vdb_dir
-
     vdir = os.path.normpath(vdb_dir)
 
     sp=sp.replace("$datadir",datadir)
@@ -123,10 +168,10 @@ def is_in_safe_path( pdir ):
             return True
     return False
 
-def load_init( vdb_init ):
+def load_init( vdb_init_file ):
     try:
-        with open(vdb_init,"r") as f:
-            vdb.config.execute(f.read(),vdb_init)
+        with open(vdb_init_file,"r") as f:
+            vdb.config.execute(f.read(),vdb_init_file)
     except FileNotFoundError:
         pass
 
@@ -152,10 +197,8 @@ def load_plugins( plugindir ):
                     except:
                         print(f"Error while loading plugin {plugindir}/{pt}/{fn}")
                         traceback.print_exc()
-                        pass
     except:
         traceback.print_exc()
-        pass
     finally:
         sys.path = oldpath
 
@@ -189,7 +232,7 @@ def start( vdbd = None, vdbinit = None ):
         print("Not starting vdb, disabled by vdb-enable")
         return None
     print("Starting vdb modules…")
-    
+
     global texe
     texe = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads.value,thread_name_prefix="vdb")
 
@@ -222,7 +265,6 @@ def start( vdbd = None, vdbinit = None ):
         except:
             print(f"Error loading module {mod}:")
             traceback.print_exc()
-            pass
 
     plug_dirs = []
     init_files = []

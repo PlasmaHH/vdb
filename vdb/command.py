@@ -8,11 +8,13 @@ import traceback
 import sys
 import shutil
 
+import abc
+
 profile_next = vdb.config.parameter("vdb-command-next-profile",False)
 
 command_registry = {}
 
-class command(gdb.Command):
+class command(gdb.Command,abc.ABC):
 
     terminal_width = 80
 
@@ -71,6 +73,10 @@ class command(gdb.Command):
 #            traceback.print_exc()
             pass
         self.do_invoke(argv)
+
+    @abc.abstractmethod
+    def do_invoke( self, argv ):
+        pass
 
     def invoke_or_pipe( self, arg,argv ):
         if( sys.modules.get("vdb.pipe",None) is not None ):
