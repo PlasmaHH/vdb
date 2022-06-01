@@ -123,6 +123,7 @@ header_repeat      = vdb.config.parameter("vdb-asm-header-repeat", 50 )
 direct_output      = vdb.config.parameter("vdb-asm-direct-output", True )
 gv_limit           = vdb.config.parameter("vdb-asm-variable-expansion-limit", 3 )
 default_argspec    = vdb.config.parameter("vdb-asm-default-argspec", "i@%=,o@%" )
+annotate_jumps     = vdb.config.parameter("vdb-asm-annotate-jumps", True )
 
 callgrind_eventmap = {} # name to index
 callgrind_data = {}
@@ -1541,11 +1542,13 @@ def fix_marker( ls, alt = None, frame = None ):
     if( mark is not None ):
         ls.marker = int(mark)
     for i in ls.instructions:
+        i.xmarked = False
 #            print("%s == %s ? %s " % (i.address,mark,(i.address == mark)))
         if( i.address == mark ):
             i.marked = True
         else:
             i.marked = False
+            
     ls.do_backtrack()
     register_flow(ls,frame)
     return ls
@@ -2047,8 +2050,64 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
 flow_vtable = {}
 
+jconditions = {
+        "je"  : ( False, [ ( "ZF", 1 ) ] ),
+        "jne" : ( False, [ ( "ZF", 0 ) ] ),
+        "jb"  : ( False, [ ( "CF", 1 ) ] ),
+        "jnb" : ( False, [ ( "CF", 0 ) ] ),
+        "ja"  : ( False, [ ( "ZF", 0 ), ( "CF", 0 ) ] ),
+        "jna" : ( True,  [ ( "CF", 1 ), ( "ZF", 1 ) ] ),
+        } # All others not supported yet due to no support for these flags yet
+
+jaliases = {
+        "jz":   "je",
+        "jbe":  "jna",
+        "jnae": "jb",
+        "jc":   "jb",
+        "jae":  "jnb",
+        "jnc":  "jnb",
+        "jnbe" : "ja",
+        "jnge" : "jl",
+        "jnl" : "jge",
+        "jng" : "jle",
+        "jnle" : "jg",
+        "jpe" : "jp",
+        "jpo" : "jnp",
+        }
 
 def vt_flow_j( ins, frame, possible_registers, possible_flags ):
+    if( not annotate_jumps.value ):
+        return (possible_registers,possible_flags)
+
+    mnemonic = jaliases.get( ins.mnemonic, ins.mnemonic )
+
+    use_or,exflags = jconditions.get(mnemonic,(None,None))
+    if( exflags is None ):
+        print(f"Unhandled conditional jump {ins.mnemonic}")
+    else:
+        extrastring = ""
+        taken = True
+        for exflag in exflags:
+            flag_value = possible_flags.get(exflag[0])
+            if( flag_value is not None ):
+                if( flag_value == exflag[1] ):
+                    extrastring += f", {exflag[0]} == {flag_value}"
+                    if( use_or ):
+                        taken = True
+                        break
+                else:
+                    taken = False
+                    extrastring += f", {exflag[0]} != {flag_value}"
+            else:
+                break
+        else:
+            if( taken ):
+                ins.add_extra(f"Jump taken" + extrastring)
+            else:
+                ins.add_extra(f"Jump NOT taken" + extrastring)
+#        print("extrastring = '%s'" % (extrastring,) )
+#        print("possible_flags = '%s'" % (possible_flags,) )
+
     return ( possible_registers, possible_flags )
 
 def vt_flow_push( ins, frame, possible_registers, possible_flags ):
@@ -2109,7 +2168,7 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 def vt_flow_jmp( ins, frame, possible_registers, possible_flags ):
-    return ( register_set(), flag_set() )
+    return ( possible_registers, possible_flags )
 
 def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     sub,_ = ins.arguments[0].value( possible_registers )
@@ -2139,7 +2198,7 @@ def vt_flow_test( ins, frame, possible_registers, possible_flags ):
 #    print("a1 = '%s'" % (a1,) )
     if( a0 is not None and a1 is not None ):
         t = a0 & a1
-        possible_flags.set("ZF",t == 0 )
+        possible_flags.set("ZF", int(t == 0) )
         # XXX add SF and PF support as soon as some other place needs it
 #        ins.possible_flag_sets.append( possible_flags )
     # No changes in registers, so just
@@ -2210,6 +2269,21 @@ def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
     if( fa is not None ):
         if( not a1.dereference and a1.register is not None):
             possible_registers.set( a1.register, fa )
+
+    return ( possible_registers, possible_flags )
+
+# XXX sub does exactly the same with the flags, maybe combine into a common function
+def vt_flow_cmp( ins, frame, possible_registers, possible_flags ):
+    a0 = ins.arguments[0]
+    a1 = ins.arguments[1]
+
+    v0 = a0.value(possible_registers)[0]
+    v1 = a1.value(possible_registers)[0]
+#    print("v0 = '%s'" % (v0,) )
+#    print("v1 = '%s'" % (v1,) )
+    if( v0 is not None and v1 is not None ):
+        possible_flags.set( "ZF", int( v0 == v1 ) )
+        possible_flags.set( "CF", int( v0 > v1 ) ) # XXX revisit for accurate signed/unsigned 32/64 bit stuff (and the other flags)
 
     return ( possible_registers, possible_flags )
 
@@ -2925,16 +2999,16 @@ def disassemble( argv ):
     if( asm_sort.value ):
         asm_listing.sort()
     marked = None
-    if( context is not None ):
-        try:
-            marked = int(gdb.parse_and_eval(" ".join(argv)))
-        except:
-            pass
-        try:
-            if( marked is None and len(argv) == 0 ):
-                marked = int(gdb.parse_and_eval("$pc"))
-        except:
-            pass
+
+    try:
+        marked = int(gdb.parse_and_eval(" ".join(argv)))
+    except:
+        pass
+    try:
+        if( marked is None and len(argv) == 0 ):
+            marked = int(gdb.parse_and_eval("$pc"))
+    except:
+        pass
 
     try:
         asm_listing.print(asm_showspec.value, context,marked, source)
