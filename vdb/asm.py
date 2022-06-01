@@ -11,6 +11,7 @@ import vdb.register
 import vdb.memory
 
 import gdb
+import colors
 
 import re
 import traceback
@@ -1391,13 +1392,14 @@ ascii mockup:
 
         if( "p" in showspec ):
             if( i.args is not None ):
-                tr.td_raw(vdb.dot.color(i.args,color_args_dot.value))
+                tr.td_raw(vdb.dot.color(i.args_string,color_args_dot.value))
             else:
                 tr.td_raw("&nbsp;")
 
         if( "r" in showspec ):
             f = ""
             for r in i.reference:
+                r = colors.strip_color(r)
                 f += wrap_shorten(r) + " "
             if( len(f) > 0 ):
                 tr.td_raw(vdb.dot.color(f,color_function_dot.value))
