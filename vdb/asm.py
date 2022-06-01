@@ -205,6 +205,9 @@ class flag_set:
     def get( self, name ):
         return self.flags.get(name,None)
 
+    def clear( self ):
+        self.flags = {}
+
     def clone( self ):
         ret = flag_set()
         ret.flags = self.flags.copy()
@@ -313,6 +316,7 @@ class asm_arg( ):
             traceback.print_exc()
             print("Failed to parse " + arg)
             raise
+        self.arg_string = arg
 
     def specfilter( self, sp ):
         if( sp is None ):
@@ -2116,6 +2120,7 @@ def vt_flow_push( ins, frame, possible_registers, possible_flags ):
         vl = int(vl) - ( vdb.arch.pointer_size // 8 )
         possible_registers.set(rname,vl)
 
+    # no flags affected
     return ( possible_registers, possible_flags )
 
 def vt_flow_pop( ins, frame, possible_registers, possible_flags ):
@@ -2124,6 +2129,7 @@ def vt_flow_pop( ins, frame, possible_registers, possible_flags ):
         vl = int(vl) + ( vdb.arch.pointer_size // 8 )
         possible_registers.set(rname,vl)
 
+    # no flags affected
     return ( possible_registers, possible_flags )
 
 def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
@@ -2165,9 +2171,11 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
         print("ins.possible_in_register_sets = '%s'" % (ins.possible_in_register_sets,) )
         print("ins.possible_out_register_sets = '%s'" % (ins.possible_out_register_sets,) )
 
+    # no flags affected
     return ( possible_registers, possible_flags )
 
 def vt_flow_jmp( ins, frame, possible_registers, possible_flags ):
+    # no flags affected
     return ( possible_registers, possible_flags )
 
 def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
@@ -2179,6 +2187,8 @@ def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     else:
         ins.arguments[0].argspec = ""
 
+    possible_flags.clear() # until we properly support them its better to not leave wrongs in
+
     return ( possible_registers, possible_flags )
 
 def vt_flow_add( ins, frame, possible_registers, possible_flags ):
@@ -2188,19 +2198,25 @@ def vt_flow_add( ins, frame, possible_registers, possible_flags ):
         nv = tgtv + add
         possible_registers.set( ins.arguments[1].register, nv )
 
+    possible_flags.clear() # until we properly support them its better to not leave wrongs in
     return ( possible_registers, possible_flags )
 
 def vt_flow_test( ins, frame, possible_registers, possible_flags ):
 #    print("ins = '%s'" % (ins,) )
     a0,_ = ins.arguments[0].value( possible_registers )
     a1,_ = ins.arguments[1].value( possible_registers )
+    if( ins.arguments[0].arg_string != ins.arguments[1].arg_string ):
+        ins.arguments[1].argspec += "%"
 #    print("a0 = '%s'" % (a0,) )
 #    print("a1 = '%s'" % (a1,) )
+    possible_flags.clear()
     if( a0 is not None and a1 is not None ):
         t = a0 & a1
         possible_flags.set("ZF", int(t == 0) )
         # XXX add SF and PF support as soon as some other place needs it
 #        ins.possible_flag_sets.append( possible_flags )
+    possible_flags.set("OF",0)
+    possible_flags.set("CF",0)
     # No changes in registers, so just
     return ( possible_registers, possible_flags )
 
@@ -2220,6 +2236,9 @@ def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
             if( args[0].register == args[1].register ):
                 possible_registers.set( args[1].register ,0)
 
+    possible_flags.clear() # until we properly support them its better to not leave wrongs in
+    possible_flags.set("OF",0)
+    possible_flags.set("CF",0)
     return ( possible_registers, possible_flags )
 
 def vt_flow_and( ins, frame, possible_registers, possible_flags ):
@@ -2234,17 +2253,23 @@ def vt_flow_and( ins, frame, possible_registers, possible_flags ):
         else: # no idea about the outcome, don't set it
             possible_registers.remove( args[1].register )
 
+    possible_flags.clear() # until we properly support them its better to not leave wrongs in
+    possible_flags.set("OF",0)
+    possible_flags.set("CF",0)
     return ( possible_registers, possible_flags )
 
 def vt_flow_movz( ins, frame, possible_registers, possible_flags ):
+    # no flags affected
     return ( possible_registers, possible_flags )
 
 def vt_flow_movs( ins, frame, possible_registers, possible_flags ):
+    # no flags affected
     return ( possible_registers, possible_flags )
 
 def vt_flow_neg( ins, frame, possible_registers, possible_flags ):
     ins.arguments[0].target = True
     val,_ = ins.arguments[0].value(  possible_registers )
+    possible_flags.clear() # until we properly support them its better to not leave wrongs in
     if( val is not None ):
         val = 0 - val
         possible_registers.set( ins.arguments[0].register, val )
@@ -2270,12 +2295,15 @@ def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
         if( not a1.dereference and a1.register is not None):
             possible_registers.set( a1.register, fa )
 
+    # no flags affected
     return ( possible_registers, possible_flags )
 
 # XXX sub does exactly the same with the flags, maybe combine into a common function
 def vt_flow_cmp( ins, frame, possible_registers, possible_flags ):
     a0 = ins.arguments[0]
     a1 = ins.arguments[1]
+
+    a1.argspec += "=" # we compare values and want to see the involved ones
 
     v0 = a0.value(possible_registers)[0]
     v1 = a1.value(possible_registers)[0]
@@ -2303,6 +2331,7 @@ def vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
             possible_registers = sc.clobber(possible_registers)
         else:
             ins.add_extra(f"syscall[{rax}]()")
+    possible_flags.clear() # syscall can return whatever
 #                    ins.add_extra(f"{possible_registers}")
     return ( possible_registers, possible_flags )
 
@@ -2311,17 +2340,20 @@ def vt_flow_leave( ins, frame, possible_registers, possible_flags ):
     if( rbp is not None ):
         possible_registers.set("rsp",rbp)
     # XXX do the "pop rbp" too
+    # no flags affected
     return ( possible_registers, possible_flags )
 
 def vt_flow_call( ins, frame, possible_registers, possible_flags ):
     npr = register_set()
     npr.copy( possible_registers, call_preserved_registers )
     possible_registers = npr
+    # no flags affected
     return ( possible_registers, possible_flags )
 
 def vt_flow_ret( ins, frame, possible_registers, possible_flags ):
     npr = register_set()
     possible_registers = npr
+    # no flags affected
     return ( possible_registers, possible_flags )
 
 def gen_vtable( ):
