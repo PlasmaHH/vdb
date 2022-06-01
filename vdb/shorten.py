@@ -576,7 +576,15 @@ re_shortens = [
         (r"std::_Vector_base<(.*), std::allocator<\1 *> >",
            r"std::vector<\1>"),
         (r"std::vector<(.*), std::allocator<\1 *> >",
-           r"std::vector<\1>")
+           r"std::vector<\1>"),
+        (r"std::_Hashtable<(.*), (.*), std::allocator<\2 >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >",
+            r"std::_Hashtable<\1, \2>"),
+        (r"std::__detail::_Map_base<(.*), (.*), std::allocator<\2 >, std::__detail::_Select1st, std::equal_to<.*>, std::hash<\1>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>",
+            r"std::__detail::_Map_base<\1, \2>"),
+        (r"std::_Hashtable<(.*),(.*),std::allocator<\2 >,std::__detail::_Select1st,std::equal_to<int>,std::hash<int>,std::__detail::_Mod_range_hashing,std::__detail::_Default_ranged_hash,std::__detail::_Prime_rehash_policy,std::__detail::_Hashtable_traits<false,false,true> >",
+            r"std::_Hashtable<\1, \2>"),
+        (r"std::_Rb_tree<(.*),(.*),std::_Select1st<\2 >,std::less<\1>,std::allocator<\2 > >",
+            r"std::_Rb_tree<\1, \2>")
         ]
 
 cre_shortens = [ ]
