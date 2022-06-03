@@ -12,7 +12,6 @@ import gdb
 
 import re
 import traceback
-from collections.abc import Iterable
 import sys
 
 color_names = vdb.config.parameter("vdb-register-colors-names", "#4c0", gdb_type = vdb.config.PARAM_COLOUR)

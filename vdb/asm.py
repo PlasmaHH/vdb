@@ -200,7 +200,11 @@ class flag_set:
         self.flags[name] = value
 
     def unset( self, name ):
-        self.flags.pop(name,None)
+        if( not isinstance(name,str) ):
+            for n in name:
+                self.unset(n)
+        else:
+            self.flags.pop(name,None)
 
     def get( self, name ):
         return self.flags.get(name,None)
@@ -212,6 +216,10 @@ class flag_set:
         ret = flag_set()
         ret.flags = self.flags.copy()
         return ret
+
+    def merge( self, other ):
+        for k,v in other.flags.items():
+            self.set(k,v)
 
     def __str__( self ):
         ret = "{"
@@ -2219,7 +2227,7 @@ def vt_flow_test( ins, frame, possible_registers, possible_flags ):
         ins.arguments[1].argspec += "%"
 #    print("a0 = '%s'" % (a0,) )
 #    print("a1 = '%s'" % (a1,) )
-    possible_flags.clear()
+    possible_flags.unset( [ "SF","ZF","AF","PF"] )
     if( a0 is not None and a1 is not None ):
         t = a0 & a1
         possible_flags.set("ZF", int(t == 0) )
@@ -2246,7 +2254,7 @@ def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
             if( args[0].register == args[1].register ):
                 possible_registers.set( args[1].register ,0)
 
-    possible_flags.clear() # until we properly support them its better to not leave wrongs in
+    possible_flags.unset( [ "SF","ZF","AF","PF"] )
     possible_flags.set("OF",0)
     possible_flags.set("CF",0)
     return ( possible_registers, possible_flags )
@@ -2263,7 +2271,7 @@ def vt_flow_and( ins, frame, possible_registers, possible_flags ):
         else: # no idea about the outcome, don't set it
             possible_registers.remove( args[1].register )
 
-    possible_flags.clear() # until we properly support them its better to not leave wrongs in
+    possible_flags.unset( [ "SF","ZF","AF","PF"] )
     possible_flags.set("OF",0)
     possible_flags.set("CF",0)
     return ( possible_registers, possible_flags )
@@ -2280,6 +2288,7 @@ def vt_flow_neg( ins, frame, possible_registers, possible_flags ):
     ins.arguments[0].target = True
     val,_ = ins.arguments[0].value(  possible_registers )
     possible_flags.clear() # until we properly support them its better to not leave wrongs in
+    possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
     if( val is not None ):
         val = 0 - val
         possible_registers.set( ins.arguments[0].register, val )
@@ -2319,6 +2328,7 @@ def vt_flow_cmp( ins, frame, possible_registers, possible_flags ):
     v1 = a1.value(possible_registers)[0]
 #    print("v0 = '%s'" % (v0,) )
 #    print("v1 = '%s'" % (v1,) )
+    possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
     if( v0 is not None and v1 is not None ):
         possible_flags.set( "ZF", int( v0 == v1 ) )
         possible_flags.set( "CF", int( v0 > v1 ) ) # XXX revisit for accurate signed/unsigned 32/64 bit stuff (and the other flags)
@@ -2421,7 +2431,27 @@ def current_registers( frame ):
         rset.set( reg.name, frame.read_register(reg) )
     return rset
 
-
+def current_flags( frame ):
+    eflags = frame.read_register("eflags")
+#    print("eflags = '%s'" % (eflags,) )
+#    print("type(eflags) = '%s'" % (type(eflags),) )
+#    print("eflags.type = '%s'" % (eflags.type,) )
+#    print("eflags.type.code = '%s'" % (vdb.util.gdb_type_code(eflags.type.code),) )
+    e_val = int(eflags)
+#    print("eflags.type.fields() = '%s'" % (eflags.type.fields(),) )
+    fs = flag_set()
+    for bit,fd in vdb.register.flag_descriptions.items():
+        mask = 1 << bit
+#        print(f"mask = {int(mask):#0x}")
+#        print("fd[1] = '%s'" % (fd[1],) )
+        fval = e_val & mask
+#        print("fval = '%s'" % (fval,) )
+        if( fval > 0 ):
+            fs.set(fd[1],1)
+        else:
+            fs.set(fd[1],0)
+#    print("fs = '%s'" % (fs,) )
+    return fs
 
 def register_flow( lng, frame ):
     global flow_vtable
@@ -2485,9 +2515,10 @@ def register_flow( lng, frame ):
             possible_registers.set( "pc", ins.address + len(ins.bytes) )
 
         if( ins.marked ):
+            cf = current_flags(frame)
+            possible_flags.merge(cf)
             cr = current_registers(frame)
-            if( not cr.empty() ):
-                possible_registers.merge(cr)
+            possible_registers.merge(cr)
 
         # Check if we have a special function handling more than the basics
         fun = flow_vtable.get(ins.mnemonic,None)
