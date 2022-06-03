@@ -1530,7 +1530,7 @@ class fake_frame:
     def block( self ):
         return []
 
-def fix_marker( ls, alt = None, frame = None ):
+def fix_marker( ls, alt = None, frame = None, do_flow = True ):
 #    mark = vdb.util.gint("$rip")
     try:
         mark = vdb.util.gint(f"${last_working_pc}")
@@ -1554,8 +1554,10 @@ def fix_marker( ls, alt = None, frame = None ):
             i.marked = False
             
     ls.do_backtrack()
-    register_flow(ls,frame)
+    if( do_flow ):
+        register_flow(ls,frame)
     return ls
+
 
 parse_cache = {}
 
@@ -1726,7 +1728,7 @@ def info_line( addr ):
 #    print("il = '%s'" % (il,) )
     return (None,None)
 
-def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached = True ):
+def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached = True, do_flow = True ):
 
 #    print(f"parse_from_gdb(arg={arg},fakedata={len(fakedata)}, arch={arch}, fakeframe={fakeframe}, cached={cached}")
     global parse_cache
@@ -1771,7 +1773,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
 #    print("ret = '%s'" % ret )
     if( ret is not None and fakedata is None ):
-        return fix_marker(ret,arg,frame)
+        return fix_marker(ret,arg,frame,do_flow)
     ret = listing()
 #    vdb.util.bark() # print("BARK")
 #    print("key = '%s'" % (key,) )
@@ -1995,7 +1997,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     ret.var_expressions = {}
 
     if( markers == 0 ):
-        ret = fix_marker(ret,arg,frame)
+        ret = fix_marker(ret,arg,frame,do_flow)
 
     fun = frame.function()
 #    print("fun.name = '%s'" % (fun.name,) )
@@ -2048,7 +2050,8 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #    print("var_addresses = '%s'" % (ret.var_addresses,) )
 #    print("var_expressions = '%s'" % (ret.var_expressions,) )
 
-    register_flow(ret,frame)
+    if( do_flow ):
+        register_flow(ret,frame)
     return ret
 
 
@@ -3060,7 +3063,7 @@ def get_single( bpos ):
         da=gdb.selected_frame().architecture().disassemble(int(bpos),count=1)
         da=da[0]
         fake = f"{da['addr']:#0x} <+0>: {da['asm']}"
-        li = parse_from_gdb("",fake)
+        li = parse_from_gdb("",fake,do_flow=False)
         ret = li.to_str(asm_showspec.value.replace("a","").replace("o",""),suppress_header = True)
         ret = ret.splitlines()
         ret = ret[1]
