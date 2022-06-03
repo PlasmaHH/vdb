@@ -2287,24 +2287,30 @@ def vt_flow_jmp( ins, frame, possible_registers, possible_flags ):
 def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     sub,_ = ins.arguments[0].value( possible_registers )
     tgtv,_ = ins.arguments[1].value( possible_registers )
+    possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
     if( tgtv is not None and sub is not None):
         nv = tgtv - sub
         possible_registers.set( ins.arguments[1].register, nv )
+        possible_flags.set_result( nv, ins.arguments[1] )
+        possible_flags.set( "CF", int(tgtv > sub) )
     else:
         ins.arguments[0].argspec = ""
 
-    possible_flags.clear() # until we properly support them its better to not leave wrongs in
-
     return ( possible_registers, possible_flags )
+
 
 def vt_flow_add( ins, frame, possible_registers, possible_flags ):
     add,_ = ins.arguments[0].value( possible_registers )
     tgtv,_ = ins.arguments[1].value( possible_registers )
+    possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
     if( tgtv is not None and add is not None):
         nv = tgtv + add
         possible_registers.set( ins.arguments[1].register, nv )
+        possible_flags.set_result( nv, ins.arguments[1] )
+        possible_flags.set( "CF", int(tgtv > add) )
+    else:
+        ins.arguments[0].argspec = ""
 
-    possible_flags.clear() # until we properly support them its better to not leave wrongs in
     return ( possible_registers, possible_flags )
 
 def vt_flow_test( ins, frame, possible_registers, possible_flags ):
