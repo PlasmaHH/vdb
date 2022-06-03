@@ -256,7 +256,16 @@ class register_set:
             self.values.pop(name,None)
             return
 
-        self.values[name] = int(value)
+        try:
+            self.values[name] = int(value)
+        except gdb.error:
+            print("name = '%s'" % (name,) )
+            print("value = '%s'" % (value,) )
+            pass
+
+
+    def empty( self ):
+        return len(self.values) == 0
 
     def get( self, name, altval = None ):
         for rname in reg_alts(name):
@@ -2405,6 +2414,16 @@ def extra_info( vname, spc, addr, extra ):
 
     return (symbol, vdb.color.color(vname,color_var.value) + symbol + spc + vdb.color.color(addrstr,color_location.value))
 
+def current_registers( frame ):
+    blacklist = set( [ "rip", "eip", "ip", "pc" ] )
+    rset = register_set()
+    for reg in frame.architecture().registers():
+        if( reg.name in blacklist ):
+            continue
+        rset.set( reg.name, frame.read_register(reg) )
+    return rset
+
+
 
 def register_flow( lng, frame ):
     global flow_vtable
@@ -2466,6 +2485,11 @@ def register_flow( lng, frame ):
             possible_registers.set( "pc", ins.next.address )
         elif( len(ins.bytes) > 0 ):
             possible_registers.set( "pc", ins.address + len(ins.bytes) )
+
+        if( ins.marked ):
+            cr = current_registers(frame)
+            if( not cr.empty() ):
+                possible_registers.merge(cr)
 
         # Check if we have a special function handling more than the basics
         fun = flow_vtable.get(ins.mnemonic,None)
