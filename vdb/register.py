@@ -91,16 +91,16 @@ abbrflags = [
         ]
 
 possible_registers = [
-		( "rax", "eax", "ax"),
-        ( "rbx", "ebx", "bx"),
-        ( "rcx", "ecx", "cx"),
-        ( "rdx", "edx", "dx"),
-		( "rsi", "esi", "si"),
-        ( "rdi", "edi", "di"),
-		( "rbp", "ebp", "bp"),
-        ( "rsp", "esp", "sp"),
+		( "rax", "eax", "ax", "al"),
+        ( "rbx", "ebx", "bx", "bl"),
+        ( "rcx", "ecx", "cx", "cl"),
+        ( "rdx", "edx", "dx", "dl"),
+		( "rsi", "esi", "si", "sil"),
+        ( "rdi", "edi", "di", "dil"),
+		( "rbp", "ebp", "bp", "bpl"),
+        ( "rsp", "esp", "sp", "spl"),
 		( "rip", "eip", "ip", "pc"),
-        "r0","r1","r2","r3","r4","r5","r6","r7",
+        "r0","r1","r2","r3","r4","r5","r6","r7", # other than x86
 		"r8" , "r9" , "r10", "r11",
 		"r12", "r13", "r14", "r15",
 		"r16", "r17", "r18", "r19",
@@ -110,6 +110,45 @@ possible_registers = [
         "lr","cpsr","fpscr",
         "sp","pc", "ctr"
 		]
+
+register_sizes = {
+        64 : [ "rax","rbx","rcx","rdx","rsi","rdi","rbp","rsp","rip", 
+                "r0","r1","r2","r3","r4","r5","r6","r7", # other than x86
+                "r8" , "r9" , "r10", "r11",
+                "r12", "r13", "r14", "r15",
+                "r16", "r17", "r18", "r19",
+                "r20", "r21", "r22", "r23",
+                "r24", "r25", "r26", "r27",
+                "r28", "r29", "r30", "r31",
+                ],
+        32 : [ "eax","ebx","ecx","edx","esi","edi","ebp","esp","eip", 
+                "r0d","r1d","r2d","r3d","r4d","r5d","r6d","r7d", # other than x86
+                "r8d" , "r9d" , "r10d", "r11d",
+                "r12d", "r13d", "r14d", "r15d",
+                "r16d", "r17d", "r18d", "r19d",
+                "r20d", "r21d", "r22d", "r23d",
+                "r24d", "r25d", "r26d", "r27d",
+                "r28d", "r29d", "r30d", "r31d",
+                ],
+        16 : [ "ax","bx","cx","dx","si","di","bp","sp","ip", 
+                "r0w","r1w","r2w","r3w","r4w","r5w","r6w","r7w", # other than x86
+                "r8w" , "r9w" , "r10w", "r11w",
+                "r12w", "r13w", "r14w", "r15w",
+                "r16w", "r17w", "r18w", "r19w",
+                "r20w", "r21w", "r22w", "r23w",
+                "r24w", "r25w", "r26w", "r27w",
+                "r28w", "r29w", "r30w", "r31w",
+                ],
+         8 : [ "al","bl","cl","dl","sil","dil","bpl","spl",
+                "r0b","r1b","r2b","r3b","r4b","r5b","r6b","r7b", # other than x86
+                "r8b" , "r9b" , "r10b", "r11b",
+                "r12b", "r13b", "r14b", "r15b",
+                "r16b", "r17b", "r18b", "r19b",
+                "r20b", "r21b", "r22b", "r23b",
+                "r24b", "r25b", "r26b", "r27b",
+                "r28b", "r29b", "r30b", "r31b",
+                ]
+        }
 
 possible_prefixes = [
 		"cs", "ds", "es", "fs", "gs", "ss"
@@ -130,6 +169,18 @@ possible_specials = [
 
 gdb_uint64_t = gdb.lookup_type("unsigned long long")
 gdb_uint8_t = gdb.lookup_type("unsigned char")
+
+size_per_reg = {}
+def gen_size_per_reg( ):
+    global size_per_reg
+    for sz,rnl in register_sizes.items():
+        for rn in rnl:
+            size_per_reg[rn] = sz
+
+def register_size( name ):
+    if( len(size_per_reg) == 0 ):
+        gen_size_per_reg()
+    return size_per_reg.get(name,None)
 
 
 def read( reg, frame = None ):

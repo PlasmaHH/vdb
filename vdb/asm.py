@@ -168,7 +168,6 @@ def gen_altlist( ):
         elif( pr[0] == "r" ):
             reg_altlists[pr] = [ pr, pr + "d" ]
             reg_altlists[pr + "d"] = [ pr + "d", pr ]
-#    print("reg_altlists = '%s'" % (reg_altlists,) )
 
 def reg_alts( reg ):
     if( len(reg_altlists) == 0 ):
@@ -190,6 +189,7 @@ class string_ref:
     def __str__( self ):
         return self.value
 
+bit_counts = bytes(bin(x).count("1") for x in range(256))  
 # similar to register_set a wrapper around a dict that stores possible flag values
 class flag_set:
 
@@ -197,14 +197,37 @@ class flag_set:
         self.flags = {}
 
     def set( self, name, value ):
+#        vdb.util.bark() # print("BARK")
+#        vdb.util.bark(-1) # print("BARK")
+#        print("name = '%s'" % (name,) )
         self.flags[name] = value
+        self._maybe_set_sf_of(name)
+#        print("self = '%s'" % (self,) )
 
     def unset( self, name ):
+#        vdb.util.bark() # print("BARK")
+#        vdb.util.bark(-1) # print("BARK")
+#        print("name = '%s'" % (name,) )
         if( not isinstance(name,str) ):
             for n in name:
                 self.unset(n)
         else:
             self.flags.pop(name,None)
+            self._maybe_set_sf_of(name)
+#        print("self = '%s'" % (self,) )
+
+    def _maybe_set_sf_of( self, name  ):
+#        print("name = '%s'" % (name,) )
+        if( name in set(["SF","OF"]) ):
+            self._set_sf_of()
+
+    def _set_sf_of( self ):
+        sfv = self.get("SF")
+        ofv = self.get("OF")
+        if( sfv is not None and ofv is not None ):
+            self.set("SF_OF", int(sfv == ofv) )
+        else:
+            self.unset("SF_OF")
 
     def get( self, name ):
         return self.flags.get(name,None)
@@ -220,6 +243,28 @@ class flag_set:
     def merge( self, other ):
         for k,v in other.flags.items():
             self.set(k,v)
+
+    # for the "according to the result" flags
+    def set_result( self, result, arg = None ):
+#        vdb.util.bark() # print("BARK")
+        if( result < 0 ):
+            if( arg is not None and ( bs := arg.bitsize ) is not None ):
+                result += (1 << bs)
+
+#        print("result = '%s'" % (result,) )
+        lsb = result & 0xFF
+        bcnt = bit_counts[lsb]
+        self.set("PF", int( bcnt & 1 == 0 ) )
+        self.set("ZF", int(result == 0) )
+        if( arg is not None and ( bs := arg.bitsize ) is not None ):
+            sbit = ( 1 << (bs-1) )
+            self.set("SF", int( (result & sbit) != 0  ))
+            mask = ( 1 << bs ) - 1
+#            print(f"mask = {int(mask):#0x}")
+#            print("bs = '%s'" % (bs,) )
+            r = result & mask
+            # XXX really not sure about this one in case of signs and all
+            self.set("OF", int(r != result) )
 
     def __str__( self ):
         ret = "{"
@@ -277,6 +322,10 @@ class register_set:
         for rname in reg_alts(name):
             rv = self.values.get(rname,None)
             if( rv is not None ):
+                rs = vdb.register.register_size(name)
+                if( rs is not None ):
+                    mask = ( 1 << rs ) - 1
+                    rv &= mask
                 return ( rv, rname )
         return ( altval, name )
 
@@ -332,6 +381,12 @@ class asm_arg( ):
             print("Failed to parse " + arg)
             raise
         self.arg_string = arg
+        self._bitsize = vdb.register.register_size( self.register )
+
+    @property
+    def bitsize( self ):
+        # XXX add heuristics for when its None
+        return self._bitsize
 
     def specfilter( self, sp ):
         if( sp is None ):
@@ -2079,6 +2134,13 @@ jconditions = {
         "jnb" : ( False, [ ( "CF", 0 ) ] ),
         "ja"  : ( False, [ ( "ZF", 0 ), ( "CF", 0 ) ] ),
         "jna" : ( True,  [ ( "CF", 1 ), ( "ZF", 1 ) ] ),
+        "jl"  : ( False, [ ( "SF_OF", 0 ) ] ),
+        "jge" : ( False, [ ( "SF_OF", 1 ) ] ),
+        "jle" : ( True,  [ ( "ZF", 1 ), ( "SF_OF", 0 ) ] ),
+        "jg"  : ( False, [ ( "ZF", 0 ), ( "SF_OF", 1 ) ] ),
+        "jp"  : ( False, [ ( "PF", 1 ) ] ),
+        "jnp" : ( False, [ ( "PF", 0 ) ] ),
+
         } # All others not supported yet due to no support for these flags yet
 
 jaliases = {
@@ -2097,6 +2159,18 @@ jaliases = {
         "jpo" : "jnp",
         }
 
+def flag_extra( name, cmp, exp, value ):
+#    vdb.util.bark() # print("BARK")
+    if( name == "SF_OF" ):
+        if( value ):
+            ret = ", SF == OF"
+        else:
+            ret = ", SF != OF"
+    else:
+        ret = f", {name}[{value}] {cmp} {exp}"
+#    print("ret = '%s'" % (ret,) )
+    return ret
+
 def vt_flow_j( ins, frame, possible_registers, possible_flags ):
     if( not annotate_jumps.value ):
         return (possible_registers,possible_flags)
@@ -2104,25 +2178,39 @@ def vt_flow_j( ins, frame, possible_registers, possible_flags ):
     mnemonic = jaliases.get( ins.mnemonic, ins.mnemonic )
 
     use_or,exflags = jconditions.get(mnemonic,(None,None))
+#    print("mnemonic = '%s'" % (mnemonic,) )
+#    print("use_or = '%s'" % (use_or,) )
+#    print("exflags = '%s'" % (exflags,) )
+#    print("possible_flags = '%s'" % (possible_flags,) )
     if( exflags is None ):
         print(f"Unhandled conditional jump {ins.mnemonic}")
     else:
         extrastring = ""
+        valid = False
         taken = True
         for exflag in exflags:
+#            print("exflag = '%s'" % (exflag,) )
             flag_value = possible_flags.get(exflag[0])
+#            print("flag_value = '%s'" % (flag_value,) )
             if( flag_value is not None ):
                 if( flag_value == exflag[1] ):
-                    extrastring += f", {exflag[0]} == {flag_value}"
+#                    vdb.util.bark() # print("BARK")
+#                    extrastring += f", {exflag[0]} == {flag_value}"
+                    extrastring += flag_extra(exflag[0],"==",exflag[1],flag_value)
                     if( use_or ):
+                        valid = True
                         taken = True
                         break
                 else:
                     taken = False
-                    extrastring += f", {exflag[0]} != {flag_value}"
+#                    vdb.util.bark() # print("BARK")
+                    extrastring += flag_extra(exflag[0],"!=",exflag[1],flag_value)
             else:
                 break
         else:
+            valid = True
+
+        if( valid ):
             if( taken ):
                 ins.add_extra(f"Jump taken" + extrastring)
             else:
@@ -2230,7 +2318,7 @@ def vt_flow_test( ins, frame, possible_registers, possible_flags ):
     possible_flags.unset( [ "SF","ZF","AF","PF"] )
     if( a0 is not None and a1 is not None ):
         t = a0 & a1
-        possible_flags.set("ZF", int(t == 0) )
+        possible_flags.set_result(t,ins.arguments[1])
         # XXX add SF and PF support as soon as some other place needs it
 #        ins.possible_flag_sets.append( possible_flags )
     possible_flags.set("OF",0)
@@ -2242,19 +2330,22 @@ def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
     args = ins.arguments
 
     # We only do it when not writing to memory
+    possible_flags.unset( [ "SF","ZF","AF","PF"] )
     if( not args[1].dereference ):
         v0,_ = args[0].value( possible_registers )
         v1,_ = args[1].value( possible_registers )
         if( v0 is not None and v1 is not None ):
-            possible_registers.set( args[1].register, v0 ^ v1 )
+            t = v0 ^ v1
+            possible_registers.set( args[1].register, t )
+            possible_flags.set_result(t)
         else: # no idea about the outcome, don't set it
             possible_registers.remove( args[1].register )
         if( len(args) == 2 ):
             # xor zeroeing out a register
             if( args[0].register == args[1].register ):
                 possible_registers.set( args[1].register ,0)
+                possible_flags.set_result(0)
 
-    possible_flags.unset( [ "SF","ZF","AF","PF"] )
     possible_flags.set("OF",0)
     possible_flags.set("CF",0)
     return ( possible_registers, possible_flags )
@@ -2263,15 +2354,17 @@ def vt_flow_and( ins, frame, possible_registers, possible_flags ):
     args = ins.arguments
 
     # We only do it when not writing to memory
+    possible_flags.unset( [ "SF","ZF","AF","PF"] )
     if( not args[1].dereference ):
         v0,_ = args[0].value( possible_registers )
         v1,_ = args[1].value( possible_registers )
         if( v0 is not None and v1 is not None ):
-            possible_registers.set( args[1].register, v0 & v1 )
+            t = v0 & v1
+            possible_registers.set( args[1].register, t )
+            possible_flags.set_result(t)
         else: # no idea about the outcome, don't set it
             possible_registers.remove( args[1].register )
 
-    possible_flags.unset( [ "SF","ZF","AF","PF"] )
     possible_flags.set("OF",0)
     possible_flags.set("CF",0)
     return ( possible_registers, possible_flags )
@@ -2330,8 +2423,10 @@ def vt_flow_cmp( ins, frame, possible_registers, possible_flags ):
 #    print("v1 = '%s'" % (v1,) )
     possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
     if( v0 is not None and v1 is not None ):
+        t = v1-v0
         possible_flags.set( "ZF", int( v0 == v1 ) )
         possible_flags.set( "CF", int( v0 > v1 ) ) # XXX revisit for accurate signed/unsigned 32/64 bit stuff (and the other flags)
+        possible_flags.set_result( t,a1 )
 
     return ( possible_registers, possible_flags )
 
