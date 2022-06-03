@@ -2628,6 +2628,11 @@ def register_flow( lng, frame ):
             cf = current_flags(frame)
             possible_flags.merge(cf)
             cr = current_registers(frame)
+            if( debug_registers.value ):
+                for r,v in cr.values.items():
+                    ov,an = possible_registers.get(r)
+                    if( ov is not None and v != ov ):
+                        ins.add_extra( f"Real register {r} has real value {v} but we deduced {ov} for {an}")
             possible_registers.merge(cr)
 
         # Check if we have a special function handling more than the basics
