@@ -369,11 +369,7 @@ class asm_arg( ):
         self.multiplier = None
         self.add_register = None
         self.asterisk = False
-        asp = default_argspec.value.split(",")
-        if( target ):
-            self.argspec = asp[1]
-        else:
-            self.argspec = asp[0]
+        self.reset_argspec()
         try:
             self.parse(arg)
         except:
@@ -382,6 +378,14 @@ class asm_arg( ):
             raise
         self.arg_string = arg
         self._bitsize = vdb.register.register_size( self.register )
+
+    def reset_argspec( self ):
+        asp = default_argspec.value.split(",")
+        if( self.target ):
+            self.argspec = asp[1]
+        else:
+            self.argspec = asp[0]
+
 
     @property
     def bitsize( self ):
@@ -603,6 +607,10 @@ class instruction( ):
         self.line = None
         self.unhandled = False
         self.parsed_reference = None
+
+    def reset_argspecs( self ):
+        for arg in self.arguments:
+            arg.reset_argspec()
 
     def _gen_extra_regs( self, name, rs ):
         for prs in rs:
@@ -2566,6 +2574,7 @@ def register_flow( lng, frame ):
         i.possible_in_flag_sets = []
         i.possible_out_flag_sets = []
         i.extra = []
+        i.reset_argspecs()
 
         # Will copy only ever on the very first call where we did not have a user defined reference
         if( i.parsed_reference is None ):
@@ -2711,7 +2720,7 @@ def register_flow( lng, frame ):
                         continue
                     argval = None
                     # Check via the possible register sets the value of the register
-                    for prs in regset:
+                    for prs in reversed(regset):
                         argval,argaddr= arg.value(prs,target)
                         if( argval is not None or argaddr is not None ):
                             break
