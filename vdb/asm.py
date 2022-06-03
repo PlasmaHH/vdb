@@ -259,8 +259,6 @@ class register_set:
         try:
             self.values[name] = int(value)
         except gdb.error:
-            print("name = '%s'" % (name,) )
-            print("value = '%s'" % (value,) )
             pass
 
 
