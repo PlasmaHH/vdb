@@ -137,9 +137,6 @@ valid_archs = [ "x86", "arm" ]
 arch_aliases = { "i386" : "x86", "i386:x86-64" : "x86" }
 
 
-def get( name ):
-    pass
-
 def wrap_shorten( fname ):
     return fname
     # we can get multiple things that are not function names, try to shorten only really for things that look like
@@ -683,13 +680,14 @@ class instruction_base( abc.ABC ):
         return ret
 
     @abc.abstractmethod
-    def parse( self, line, m ):
+    def parse( self, line, m, oldins ):
         pass
 
 class x86_instruction( instruction_base ):
 
     @vdb.overrides
     def parse( self, line, m, oldins ):
+#        print("m.groups() = '%s'" % (m.groups(),) )
         self.line = line
         tokens = line.split()
         marker = m.group(1)
@@ -827,11 +825,55 @@ class x86_instruction( instruction_base ):
         oldins = self
         return self
 
-class asm_instruction( instruction_base ):
+class arm_instruction( instruction_base ):
 
     @vdb.overrides
-    def parse( self, line, m ):
-        pass
+    def parse( self, line, m, oldins ):
+        print("line = '%s'" % (line,) )
+        self.line = line
+        marker = m.group(1)
+        tokens = line.split()
+        if( marker is not None ):
+            self.marked = True
+            tokens = tokens[1:]
+#        print("m.groups() = '%s'" % (m.groups(),) )
+#        print("tokens = '%s'" % (tokens,) )
+
+        addr = tokens[0]
+        if( addr[-1] == ":" ):
+            addr = addr[:-1]
+            self.offset = ""
+
+        # XXX need to handle offset too
+        del tokens[0] # address
+
+        self.address = vdb.util.xint(addr)
+
+        ibytes = []
+        while( self.bytere.match(tokens[0]) ):
+            ibytes.append(tokens[0])
+            del tokens[0]
+        self.bytes = ibytes
+
+        if( tokens[0] in prefixes ):
+            self.prefix = tokens[0]
+            del tokens[0]
+
+        self.mnemonic = tokens[0]
+        del tokens[0]
+
+        # up until to the mnemonic x86 and arm are the same, so put everything into a function
+        tokens = " ".join(tokens)
+        tokens = tokens.split(";")
+        if( len(tokens) > 1 ):
+            self.reference = tokens[1:]
+        params = tokens[0]
+#        print("tokens = '%s'" % (tokens,) )
+        print("params = '%s'" % (params,) )
+
+        if( oldins is not None ):
+            oldins.next = self
+        return self
 
 class listing( ):
 
@@ -1755,6 +1797,8 @@ arm_base_pointer = "r11" # can be different
 pc_list = [ "rip", "eip", "ip", "pc" ]
 last_working_pc = ""
 
+current_arch = None
+
 def configure_arch( arch = None ):
     archname = "x86"
     try:
@@ -1768,6 +1812,10 @@ def configure_arch( arch = None ):
     except:
         print("Not configured for architecture %s, falling back to x86" % archname )
 
+    global current_arch
+    if( archname == current_arch ): # already setup
+        return
+
     try:
         module = sys.modules[__name__]
         for gv in dir(module):
@@ -1780,10 +1828,14 @@ def configure_arch( arch = None ):
                 avval = getattr(module,avarname,None)
                 if( avval is not None ):
                     setattr( module, varn, avval )
+                else: # fall back to x86 default
+                    setattr( module, varn, xval )
 #            print("gv = '%s'" % (gv,) )
     except:
         pass
 
+    current_arch = archname
+    gen_vtable()
     return archname
 
 
@@ -2231,7 +2283,7 @@ def flag_extra( name, cmp, exp, value ):
 #    print("ret = '%s'" % (ret,) )
     return ret
 
-def vt_flow_j( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_j( ins, frame, possible_registers, possible_flags ):
     if( not annotate_jumps.value ):
         return (possible_registers,possible_flags)
 
@@ -2280,7 +2332,7 @@ def vt_flow_j( ins, frame, possible_registers, possible_flags ):
 
     return ( possible_registers, possible_flags )
 
-def vt_flow_push( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_push( ins, frame, possible_registers, possible_flags ):
     vl,rname = possible_registers.get("sp")
     if( vl is not None ):
         vl = int(vl) - ( vdb.arch.pointer_size // 8 )
@@ -2289,7 +2341,7 @@ def vt_flow_push( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
-def vt_flow_pop( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_pop( ins, frame, possible_registers, possible_flags ):
     vl,rname = possible_registers.get("sp")
     if( vl is not None ):
         vl = int(vl) + ( vdb.arch.pointer_size // 8 )
@@ -2298,7 +2350,7 @@ def vt_flow_pop( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
-def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     if( debug.value ):
         print()
         vdb.util.bark() # print("BARK")
@@ -2340,11 +2392,11 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
-def vt_flow_jmp( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_jmp( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
-def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     sub,_ = ins.arguments[0].value( possible_registers )
     tgtv,_ = ins.arguments[1].value( possible_registers )
     possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
@@ -2359,7 +2411,7 @@ def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 
-def vt_flow_add( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_add( ins, frame, possible_registers, possible_flags ):
     add,_ = ins.arguments[0].value( possible_registers )
     tgtv,_ = ins.arguments[1].value( possible_registers )
     possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
@@ -2373,7 +2425,7 @@ def vt_flow_add( ins, frame, possible_registers, possible_flags ):
 
     return ( possible_registers, possible_flags )
 
-def vt_flow_test( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_test( ins, frame, possible_registers, possible_flags ):
 #    print("ins = '%s'" % (ins,) )
     a0,_ = ins.arguments[0].value( possible_registers )
     a1,_ = ins.arguments[1].value( possible_registers )
@@ -2392,7 +2444,7 @@ def vt_flow_test( ins, frame, possible_registers, possible_flags ):
     # No changes in registers, so just
     return ( possible_registers, possible_flags )
 
-def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_xor( ins, frame, possible_registers, possible_flags ):
     args = ins.arguments
 
     # We only do it when not writing to memory
@@ -2416,7 +2468,7 @@ def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
     possible_flags.set("CF",0)
     return ( possible_registers, possible_flags )
 
-def vt_flow_and( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_and( ins, frame, possible_registers, possible_flags ):
     args = ins.arguments
 
     # We only do it when not writing to memory
@@ -2435,15 +2487,15 @@ def vt_flow_and( ins, frame, possible_registers, possible_flags ):
     possible_flags.set("CF",0)
     return ( possible_registers, possible_flags )
 
-def vt_flow_movz( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_movz( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
-def vt_flow_movs( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_movs( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
-def vt_flow_neg( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_neg( ins, frame, possible_registers, possible_flags ):
     ins.arguments[0].target = True
     val,_ = ins.arguments[0].value(  possible_registers )
     possible_flags.clear() # until we properly support them its better to not leave wrongs in
@@ -2459,7 +2511,7 @@ def vt_flow_neg( ins, frame, possible_registers, possible_flags ):
         possible_flags.unset("CF")
     return ( possible_registers, possible_flags )
 
-def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_lea( ins, frame, possible_registers, possible_flags ):
 #    print("ins.line = '%s'" % (ins.line,) )
     a0 = ins.arguments[0]
     a1 = ins.arguments[1]
@@ -2477,7 +2529,7 @@ def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 # XXX sub does exactly the same with the flags, maybe combine into a common function
-def vt_flow_cmp( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_cmp( ins, frame, possible_registers, possible_flags ):
     a0 = ins.arguments[0]
     a1 = ins.arguments[1]
 
@@ -2496,7 +2548,7 @@ def vt_flow_cmp( ins, frame, possible_registers, possible_flags ):
 
     return ( possible_registers, possible_flags )
 
-def vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
 #            print("possible_registers = '%s'" % (possible_registers,) )
 #            ins._gen_extra()
     rax,_ = possible_registers.get("rax",None)
@@ -2516,7 +2568,7 @@ def vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
 #                    ins.add_extra(f"{possible_registers}")
     return ( possible_registers, possible_flags )
 
-def vt_flow_leave( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_leave( ins, frame, possible_registers, possible_flags ):
     rbp,_ = possible_registers.get("rbp",None)
     if( rbp is not None ):
         possible_registers.set("rsp",rbp)
@@ -2524,14 +2576,14 @@ def vt_flow_leave( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
-def vt_flow_call( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_call( ins, frame, possible_registers, possible_flags ):
     npr = register_set()
     npr.copy( possible_registers, call_preserved_registers )
     possible_registers = npr
     # no flags affected
     return ( possible_registers, possible_flags )
 
-def vt_flow_ret( ins, frame, possible_registers, possible_flags ):
+def x86_vt_flow_ret( ins, frame, possible_registers, possible_flags ):
     npr = register_set()
     possible_registers = npr
     # no flags affected
@@ -2541,14 +2593,14 @@ def gen_vtable( ):
     vdb.util.bark() # print("BARK")
     global flow_vtable
     thismodule = sys.modules[__name__]
+    start = current_arch + "_vt_flow_"
     for funname in dir(thismodule):
-        if( funname.startswith("vt_flow_") ):
+        if( funname.startswith(start) ):
             fun = getattr( thismodule, funname )
-            funname = funname[8:]
+            funname = funname[len(start):]
             flow_vtable[funname] = fun
 #    print("flow_vtable = '%s'" % (flow_vtable,) )
 
-gen_vtable()
 
 def short_color( symbol ):
     symbol = symbol.split("@")
@@ -2592,7 +2644,11 @@ def current_registers( frame ):
         rset.set( reg.name, frame.read_register(reg) )
     return rset
 
-def current_flags( frame ):
+def arm_current_flags( frame ):
+    fs = flag_set()
+    return fs
+
+def x86_current_flags( frame ):
     eflags = frame.read_register("eflags")
 #    print("eflags = '%s'" % (eflags,) )
 #    print("type(eflags) = '%s'" % (type(eflags),) )
@@ -2618,6 +2674,8 @@ def register_flow( lng, frame ):
     global flow_vtable
     if( len(flow_vtable) == 0 ):
         gen_vtable()
+    if( len( lng.instructions) == 0 ):
+        return None
 
     for i in lng.instructions:
         i.passes = 0
@@ -2744,6 +2802,7 @@ def register_flow( lng, frame ):
 
 
 
+        extra = None
 #        vdb.util.bark() # print("BARK")
         # Check if we can output a bit more info about the register values used in this
         if( len(ins.arguments) > 0 ):
@@ -2869,11 +2928,12 @@ def register_flow( lng, frame ):
                 if xr not in printed_addrs:
                     sym,ei = extra_info(None, "~", xr, extra )
                     if( sym is None or len(sym) == 0 ):
-                        ei += prv[1:]
+                        ei += "".join(prv[1:])
                     ins.reference.append(ei)
             except:
-                traceback.print_exc()
-                pass
+                ins.reference.append(pr)
+                if( debug.value ):
+                    traceback.print_exc()
 
 
         if( debug_registers.value ):

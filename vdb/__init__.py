@@ -65,6 +65,7 @@ vdb_init = None
 texe = None
 keep_running = True
 
+# XXX check for number/names? of variables
 def overrides(method):
     # actually can't do this because a method is really just a function while inside a class def'n
     #assert(inspect.ismethod(method))
