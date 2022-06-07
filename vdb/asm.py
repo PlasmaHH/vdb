@@ -403,70 +403,17 @@ class asm_arg_base( ):
         else:
             self.argspec = self.argspec.replace(sp,"")
 
+    @abc.abstractmethod
     def parse( self, arg ):
-#        print("arg = '%s'" % (arg,) )
-        oarg = arg
-        if( arg.find(":") != -1 ):
-            pf = arg.split(":")
-            arg = pf[1]
-            self.prefix = pf[0][1:]
-#        print("self.prefix = '%s'" % (self.prefix,) )
-#        print("arg = '%s'" % (arg,) )
+        pass
 
-        if( arg[0] == "*" ):
-            self.asterisk = True
-            arg = arg[1:]
-
-        if( arg[-1] == ")" ):
-            self.dereference = True
-            if( arg[0] == "(" ):
-                arg = arg[1:-1]
-            else:
-                argv = arg.split("(")
-#                print("argv = '%s'" % (argv,) )
-                po = argv[0]
-#                print("po = '%s'" % (po,) )
-                if( po[0] == "%" ):
-                    if( po[-1] == ":" ):
-                        self.prefix = po[1:-1]
-                else:
-                    self.offset = vdb.util.rxint(po)
-#                    print("self.offset = '%s'" % (self.offset,) )
-                arg = argv[1][:-1]
-#                print("arg = '%s'" % (arg,) )
-                marg = arg.split(",")
-#                print("marg = '%s'" % (marg,) )
-                if( len(marg) == 2 ):
-                    self._check(oarg)
-                elif( len(marg) == 3):
-                    if( len(marg[0]) > 0 ):
-                        self.add_register = marg[0][1:]
-#                        print("self.add_register = '%s'" % (self.add_register,) )
-                    self.register = marg[1][1:]
-                    self.multiplier = vdb.util.rxint(marg[2])
-                    self._check(oarg)
-                    return
-
-        if( arg[0] == "%" ):
-            self.register = arg[1:]
-#            print("self.register = '%s'" % (self.register,) )
-
-        if( arg[0] == "$" ):
-            if( arg.startswith("$0x") ):
-                self.immediate_hex = True
-            self.immediate = vdb.util.rxint( arg[1:] )
-
-        if( arg.startswith("0x") ):
-            self.jmp_target = vdb.util.rxint( arg )
-#        print("self.jmp_target = '%s'" % (self.jmp_target,) )
-        self._check(oarg)
-
-    def _check(self,oarg):
+    def _check(self,oarg,fail = True):
         if( str(self) != oarg ):
             print("oarg = '%s'" % (oarg,) )
             print("str(self) = '%s'" % (str(self),) )
             self._dump()
-            raise RuntimeError(f"Parser self check failed ({str(self)} != {oarg})")
+            if( fail ):
+                raise RuntimeError(f"Parser self check failed ({str(self)} != {oarg})")
 
     def _fixup_value( self, val ):
         if( val is None ):
@@ -512,7 +459,7 @@ class asm_arg_base( ):
                     if( target is None ):
                         dval = vdb.memory.read(val,vdb.arch.pointer_size//8)
                     else:
-                        if( target.register[0] == "r" ):
+                        if( target.bitsize == 64 ):
                             dval = vdb.memory.read(val,8)
                         else:
                             dval = vdb.memory.read(val,4)
@@ -572,10 +519,124 @@ class asm_arg_base( ):
 
 
 class x86_asm_arg(asm_arg_base):
-    pass
+
+    @vdb.overrides
+    def parse( self, arg ):
+#        print("arg = '%s'" % (arg,) )
+        oarg = arg
+        if( arg.find(":") != -1 ):
+            pf = arg.split(":")
+            arg = pf[1]
+            self.prefix = pf[0][1:]
+#        print("self.prefix = '%s'" % (self.prefix,) )
+#        print("arg = '%s'" % (arg,) )
+
+        if( arg[0] == "*" ):
+            self.asterisk = True
+            arg = arg[1:]
+
+        if( arg[-1] == ")" ):
+            self.dereference = True
+            if( arg[0] == "(" ):
+                arg = arg[1:-1]
+            else:
+                argv = arg.split("(")
+#                print("argv = '%s'" % (argv,) )
+                po = argv[0]
+#                print("po = '%s'" % (po,) )
+                if( po[0] == "%" ):
+                    if( po[-1] == ":" ):
+                        self.prefix = po[1:-1]
+                else:
+                    self.offset = vdb.util.rxint(po)
+#                    print("self.offset = '%s'" % (self.offset,) )
+                arg = argv[1][:-1]
+#                print("arg = '%s'" % (arg,) )
+                marg = arg.split(",")
+#                print("marg = '%s'" % (marg,) )
+                if( len(marg) == 2 ):
+                    self._check(oarg)
+                elif( len(marg) == 3):
+                    if( len(marg[0]) > 0 ):
+                        self.add_register = marg[0][1:]
+#                        print("self.add_register = '%s'" % (self.add_register,) )
+                    self.register = marg[1][1:]
+                    self.multiplier = vdb.util.rxint(marg[2])
+                    self._check(oarg)
+                    return
+
+        if( arg[0] == "%" ):
+            self.register = arg[1:]
+#            print("self.register = '%s'" % (self.register,) )
+
+        if( arg[0] == "$" ):
+            if( arg.startswith("$0x") ):
+                self.immediate_hex = True
+            self.immediate = vdb.util.rxint( arg[1:] )
+
+        if( arg.startswith("0x") ):
+            self.jmp_target = vdb.util.rxint( arg )
+#        print("self.jmp_target = '%s'" % (self.jmp_target,) )
+        self._check(oarg)
 
 class arm_asm_arg(asm_arg_base):
-    pass
+
+    @vdb.overrides
+    def parse( self, arg ):
+        arg = arg.strip()
+#        vdb.util.bark() # print("BARK")
+        oarg = arg
+        if( arg.startswith("0x") ):
+            self.jmp_target = vdb.util.rxint( arg )
+        elif( arg.startswith("#") ):
+            self.immediate = int(arg[1:])
+        elif( arg.startswith("[") and arg.endswith("]")):
+            arg = arg[1:-1]
+            arg = list(map(str.strip,arg.split(",")))
+            self.dereference = True
+            self.register = arg[0]
+            if( len(arg) > 1 ):
+#                print("arg[1] = '%s'" % (arg[1],) )
+                if( arg[1][0] == "#" ):
+                    self.offset = int(arg[1][1:])
+                else:
+                    self.add_register = arg[1]
+        else:
+            self.register = arg
+#        print("arg = '%s'" % (arg,) )
+#        print("str(self) = '%s'" % (str(self),) )
+        self._check(oarg,False)
+
+    def __str__( self ):
+        ret = ""
+        if( self.asterisk ):
+            ret +=  "*"
+        if( self.prefix is not None ):
+            ret += f"%{self.prefix}:"
+        if( self.dereference ):
+            ret += "["
+            if( self.multiplier is not None ):
+                if( self.add_register is not None ):
+                    ret += "%" + self.add_register
+                ret += ","
+            ret += self.register
+            if( self.offset is not None ):
+                ret += ", #" + str(self.offset)
+            if( self.multiplier is not None ):
+                ret += f",{self.multiplier}"
+            ret += "]"
+        elif( self.register is not None ):
+            ret += self.register
+        if( self.immediate is not None ):
+            if( self.immediate_hex ):
+                ret += f"${self.immediate:#0x}"
+            else:
+                ret += f"#{self.immediate}"
+        if( self.jmp_target is not None ):
+            ret += f"{self.jmp_target:#0x}"
+        return ret
+
+
 
 class instruction_base( abc.ABC ):
 
@@ -827,9 +888,13 @@ class x86_instruction( instruction_base ):
 
 class arm_instruction( instruction_base ):
 
+    def __init__( self ):
+        super().__init__()
+        self.arg_is_list = False
+
     @vdb.overrides
     def parse( self, line, m, oldins ):
-        print("line = '%s'" % (line,) )
+#        print("line = '%s'" % (line,) )
         self.line = line
         marker = m.group(1)
         tokens = line.split()
@@ -860,19 +925,60 @@ class arm_instruction( instruction_base ):
             del tokens[0]
 
         self.mnemonic = tokens[0]
-        del tokens[0]
+        if( self.mnemonic == ";" ):
+            self.mnemonic = ""
+        else:
+            del tokens[0]
 
         # up until to the mnemonic x86 and arm are the same, so put everything into a function
         tokens = " ".join(tokens)
         tokens = tokens.split(";")
         if( len(tokens) > 1 ):
             self.reference = tokens[1:]
-        params = tokens[0]
-#        print("tokens = '%s'" % (tokens,) )
-        print("params = '%s'" % (params,) )
+        args = tokens[0]
+        self.args_string = args
+
+        oargs = args
+#        print("oargs = '%s'" % (args,) )
+
+        if( len(args) > 0 ):
+            self.args = []
+            if( args[0] == "{" and args[-1] == "}" ):
+                self.arg_is_list = True
+                args = args[1:-1]
+#            print("args = '%s'" % (args,) )
+            args = args.split(",")
+#            print("args = '%s'" % (args,) )
+            target = True
+            while len(args) > 0:
+                arg = args[0].strip()
+                if( arg[0] == "[" ):
+                    arg = ",".join(args)
+                    args = []
+                else:
+                    del args[0]
+                aarg = arm_asm_arg(target,arg)
+                target = False
+                self.args.append(arg)
+                self.arguments.append(aarg)
+        reargs = ", ".join(map(str,self.arguments))
+        if( self.arg_is_list ):
+            reargs = "{" + reargs + "}"
+        if( reargs != oargs.strip() ):
+            print("CHECK OF WHOLE EXPRESION FAILED")
+            print("oargs  = '%s'" % (oargs,) )
+            print("reargs = '%s'" % (reargs,) )
+            self.add_extra(reargs)
+
+        if( self.mnemonic in arm_conditional_jump_mnemonics ):
+            self.targets.add( vdb.util.xint(oargs) )
+            self.conditional_jump = True
+        elif( self.mnemonic in arm_unconditional_jump_mnemonics ):
+            self.targets.add( vdb.util.xint(oargs) )
 
         if( oldins is not None ):
-            oldins.next = self
+            if oldins.mnemonic not in arm_unconditional_jump_mnemonics :
+                oldins.next = self
         return self
 
 class listing( ):
@@ -2590,7 +2696,7 @@ def x86_vt_flow_ret( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 def gen_vtable( ):
-    vdb.util.bark() # print("BARK")
+#    vdb.util.bark() # print("BARK")
     global flow_vtable
     thismodule = sys.modules[__name__]
     start = current_arch + "_vt_flow_"
@@ -2836,6 +2942,7 @@ def register_flow( lng, frame ):
                         continue
                     argval = None
                     # Check via the possible register sets the value of the register
+                    argaddr = None
                     for prs in reversed(regset):
                         argval,argaddr= arg.value(prs,target)
                         if( argval is not None or argaddr is not None ):
