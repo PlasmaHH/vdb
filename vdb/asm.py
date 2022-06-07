@@ -18,6 +18,7 @@ import traceback
 import sys
 import os
 import time
+import abc
 
 asm_colors = [
         ( "j.*", "#f0f" ),
@@ -131,6 +132,13 @@ from_tty = None
 
 
 color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,gdb_type = vdb.config.PARAM_COLOUR_LIST )
+
+valid_archs = [ "x86", "arm" ]
+arch_aliases = { "i386" : "x86", "i386:x86-64" : "x86" }
+
+
+def get( name ):
+    pass
 
 def wrap_shorten( fname ):
     return fname
@@ -355,7 +363,7 @@ class register_set:
 
 
 
-class asm_arg( ):
+class asm_arg_base( ):
 
     def __init__( self, target, arg ):
         self.register = None
@@ -565,7 +573,17 @@ class asm_arg( ):
             offset = f"{self.offset:#0x}"
         print(f"arg %{self.register}, ${self.immediate}, ({self.dereference}), {self.offset},,, T{self.target} :{self.prefix}:: {self.multiplier}*REG + {self.add_register} => {self}")
 
-class instruction( ):
+
+class x86_asm_arg(asm_arg_base):
+    pass
+
+class arm_asm_arg(asm_arg_base):
+    pass
+
+class instruction_base( abc.ABC ):
+
+    bytere = re.compile("^[0-9a-fA-F][0-9a-fA-F]$")
+    cmpre  = re.compile("^\$(0x[0-9a-fA-F]*),.*")
 
     def __init__( self ):
         self.mnemonic = None
@@ -663,6 +681,157 @@ class instruction( ):
             a = 0
         ret = f"INS @{a:x} => {ta} <={to}"
         return ret
+
+    @abc.abstractmethod
+    def parse( self, line, m ):
+        pass
+
+class x86_instruction( instruction_base ):
+
+    @vdb.overrides
+    def parse( self, line, m, oldins ):
+        self.line = line
+        tokens = line.split()
+        marker = m.group(1)
+        if( marker is not None ):
+            self.marked = True
+            tokens = tokens[1:]
+#            print("tokens = '%s'" % tokens )
+        # the dissamble version without <line+>
+        if( tokens[0][-1] == ":" ):
+            tokens[0] = tokens[0][:-1]
+        elif( tokens[1][-1] != ":" ):
+            while( tokens[1][-1] != ":" ):
+#                    print("tokens[1][-1] = '%s'" % tokens[1][-1] )
+                tokens[1] += tokens[2]
+#                    print("tokens[1] = '%s'" % tokens[1] )
+                del tokens[2]
+
+        xtokens = []
+#            print("tokens = '%s'" % tokens )
+        while len(tokens) > 0:
+            tok = tokens[0]
+            if( len(xtokens) > 0 and xtokens[-1].endswith(",") ):
+                xtokens[-1] += tok
+            else:
+                xtokens.append(tok)
+            tokens = tokens[1:]
+#            print("xtokens = '%s'" % xtokens )
+        tokens = xtokens
+
+        self.address = vdb.util.xint(tokens[0])
+ #            print("tokens[1] = '%s'" % tokens[1] )
+        if( len(tokens[1]) < 2 or tokens[1][1] == "+" ):
+            self.offset = tokens[1][2:-2]
+        else:
+            self.offset = tokens[1][1:-2]
+#            print("self.offset = '%s'" % self.offset )
+        tpos = 1
+        ibytes = []
+#            print("tpos = '%s'" % (tpos,) )
+#            print("tokens = '%s'" % (tokens,) )
+        if( len(self.offset) == 0 ):
+            tpos -= 1
+        while( tpos < len(tokens) ):
+            tpos += 1
+            tok = tokens[tpos]
+            if( self.bytere.match(tok) ):
+                ibytes.append( tok )
+            else:
+                break
+#            print("ibytes= '%s'" % (ibytes,) )
+        self.bytes = ibytes
+        tokens = tokens[tpos:]
+        tpos = 0
+        if( tokens[tpos] in prefixes ):
+            self.prefix = tokens[tpos]
+            tpos += 1
+        self.mnemonic = tokens[tpos]
+        tpos += 1
+        if( self.mnemonic in return_mnemonics ):
+            self.return_ = True
+        if( len(tokens) > tpos ):
+            self.args = split_args(tokens[tpos])
+            self.args_string = tokens[tpos]
+            tpos += 1
+
+        if( self.mnemonic in conditional_jump_mnemonics ):
+            self.conditional_jump = True
+        if( self.mnemonic.startswith("cmp") ):
+            m = re.search(self.cmpre,self.args_string)
+#                print("m = '%s'" % m )
+            if( m is not None ):
+                cmparg = m.group(1)
+                last_cmp_immediate = vdb.util.xint(cmparg)
+
+        if( len(tokens) > tpos ):
+#                print("tokens = '%s'" % (tokens,) )
+#                print("tokens[tpos] = '%s'" % tokens[tpos] )
+            if( tokens[tpos] == "#" ):
+                self.reference.append( " ".join(tokens[tpos+1:]) )
+#                    print("self.reference = '%s'" % self.reference )
+            else:
+                if( self.mnemonic not in unconditional_jump_mnemonics ):
+                    self.conditional_jump = True
+#                    print("TARGET ADD '%s'" % tokens[tpos-1])
+                try:
+                    self.targets.add(vdb.util.xint(tokens[tpos-1]))
+                except:
+                    pass
+                self.target_name = " ".join(tokens[tpos:])
+#            elif( self.mnemonic in conditional_jump_mnemonics ):
+        elif( self.conditional_jump ):
+#                print("CONDITIONAL JUMP? %s %s" % (self.mnemonic, tokens ) )
+            try:
+                self.targets.add(vdb.util.xint(tokens[tpos-1]))
+            except:
+                pass
+        elif( self.mnemonic in unconditional_jump_mnemonics ):
+#                print("UNCONDITIONAL JUMP? %s %s" % (self.mnemonic, tokens ) )
+            m = re.search(jmpre,self.args_string)
+            if( m is not None ):
+                table = m.group(1)
+                cnt = 0
+                while True:
+                    try:
+                        jmpval = gdb.parse_and_eval(f"*((void**){table}+{cnt})")
+#                        print("jmpval = '%s'" % jmpval )
+                        if( jmpval == 0 ):
+                            break
+                    except gdb.MemoryError:
+                        break
+                    if( cnt > last_cmp_immediate ):
+                        break
+#                        print("last_cmp_immediate = '%s'" % last_cmp_immediate )
+                    self.targets.add(int(jmpval))
+                    cnt += 1
+                self.reference.append( f"{len(self.targets)} computed jump targets " ) # + str(self.targets)
+#                    print("jmpval = '%s'" % jmpval )
+#                    print("m = '%s'" % m )
+#                    print("m.group(1) = '%s'" % m.group(1) )
+#                    print("self = '%s'" % self )
+            else:
+                try:
+                    self.targets.add(vdb.util.xint(tokens[tpos-1]))
+                except:
+                    pass
+
+        if( self.mnemonic in call_mnemonics ):
+            self.call = True
+            self.conditional_jump = False
+#            print("tokens = '%s'" % tokens[tpos:] )
+
+        if( oldins is not None and oldins.mnemonic != "ret" ):
+            oldins.next = self
+            self.previous = oldins
+        oldins = self
+        return self
+
+class asm_instruction( instruction_base ):
+
+    @vdb.overrides
+    def parse( self, line, m ):
+        pass
 
 class listing( ):
 
@@ -1565,6 +1734,7 @@ x86_unconditional_jump_mnemonics = set([ "jmp", "jmpq" ] )
 x86_return_mnemonics = set (["ret","retq","iret"])
 x86_call_mnemonics = set(["call","callq","int"])
 x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd", "cs", "ss", "ds", "es", "fs", "gs" ])
+x86_base_pointer = "rbp" # what for 32bit?
 
 call_preserved_registers = [ "rbx", "rsp", "rbp", "r12", "r13", "r14", "r15" ]
 
@@ -1580,15 +1750,42 @@ for uj in arm_unconditional_jump_mnemonics:
 arm_return_mnemonics = set ([])
 arm_call_mnemonics = set([])
 arm_prefixes = set([ ])
-
-mnemonics = {
-        "i386:x86-64" : ( x86_prefixes , x86_conditional_jump_mnemonics, x86_unconditional_jump_mnemonics , x86_return_mnemonics , x86_call_mnemonics ),
-        "arm" : ( arm_prefixes , arm_conditional_jump_mnemonics, arm_unconditional_jump_mnemonics , arm_return_mnemonics , arm_call_mnemonics ),
-
-        }
+arm_base_pointer = "r11" # can be different
 
 pc_list = [ "rip", "eip", "ip", "pc" ]
 last_working_pc = ""
+
+def configure_arch( arch = None ):
+    archname = "x86"
+    try:
+        if( arch is not None ):
+            archname = arch
+        else:
+            archname = gdb.selected_frame().architecture().name()
+
+        archname = arch_aliases.get(archname,archname)
+#        print("archname = '%s'" % (archname,) )
+    except:
+        print("Not configured for architecture %s, falling back to x86" % archname )
+
+    try:
+        module = sys.modules[__name__]
+        for gv in dir(module):
+            if( gv.startswith("x86_") ):
+                varn = gv[4:]
+                xval = getattr(module,gv)
+                avarname = archname + "_" + varn
+#                print("varn = '%s'" % (varn,) )
+#                print("avarname = '%s'" % (avarname,) )
+                avval = getattr(module,avarname,None)
+                if( avval is not None ):
+                    setattr( module, varn, avval )
+#            print("gv = '%s'" % (gv,) )
+    except:
+        pass
+
+    return archname
+
 
 class fake_frame:
 
@@ -1685,7 +1882,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
         reglist = [ "rdi", "rsi", "rdx", "rcx", "r8", "r9" ]
     # TODO support float/double registers and vectors
 
-    rbp = "rbp" # adapt for other archs
+    rbp = base_pointer
 
     rbpval = frame.read_register(rbp)
     if( rbpval is not None ):
@@ -1858,39 +2055,17 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #    print("parse_cache = '%s'" % (parse_cache,) )
 
 
-    prefixes = x86_prefixes
-    conditional_jump_mnemonics = x86_conditional_jump_mnemonics
-    unconditional_jump_mnemonics = x86_unconditional_jump_mnemonics
-    return_mnemonics = x86_return_mnemonics
-    call_mnemonics = x86_call_mnemonics
+    archname = configure_arch(arch)
 
-    archname="x86"
-    try:
-        if( arch is not None ):
-            archname = arch
-        else:
-            archname = gdb.selected_frame().architecture().name()
-            prefixes, conditional_jump_mnemonics, unconditional_jump_mnemonics, return_mnemonics, call_mnemonics = mnemonics[archname]
-    except:
-        print("Not configured for architecture %s, falling back to x86" % archname )
-        pass
-
-#    print("arg = '%s'" % (arg,) )
     if( fakedata is None ):
-        t0 = time.time()
         dis = gdb.execute(f'disassemble/r {arg}',False,True)
-        t1 = time.time()
-#        print("t1-t0 = '%s'" % (t1-t0,) )
     else:
         dis = fakedata
-#    print("dis = '%s'" % dis )
 #    linere = re.compile("^(=>)*\s*(0x[0-9a-f]*)\s*<\+([0-9]*)>:\s*([^<]*)(<[^+]*(.*)>)*")
     linere = re.compile(r"^(=>)*\s*(0x[0-9a-f]*)(\s*<\+([0-9]*)>:)*\s*([^<]*)(<[^+]*(.*)>)*")
     funcre = re.compile("for function (.*):")
     rangere = re.compile("Dump of assembler code from (0x[0-9a-f]*) to (0x[0-9a-f]*):")
-    bytere = re.compile("^[0-9a-fA-F][0-9a-fA-F]$")
     jmpre  = re.compile("^\*(0x[0-9a-fA-F]*)\(.*")
-    cmpre  = re.compile("^\$(0x[0-9a-fA-F]*),.*")
     current_function=""
     last_cmp_immediate = 1
 
@@ -1898,8 +2073,14 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     oldins = None
 
     for line in dis.splitlines():
-        ins = instruction()
-        ins.line = line
+
+        if( line in set(["End of assembler dump."]) ):
+            continue
+        if( line.startswith("Address range") ):
+            continue
+        if( len(line) == 0 ):
+            continue
+
         fm=re.search(funcre,line)
         if( fm ):
             ret.function = fm.group(1)
@@ -1911,160 +2092,31 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
                 pass
             current_function = "<" + fm.group(1)
             continue
+
         rr = re.search(rangere,line)
         if( rr ):
             continue
-        if( line.startswith("Address range") ):
-            continue
+
         m=re.search(linere,line)
+
+        ins = None
         if( m ):
-            tokens = line.split()
-            marker = m.group(1)
-            if( marker is not None ):
-                ins.marked = True
+            ins = instruction()
+            ins = ins.parse( line, m, oldins )
+
+        if ins is not None :
+            if( ins.marked ):
                 markers += 1
-                tokens = tokens[1:]
-#            print("tokens = '%s'" % tokens )
-            # the dissamble version without <line+>
-            if( tokens[0][-1] == ":" ):
-                tokens[0] = tokens[0][:-1]
-            elif( tokens[1][-1] != ":" ):
-                while( tokens[1][-1] != ":" ):
-#                    print("tokens[1][-1] = '%s'" % tokens[1][-1] )
-                    tokens[1] += tokens[2]
-#                    print("tokens[1] = '%s'" % tokens[1] )
-                    del tokens[2]
-
-            xtokens = []
-#            print("tokens = '%s'" % tokens )
-            while len(tokens) > 0:
-                tok = tokens[0]
-                if( len(xtokens) > 0 and xtokens[-1].endswith(",") ):
-                    xtokens[-1] += tok
-                else:
-                    xtokens.append(tok)
-                tokens = tokens[1:]
-#            print("xtokens = '%s'" % xtokens )
-            tokens = xtokens
-
-            ins.address = vdb.util.xint(tokens[0])
+            ret.add(ins)
             if( ret.start == 0 ):
                 ret.start = ins.address
             else:
                 ret.start = min(ret.start,ins.address)
             ret.end = max(ret.end,ins.address)
-#            print("tokens[1] = '%s'" % tokens[1] )
-            if( len(tokens[1]) < 2 or tokens[1][1] == "+" ):
-                ins.offset = tokens[1][2:-2]
-            else:
-                ins.offset = tokens[1][1:-2]
-#            print("ins.offset = '%s'" % ins.offset )
-            tpos = 1
-            ibytes = []
-#            print("tpos = '%s'" % (tpos,) )
-#            print("tokens = '%s'" % (tokens,) )
-            if( len(ins.offset) == 0 ):
-                tpos -= 1
-            while( tpos < len(tokens) ):
-                tpos += 1
-                tok = tokens[tpos]
-                if( bytere.match(tok) ):
-                    ibytes.append( tok )
-                else:
-                    break
-#            print("ibytes= '%s'" % (ibytes,) )
-            ins.bytes = ibytes
-            tokens = tokens[tpos:]
-            tpos = 0
-            if( tokens[tpos] in prefixes ):
-                ins.prefix = tokens[tpos]
-                tpos += 1
-            ins.mnemonic = tokens[tpos]
-            tpos += 1
-            if( ins.mnemonic in return_mnemonics ):
-                ins.return_ = True
-            if( len(tokens) > tpos ):
-                ins.args = split_args(tokens[tpos])
-                ins.args_string = tokens[tpos]
-                tpos += 1
 
-            if( ins.mnemonic in conditional_jump_mnemonics ):
-                ins.conditional_jump = True
-            if( ins.mnemonic.startswith("cmp") ):
-                m = re.search(cmpre,ins.args_string)
-#                print("m = '%s'" % m )
-                if( m is not None ):
-                    cmparg = m.group(1)
-                    last_cmp_immediate = vdb.util.xint(cmparg)
-
-            if( len(tokens) > tpos ):
-#                print("tokens = '%s'" % (tokens,) )
-#                print("tokens[tpos] = '%s'" % tokens[tpos] )
-                if( tokens[tpos] == "#" ):
-                    ins.reference.append( " ".join(tokens[tpos+1:]) )
-#                    print("ins.reference = '%s'" % ins.reference )
-                else:
-                    if( ins.mnemonic not in unconditional_jump_mnemonics ):
-                        ins.conditional_jump = True
-#                    print("TARGET ADD '%s'" % tokens[tpos-1])
-                    try:
-                        ins.targets.add(vdb.util.xint(tokens[tpos-1]))
-                    except:
-                        pass
-                    ins.target_name = " ".join(tokens[tpos:])
-#            elif( ins.mnemonic in conditional_jump_mnemonics ):
-            elif( ins.conditional_jump ):
-#                print("CONDITIONAL JUMP? %s %s" % (ins.mnemonic, tokens ) )
-                try:
-                    ins.targets.add(vdb.util.xint(tokens[tpos-1]))
-                except:
-                    pass
-            elif( ins.mnemonic in unconditional_jump_mnemonics ):
-#                print("UNCONDITIONAL JUMP? %s %s" % (ins.mnemonic, tokens ) )
-                m = re.search(jmpre,ins.args_string)
-                if( m is not None ):
-                    table = m.group(1)
-                    cnt = 0
-                    while True:
-                        try:
-                            jmpval = gdb.parse_and_eval(f"*((void**){table}+{cnt})")
-#                        print("jmpval = '%s'" % jmpval )
-                            if( jmpval == 0 ):
-                                break
-                        except gdb.MemoryError:
-                            break
-                        if( cnt > last_cmp_immediate ):
-                            break
-#                        print("last_cmp_immediate = '%s'" % last_cmp_immediate )
-                        ins.targets.add(int(jmpval))
-                        cnt += 1
-                    ins.reference.append( f"{len(ins.targets)} computed jump targets " ) # + str(ins.targets)
-#                    print("jmpval = '%s'" % jmpval )
-#                    print("m = '%s'" % m )
-#                    print("m.group(1) = '%s'" % m.group(1) )
-#                    print("ins = '%s'" % ins )
-                else:
-                    try:
-                        ins.targets.add(vdb.util.xint(tokens[tpos-1]))
-                    except:
-                        pass
-
-            if( ins.mnemonic in call_mnemonics ):
-                ins.call = True
-                ins.conditional_jump = False
-#            print("tokens = '%s'" % tokens[tpos:] )
-            ret.add(ins)
-
-            if( oldins is not None and oldins.mnemonic != "ret" ):
-                oldins.next = ins
-                ins.previous = oldins
             oldins = ins
-            continue
-        if( line in set(["End of assembler dump."]) ):
-            continue
-        if( len(line) == 0 ):
-            continue
-        print(f"Don't know what to do with '{line}'")
+        else:
+            print(f"Don't know what to do with '{line}'")
 #			print("m = '%s'" % m )
     if( fakedata is None ):
         parse_cache[key] = ret
@@ -2588,10 +2640,10 @@ def register_flow( lng, frame ):
     possible_registers = lng.initial_registers.clone()
     possible_flags = flag_set()
 
-    rbp = frame.read_register("rbp")
+    rbp = frame.read_register(base_pointer)
     if( rbp  is not None ):
         if( vdb.memory.mmap.accessible(rbp) ):
-            possible_registers.set( "rbp", rbp )
+            possible_registers.set( base_pointer, rbp )
 
 #    for ins in ret.instructions:
     flowstack = [ (None,None,None) ]
