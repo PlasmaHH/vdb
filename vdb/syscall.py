@@ -686,6 +686,8 @@ def parse_xml( fn = None ):
 
 
 
-
-parse_xml()
+try:
+    parse_xml()
+except:
+    pass
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

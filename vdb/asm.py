@@ -134,7 +134,7 @@ from_tty = None
 color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
 valid_archs = [ "x86", "arm" ]
-arch_aliases = { "i386" : "x86", "i386:x86-64" : "x86" }
+arch_aliases = { "i386" : "x86", "i386:x86-64" : "x86", "aarch64" : "arm" }
 
 
 def wrap_shorten( fname ):
@@ -587,9 +587,16 @@ class arm_asm_arg(asm_arg_base):
 #        vdb.util.bark() # print("BARK")
         oarg = arg
         if( arg.startswith("0x") ):
+            args = arg.split("<")
+            if( len(args) > 1 ):
+                arg = args[0].strip()
+                # we throw away the symbolname here, do we want to keep it in case no other way shows it?
             self.jmp_target = vdb.util.rxint( arg )
         elif( arg.startswith("#") ):
-            self.immediate = int(arg[1:])
+            if( arg.startswith("#0x") ):
+                self.immediate_hex = vdb.util.xint(arg[1:])
+            else:
+                self.immediate = int(arg[1:])
         elif( arg.startswith("[") and arg.endswith("]")):
             arg = arg[1:-1]
             arg = list(map(str.strip,arg.split(",")))
@@ -908,9 +915,15 @@ class arm_instruction( instruction_base ):
         if( addr[-1] == ":" ):
             addr = addr[:-1]
             self.offset = ""
+            del tokens[0] # address
+        else:
+            self.offset = tokens[1][1:-1]
+            if( self.offset[0] == "+" ):
+                self.offset = self.offset[1:]
+            del tokens[0] # address
+            del tokens[0] # offset
 
-        # XXX need to handle offset too
-        del tokens[0] # address
+
 
         self.address = vdb.util.xint(addr)
 
@@ -933,6 +946,8 @@ class arm_instruction( instruction_base ):
         # up until to the mnemonic x86 and arm are the same, so put everything into a function
         tokens = " ".join(tokens)
         tokens = tokens.split(";")
+        if( len(tokens) == 1 ): ## aarch64 uses // instead of ;
+            tokens = tokens[0].split("//")
         if( len(tokens) > 1 ):
             self.reference = tokens[1:]
         args = tokens[0]
@@ -974,7 +989,11 @@ class arm_instruction( instruction_base ):
             self.targets.add( vdb.util.xint(oargs) )
             self.conditional_jump = True
         elif( self.mnemonic in arm_unconditional_jump_mnemonics ):
-            self.targets.add( vdb.util.xint(oargs) )
+            sargs = oargs
+            ol = sargs.split("<")
+            if( len(ol) > 1 ):
+                sargs = ol[0]
+            self.targets.add( vdb.util.xint(sargs) )
 
         if( oldins is not None ):
             if oldins.mnemonic not in arm_unconditional_jump_mnemonics :
@@ -1899,6 +1918,7 @@ arm_return_mnemonics = set ([])
 arm_call_mnemonics = set([])
 arm_prefixes = set([ ])
 arm_base_pointer = "r11" # can be different
+aarch64_base_pointer = "sp"
 
 pc_list = [ "rip", "eip", "ip", "pc" ]
 last_working_pc = ""
@@ -1907,12 +1927,14 @@ current_arch = None
 
 def configure_arch( arch = None ):
     archname = "x86"
+    origarch = archname
     try:
         if( arch is not None ):
             archname = arch
         else:
             archname = gdb.selected_frame().architecture().name()
 
+        origarch = archname
         archname = arch_aliases.get(archname,archname)
 #        print("archname = '%s'" % (archname,) )
     except:
@@ -1929,13 +1951,18 @@ def configure_arch( arch = None ):
                 varn = gv[4:]
                 xval = getattr(module,gv)
                 avarname = archname + "_" + varn
+                ovarname = origarch + "_" + varn
 #                print("varn = '%s'" % (varn,) )
 #                print("avarname = '%s'" % (avarname,) )
-                avval = getattr(module,avarname,None)
-                if( avval is not None ):
-                    setattr( module, varn, avval )
-                else: # fall back to x86 default
-                    setattr( module, varn, xval )
+                orval = getattr(module,ovarname,None)
+                if( orval is not None ):
+                    setattr( module, varn, orval )
+                else:
+                    avval = getattr(module,avarname,None)
+                    if( avval is not None ):
+                        setattr( module, varn, avval )
+                    else: # fall back to x86 default
+                        setattr( module, varn, xval )
 #            print("gv = '%s'" % (gv,) )
     except:
         pass
