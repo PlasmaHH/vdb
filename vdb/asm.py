@@ -755,6 +755,7 @@ class x86_instruction( instruction_base ):
 
     @vdb.overrides
     def parse( self, line, m, oldins ):
+        jmpre  = re.compile("^\*(0x[0-9a-fA-F]*)\(.*")
 #        print("m.groups() = '%s'" % (m.groups(),) )
         self.line = line
         tokens = line.split()
@@ -1906,7 +1907,7 @@ x86_base_pointer = "rbp" # what for 32bit?
 call_preserved_registers = [ "rbx", "rsp", "rbp", "r12", "r13", "r14", "r15" ]
 
 arm_conditional_suffixes = [ "eq","ne","cs","hs","cc","lo","mi","pl","vs","vc","hi","ls","ge","lt","gt","le" ]
-arm_unconditional_jump_mnemonics = set([ "b", "bl", "blx" ] )
+arm_unconditional_jump_mnemonics = set([ "b" ] )
 arm_conditional_jump_mnemonics = set()
 for uj in arm_unconditional_jump_mnemonics:
     for csuf in arm_conditional_suffixes:
@@ -1915,7 +1916,7 @@ for uj in arm_unconditional_jump_mnemonics:
 #print("arm_conditional_jump_mnemonics = '%s'" % (arm_conditional_jump_mnemonics,) )
 
 arm_return_mnemonics = set ([])
-arm_call_mnemonics = set([])
+arm_call_mnemonics = set(["bl", "blx"])
 arm_prefixes = set([ ])
 arm_base_pointer = "r11" # can be different
 aarch64_base_pointer = "sp"
@@ -2250,7 +2251,6 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     linere = re.compile(r"^(=>)*\s*(0x[0-9a-f]*)(\s*<\+([0-9]*)>:)*\s*([^<]*)(<[^+]*(.*)>)*")
     funcre = re.compile("for function (.*):")
     rangere = re.compile("Dump of assembler code from (0x[0-9a-f]*) to (0x[0-9a-f]*):")
-    jmpre  = re.compile("^\*(0x[0-9a-fA-F]*)\(.*")
     current_function=""
     last_cmp_immediate = 1
 
