@@ -911,13 +911,13 @@ class arm_instruction( instruction_base ):
 #        print("m.groups() = '%s'" % (m.groups(),) )
 #        print("tokens = '%s'" % (tokens,) )
 
-        addr = tokens[0]
+        addr = tokens[0].strip()
         if( addr[-1] == ":" ):
             addr = addr[:-1]
             self.offset = ""
             del tokens[0] # address
         else:
-            self.offset = tokens[1][1:-1]
+            self.offset = tokens[1].strip()[1:-1]
             if( self.offset[0] == "+" ):
                 self.offset = self.offset[1:]
             del tokens[0] # address
