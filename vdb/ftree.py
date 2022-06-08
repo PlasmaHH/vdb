@@ -163,12 +163,21 @@ def std_tree_member( m, val, path ):
     xm = re.findall( "{(std::_Rb_tree<[^}]*>)}::_M_t", path )
 #    print("xm = '%s'" % xm )
     if( len(xm) > 0 ):
+        try:
 
-        node_type = vdb.cache.lookup_type(xm[-1] + "::value_type")
+            iterator_type = vdb.cache.lookup_type(xm[-1] + "::iterator")
+            iterator_type = iterator_type.strip_typedefs()
+            print("iterator_type = '%s'" % (iterator_type,) )
+#            node_type = vdb.cache.lookup_type(xm[-1] + "::iterator")
+            node_type = vdb.cache.lookup_type( iterator_type.name + "::pointer").target().target()
+            print("node_type = '%s'" % (node_type,) )
 
-        if( node_type is not None ):
-            node_type = node_type.strip_typedefs()
-            return node_type
+            if( node_type is not None ):
+                node_type = node_type.strip_typedefs()
+                return node_type
+        except gdb.error:
+            traceback.print_exc()
+            pass
 
     return None
 
@@ -848,6 +857,8 @@ class ftree:
         return ret
     
     def apply_cast_action( self, val, m, path, action ):
+        if( verbosity.value > 4 ):
+            print(f"apply_cast_action( {self=}, {str(val)=}, {m=}, {path=}, {action=} )")
         if( m ):
             newtype = action(m,val,path)
             if( newtype is not None ):
@@ -867,7 +878,7 @@ class ftree:
 
     def try_member_cast(  self, val, path ):
         if( verbosity.value > 4 ):
-            print(f"try_member_cast( @{int(val.address):#0x}, {path})")
+            print(f"try_member_cast( @{int(val.address):#0x}, {vdb.color.color(path,'#fe6')})")
         sw = vdb.util.stopwatch()
         sw.start()
 #        print("path = '%s'" % path )
