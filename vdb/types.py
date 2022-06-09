@@ -128,7 +128,7 @@ def refresh_locations( at ):
                 continue
             fields = []
             fields += comp[0].split("\t",1) + comp[1].split("\t") + [None]*3
-            if( len(fields[3]) != 1 ):
+            if( fields[3] is None or len(fields[3]) != 1 ):
                 print("line = '%s'" % (line,) )
                 print("fields = '%s'" % (fields,) )
                 continue
