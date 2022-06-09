@@ -409,6 +409,7 @@ class asm_arg_base( ):
 
     def _check(self,oarg,fail = True):
         if( str(self) != oarg ):
+            print("_check() failed:")
             print("oarg = '%s'" % (oarg,) )
             print("str(self) = '%s'" % (str(self),) )
             self._dump()
@@ -951,7 +952,12 @@ class arm_instruction( instruction_base ):
             tokens = tokens[0].split("//")
         if( len(tokens) > 1 ):
             self.reference = tokens[1:]
-        args = tokens[0]
+        args = tokens[0].strip()
+        print(f"{args=}")
+        if( len(args) > 0 and args[-1] == ">" and ( ( lbi := args.find("<") ) > 0 ) ):
+            print(f"{lbi=}")
+            args = args[:lbi]
+        print(f"{args=}")
         self.args_string = args
 
         oargs = args
@@ -990,11 +996,7 @@ class arm_instruction( instruction_base ):
             self.targets.add( vdb.util.xint(oargs) )
             self.conditional_jump = True
         elif( self.mnemonic in arm_unconditional_jump_mnemonics ):
-            sargs = oargs
-            ol = sargs.split("<")
-            if( len(ol) > 1 ):
-                sargs = ol[0]
-            self.targets.add( vdb.util.xint(sargs) )
+            self.targets.add( vdb.util.xint(oargs) )
 
         if( oldins is not None ):
             if oldins.mnemonic not in arm_unconditional_jump_mnemonics :
@@ -1912,6 +1914,7 @@ arm_conditional_jump_mnemonics = set()
 for uj in arm_unconditional_jump_mnemonics:
     for csuf in arm_conditional_suffixes:
         arm_conditional_jump_mnemonics.add(uj+csuf)
+        arm_conditional_jump_mnemonics.add(uj+"."+csuf)
 
 #print("arm_conditional_jump_mnemonics = '%s'" % (arm_conditional_jump_mnemonics,) )
 
@@ -2967,6 +2970,8 @@ def register_flow( lng, frame ):
                     else:
                         # No register set specified, no value available
                         continue
+                    if( len(regset) == 0 ): # in case no registers available this causes constants to be shown
+                        regset = [ register_set() ]
                     argval = None
                     # Check via the possible register sets the value of the register
                     argaddr = None
