@@ -570,6 +570,7 @@ shortens = {
         "std::basic_ostream<wchar_t, std::char_traits<wchar_t> >": "std::wostream",
         "(anonymous namespace)": "(anon)",
         "<unnamed enum>": "<enum>",
+        "std::__detail::": "std::_d::",
         }
 
 re_shortens = [
