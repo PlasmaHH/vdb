@@ -1045,7 +1045,30 @@ class ftree:
         htd = htr.td("{:#0x}".format(int(val)))
 
         ttr = vdb.dot.tr()
-        ttd = ttr.td(self.shorten(xl.object.type.name))
+
+        try:
+            on0 = val.type.target().name
+            if( on0 is None ):
+                on0 = str(val.type.target())
+        except:
+            on0 = val.type.name
+            if( on0 is None ):
+                on0 = str(val.type)
+
+        on1 = xl.object.type.name
+        if( on1 is None ):
+            on1 = str(xl.object.type)
+
+#        print("on0 = '%s'" % (on0,) )
+#        print("on1 = '%s'" % (on1,) )
+
+        # One could be a typedef, take the shortest one
+        if( len(on1) < len(on0) ):
+            on = on1
+        else:
+            on = on0
+
+        ttd = ttr.td(self.shorten(on))
 #        print("xl.type = '%s'" % xl.type )
 #        print("xl.vtype = '%s'" % xl.vtype )
 
