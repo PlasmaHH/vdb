@@ -269,8 +269,9 @@ pointer_blacklist = [
 member_blacklist = [
     ]
 pretty_print_types = [
-    "std::__cxx11::string",
-    "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >"
+    "std::string$",
+    "std::__cxx11::string$",
+    "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >$",
     ]
 
 def add_array_element_filter( rex, act ):
@@ -309,6 +310,14 @@ def set_member_blacklist( rel ):
 def set_pretty_print_types( rel ):
     pretty_print_types = rel
 
+def pretty_print( val ):
+    ret = ""
+    try:
+        ret += "[" + str(val["_M_string_length"]) + "]"
+    except:
+        pass
+    ret += str(val)
+    return ret
 
 class ftree:
     def __init__( self ):
@@ -363,7 +372,8 @@ class ftree:
         return ret
 
     def needs_pretty_print( self, tname ):
-#        print("tname = '%s'" % tname )
+        if( verbosity.value > 4 ):
+            print(f"needs_pretty_print( {tname=} ) => ", end = "")
         cr = self.pp_cache.get(tname,None)
         if( cr is None ):
             cr = vdb.cache.cache_result()
@@ -373,7 +383,8 @@ class ftree:
                 if( ppt.match(tname) is not None ):
                     cr.result = True
                     break
-#        print("cr.result = '%s'" % cr.result )
+        if( verbosity.value > 4 ):
+            print(cr.result)
         return cr.result
 
     def is_blacklisted( self, obj ):
@@ -664,7 +675,7 @@ class ftree:
             else:
                 self.value_cache[obj.get_path()] = fval
             if( force_pp ):
-                rettd.set(str(fval))
+                rettd.set(pretty_print(fval))
             elif( real_type.code == gdb.TYPE_CODE_PTR ):
 #                print(vdb.color.color("real_type.code = '%s'" % vdb.util.gdb_type_code(real_type.code),"#ff9900" ) )
 #                print("PTR is %s" % fval )
