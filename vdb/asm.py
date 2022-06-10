@@ -2469,7 +2469,7 @@ def x86_vt_flow_j( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 def x86_vt_flow_push( ins, frame, possible_registers, possible_flags ):
-    vl,rname = possible_registers.get("sp")
+    vl,rname = possible_registers.get("rsp")
     if( vl is not None ):
         vl = int(vl) - ( vdb.arch.pointer_size // 8 )
         possible_registers.set(rname,vl)
@@ -2478,7 +2478,7 @@ def x86_vt_flow_push( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 def x86_vt_flow_pop( ins, frame, possible_registers, possible_flags ):
-    vl,rname = possible_registers.get("sp")
+    vl,rname = possible_registers.get("rsp")
     if( vl is not None ):
         vl = int(vl) + ( vdb.arch.pointer_size // 8 )
         possible_registers.set(rname,vl)
