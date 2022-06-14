@@ -134,7 +134,8 @@ def logger_logprint( msg, level ):
 def init_logger( ):
     global logger
     logging.basicConfig( style="{", format = "{asctime} {message}" )
-    logger = logging.getLogger()
+    logger = logging.getLogger("vdb")
+    logger.propagate = False
 #    print("logger.hasHandlers() = '%s'" % (logger.hasHandlers(),) )
 #    print("logger.handlers = '%s'" % (logger.handlers,) )
     while( len(logger.handlers) > 0 ):
