@@ -337,7 +337,7 @@ def add_board( tgt, argv ):
     # A special "log" command that basically means to redirect stuff to that dashboard
     if( argv[0] == "log" ):
         od = output_redirect(tgt)
-        vdb.util.logprint = od.print
+        vdb.util.console_logprint = od.print
         dash_events.setdefault("before_prompt",[]).append(od)
         return
     cmd = " ".join(argv)

@@ -9,6 +9,8 @@ import itertools
 import time
 import types
 import functools
+import logging
+import logging.handlers
 
 from enum import Enum,auto
 import os
@@ -116,12 +118,67 @@ def num_suffix( num, iso = False, factor = 1.5 ):
     suffix = suffixes[n]
     return (snum,suffix)
 
+logfilename = "vdb.log"
+logger = None
+
 logprint = print
+console_logprint = print
+
 loglevel = 3
+console_loglevel = 1
+
+def logger_logprint( msg, level ):
+    ll = 60 - level * 10
+    logger.log(ll,msg)
+
+def init_logger( ):
+    global logger
+    logging.basicConfig( style="{", format = "{asctime} {message}" )
+    logger = logging.getLogger()
+#    print("logger.hasHandlers() = '%s'" % (logger.hasHandlers(),) )
+#    print("logger.handlers = '%s'" % (logger.handlers,) )
+    while( len(logger.handlers) > 0 ):
+        logger.removeHandler( logger.handlers[0] )
+
+    rfh = logging.handlers.RotatingFileHandler(logfilename, maxBytes = 1, backupCount = 320 )
+    logger.addHandler(rfh)
+
+    logger.warning("Opened Logfile")
+    logger.removeHandler(rfh)
+    rfh = logging.FileHandler(logfilename)
+    logger.addHandler(rfh)
+    global logprint
+    formatter = logging.Formatter( style="{", fmt = "{asctime} {message}" )
+    rfh.setFormatter(formatter)
+    logprint = logger_logprint
+
 
 def maybe_logprint( level, msg ):
+    if( logger is None ):
+        init_logger()
+    import traceback
+    st = traceback.extract_stack()
+    st = st[-3]
+    fn = os.path.split(st.filename)
+    fn = fn[-1]
+    fn = fn.removesuffix(".py")
+    loc = f"{fn}.{st.name} "
+#    print("loc = '%s'" % (loc,) )
+    global loglevel
+#    print("logprint = '%s'" % (logprint,) )
+#    print("console_logprint = '%s'" % (console_logprint,) )
+    # never print anything to console but not to logfile
+    if( loglevel < console_loglevel ):
+        loglevel = console_loglevel
     if( level <= loglevel ):
-        logprint(msg)
+#        print(f"logprint({msg=})")
+        if( logprint is not None ):
+            logprint(loc+msg,level)
+    if( level <= console_loglevel ):
+        if( console_logprint != logprint ):
+#            print(f"console_logprint({msg=})")
+            if( console_logprint is not None ):
+                console_logprint(msg)
 
 def log(fmt, **more ):
     level = more.get("level",1)
