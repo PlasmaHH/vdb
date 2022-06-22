@@ -383,15 +383,18 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
             if( type(a) == ArgVal ):
                 ret.append( a )
                 continue
-#			print("a.symbol() = '%s'" % a.symbol() )
+#            print("a.symbol() = '%s'" % a.symbol() )
             symbol = a.symbol()
             symbol = str(symbol)
             symbol = vdb.color.color(symbol,color_argument.value)
             if( "P" in showspec.value ):
-                val = frame.read_var(a.symbol())
-                val = vdb.color.color(val,color_argvalue.value)
+                try:
+                    val = frame.read_var(a.symbol())
+                    val = vdb.color.color(val,color_argvalue.value)
+                    ret.append( ArgVal( symbol, val) )
+                except gdb.MemoryError as e:
+                    ret.append( ArgVal( symbol, str(e) ) )
 #                val = "\x1b[1D" + val
-                ret.append( ArgVal( symbol, val) )
 #                ret.append( ArgVal( symbol, XValue(val)) )
 #                print(Value(val))
 #                ret.append( ArgVal( symbol, XValue(42) ) )
