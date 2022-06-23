@@ -2599,6 +2599,7 @@ def x86_vt_flow_xor( ins, frame, possible_registers, possible_flags ):
             if( args[0].register == args[1].register ):
                 possible_registers.set( args[1].register ,0)
                 possible_flags.set_result(0)
+                args[0].specfilter("%")
 
     possible_flags.set("OF",0)
     possible_flags.set("CF",0)
