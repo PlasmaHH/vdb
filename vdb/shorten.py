@@ -783,7 +783,7 @@ def symbol(fname,silent = False):
         lazy_load_typedefs()
     elif( lazy_hint ):
         lazy_hint = False
-        vdb.util.log("Lazy typedef loading is disabled. To manually load typedefs for shortening, do vdb load shorten")
+        vdb.util.qlog("Lazy typedef loading is disabled. To manually load typedefs for shortening, do vdb load shorten")
 
     if( fname is None ):
         return fname

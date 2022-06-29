@@ -154,7 +154,7 @@ def init_logger( ):
     logprint = logger_logprint
 
 
-def maybe_logprint( level, msg ):
+def maybe_logprint( level, msg, queue = False ):
     if( logger is None ):
         init_logger()
     import traceback
@@ -179,7 +179,18 @@ def maybe_logprint( level, msg ):
         if( console_logprint != logprint ):
 #            print(f"console_logprint({msg=})")
             if( console_logprint is not None ):
-                console_logprint(msg)
+                if( queue ):
+                    import vdb.prompt
+                    vdb.prompt.queue_msg(msg)
+                else:
+                    console_logprint(msg)
+
+def qlog(fmt, **more ):
+    level = more.get("level",1)
+    try:
+        maybe_logprint(level,fmt.format(**more),queue=True)
+    except IndexError:
+        maybe_logprint(level,fmt,queue=True)
 
 def log(fmt, **more ):
     level = more.get("level",1)
