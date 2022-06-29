@@ -2133,6 +2133,11 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
 #            traceback.print_exc()
             pass
 
+#        try:
+#            bval = bval.referenced_value()
+#        except:
+#            pass
+
         if( debug.value ):
             print("prefix = '%s'" % (prefix,) )
             print("b.name = '%s'" % (b.name,) )
@@ -2145,6 +2150,8 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
             lng.var_expressions[expr] = prefix + b.name
 
         try:
+#            print("b.name = '%s'" % (b.name,) )
+#            print("b.is_argument = '%s'" % (b.is_argument,) )
             if( b.is_argument ):
                 if( debug.value ):
                     print("b = '%s'" % (b,) )
@@ -2154,9 +2161,14 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                         print("reglist[regindex] = '%s'" % (reglist[regindex],) )
                         print("bval = '%s'" % (bval,) )
                         print("bval.address = '%s'" % (bval.address,) )
+                        print("bval.type = '%s'" % (bval.type,) )
+                        print("bval.type.code = '%s'" % (vdb.util.gdb_type_code(bval.type.code),) )
                         print("type(lng.initial_registers) = '%s'" % (type(lng.initial_registers),) )
-#                    lng.initial_registers[reglist[regindex]] = int(bval.address)
-                    lng.initial_registers.set( reglist[regindex] , int(bval))
+        
+                    if( bval.type.code == gdb.TYPE_CODE_REF ):
+                        lng.initial_registers.set( reglist[regindex] , int(bval.address))
+                    else:
+                        lng.initial_registers.set( reglist[regindex] , int(bval))
                     if( debug.value ):
                         print("lng.initial_registers = '%s'" % (lng.initial_registers,) )
                     regindex += 1
@@ -2175,8 +2187,11 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                     else:
                         ret += " = <...>"
                 ret += ","
-        except:
+        except AttributeError:
 #            traceback.print_exc()
+            pass
+        except:
+            traceback.print_exc()
             pass
     if( debug.value ):
         print("ret = '%s'" % (ret,) )
@@ -2363,8 +2378,8 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
             # variable not recognized
             pass
 
-    print("block.function = '%s'" % (block.function,) )
-    print("block.superblock.function = '%s'" % (block.superblock.function,) )
+#    print("block.function = '%s'" % (block.function,) )
+#    print("block.superblock.function = '%s'" % (block.superblock.function,) )
     gv = gather_vars( frame, ret, block )
     # sometimes the args are in a superblock
     if( block.function is None and block.superblock is not None ):
