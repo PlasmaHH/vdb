@@ -2122,10 +2122,13 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
 #            traceback.print_exc()
             pass
         try:
-#            for f in b.type.fields():
-#                print("f.name = '%s'" % (f.name,) )
-#                print("bval[f.name] = '%s'" % (bval[f.name],) )
             ret += gather_vars( frame, lng, b.type.fields(), bval, prefix + b.name + ".", [], level )
+        except:
+#            traceback.print_exc()
+            pass
+
+        try:
+            ret += gather_vars( frame, lng, b.type.target().unqualified().fields(), bval, prefix + b.name + ".", [], level )
         except:
 #            traceback.print_exc()
             pass
@@ -2344,6 +2347,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 #    print("va = '%s'" % (va,) )
     for a,n in va.items():
 #        print("a = '%s'" % (a,) )
+#        print("n = '%s'" % (n,) )
         try:
             vv = frame.read_var(n)
 #            print("vv = '%s'" % (vv,) )
@@ -2359,7 +2363,12 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
             # variable not recognized
             pass
 
+    print("block.function = '%s'" % (block.function,) )
+    print("block.superblock.function = '%s'" % (block.superblock.function,) )
     gv = gather_vars( frame, ret, block )
+    # sometimes the args are in a superblock
+    if( block.function is None and block.superblock is not None ):
+        gv += gather_vars( frame, ret, block.superblock )
 
     if( len(gv) > 0 ):
         funhead += "(" + gv + ")"
