@@ -2344,7 +2344,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     if( fun is not None and fun.name == ret.function ):
         block = frame.block()
     else:
-        block = []
+        block = None
 #    print("block = '%s'" % (block,) )
 #    for b in block:
 #        print("b = '%s'" % (b,) )
@@ -2380,10 +2380,13 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
 #    print("block.function = '%s'" % (block.function,) )
 #    print("block.superblock.function = '%s'" % (block.superblock.function,) )
-    gv = gather_vars( frame, ret, block )
-    # sometimes the args are in a superblock
-    if( block.function is None and block.superblock is not None ):
-        gv += gather_vars( frame, ret, block.superblock )
+    if( block is not None ):
+        gv = gather_vars( frame, ret, block )
+        # sometimes the args are in a superblock
+        if( block.function is None and block.superblock is not None ):
+            gv += gather_vars( frame, ret, block.superblock )
+    else:
+        gv = gather_vars( frame, ret, [] )
 
     if( len(gv) > 0 ):
         funhead += "(" + gv + ")"
