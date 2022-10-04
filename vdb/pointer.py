@@ -134,7 +134,9 @@ def as_tailspec( ptr, minasc, spec ):
         elif( sp == "x" ): # points to executable memory
             at = vdb.memory.mmap.get_atype( ptr )
             if( at  == vdb.memory.access_type.ACCESS_EX ):
-                return vdb.asm.get_single(ptr)
+                asm = vdb.asm.get_single(ptr)
+                if( asm.find("(bad)") == -1 ):
+                    return asm
         elif( sp == "n" ): # points to a named object
             a = annotate(ptr)
             if( a is not None ):
