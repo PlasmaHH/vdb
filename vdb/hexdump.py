@@ -25,6 +25,7 @@ color_head       = vdb.config.parameter("vdb-hexdump-colors-header",            
 default_len   = vdb.config.parameter("vdb-hexdump-default-len",8*16)
 repeat_header = vdb.config.parameter("vdb-hexdump-repeat-header",42)
 default_chaindepth = vdb.config.parameter("vdb-hexdump-default-chaindepth",3)
+default_align = vdb.config.parameter("vdb-hexdump-default-align",False)
 
 pc_separator = vdb.config.parameter("vdb-hexdump-pointer-chain-separator","|")
 row_format = vdb.config.parameter("vdb-hexdump-row-format", "{p}: {l}{t} {s}{pointer_string}{value_string}")
@@ -63,7 +64,29 @@ def get_annotation( xaddr, symtree ):
         xs = symtree[xaddr]
     return xs
 
-def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False, symbols = True ):
+def spacer_format( cnt, t, l ):
+    t += (cnt-1)*" "
+    l += (cnt)*"   "
+    l += ((cnt-1)//4)*" "
+    l += ((cnt+7)//8)*" "
+    t += ((cnt+7)//8)*" "
+    return (t,l)
+
+def tile_format( cnt, t, l ):
+    if( cnt == 8 ):
+        t += " "
+        l += "-"
+    if( cnt % 4 == 0 ):
+        l += " "
+    return (t,l)
+
+def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False, symbols = True, align = None ):
+
+    if( align is None ):
+        align = default_align.value
+
+
+
     if( chaindepth < 0 ):
         chaindepth = default_chaindepth.value
     if( xlen == -1):
@@ -72,11 +95,21 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
         symtree = vdb.memory.get_symbols(addr,xlen)
     else:
         symtree = intervaltree.IntervalTree()
+
+    suppress = 0
+    if( align ):
+#        print(f"addr = {int(addr):#0x}" if addr is not None else "addr = None")
+        naddr = addr & ~0xf
+#        print(f"naddr = {int(naddr):#0x}" if naddr is not None else "naddr = None")
+        suppress = addr - naddr
+        addr = naddr
+        xlen += suppress
+
     olen = xlen
 
     data = vdb.memory.read(addr,xlen)
     if( data is None ):
-        data = vdb.memory.read(addr,1)
+        data = vdb.memory.read(addr+suppress,1)
         if( data is not None ):
             data = None
             while(data is None ):
@@ -120,6 +153,13 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
                     pointer_string += pc_separator.value
 
         for d in dc:
+            if( suppress ):
+                suppress -= 1
+                l += "   "
+                t += " "
+                cnt += 1
+                t,l = tile_format(cnt,t,l)
+                continue
 #            xs = symtree[xaddr+cnt]
             xs = get_annotation( xaddr + cnt, symtree )
             nsym = None
@@ -175,17 +215,9 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
             else:
                 t += vdb.color.color(".",sym_color)
             cnt += 1
-            if( cnt == 8 ):
-                t += " "
-                l += "-"
-            if( cnt % 4 == 0 ):
-                l += " "
+            t,l = tile_format(cnt,t,l)
         cnt = (16-cnt)
-        t += (cnt-1)*" "
-        l += (cnt)*"   "
-        l += ((cnt-1)//4)*" "
-        l += ((cnt+7)//8)*" "
-        t += ((cnt+7)//8)*" "
+        t,l = spacer_format(cnt,t,l)
         if( line % repeat_header.value == 0 ):
             print_header()
         line += 1
@@ -320,6 +352,7 @@ def call_hexdump( argv ):
         return
     pointers = False
     values = False
+    align = None
     chainlen = -1
     if( argv[0].startswith("/") ):
         argv[0] = argv[0][1:]
@@ -336,6 +369,10 @@ def call_hexdump( argv ):
             values = True
             argv[0] = argv[0].replace("v","")
 
+        if( argv[0].find("a") != -1 ):
+            align = True
+            argv[0] = argv[0].replace("a","")
+
         if( len(argv[0]) > 0 ):
             print("Unknown argument %s" % argv[0])
             return
@@ -347,11 +384,11 @@ def call_hexdump( argv ):
         xlen = None
         if( len(argv) == 1 ):
             addr = vdb.util.gint("(void*)" + argv[0])
-            hexdump(addr,pointers=pointers,chaindepth=chainlen,values=values)
+            hexdump(addr,pointers=pointers,chaindepth=chainlen,values=values,align=align)
         elif( len(argv) == 2 ):
             addr = vdb.util.gint("(void*)" + argv[0])
             xlen = vdb.util.gint(argv[1])
-            hexdump(addr,xlen,pointers=pointers,chaindepth=chainlen,values=values)
+            hexdump(addr,xlen,pointers=pointers,chaindepth=chainlen,values=values,align=align)
         else:
             print(cmd_hexdump.__doc__)
     return
