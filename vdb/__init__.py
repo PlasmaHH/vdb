@@ -281,7 +281,7 @@ def start( vdbd = None, vdbinit = None ):
 
         plug_dirs.append(cvdb)
         init_files.append(cwd + "/.vdbinit")
-        cwd,down = os.path.split(cwd)
+        cwd,_= os.path.split(cwd)
 
 
     if( not search_down.value ):
