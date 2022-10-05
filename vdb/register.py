@@ -215,7 +215,7 @@ class Registers():
         self.next_type_index = 1
 
         try:
-            frame=gdb.selected_frame()
+            gdb.selected_frame()
         except:
             return
         thread=gdb.selected_thread()
