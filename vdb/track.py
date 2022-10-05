@@ -48,10 +48,6 @@ bpdisp = {
 def bp_disp( d ):
     return bpdisp.get(d,d)
 
-#def stop( bp ):
-#    print("bp = '%s'" % bp )
-#    return False
-
 def ptr_color( addr ):
     try:
         ret = vdb.pointer.color(addr,vdb.arch.pointer_size)
@@ -254,6 +250,13 @@ trackings_by_number = { }
 trackings_by_bpid = { }
 do_sub_trackings = False
 
+def wait( t ):
+#    time.sleep(10)
+    return
+    for i in range(0,t):
+        print(f"{t-i}...")
+        time.sleep(1)
+
 continues = 0
 
 def schedule_continue( ):
@@ -263,10 +266,11 @@ def schedule_continue( ):
         gdb.post_event(do_continue)
 
 def do_continue( ):
+    wait(5)
     global continues
-    print("continues = '%s'" % (continues,) )
+#    print("continues = '%s'" % (continues,) )
     continues -= 1
-    print("GDB EXECUTE CONTINUE")
+#    print("GDB EXECUTE CONTINUE")
     try:
         gdb.execute("continue")
     # somehow we schedule two of them, for now just suppress the error
@@ -280,10 +284,11 @@ def schedule_finish( ):
         gdb.post_event(do_finish)
 
 def do_finish( ):
+    wait(5)
     global continues
-    print("continues = '%s'" % (continues,) )
+#    print("continues = '%s'" % (continues,) )
     continues -= 1
-    print("GDB EXECUTE finish")
+#    print("GDB EXECUTE finish")
     try:
         gdb.execute("finish")
     # somehow we schedule two of them, for now just suppress the error
@@ -319,6 +324,8 @@ def exec_tracking_number( number, now ):
     tr = by_number( number )
     return exec_tracking( tr, now)
 
+
+
 @vdb.event.stop()
 def stop( bpev ):
 
@@ -350,7 +357,7 @@ def stop( bpev ):
                 if ( name < 0 ):
                     if( isinstance( tr, finish_breakpoint ) ):
                         tr.stop()
-            return
+            return False
         else:
             bps = bpev.breakpoints
 #            print("bps = '%s'" % (bps,) )
@@ -728,7 +735,7 @@ class finish_breakpoint( gdb.FinishBreakpoint ):
 #        gdb.post_event(do_continue)
         global trackings_by_number
         del trackings_by_number[self.number]
-        print("STOP RETURNS False")
+#        print("STOP RETURNS False")
         return False
 
 class track_action:
