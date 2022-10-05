@@ -133,7 +133,7 @@ score=yes
 [REFACTORING]
 
 # Maximum number of nested blocks for function / method body
-max-nested-blocks=7
+max-nested-blocks=9
 
 # Complete name of functions that never returns. When checking for
 # inconsistent-return-statements if a never returning function is called then
@@ -286,7 +286,7 @@ indent-string='    '
 max-line-length=240
 
 # Maximum number of lines in a module.
-max-module-lines=1000
+max-module-lines=4000
 
 # Allow the body of a class to be on the same line as the declaration if body
 # contains single statement.
@@ -501,31 +501,31 @@ exclude-too-few-public-methods=
 ignored-parents=
 
 # Maximum number of arguments for function / method.
-max-args=7
+max-args=11
 
 # Maximum number of attributes for a class (see R0902).
-max-attributes=7
+max-attributes=42
 
 # Maximum number of boolean expressions in an if statement (see R0916).
 max-bool-expr=5
 
 # Maximum number of branch for function / method body.
-max-branches=30
+max-branches=70
 
 # Maximum number of locals for function / method body.
-max-locals=42
+max-locals=55
 
 # Maximum number of parents for a class (see R0901).
 max-parents=7
 
 # Maximum number of public methods for a class (see R0904).
-max-public-methods=20
+max-public-methods=30
 
 # Maximum number of return / yield for function / method body.
-max-returns=6
+max-returns=7
 
 # Maximum number of statements in function / method body.
-max-statements=150
+max-statements=200
 
 # Minimum number of public methods for a class (see R0903).
 min-public-methods=0
