@@ -1088,6 +1088,8 @@ def init_set( argv ):
 #    print("argv = '%s'" % (argv,) )
     if( tset is None ):
         print("Could not find set '%s'" % setname )
+        return None
+
     parameters = {}
     for a in paramlist:
         try:
