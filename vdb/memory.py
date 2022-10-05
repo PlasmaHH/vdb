@@ -317,6 +317,7 @@ def read( ptr, count = 1 ):
 #        print("addr = '%s'" % (addr,) )
         while( addr < 0 ):
             addr += 2** vdb.arch.pointer_size
+        addr=int(addr)
         if( addr.bit_length() > vdb.arch.pointer_size ):
             addr &= ( 2 ** vdb.arch.pointer_size - 1 )
             
