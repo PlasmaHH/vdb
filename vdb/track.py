@@ -1055,7 +1055,19 @@ ssl_set = {
                 ]
             }
 
-sets = { "ssl" : ssl_set }
+
+memleak_set = {
+        "malloc" :
+        [
+            ( "store", [ "$ret", "ret" ] ),
+            ( "data", [ "size" ] )
+            ]
+        }
+
+
+sets = { "ssl" : ssl_set,
+        "memleak" : memleak_set
+        }
 
 set_data = {}
 def init_set( argv ):
@@ -1087,7 +1099,7 @@ def init_set( argv ):
 #        print("v = '%s'" % (v,) )
         parameters[k] = v
 
-    for k,v in ssl_set.items():
+    for k,v in tset.items():
         eti = extended_track_item( k, v, setname + ".", parameters )
         etis.append(eti)
     print("Enabled set '%s'" % setname)
