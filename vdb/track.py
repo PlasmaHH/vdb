@@ -254,8 +254,43 @@ trackings_by_number = { }
 trackings_by_bpid = { }
 do_sub_trackings = False
 
+continues = 0
+
+def schedule_continue( ):
+    global continues
+    if( continues == 0 ):
+        continues += 1
+        gdb.post_event(do_continue)
+
 def do_continue( ):
-    gdb.execute("continue")
+    global continues
+    print("continues = '%s'" % (continues,) )
+    continues -= 1
+    print("GDB EXECUTE CONTINUE")
+    try:
+        gdb.execute("continue")
+    # somehow we schedule two of them, for now just suppress the error
+    except gdb.error:
+        pass
+
+def schedule_finish( ):
+    global continues
+    if( continues == 0 ):
+        continues += 1
+        gdb.post_event(do_finish)
+
+def do_finish( ):
+    global continues
+    print("continues = '%s'" % (continues,) )
+    continues -= 1
+    print("GDB EXECUTE finish")
+    try:
+        gdb.execute("finish")
+    # somehow we schedule two of them, for now just suppress the error
+    except gdb.error:
+        pass
+
+
 
 def by_id( bpid ):
     return trackings_by_bpid.get(bpid,[])
@@ -310,6 +345,11 @@ def stop( bpev ):
 
     try:
         if( type(bpev) == gdb.StopEvent ):
+            # hack for catching possibly inlined return cases..
+            for name,tr in trackings_by_number.items():
+                if ( name < 0 ):
+                    if( isinstance( tr, finish_breakpoint ) ):
+                        tr.stop()
             return
         else:
             bps = bpev.breakpoints
@@ -323,8 +363,9 @@ def stop( bpev ):
         print("e = '%s'" % e )
 #        traceback.print_exc()
         pass
-    if( cont ):
-        gdb.post_event(do_continue)
+    return False
+#    if( cont ):
+#        gdb.post_event(do_continue)
 
 tracking_data = {}
 
@@ -570,7 +611,6 @@ track   - pass expression to parse_and_eval
 track/E - interpret expression as python code to evaluate
 track/x - execute expression and use resulting gdb value
 track/X - execute expression and then run parse_and_eval on the result ($)
-track/s - work with tracking sets (see documentation for them)
 
 id           is the id of an existing breakpoint
 location    can be any location that gdb understands for breakpoints
@@ -584,6 +624,7 @@ show     - show a list of trackpoints (similar to info break)
 data     - show the list of data collected so far
 clear    - clear all data collected so far 
 del <id> - delete the trackpoint with the given trackpoint id
+set <name>     - work with tracking sets (see documentation for them)
 
 You should have a look at the data and graph modules, which can take the data from here and draw graphics and histograms
 """
@@ -659,11 +700,35 @@ class finish_breakpoint( gdb.FinishBreakpoint ):
     def __init__( self, frame, action ):
         super( finish_breakpoint, self).__init__(frame,True)
         self.action = action
+#        vdb.util.bark() # print("BARK")
+        global trackings_by_number
+        trackings_by_number[self.number] = self
+        self.saved_number = self.number
+
+    # This is a bit ugly with the lifetime and such but no idea currently at what place to better do it
+    def __del__(self ):
+        global trackings_by_number
+        trackings_by_number.pop(self.saved_number,None)
+#        vdb.util.bark() # print("BARK")
+
+    def out_of_scope( self ):
+        vdb.util.bark() # print("BARK")
+#        try:
+#            print("self.return_value = '%s'" % (self.return_value,) )
+#        except:
+#            traceback.print_exc()
+#        print("self.return_value = '%s'" % (self.return_value,) )
 
     def stop( self ):
         now = time.time()
         self.action.fin_action( self.return_value, now )
         self.action.fin_bp = None
+#        vdb.util.bark() # print("BARK")
+        schedule_continue()
+#        gdb.post_event(do_continue)
+        global trackings_by_number
+        del trackings_by_number[self.number]
+        print("STOP RETURNS False")
         return False
 
 class track_action:
@@ -853,15 +918,27 @@ class store_track_action(track_action):
         self.map_key = prefix
 
     def action( self,now ):
+        vdb.util.bark() # print("BARK")
+#        print("self.expression = '%s'" % (self.expression,) )
+        if( self.expression == "$ret" ):
+            return None
         val = self.get( self.expression )
+#        print("val = '%s'" % (val,) )
+        self.store_data(val)
+        return True
 
+    def store_data( self, val ):
+#        print("val = '%s'" % (val,) )
         global track_storage
         store = track_storage.setdefault( self.map_key, {} )
         storeset = store.setdefault(self.storage_map,set())
         storeset.add( val )
 #        print(f"{self.expression} = {val} => {self.storage_map}")
 #        print("track_storage = '%s'" % (track_storage,) )
-        return True
+
+    def fin_action( self, retval, now ):
+#        print("retval = '%s'" % (retval,) )
+        self.store_data(retval)
 
 class delete_track_action:
 
@@ -956,8 +1033,16 @@ class track_breakpoint( gdb.Breakpoint ):
 #        print("location = '%s'" % (location,) )
 
     def stop( self ):
-#        print("track_breakpoint.stop()")
-        self.track_item.stop()
+#        vdb.util.bark() # print("BARK")
+#        print(f"track_breakpoint.stop() [{self.expression}|{self.location}]")
+        ret = self.track_item.stop()
+#        print("ret = '%s'" % (ret,) )
+        if( ret is None ):
+            schedule_finish()
+#            gdb.post_event(do_finish)
+#            print("track_breakpoint.stop() RETURNS True")
+            return True
+#        print("track_breakpoint.stop() RETURNS False")
         return False
 
 class extended_track_item:
@@ -992,6 +1077,7 @@ class extended_track_item:
 
     def stop( self ):
         now = time.time()
+        oret = True
 #        print("eti.stop()")
 #        gdb.execute("bt")
         for ai in self.actions:
@@ -1006,6 +1092,8 @@ class extended_track_item:
             if( ret is None ):
                 frame = gdb.newest_frame()
                 ai.fin_bp = finish_breakpoint( frame, ai )
+                oret = None
+        return oret
 
 #
 # track set = A dictionary location/function : [ list of action items ]
