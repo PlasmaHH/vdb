@@ -34,6 +34,19 @@ after this is interpreted as the maximum chain length for the pointer chains. It
 
 ![](img/hd.pointer.png)
 
+### `hexdump/a`
+
+Align the output to 16 byte boundaries.
+
+
+Set
+```
+vdb-hexdump-default-align
+```
+to `True` to have that behaviour always on.
+
+![](img/hd.align.png)
+
 ### `hexdump/v`
 
 Value or verbose, whatever you like more. It will try to print a representation for known types at annotated parts of a
