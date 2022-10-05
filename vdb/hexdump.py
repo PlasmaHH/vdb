@@ -406,6 +406,7 @@ hexdump[/p#|v] <addr> [<len>]               - shows a hexdump of <len> or vdb-he
 
 hexdump/p#                                  - In the annotation text, show pointer chains of (aligned) pointers with max length of #
 hexdump/v                                   - In case of annotated known variables, print their pretty printed values too
+hexdump/a                                   - Output addresses 16 byte aligned
 
 hexdump annotate <varname>                  - annotates the variable <varname> according to the type information known to gdb
 hexdump annotate <addres> <type>            - annotates the given address like a variable of type <type>
