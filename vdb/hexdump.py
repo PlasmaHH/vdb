@@ -34,6 +34,7 @@ row_format = vdb.config.parameter("vdb-hexdump-row-format", "{p}: {l}{t} {s}{poi
 color_list = vdb.config.parameter("vdb-hexdump-colors-symbols", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
 def print_header( ):
+    #pylint: disable=possibly-unused-variable
     plen = vdb.arch.pointer_size // 4
     rowf = row_format.value
     rowf = rowf.replace(":"," ")
@@ -127,6 +128,7 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
     line = 0
 
     rowf = row_format.value
+    #pylint: disable=possibly-unused-variable
     while(len(data) > 0 ):
         dc = data[:16]
         data = data[16:]
@@ -229,7 +231,7 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
 #        print("len(data) = '%s'" % len(data) )
         xaddr += 16
 #    print("data = '%s'" % data )
-    
+
 #    print("HEXDUMP")
 #    print("addr = '%s'" % addr )
 #    print("xlen = '%s'" % xlen )
@@ -247,7 +249,7 @@ def annotate_var( addr,gval, gtype, name ):
 #    print("ol.type = '%s'" % (ol.type,) )
 #    print("ol = '%s'" % ol )
 #    print("ol.object = '%s'" % ol.object )
-        
+
 #    print("annotate_var .....")
     for bd in ol.descriptors:
 #        print("name = '%s'" % (name,) )
@@ -309,17 +311,17 @@ def annotate_block( block ):
                 annotate_var( v.address,v, v.type, i.name )
         except:
             traceback.print_exc()
-            pass
+#            pass
     if( block.superblock ):
         annotate_block( block.superblock )
 
 def annotate( argv ):
-    global annotation_tree
+#    global annotation_tree
     if( len(argv) == 2 ):
         addr = vdb.util.gint( argv[0] )
         ttype = argv[1]
         gtype = gdb.lookup_type( ttype )
-        global default_sizes
+#        global default_sizes
         default_sizes[addr] = gtype.sizeof
         gval = gdb.parse_and_eval(f"*({ttype}*)({addr})")
         annotate_var( addr,gval,gtype,"")
@@ -334,19 +336,18 @@ def annotate( argv ):
         annotate_block( fr.block() )
 #        print("annotation_tree = '%s'" % annotation_tree )
     elif( len(argv) == 1 ):
-        print("Automatically annotating variable %s" % argv[0] )
+        print(f"Automatically annotating variable {argv[0]}")
         varname = argv[0]
         var = gdb.parse_and_eval(varname)
-        print("var = '%s'" % var )
+        print(f"var = '{var}'")
         annotate_var( var.address,var, var.type, varname )
     else:
         print("Usage: hexdump annotate <addr> <len> <text> or <addr> <typename>")
-    print("Annotated {}".format(argv))
+    print(f"Annotated {argv}")
 
 
 def call_hexdump( argv ):
 #    argv = gdb.string_to_argv(arg)
-    colorspec = "sma"
     if( len(argv) == 0 ):
         print(cmd_hexdump.__doc__)
         return
@@ -374,7 +375,7 @@ def call_hexdump( argv ):
             argv[0] = argv[0].replace("a","")
 
         if( len(argv[0]) > 0 ):
-            print("Unknown argument %s" % argv[0])
+            print(f"Unknown argument {argv[0]}")
             return
         argv = argv[1:]
     if( len(argv) > 0 and argv[0] == "annotate" ):
@@ -417,7 +418,7 @@ We recommend having an alias hd = hexdump in your .gdbinit
 """
 
     def __init__ (self):
-        super (cmd_hexdump, self).__init__ ("hexdump", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        super ().__init__ ("hexdump", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
     def do_invoke (self, argv):
         try:
@@ -425,7 +426,7 @@ We recommend having an alias hd = hexdump in your .gdbinit
         except:
             traceback.print_exc()
             raise
-            pass
+#            pass
         self.dont_repeat()
 
 cmd_hexdump()
