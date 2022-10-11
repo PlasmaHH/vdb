@@ -1165,8 +1165,8 @@ ftree <pointer>|<variable> [<limit>]  - It takes a pointer to some object or a v
         self.result=""
         return None
 
-    def invoke (self, arg, from_tty):
-        argv = gdb.string_to_argv(arg)
+    def do_invoke (self, argv ):
+#        argv = gdb.string_to_argv(arg)
         self.print("argv = '%s'" % argv )
         if len(argv) > 2:
             raise gdb.GdbError('ftree takes 1-2 arguments.')
