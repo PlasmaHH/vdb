@@ -372,7 +372,9 @@ class register_set:
 class asm_arg_base( ):
 
     def __init__( self, target, arg ):
-        self.register = None
+        # New capstone based members
+
+        self.base = None
         self.immediate = None
         self.immediate_hex = False
         self.dereference = None
@@ -391,7 +393,7 @@ class asm_arg_base( ):
             print("Failed to parse " + arg)
             raise
         self.arg_string = arg
-        self._bitsize = vdb.register.register_size( self.register )
+        self._bitsize = vdb.register.register_size( self.base )
 
     def reset_argspec( self ):
         asp = default_argspec.value.split(",")
@@ -512,12 +514,12 @@ class asm_arg_base( ):
                 if( self.add_register is not None ):
                     ret += "%" + self.add_register
                 ret += ","
-            ret += "%" + self.register
+            ret += "%" + self.base
             if( self.multiplier is not None ):
                 ret += f",{self.multiplier}"
             ret += ")"
-        elif( self.register is not None ):
-            ret += "%" + self.register
+        elif( self.base is not None ):
+            ret += "%" + self.base
         if( self.immediate is not None ):
             if( self.immediate_hex ):
                 ret += f"${self.immediate:#0x}"
@@ -536,7 +538,7 @@ class asm_arg_base( ):
             offset = "None"
         else:
             offset = f"{self.offset:#0x}"
-        print(f"arg %{self.register}, ${self.immediate}, ({self.dereference}), {self.offset},,, T{self.target} :{self.prefix}:: {self.multiplier}*REG + {self.add_register} => {self}")
+        print(f"arg %{self.base}, ${self.immediate}, ({self.dereference}), {self.offset},,, T{self.target} :{self.prefix}:: {self.multiplier}*REG + {self.add_register} => {self}")
 
 
 class x86_asm_arg(asm_arg_base):
@@ -581,14 +583,14 @@ class x86_asm_arg(asm_arg_base):
                     if( len(marg[0]) > 0 ):
                         self.add_register = marg[0][1:]
 #                        print("self.add_register = '%s'" % (self.add_register,) )
-                    self.register = marg[1][1:]
+                    self.base = marg[1][1:]
                     self.multiplier = vdb.util.rxint(marg[2])
                     self._check(oarg)
                     return
 
         if( arg[0] == "%" ):
-            self.register = arg[1:]
-#            print("self.register = '%s'" % (self.register,) )
+            self.base = arg[1:]
+#            print("self.base = '%s'" % (self.base,) )
 
         if( arg[0] == "$" ):
             if( arg.startswith("$0x") ):
@@ -622,7 +624,7 @@ class arm_asm_arg(asm_arg_base):
             arg = arg[1:-1]
             arg = list(map(str.strip,arg.split(",")))
             self.dereference = True
-            self.register = arg[0]
+            self.base = arg[0]
             if( len(arg) > 1 ):
 #                print("arg[1] = '%s'" % (arg[1],) )
                 if( arg[1][0] == "#" ):
@@ -630,7 +632,7 @@ class arm_asm_arg(asm_arg_base):
                 else:
                     self.add_register = arg[1]
         else:
-            self.register = arg
+            self.base = arg
 #        print("arg = '%s'" % (arg,) )
 #        print("str(self) = '%s'" % (str(self),) )
         self._check(oarg,False)
@@ -647,14 +649,14 @@ class arm_asm_arg(asm_arg_base):
                 if( self.add_register is not None ):
                     ret += "%" + self.add_register
                 ret += ","
-            ret += self.register
+            ret += self.base
             if( self.offset is not None ):
                 ret += ", #" + str(self.offset)
             if( self.multiplier is not None ):
                 ret += f",{self.multiplier}"
             ret += "]"
-        elif( self.register is not None ):
-            ret += self.register
+        elif( self.base is not None ):
+            ret += self.base
         if( self.immediate is not None ):
             if( self.immediate_hex ):
                 ret += f"${self.immediate:#0x}"
@@ -674,6 +676,27 @@ class instruction_base( abc.ABC ):
 
     bytere = re.compile("^[0-9a-fA-F][0-9a-fA-F]$")
     cmpre  = re.compile("^\$(0x[0-9a-fA-F]*),.*")
+
+    def from_capstone( self, cs ):
+        cs.detail = True
+        c_bytes = bytes.fromhex("".join(self.bytes))
+        cs_ins_gen = cs.disasm( c_bytes, self.address )
+        from pprint import pprint
+        print("self.line = '%s'" % (self.line,) )
+        tbl = []
+        for cs_ins in cs_ins_gen:
+            for attr in ["prefix","mnemonic","opcode"]:
+                line = []
+                tbl.append(line)
+                line.append(attr)
+                g = getattr(self,attr,None)
+                g = str(g)
+                line.append(g)
+                c = getattr(cs_ins,attr,None)
+                c = str(c)
+                line.append(c)
+        vdb.util.print_table(tbl)
+            
 
     def __init__( self ):
         self.mnemonic = None            # Instructions "name" like mov or sub or push or call
@@ -2576,6 +2599,12 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
         ret = fix_marker(ret,arg,frame,do_flow)
     update_vars(ret,frame)
 
+    import capstone
+    cs = capstone.Cs( capstone.CS_ARCH_X86, capstone.CS_MODE_64 )
+    cs.syntax = capstone.CS_OPT_SYNTAX_ATT
+    for ins in ret.instructions:
+        ins.from_capstone(cs)
+
     if( do_flow ):
         register_flow(ret,frame)
     return ret
@@ -2935,7 +2964,7 @@ def x86_vt_flow_xor( ins, frame, possible_registers, possible_flags ):
             possible_registers.set( args[1].register, t,origin="flow_xor" )
             possible_flags.set_result(t)
         else: # no idea about the outcome, don't set it
-            possible_registers.remove( args[1].register )
+            possible_registers.remove( args[1].base )
         if( len(args) == 2 ):
             # xor zeroeing out a register
             if( args[0].register == args[1].register ):
@@ -2964,7 +2993,7 @@ def x86_vt_flow_and( ins, frame, possible_registers, possible_flags ):
             possible_registers.set( args[1].register, t ,origin="flow_and")
             possible_flags.set_result(t)
         else: # no idea about the outcome, don't set it
-            possible_registers.remove( args[1].register )
+            possible_registers.remove( args[1].base )
 
     possible_flags.set("OF",0)
     possible_flags.set("CF",0)
@@ -3003,7 +3032,7 @@ def x86_vt_flow_lea( ins, frame, possible_registers, possible_flags ):
     a0.specfilter("=")
 
     fv,fa = a0.value(possible_registers)
-    possible_registers.remove( a1.register )
+    possible_registers.remove( a1.base )
     if( fa is not None ):
         if( not a1.dereference and a1.register is not None):
             possible_registers.set( a1.register, fa ,origin="flow_lea")
