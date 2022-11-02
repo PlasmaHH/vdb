@@ -393,6 +393,8 @@ class asm_arg_base( ):
             print("Failed to parse " + arg)
             raise
         self.arg_string = arg
+        # In case we read from memory, the size being read depends on the register the value is loaded into, thus if
+        # this argument describes that register we need to know the size
         self._bitsize = vdb.register.register_size( self.base )
 
     def reset_argspec( self ):
@@ -446,7 +448,8 @@ class asm_arg_base( ):
     # registers is a register_set object to possible get the value from
     # XXX At the moment we do not support prefixes
     # In case we read the value from memory, the second tuple element contains its address
-    def value( self, registers, target = None ):
+    def value( self, registers, target : "asm_arg_base" = None ):
+        print("self = '%s'" % (self,) )
         prefixval = 0
         if( self.prefix is not None ):
             preg = self.prefix + "_base"
@@ -470,6 +473,8 @@ class asm_arg_base( ):
                     val += self.offset
                 if( self.memory ):
                     castto = "P"
+                    print("target = '%s'" % (target,) )
+                    print("type(target) = '%s'" % (type(target),) )
                     if( target is None ):
                         dval = vdb.memory.read(val,vdb.arch.pointer_size//8)
                         if( vdb.arch.pointer_size == 32 ):
