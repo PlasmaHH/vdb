@@ -364,11 +364,11 @@ class asm_arg_base( ):
 
     def __init__( self, target, arg ):
         # New capstone based members
-
         self.base = None
+
         self.immediate = None
         self.immediate_hex = False
-        self.dereference = None
+        self.memory = None
         self.prefix = None
         self.offset = None
         self.target = target
@@ -457,7 +457,7 @@ class asm_arg_base( ):
                 val += prefixval
                 if( self.offset is not None ):
                     val += self.offset
-                if( self.dereference ):
+                if( self.memory ):
                     castto = "P"
                     if( target is None ):
                         dval = vdb.memory.read(val,vdb.arch.pointer_size//8)
@@ -488,7 +488,7 @@ class asm_arg_base( ):
             ret += f"%{self.prefix}:"
         if( self.offset is not None ):
             ret += f"{self.offset:#0x}"
-        if( self.dereference ):
+        if( self.memory ):
             ret += "("
             if( self.multiplier is not None ):
                 if( self.add_register is not None ):
@@ -518,7 +518,7 @@ class asm_arg_base( ):
             offset = "None"
         else:
             offset = f"{self.offset:#0x}"
-        print(f"arg %{self.base}, ${self.immediate}, ({self.dereference}), {self.offset},,, T{self.target} :{self.prefix}:: {self.multiplier}*REG + {self.add_register} => {self}")
+        print(f"arg %{self.base}, ${self.immediate}, ({self.memory}), {self.offset},,, T{self.target} :{self.prefix}:: {self.multiplier}*REG + {self.add_register} => {self}")
 
 
 class x86_asm_arg(asm_arg_base):
@@ -539,7 +539,7 @@ class x86_asm_arg(asm_arg_base):
             arg = arg[1:]
 
         if( arg[-1] == ")" ):
-            self.dereference = True
+            self.memory = True
             if( arg[0] == "(" ):
                 arg = arg[1:-1]
             else:
@@ -603,7 +603,7 @@ class arm_asm_arg(asm_arg_base):
         elif( arg.startswith("[") and arg.endswith("]")):
             arg = arg[1:-1]
             arg = list(map(str.strip,arg.split(",")))
-            self.dereference = True
+            self.memory = True
             self.base = arg[0]
             if( len(arg) > 1 ):
 #                print("arg[1] = '%s'" % (arg[1],) )
@@ -623,7 +623,7 @@ class arm_asm_arg(asm_arg_base):
             ret +=  "*"
         if( self.prefix is not None ):
             ret += f"%{self.prefix}:"
-        if( self.dereference ):
+        if( self.memory ):
             ret += "["
             if( self.multiplier is not None ):
                 if( self.add_register is not None ):
@@ -671,10 +671,37 @@ class instruction_base( abc.ABC ):
                 c = getattr(cs_ins,attr,None)
                 c = str(c)
                 line.append(c)
+
+        for op in cs_ins.operands:
+            print("op.reg = '%s'" % (cs_ins.reg_name(op.reg)) )
+            print(f"op.imm = {int(op.imm):#0x}" if op.imm is not None else "op.imm = None")
+            print("op.mem.segment = '%s'" % (cs_ins.reg_name(op.mem.segment),) )
+            print("op.mem.base = '%s'" % (cs_ins.reg_name(op.mem.base),) )
+            print("op.mem.index = '%s'" % (cs_ins.reg_name(op.mem.index),) )
+            print("op.mem.scale = '%s'" % (op.mem.scale,) )
+            print("op.mem.disp = '%s'" % (op.mem.disp,) )
+        print("self.arguments = '%s'" % (self.arguments,) )
+        for a in self.arguments:
+            print("a = '%s' ... " % (a,), end = "" )
+            a._dump()
         vdb.util.print_table(tbl)
             
 
     def __init__( self ):
+
+        # in case of capstone we get them directly, otherwise the vt_flow functions need to create them in a best effort
+        # way (there are quite some instructions where the modified members are not explicitly mentioend)
+        # primary use is to remove them from the outgoing set so even for not fully supported instructions we at least
+        # don't leave trash in here
+        self.registers_modified = set()
+
+        # Other members derived or used for gdb parsing only
+        # The set of flags that is possibly modified by this function, use this to delete flags from the outgoing set in
+        # case we don't fully support the mnemonic yet
+        self.flags_modified = set()
+
+
+
         self.mnemonic = None
         self.args = None
         self.arguments = []
@@ -2417,6 +2444,8 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     ret.function_header = funhead
 #    print("var_addresses = '%s'" % (ret.var_addresses,) )
 #    print("var_expressions = '%s'" % (ret.var_expressions,) )
+    if( do_flow ):
+        register_flow(ret,frame)
 
     import capstone
     cs = capstone.Cs( capstone.CS_ARCH_X86, capstone.CS_MODE_64 )
@@ -2424,8 +2453,6 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     for ins in ret.instructions:
         ins.from_capstone(cs)
 
-    if( do_flow ):
-        register_flow(ret,frame)
     return ret
 
 
@@ -2563,7 +2590,7 @@ def x86_vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     to  = ins.arguments[1]
 
     # the new register value will be...
-    if( not to.dereference ):
+    if( not to.memory ):
         # We ignore any (initial frame setup) move of rsp to rbp to keep the value intact
         # XXX if we do it that way we can also from here on (backwards?) assume rsp=rbp. (likely just after it we
         # sub something from rsp, we should support basic calculations too)
@@ -2641,7 +2668,7 @@ def x86_vt_flow_xor( ins, frame, possible_registers, possible_flags ):
 
     # We only do it when not writing to memory
     possible_flags.unset( [ "SF","ZF","AF","PF"] )
-    if( not args[1].dereference ):
+    if( not args[1].memory ):
         v0,_ = args[0].value( possible_registers )
         v1,_ = args[1].value( possible_registers )
         if( v0 is not None and v1 is not None ):
@@ -2666,7 +2693,7 @@ def x86_vt_flow_and( ins, frame, possible_registers, possible_flags ):
 
     # We only do it when not writing to memory
     possible_flags.unset( [ "SF","ZF","AF","PF"] )
-    if( not args[1].dereference ):
+    if( not args[1].memory ):
         v0,_ = args[0].value( possible_registers )
         v1,_ = args[1].value( possible_registers )
         if( v0 is not None and v1 is not None ):
@@ -2715,7 +2742,7 @@ def x86_vt_flow_lea( ins, frame, possible_registers, possible_flags ):
     fv,fa = a0.value(possible_registers)
     possible_registers.remove( a1.base )
     if( fa is not None ):
-        if( not a1.dereference and a1.base is not None):
+        if( not a1.memory and a1.base is not None):
             possible_registers.set( a1.base, fa )
 
     # no flags affected
