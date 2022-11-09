@@ -153,22 +153,34 @@ class tty(target):
 
 class tmux(tty):
     def __init__( self, pane_name ):
-        p = subprocess.run([ "tmux", "list-panes","-a","-F","#{pane_title}{|}#{pane_tty}" ], encoding = "utf-8", stdout = subprocess.PIPE )
+        p = subprocess.run([ "tmux", "list-panes","-a","-F","#{pane_title}{|}#{pane_tty}{|}#{session_name}" ], encoding = "utf-8", stdout = subprocess.PIPE )
 #        print("p = '%s'" % p )
         output = p.stdout.splitlines()
         tty = None
-        self.pane = pane_name
+        ps = pane_name.split("@")
+        print("ps = '%s'" % (ps,) )
+        if( len(ps) == 2 ):
+            self.pane = ps[0]
+            self.session = ps[1]
+        else:
+            self.pane = pane_name
+            self.session = None
+        print("self.pane = '%s'" % (self.pane,) )
+        print("self.session = '%s'" % (self.session,) )
         for line in output:
             line = line.split("{|}")
-#            print("line = '%s'" % line )
+            print("line = '%s'" % line )
             # or regex?
-#            if( line[0] == pane_name ):
-            if( re.match( pane_name, line[0] ) ):
-                tty = line[1]
-                break
+            if( re.match( self.pane, line[0] ) ):
+                if( self.session is not None ):
+                    if( re.match( self.session, line[2] ) ):
+                        tty = line[1]
+                else:
+                    tty = line[1]
+                    break
         if( tty is None ):
-            raise gdb.error("Could not find tmux pane named %s" % pane_name )
-#        print("tty = '%s'" % tty )
+            raise gdb.error("Could not find tmux pane %s" % pane_name )
+        print("tty = '%s'" % tty )
         super().__init__(tty)
 
     def name( self ):
@@ -358,6 +370,101 @@ def del_board( id ):
 #                db.enabled = to
                 return
 
+def tmux_panes( ):
+    cmd = [ "tmux", "list-panes", "-a", "-F", "#{pane_id}{|}#{pane_title}{|}#{pane_tty}{|}#{session_name}" ]
+    p = subprocess.run( cmd, encoding = "utf-8", stdout = subprocess.PIPE )
+    print("p.stdout = '%s'" % (p.stdout,) )
+    output = p.stdout.splitlines()
+    pane2id = {} # plane mappings of pane names to id|tty pair
+    session = {} # the same mapping but per session name
+    for pane in output:
+        pane_id,pane_title,pane_tty,session_name = pane.split("{|}")
+        ses_pane2id = session.setdefault(session_name,{})
+        pane2id[pane_title] = ( pane_id, pane_tty )
+        ses_pane2id[pane_title] = ( pane_id, pane_tty )
+    print("pane2id = '%s'" % (pane2id,) )
+    print("session = '%s'" % (session,) )
+    return ( session, pane2id )
+
+def run_tmux( args ):
+    cmd  = [ "tmux" ] + args
+    print("cmd = '%s'" % (cmd,) )
+    p = subprocess.run( cmd, encoding = "utf-8", stdout = subprocess.PIPE )
+    return p
+
+def do_xmux( argv ):
+    print("argv = '%s'" % (argv,) )
+
+    spanes,panes = tmux_panes()
+
+    spp = argv[0]
+
+    pane_size = None
+    if( spp[-1] == "]" ): # end is [#] size spec
+        spp,pane_size = spp[:-1].split("[")
+
+    print("spp = '%s'" % (spp,) )
+    print("pane_size = '%s'" % (pane_size,) )
+
+    dash_alias = None
+    spl = spp.split("|")
+    if( len(spl) > 1 ):
+        spp,dash_alias = spl
+
+    print("spp = '%s'" % (spp,) )
+    print("dash_alias = '%s'" % (dash_alias,) )
+
+    spl = spp.split(":")
+    old_pane = None
+    new_pane = None
+    if( len(spl) > 1 ):
+        old_pane = spl[0]
+        new_pane = spl[1]
+    else:
+        new_pane = spp
+
+    print("old_pane = '%s'" % (old_pane,) )
+    print("new_pane = '%s'" % (new_pane,) )
+
+    old_session = None
+
+    spl = old_pane.split("@")
+    if( len(spl) > 1 ):
+        old_pane = spl[0]
+        old_session = spl[1]
+
+    print("old_pane = '%s'" % (old_pane,) )
+    print("old_session = '%s'" % (old_session,) )
+
+    print("spanes = '%s'" % (spanes,) )
+    created = False
+    spanes,panes = tmux_panes()
+    if( old_session is not None and old_session not in spanes ):
+        print(f"tmux session {old_session} not found, creating")
+        create_cmd = [ "new-session", "-d", "-s", old_session ]
+        p = run_tmux( create_cmd )
+        created = True
+        # Since we created it we should name it. It should currently be selected, unless in between someone else created
+        # other sessions. Don't know if there is a way to circumvent that race condition
+        if( old_pane is not None ):
+            name_cmd = [ "select-pane", "-T", old_pane ]
+            p = run_tmux( name_cmd )
+        spanes,panes = tmux_panes() # update information
+
+    # when no old pane was chose, take the selected one and rename it to the new pane name
+    if( old_pane is None ):
+        name_cmd = [ "select-pane", "-T", new_pane ]
+        p = run_tmux( name_cmd )
+        spanes,panes = tmux_panes() # update information
+    # when we can't find the old session, 
+    active_spanes = spanes.get(old_session,panes)
+    print("active_spanes = '%s'" % (active_spanes,) )
+    # 
+
+    if( created ):
+        print(f"tmux session '{old_session}' created. Do a tmux at -t '{old_session}' in another window/terminal to attach to it") 
+#        print("p = '%s'" % p )
+
 def call_dashboard( argv ):
     # type: tmux,port,tty
     # subcommands: list,enable,disable,erase
@@ -377,6 +484,8 @@ def call_dashboard( argv ):
             raise gdb.error("dashboard tmux, need at least 2 parameters")
         tgt = tmux(argv[1])
         add_board(tgt,argv[2:])
+    elif( "xmux".startswith(argv[0]) ):
+        do_xmux( argv[1:] )
     elif( "port".startswith(argv[0]) ):
         if( len(argv) < 3 ):
             raise gdb.error("dashboard port, need at least 2 parameters")
@@ -453,4 +562,61 @@ Remember that you can use dash as short as long as no other command collides wit
 cmd_dashboard()
 
 
+
+### maybe the stuff below needs to go into another module? We will probably depend on tmux a lot
+
+# Dashboard will have the possibility to set aliases instead of just IDs by which we can mention them in views
+# xmux advanced dash target will instead of using an existing tmux create one. If the session does not exist, create it.
+# If the pane does not exist, create it. Use -xyz parameters as tmux split-window parameters. Don't support everything,
+# just the most common stuff. People can always call tmux to tweak things later on the created panes.
+# <pane-to-split>:<new-pane>
+# pane-to-split can be pane@session or just pane or @session to mean any pane at that session
+# Having no : means to just select that pane, no split options possible here, everything will be forwarded to the tmux
+# target
+# dash xmux pane1@session1:pane2 -vb registers
+# a |alias after it makes this an alias for the tmux object with that name. Duplicates make this an error. To be used
+# for enable/disable views. Maybe later for closing a pane when there is no view? But then how to reopen in the right
+# layout...
+# 
+# If session "session1" does not exist create it. Select pane1 if it exists, and then via -vb create a new pane with the
+# -l size 66 named pane2. Both could be omitted, making things nameless. If pane1 does not exist, give a notice and
+# split the currently selected pane instead.
+# pass the registers command to the tmux command with "^pane2$" in the name, but select for session name too. Extend
+# tmux syntax to support sessions too for that
+# If there is no session but also no pane specified, try to be smart about it and when possible select the session that
+# the current gdb runs in. Maybe make that configureable. This way we can just start gdb in a tmux and startup the
+# layout
+# 
+# 
+# views will be based on self controlled tmux panes/windows.
+# view add <session> <dash ID/name> <tmux options for layout>
+#
+# view add <session> { commands to setup a dash that will then automatically added }
+def call_view( argv ):
+    vdb.util.bark() # print("BARK")
+
+class cmd_view (vdb.command.command):
+    """
+Manage dashboard views
+    """
+
+    def __init__ (self):
+        super ().__init__ ("view", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+
+    def do_invoke (self, argv):
+        try:
+
+#            import cProfile
+#            cProfile.runctx("call_view(argv)",globals(),locals())
+            call_view(argv)
+        except gdb.error as ge:
+#            traceback.print_exc()
+            print("view: %s" % ge)
+        except:
+            traceback.print_exc()
+            raise
+            pass
+        self.dont_repeat()
+
+cmd_view()
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
