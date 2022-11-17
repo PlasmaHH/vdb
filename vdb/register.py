@@ -1057,9 +1057,9 @@ We recommend having an alias reg = registers in your .gdbinit
                     elif( argv[0] == "/e" ):
                         registers.print("Ipx")
                     elif( argv[0] == "/a" ):
-                        registers.print("ixfpmv")
+                        registers.print("ixofpmv")
                     elif( argv[0] == "/E" ):
-                        registers.print("IXFPMV")
+                        registers.print("IXOFPMV")
                     elif( argv[0] == "/_d" ):
                         registers._dump()
                     else:
