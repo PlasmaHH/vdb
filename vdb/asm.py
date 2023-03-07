@@ -754,6 +754,7 @@ class instruction_base( abc.ABC ):
 
 class x86_instruction( instruction_base ):
 
+    last_cmp_immediate = 1
     @vdb.overrides
     def parse( self, line, m, oldins ):
         jmpre  = re.compile("^\*(0x[0-9a-fA-F]*)\(.*")
@@ -830,7 +831,7 @@ class x86_instruction( instruction_base ):
 #                print("m = '%s'" % m )
             if( m is not None ):
                 cmparg = m.group(1)
-                last_cmp_immediate = vdb.util.xint(cmparg)
+                x86_instruction.last_cmp_immediate = vdb.util.xint(cmparg)
 
         if( len(tokens) > tpos ):
 #                print("tokens = '%s'" % (tokens,) )
@@ -868,7 +869,7 @@ class x86_instruction( instruction_base ):
                             break
                     except gdb.MemoryError:
                         break
-                    if( cnt > last_cmp_immediate ):
+                    if( cnt > x86_instruction.last_cmp_immediate ):
                         break
 #                        print("last_cmp_immediate = '%s'" % last_cmp_immediate )
                     self.targets.add(int(jmpval))
@@ -897,9 +898,12 @@ class x86_instruction( instruction_base ):
 
 class arm_instruction( instruction_base ):
 
+    last_cmp_immediate = 1
+
     def __init__( self ):
         super().__init__()
         self.arg_is_list = False
+
 
     @vdb.overrides
     def parse( self, line, m, oldins ):
@@ -953,11 +957,11 @@ class arm_instruction( instruction_base ):
         if( len(tokens) > 1 ):
             self.reference = tokens[1:]
         args = tokens[0].strip()
-        print(f"{args=}")
+#        print(f"{args=}")
         if( len(args) > 0 and args[-1] == ">" and ( ( lbi := args.find("<") ) > 0 ) ):
-            print(f"{lbi=}")
+#            print(f"{lbi=}")
             args = args[:lbi]
-        print(f"{args=}")
+#        print(f"{args=}")
         self.args_string = args
 
         oargs = args
@@ -997,6 +1001,33 @@ class arm_instruction( instruction_base ):
             self.conditional_jump = True
         elif( self.mnemonic in arm_unconditional_jump_mnemonics ):
             self.targets.add( vdb.util.xint(oargs) )
+        elif( self.mnemonic in ["tbb","tbh"] ): # arm jump table stuff
+#            print("ARM TBB/TBH DETECTED")
+            try:
+                # TODO Check how to support other registers (would probably require rewriting targets)
+                if( self.arguments[0].register == "pc" ):
+                    if( self.mnemonic == "tbh" ):
+                        ctyp = "unsigned short"
+                        csz  = 2
+                    else:
+                        ctyp = "unsigned char"
+                        csz  = 1
+                    tbllen = int(arm_instruction.last_cmp_immediate)
+#                    print("tbllen = '%s'" % (tbllen,) )
+                    for i in range(0,tbllen):
+                        gexp = f"$pc +4+ *({ctyp}*)($pc+4+{csz}*{i})*2"
+#                        print("gexp = '%s'" % (gexp,) )
+                        gexp = gdb.parse_and_eval( gexp )
+#                        print("gexp = '%x'" % (gexp,) )
+                        self.targets.add( int(gexp) )
+
+
+            except ValueError:
+                pass
+        elif( self.mnemonic.startswith("cmp") ):
+            arm_instruction.last_cmp_immediate = self.arguments[1].immediate
+            print("arm_instruction.last_cmp_immediate = '%s'" % (arm_instruction.last_cmp_immediate,) )
+
 
         if( oldins is not None ):
             if oldins.mnemonic not in arm_unconditional_jump_mnemonics :
@@ -1909,12 +1940,15 @@ x86_base_pointer = "rbp" # what for 32bit?
 call_preserved_registers = [ "rbx", "rsp", "rbp", "r12", "r13", "r14", "r15" ]
 
 arm_conditional_suffixes = [ "eq","ne","cs","hs","cc","lo","mi","pl","vs","vc","hi","ls","ge","lt","gt","le" ]
+arm_encoding_suffixes = [ "n","w" ]
 arm_unconditional_jump_mnemonics = set([ "b" ] )
 arm_conditional_jump_mnemonics = set()
 for uj in arm_unconditional_jump_mnemonics:
     for csuf in arm_conditional_suffixes:
-        arm_conditional_jump_mnemonics.add(uj+csuf)
-        arm_conditional_jump_mnemonics.add(uj+"."+csuf)
+        fmn = uj+csuf
+        arm_conditional_jump_mnemonics.add(fmn)
+        for enc in arm_encoding_suffixes:
+            arm_conditional_jump_mnemonics.add(fmn + "." + enc )
 
 #print("arm_conditional_jump_mnemonics = '%s'" % (arm_conditional_jump_mnemonics,) )
 
@@ -1943,6 +1977,8 @@ def configure_arch( arch = None ):
 #        print("archname = '%s'" % (archname,) )
     except:
         print("Not configured for architecture %s, falling back to x86" % archname )
+    if( archname.startswith("armv") ):
+        archname = "arm"
 
     global current_arch
     if( archname == current_arch ): # already setup
@@ -2273,7 +2309,6 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     funcre = re.compile("for function (.*):")
     rangere = re.compile("Dump of assembler code from (0x[0-9a-f]*) to (0x[0-9a-f]*):")
     current_function=""
-    last_cmp_immediate = 1
 
     markers = 0
     oldins = None
@@ -3571,6 +3606,9 @@ if __name__ == "__main__":
         traceback.print_exc()
         pass
 
+# TODO/Ideas
+# Go through the code, check for push/pop and stackpointer modifications, try to estimate stack usagee
+# Theoretically we should be able to start at the entry point and build a callgraph
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

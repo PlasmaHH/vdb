@@ -452,5 +452,7 @@ Remember that you can use dash as short as long as no other command collides wit
 
 cmd_dashboard()
 
+# TODO/Ideas
+# modifier to show top/bottom N rows of command only
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
