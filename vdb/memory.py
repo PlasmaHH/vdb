@@ -689,39 +689,42 @@ class memory_map:
         nullr.mtype = memory_type.NULL
         self.add_region(nullr)
 #        self.regions.sort()
-        info_proc_mapping = gdb.execute("info proc mapping",False,True)
-        mre = re.compile("(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(.*)")
+        try:
+            info_proc_mapping = gdb.execute("info proc mapping",False,True)
+            mre = re.compile("(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(.*)")
 
-        
-        for mapping in info_proc_mapping.splitlines():
-            mapping=mapping.strip()
-            m = mre.match(mapping)
+            
+            for mapping in info_proc_mapping.splitlines():
+                mapping=mapping.strip()
+                m = mre.match(mapping)
 #            print("mapping = '%s'" % mapping )
 #            print("m = '%s'" % m )
-            if( m ):
-                start=int(m.group(1),16)
-                end=int(m.group(2),16)
-                file=m.group(5)
-                mm = self.section(start,end)
-                size = end-start
-                if( ignore_empty.value and size == 0 ):
-                    continue
-                if( mm is None ):
-                    mm = memory_region( start, end, None, file )
-                    self.add_region(mm)
-                mm.procline = mapping
-                if( len(file) > 0 and mm.file is None ):
-                    mm.file = file
-                if( file.startswith("/SYSV00000000 (deleted)") ):
-                    mm.mtype = memory_type.SHM
-                elif( file.endswith( "[stack]") ):
-                    mm.mtype = memory_type.FOREIGN_STACK
-                elif( file.endswith( "[heap]") ):
-                    mm.mtype = memory_type.HEAP
-                elif( file.endswith( "[vsyscall]") ):
-                    mm.mtype = memory_type.CODE
-                elif( file.endswith( "[vdso]") ):
-                    mm.mtype = memory_type.CODE
+                if( m ):
+                    start=int(m.group(1),16)
+                    end=int(m.group(2),16)
+                    file=m.group(5)
+                    mm = self.section(start,end)
+                    size = end-start
+                    if( ignore_empty.value and size == 0 ):
+                        continue
+                    if( mm is None ):
+                        mm = memory_region( start, end, None, file )
+                        self.add_region(mm)
+                    mm.procline = mapping
+                    if( len(file) > 0 and mm.file is None ):
+                        mm.file = file
+                    if( file.startswith("/SYSV00000000 (deleted)") ):
+                        mm.mtype = memory_type.SHM
+                    elif( file.endswith( "[stack]") ):
+                        mm.mtype = memory_type.FOREIGN_STACK
+                    elif( file.endswith( "[heap]") ):
+                        mm.mtype = memory_type.HEAP
+                    elif( file.endswith( "[vsyscall]") ):
+                        mm.mtype = memory_type.CODE
+                    elif( file.endswith( "[vdso]") ):
+                        mm.mtype = memory_type.CODE
+        except gdb.error as e:
+            print(e)
 
 #        self.regions += map_regions
 #        self.regions.sort()
