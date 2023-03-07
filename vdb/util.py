@@ -273,79 +273,141 @@ def next_id( name ):
     id_store[name] = nid+1
     return nid
 
+class table_cell:
+
+    def __init__( self, s, color, dpy_len, max_size, truncate ):
+        self.s = s
+        self.color = color
+        if( dpy_len is None ): # Default len is just the strlen
+            dpy_len = len(s)
+        self.dpy_len = dpy_len   # The length in really printed chars, can be smaller than len due to colours
+        self.max_size = max_size # truncate string to that if necessary. Can't work together with preset dpy_len
+        if( truncate is None ): # default behaviour
+            truncate = True
+        self.truncate = truncate
+        self.rendered = False
+#        print(f"cell: .s={self.s}[{len(self.s)}], .color={self.color}, .dpy_len={self.dpy_len}, .max_size={self.max_size}, .truncate={self.truncate}")
+
+
+    def render( self, width, skip_padding = False):
+        if( not self.rendered ):
+#            print(f"render(width={width},.s={self.s}[{len(self.s)}],.dpy_len={self.dpy_len},.truncate={self.truncate}")
+            if( len(self.s) <= self.dpy_len ): # No special chars that could interfere with truncating
+                if( self.dpy_len > width and self.truncate ): # need to truncate
+                    self.s = self.s[:width]
+
+            if( self.color is not None ): # Will change the len(self.s) but not the amount of displayed characters
+                import vdb.color
+                self.s = vdb.color.color(self.s,self.color)
+        self.rendered = True
+
+        # Now all we need is the padding
+        xpad = width - self.dpy_len
+        if( skip_padding or xpad < 0 ):
+            xpad = 0
+#        print(f"render(width={width}, skip_padding={skip_padding} cell: .s={self.s}[{len(self.s)}], .color={self.color}, .dpy_len={self.dpy_len}, .max_size={self.max_size}, .truncate={self.truncate} => xpad={xpad}")
+        ret = f"{self.s}{' ' * xpad}"
+        return ret
+
+
 def format_line( line, maxsz, padbefore, padafter ):
     ret = ""
-    cnt = 0
+    column = 0
     for cell in line:
-        if( cell is None ):
-            cell = ""
-#        ret += str(maxsz[cnt])
         ret += padbefore
-        if isinstance(cell,tuple):
-            cval = cell[0]
-            clen = cell[1]
-            if( len(cell) > 2 ):
-                if( cell[2] == 0 ):  # truncate to max size
-                    cval = cval[0:maxsz[cnt]]
-            if( len(cell) > 1 ):
-                if( isinstance(clen,str) ):
-                    import vdb.color
-                    v=cell[0]
-                    c=cell[1]
-                    cell = vdb.color.colorl(cval,clen) + cell[2:]
-                    cval = cell[0]
-                    clen = cell[1]
-            if( clen == 0 ):
-                clen = len(cval)
-                xpad = maxsz[cnt] - clen
-            else:
-                xpad = maxsz[cnt] - clen
-            if( cnt+1 == len(line) ):
-                xpad = 0
-            ret += f"{cval}{' ' * xpad}"
-        else:
-            xmaxsz = maxsz[cnt]
-            if( cnt+1 == len(line) ):
-                xmaxsz = 0
-            ret += "{cell:<{maxsz}}".format(cell = cell, maxsz = xmaxsz )
+        ret += cell.render(maxsz[column])
         ret += padafter
-        cnt += 1
+        column += 1
     return ret
 
 def format_table( tbl, padbefore = " ", padafter = " " ):
+    """
+    Formats a table made out of a list of lines. Each line is a list too. Each cell in that line is either
+    - None, denotes an empty string
+    - a string
+    - a 2-tuple made of a string and its display length (Must match the actual display len, otherwise table is messed up)
+    - a 2-tuple made of a string and a colour string (causing the whole cell to have that colour)
+    - a 3-tuple made of a string, either a colour string or a display len, and then some size thing. If that size is 0, display len
+      is ignored and the string is truncated to the maximum size of other fields. If its > 0 then the size of this field
+      will cause the column to be at most that size, but the string can be bigger. If the value is < 0 then it will be
+      truncated to the column width, and the positive version is taken as the maximum width
+    - a 4-tuple made of a string, a colour string, display len, and the max size
+
+    The table will be layed out so that the width is the width of the biggest element
+    """
     ret = ""
     if( len(tbl) == 0 ):
         return ret
 #    maxsz = list(itertools.repeat(0,len(tbl[0])))
     maxsz = {}
+    normal_table = []
 #    print("len(maxsz) = '%s'" % len(maxsz) )
     for line in tbl:
+#        print("maxsz = '%s'" % (maxsz,) )
 #        print("line = '%s'" % line )
-        cnt = 0
+        column = 0
+        nline = []
+        if( line is None ):
+            line = []
 #        for cell in line:
-        for cnt in range(0,len(line)):
-            cell = line[cnt]
+        for column in range(0,len(line)):
+            cell = line[column]
             if( cell is None ):
                 cell=""
-#            print("cnt = '%s'" % cnt )
+#            print("column = '%s'" % column )
             if isinstance(cell,tuple):
-                if( len(cell) == 2 ):
-                    clen = cell[1]
-                    if( isinstance(clen,str) ):
-                        clen = len(cell[0])
-                    maxsz[cnt] = max(maxsz.get(cnt,0),clen)
-                elif( len(cell) > 3):
-                    maxsz[cnt] = max(maxsz.get(cnt,0),cell[3])
-                else:
-                    # Ignore the size at that point
-                    maxsz[cnt] = max(maxsz.get(cnt,0),1)
-            else:
-                maxsz[cnt] = max(maxsz.get(cnt,0),len(str(cell)))
-#            cnt += 1
-#    for x,y in maxsz.items():
-#        print("x = '%s'" % x )
-#        print("y = '%s'" % y )
-    for line in tbl:
+                match len(cell):
+                    case 0: # empty
+                        ncell = table_cell("",None,1,None,None)
+                    case 1: # just a string
+                        ncell = table_cell(cell[0],None,len(cell[0]),None,None)
+                        maxsz[column] = max(maxsz.get(column,0),ncell.dpy_len)
+                    case 2: # string and col or len
+                        if( isinstance(cell[1],str) ): # is a colour, not a len
+                            colour = cell[1]
+                            clen = len(cell[0])
+                        else:
+                            colour = None
+                            clen = cell[1]
+                        ncell = table_cell(cell[0],colour,clen,None,None)
+                        maxsz[column] = max(maxsz.get(column,0),ncell.dpy_len)
+                    case _: # string, then col or len
+                        cval = cell[0]
+                        if( isinstance(cell[1],str) ): # a colour
+                            colour = cell[1]
+                            clen = cell[2]
+                            if( clen == 0 ):
+                                clen = len(cell[0])
+                                maxs = 0
+                            else:
+                                maxs = None
+                        else:
+                            colour = None
+                            clen = cell[1]
+                            maxs = cell[2]
+                        if( len(cell) > 3 ):# then the 4th is definetly a maxs
+                            maxs = cell[3]
+                        if( maxs is not None ):
+                            # The maximum size that a column is automatically expanded to
+                            truncate = False
+                            # negative means to actually tuncate the value, positive can overflow the cell
+                            if( maxs < 0 ):
+                                truncate = True
+                                maxs = -maxs
+                            ncell = table_cell(cval,colour,clen,maxs,truncate)
+                            dm = min(maxs,ncell.dpy_len)
+                            maxsz[column] = max(maxsz.get(column,0),dm)
+                        else:
+                            ncell = table_cell(cval,colour,clen,maxs,None)
+                            maxsz[column] = max(maxsz.get(column,0),ncell.dpy_len)
+            else: # just some printable thing
+                ncell = table_cell(str(cell),None,None,None,None)
+                maxsz[column] = max(maxsz.get(column,0),ncell.dpy_len)
+            nline.append(ncell)
+        normal_table.append(nline)
+#    print("maxsz = '%s'" % (maxsz,) )
+
+    for line in normal_table:
         ret += format_line(line,maxsz,padbefore,padafter)
         ret += "\n"
     return ret
@@ -762,7 +824,7 @@ class progress_indicator:
         out = format.format(**locals())
         return out
 
-
+callvl = 0
 def memoize( reset_events = [] ):
     class memoize_cache:
         def __init__( self, func ):
@@ -783,15 +845,29 @@ def memoize( reset_events = [] ):
 #            bark() # print("BARK")
             self.cache = {}
 
+        # todo: profile and speedup
         def __call__( self, *args, **kwargs ):
+#            global callvl
+#            callvl += 1
 #            bark() # print("BARK")
-            if( len(kwargs) > 0 ):
-                return self.func(*args,**kwargs)
+#            indent(callvl,str(self))
+#            indent(callvl,"args = '%s'" % (args,) )
+#            print("kwargs = '%s'" % (kwargs,) )
+#            if( len(kwargs) > 0 ):
+#                return self.func(*args,**kwargs)
 
-            val = self.cache.get(args, self )
+            key = (args,tuple(zip(kwargs.keys(),kwargs.values())))
+#            print("key = '%s'" % (key,) )
+#            val = self.cache.get(args, self )
+            val = self.cache.get( key, self )
+#            indent(callvl,"val = '%s'" % (val,) )
             if( val is self ):
-                val = self.func(*args)
-                self.cache[args] = val
+                val = self.func(*args,**kwargs)
+                self.cache[key] = val
+                val = self.cache.get( key, self )
+#                indent(callvl,"val = '%s'" % (val,) )
+#                indent(callvl,"len(self.cache) = '%s'" % (len(self.cache),) )
+#            callvl -= 1
             return val
     return memoize_cache
 

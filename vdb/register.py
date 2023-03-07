@@ -77,10 +77,11 @@ bndstatus_descriptions = {
         }
 
 flag_info = {
-            "eflags" : ( 21, flag_descriptions, None ),
-            "mxcsr"  : ( 15, mxcsr_descriptions, None ),
-            "bndcfgu" : ( 12, bndcfgu_descriptions, ( "raw", "config" ) ),
-            "bndstatus" : ( 4, bndstatus_descriptions, ( "raw", "status" ) )
+            "eflags"    : ( 21, flag_descriptions, None ),
+            "mxcsr"     : ( 15, mxcsr_descriptions, None ),
+            "bndcfgu"   : ( 12, bndcfgu_descriptions, ( "raw", "config" ) ),
+            "bndstatus" : (  4, bndstatus_descriptions, ( "raw", "status" ) ),
+            "apsr"      : ( )
             }
 possible_flags = [
         "eflags", "flags", "mxcsr", "bndcfgu", "bndstatus"
@@ -771,6 +772,7 @@ class Registers():
         return ret
 
     def format_flags_mini( self, name, val ):
+        """Never returns colour"""
         count,descriptions,rawname = flag_info.get(name)
 
         if( rawname is None ):
@@ -794,6 +796,7 @@ class Registers():
         else:
             iflags = int(flags)
         ret = ""
+        retlen = 0
 
         bit = 0
 
@@ -803,6 +806,7 @@ class Registers():
             ex &= 1
 
             short = ""
+            shortlen = 0
 
             tbit = f"{bit:02x}"
             desc = descriptions.get(bit,None)
@@ -826,16 +830,16 @@ class Registers():
                         if( ms is not None ):
                             short = f"{dshort}[{ms},{ex}]"
 
+                shorteln = len(short)
                 if( ex != 0 ):
-                    short = vdb.color.color(short,flag_colour.value)
+                    short,shortlen = vdb.color.colorl(short,flag_colour.value)
 
-            mask = f"0x{mask:04x}"
             # bit order
             if( len(short) > 0 ):
-                ret = str(short) + " " + ret
+                ret,relen = vdb.color.concat( vdb.color.concat( (short,shortlen)," ") , (ret,retlen) )
             bit += 1
 
-        return ret
+        return [(ret,retlen)]
 
     def format_flags( self, name ):
         count,descriptions,rawname = flag_info.get(name)
@@ -907,26 +911,19 @@ class Registers():
 
             bit += 1
 
-        ret = vdb.util.format_table( ftbl )
-        return ret
+        ftbl.append(None)
+        return ftbl
 
-    def flags( self, extended = False ):
-        ret=""
-
-#        if( self.eflags is not None ):
-#            if( extended ):
-#                ret += self.format_flags( "eflags" )
-#            else:
-#                ret += " "
-#                ret += self.format_flags_short("eflags",False)
-#        else:
-#            ret += "NO SUPPORTED FLAGS FOUND\n"
-
-#        ret += "\n"
-#        ret += self._mxcsr( extended )
+    def flags( self, extended , short , mini ):
+        flagtable = []
+#        return vdb.util.format_table( [
+#            ["a","b","c","d","e","f"],
+#            [("AB","#ff3"),("AB",2),("ABCDEF","#876",0),("ABCD")],
+#            [("AB","#ff3"),("AB",2),("XYZDEF","#876",6,-5),("abcd")],
+#            [("AB","#ff3"),("AB",2),("DEFLOL","#876",300,0),("abcd")],
+#            ],"_",".")
 
         for fr,v in self.rflags.items():
-            ret += "\n"
             fv,ft = v
             abbr = False
             if( fr.name in abbrflags ):
@@ -939,17 +936,20 @@ class Registers():
             else:
                 ival = int(fv)
 
-            fvm = self.format_flags_mini( fr.name, fv )
-            ret += vdb.color.color(f" {fr.name} ",color_names.value)+f"0x{ival:016x} {fvm}"
-            ret += "\n"
+            line = [ (fr.name,color_names.value), f"0x{ival:016x}" ]
+            flagtable.append(line)
+
+            if( mini ):
+                fvm = self.format_flags_mini( fr.name, fv )
+                line.append(fvm)
+
+            if( short ):
+                line += self.format_flags_short(fr.name,abbr)
 
             if( extended ):
-                ret += self.format_flags(fr.name)
-            else:
-                ret += " "
-                ret += self.format_flags_short(fr.name,abbr)
-            ret += "\n"
+                flagtable += self.format_flags(fr.name)
 
+        ret = vdb.util.format_table( flagtable )
         return ret
 
     def print( self, showspec ):
@@ -966,10 +966,12 @@ class Registers():
                 print(self.floats())
             elif( s == "F" ):
                 print(self.ex_floats())
+            elif( s == "y" ):
+                print(self.flags(extended=False,short=False,mini=True))
             elif( s == "x" ):
-                print(self.flags(extended=False))
+                print(self.flags(extended=False,short=True,mini=False))
             elif( s == "X" ):
-                print(self.flags(extended=True))
+                print(self.flags(extended=True,short=False,mini=False))
             elif( s == "o" ):
                 print(self.other(extended=False))
             elif( s == "O" ):
