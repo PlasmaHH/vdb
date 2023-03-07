@@ -315,7 +315,7 @@ def format_line( line, maxsz, padbefore, padafter ):
     column = 0
     for cell in line:
         ret += padbefore
-        ret += cell.render(maxsz[column])
+        ret += cell.render(maxsz[column], column+1 >= len(line) )
         ret += padafter
         column += 1
     return ret
