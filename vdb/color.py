@@ -23,6 +23,17 @@ def mcolor( s, cs ):
 def colorl( s, cs ):
     return ( color(s,cs),len(s))
 
+def concat( ltpl, rtpl ):
+    """concatenate a string and its display lengths"""
+    ls,ll = ltpl
+    if( isinstance(rtpl,str) ):
+        rs = rtpl
+        rl = len(rs)
+    else:
+        rs,rl = rtpl
+    return ( ls+rs,ll+rl )
+
+
 # readline safe (?) colouring
 def color_rl( s, cs ):
     # these special characters will make libreadline handle searches better
