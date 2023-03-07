@@ -76,15 +76,119 @@ bndstatus_descriptions = {
         2 : ( 62,"BDE", "BDE Address", None ),
         }
 
+apsr_descriptions = {
+        31 : ( 1, "N"  , "Negative Condition", "bit[31] (sign) of a result" ),
+        30 : ( 1, "Z"  , "Zero Condition", "Set if result is zero" ),
+        29 : ( 1, "C"  , "Carry Flag", None ),
+        28 : ( 1, "V"  , "Overflow Flag", None ),
+        27 : ( 1, "Q"  , "Overflow or Saturation", None ),
+        24 : ( 3, "RAZ", "RAZ/SBZP Flags.", None ),
+        16 : ( 4, "GE" ,">= Flags", "See SEL instruction", None )
+        }
+
+ipsr_descriptions = {
+        0 : ( 9, "ISR", "ISR_NUMBER Exception", {
+                                                    0 : ( "TM","Thread mode"),
+                                                    1 : ( "RS","Reserved"),
+                                                    2 : ( "NMI",""),
+                                                    3 : ( "HF", "Hard Fault"),
+                                                    4 : ( "MM", "Mem Manage"),
+                                                    5 : ( "BF", "Bus Fault"),
+                                                    6 : ( "UF", "Usage Fault"),
+                                                    11: ( "SV", "SVCall"),
+                                                    12: ( "DB", "Debug"),
+                                                    14: ( "PS", "PendSV"),
+                                                    15: ( "ST", "SysTick"),
+                                                    16: ( "IRQ0",""), # TODO Add all other IRQ too
+                                                }),
+        }
+
+epsr_descriptions = {
+        25 : ( 2, "ICI/IT", "", None ),
+        10 : ( 6, "ICI/IT", "", None ),
+        24 : ( 1, "T", "Thumb state", None ),
+        }
+primask_descriptions = {
+        0 : ( 1, "PRIMASK", "", None ),
+        }
+
+faultmask_descriptions = {
+        0 : ( 1, "FAULTMASK", "", None ),
+        }
+
+basepri_descriptions = {
+        0 : ( 8, "BAEPRI", "", None ),
+        }
+
+control_descriptions = {
+        0 : ( 1, "nPRIV", "Thread mode Privilege Level", { 
+                                                          0 : ( "PR","Priveleged" ), 
+                                                          1 : ( "UN","Unprivileged" ) 
+                                                          }),
+        1 : ( 1, "SPSEL", "Current Stack Pointer", { 
+                                                    0 : ("MSP","is current SP" ),
+                                                    1 : ("PSP","is current SP" ),
+                                                    }),
+        }
+fpscr_descriptions = {
+        31 : ( 1, "N"  , "Negative Condition", "bit[31] (sign) of a result" ),
+        30 : ( 1, "Z"  , "Zero Condition", "Set if result is zero" ),
+        29 : ( 1, "C"  , "Carry Flag", None ),
+        28 : ( 1, "V"  , "Overflow Flag", None ),
+        24 : ( 1, "FZ" , "Flush to zero", { 
+                                           0 : ("-FZ", "Flush to Zero Mode disabled"),
+                                           1 : ("+FZ", "Flush to Zero Mode enabled"),
+                                           }),
+        22 : ( 2, "RND", "Rounding Control", {
+                                            0b00 : ("RN", "Round to nearest"),
+                                            0b01 : ("RP", "Round to plus Inf"),
+                                            0b10 : ("RM", "Round to minus Inf"),
+                                            0b11 : ("RZ", "Round to zero")
+                                            }),
+        20 : ( 2, "STRIDE", "Vector Stride", {
+                                            0b00 : ("1", "Stride 1"),
+                                            0b11 : ("2", "Stride 2")
+                                            }),
+        16 : ( 3, "LEN", "Register per Vector", {
+                                            0 : ("1",""),
+                                            1 : ("2",""),
+                                            2 : ("3",""),
+                                            3 : ("4",""),
+                                            4 : ("5",""),
+                                            5 : ("6",""),
+                                            6 : ("7",""),
+                                            7 : ("8",""),
+                                            }),
+        12 : ( 1, "IXE", "Inexact Ex Enabled", None ),
+        11 : ( 1, "UFE", "Underflow Ex Enabled", None ),
+        10 : ( 1, "OFE", "Overflow Ex Enabled", None ),
+         9 : ( 1, "DZE", "Div by Zero Ex Enabled", None ),
+         8 : ( 1, "IOE", "Invalid Operation Ex Enabled", None ),
+         4 : ( 1, "IXC", "Inexact Exception Occured", None ),
+         3 : ( 1, "UFC", "Underflow Exception Occured", None ),
+         2 : ( 1, "OFC", "Overflow Exception Occured", None ),
+         1 : ( 1, "DZC", "Div by Zero Exception Occured", None ),
+         0 : ( 1, "IOC", "Invalid Operation Exception Occured", None ),
+        }
+
 flag_info = {
             "eflags"    : ( 21, flag_descriptions, None ),
             "mxcsr"     : ( 15, mxcsr_descriptions, None ),
             "bndcfgu"   : ( 12, bndcfgu_descriptions, ( "raw", "config" ) ),
             "bndstatus" : (  4, bndstatus_descriptions, ( "raw", "status" ) ),
-            "apsr"      : ( )
+            # From Cortex M3 Documentation, if others vary we need to figure that out somehow
+            "apsr"      : ( 31, apsr_descriptions, None ),
+            "ipsr"      : (  9, ipsr_descriptions, None ),
+            "epsr"      : ( 26, epsr_descriptions, None ),
+            "primask"   : (  1, primask_descriptions, None ),
+            "faultmask" : (  1, faultmask_descriptions, None ),
+            "basepri"   : (  7, basepri_descriptions, None ),
+            "control"   : (  2, control_descriptions, None ),
+            "fpscr"     : ( 31, fpscr_descriptions, None ),
             }
 possible_flags = [
-        "eflags", "flags", "mxcsr", "bndcfgu", "bndstatus"
+        "eflags", "flags", "mxcsr", "bndcfgu", "bndstatus", "apsr", "ipsr", "epsr", "primask", 
+        "faultmask", "basepri", "control", "fpscr",
         ]
 
 abbrflags = [ 
@@ -776,9 +880,16 @@ class Registers():
         count,descriptions,rawname = flag_info.get(name)
 
         if( rawname is None ):
-            return str(val)
+            val=str(val)
+            try:
+                return f"{int(val):#0x}"
+            except ValueError:
+                return val
 
         ret = " "
+#        print("val = '%s'" % (val,) )
+#        print("rawname = '%s'" % (rawname,) )
+#        print("val[rawname[1]] = '%s'" % (val[rawname[1]],) )
         for f in val[rawname[1]].type.fields():
             sv = val[rawname[1]][f]
             ret += f"{f.name}[{sv}] "
@@ -895,8 +1006,11 @@ class Registers():
                 if( ex != 0 ):
                     short = ( vdb.color.color(short,flag_colour.value), len(short))
                 if( mp is not None ):
-                    ms,ml= mp.get(ex,("","??"))
-                    meaning = ms+ml
+                    if( isinstance(mp,str) ):
+                        meaning = mp
+                    else:
+                        ms,ml= mp.get(ex,("","??"))
+                        meaning = ms+" "+ml
 
                 mask = f"0x{mask:04x}"
                 ftbl.append( [ tbit, mask, short, text, ex, meaning ] )
