@@ -1545,18 +1545,18 @@ ascii mockup:
             else:
                 vdb.util.log(f"Specified callgrind event {evn} not present in any loaded file", level = 4)
 
-        headfields = [    ("m" ,[ ("Marker",",,bold",0,-1) ])
+        headfields = [    ("m" ,[ ("Marker",",,bold",0,0) ])
                         , ("a" ,[("Address",",,bold")])
-                        , ("j" ,[ ("History",",,bold",0,-1)])
-                        , ("hH",[ ("History",",,bold",0,-1) ])
-                        , ("o" ,[ ("Offset",",,bold",0,-1)])
+                        , ("j" ,[ ("History",",,bold",0,0)])
+                        , ("hH",[ ("History",",,bold",0,0) ])
+                        , ("o" ,[ ("Offset",",,bold",0,0)])
                         , ("c" ,cg_header)
-                        , ("d" ,[ ("Jumps",",,bold",0,-1) ])
-                        , ("b" ,[("Bytes",",,bold",0,-1)])
-                        , ("n" ,[("Mnemonic",",,bold",0,-1)])
-                        , ("p" ,[("Args",",,bold",0,-1)])
-                        , ("r" ,[("Reference",",,bold",0,-1) ])
-                        , ("tT",[("Target",",,bold",0,-1) ])
+                        , ("d" ,[ ("Jumps",",,bold",0,0) ])
+                        , ("b" ,[("Bytes",",,bold",0,0)])
+                        , ("n" ,[("Mnemonic",",,bold",0,0)])
+                        , ("p" ,[("Args",",,bold",0,0)])
+                        , ("r" ,[("Reference",",,bold",0,0) ])
+                        , ("tT",[("Target",",,bold",0,0) ])
                         ]
         header = []
         for sp,hf in headfields:

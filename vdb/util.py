@@ -391,7 +391,7 @@ def format_table( tbl, padbefore = " ", padafter = " " ):
                             # The maximum size that a column is automatically expanded to
                             truncate = False
                             # negative means to actually tuncate the value, positive can overflow the cell
-                            if( maxs < 0 ):
+                            if( maxs <= 0 ):
                                 truncate = True
                                 maxs = -maxs
                             ncell = table_cell(cval,colour,clen,maxs,truncate)
