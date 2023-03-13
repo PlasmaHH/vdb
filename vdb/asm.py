@@ -131,6 +131,7 @@ default_argspec    = vdb.config.parameter("vdb-asm-default-argspec", "i@%=,o@%" 
 annotate_jumps     = vdb.config.parameter("vdb-asm-annotate-jumps", True )
 asm_explain        = vdb.config.parameter("vdb-asm-explain", False, on_set = invalidate_cache  )
 ref_width          = vdb.config.parameter("vdb-asm-reference-width", 120 )
+use_capstone       = vdb.config.parameter("vdb-asm-capstone",True,"Whether or not to use capstone instead of gdb for disassembly")
 
 callgrind_eventmap = {} # name to index
 callgrind_data = {}
@@ -372,6 +373,9 @@ class register_set:
 class asm_arg_base( ):
 
     def __init__( self, target, arg ):
+        vdb.util.bark(-2) # print("BARK")
+        vdb.util.bark(-1) # print("BARK")
+        vdb.util.bark(0) # print("BARK")
         # New capstone based members
         self.base = None
 
@@ -379,7 +383,7 @@ class asm_arg_base( ):
         self.immediate_hex = False
         self.memory = None
         self.prefix = None
-        self.offset = None
+        self.disp = None
         self.target = target
         self.jmp_target = None
         self.multiplier = None
@@ -449,7 +453,7 @@ class asm_arg_base( ):
     # XXX At the moment we do not support prefixes
     # In case we read the value from memory, the second tuple element contains its address
     def value( self, registers, target : "asm_arg_base" = None ):
-        print("self = '%s'" % (self,) )
+#        print("self = '%s'" % (self,) )
         prefixval = 0
         if( self.prefix is not None ):
             preg = self.prefix + "_base"
@@ -466,15 +470,15 @@ class asm_arg_base( ):
 #            print("self.prefix = '%s'" % (self.prefix,) )
 #            print("self.register = '%s'" % (self.register,) )
 #            print("val = '%s'" % (val,) )
-#            print("self.offset = '%s'" % (self.offset,) )
+#            print("self.disp = '%s'" % (self.disp,) )
             if( val is not None  ):
                 val += prefixval
-                if( self.offset is not None ):
-                    val += self.offset
+                if( self.disp is not None ):
+                    val += self.disp
                 if( self.memory ):
                     castto = "P"
-                    print("target = '%s'" % (target,) )
-                    print("type(target) = '%s'" % (type(target),) )
+#                    print("target = '%s'" % (target,) )
+#                    print("type(target) = '%s'" % (type(target),) )
                     if( target is None ):
                         dval = vdb.memory.read(val,vdb.arch.pointer_size//8)
                         if( vdb.arch.pointer_size == 32 ):
@@ -511,8 +515,8 @@ class asm_arg_base( ):
             ret +=  "*"
         if( self.prefix is not None ):
             ret += f"%{self.prefix}:"
-        if( self.offset is not None ):
-            ret += f"{self.offset:#0x}"
+        if( self.disp is not None ):
+            ret += f"{self.disp:#0x}"
         if( self.memory ):
             ret += "("
             if( self.multiplier is not None ):
@@ -539,11 +543,11 @@ class asm_arg_base( ):
 
 
     def _dump( self ):
-        if( self.offset is None ):
-            offset = "None"
+        if( self.disp is None ):
+            disp = "None"
         else:
-            offset = f"{self.offset:#0x}"
-        print(f"arg %{self.base}, ${self.immediate}, ({self.memory}), {self.offset},,, T{self.target} :{self.prefix}:: {self.multiplier}*REG + {self.add_register} => {self}")
+            disp = f"{self.disp:#0x}"
+        print(f"arg base=%{self.base}, imm=${self.immediate}, mem?({self.memory}), disp={disp},,, T{self.target} :{self.prefix}:: {self.multiplier}*REG + {self.add_register} => {self}")
 
 
 class x86_asm_arg(asm_arg_base):
@@ -576,8 +580,8 @@ class x86_asm_arg(asm_arg_base):
                     if( po[-1] == ":" ):
                         self.prefix = po[1:-1]
                 else:
-                    self.offset = vdb.util.rxint(po)
-#                    print("self.offset = '%s'" % (self.offset,) )
+                    self.disp = vdb.util.rxint(po)
+#                    print("self.disp = '%s'" % (self.disp,) )
                 arg = argv[1][:-1]
 #                print("arg = '%s'" % (arg,) )
                 marg = arg.split(",")
@@ -633,7 +637,7 @@ class arm_asm_arg(asm_arg_base):
             if( len(arg) > 1 ):
 #                print("arg[1] = '%s'" % (arg[1],) )
                 if( arg[1][0] == "#" ):
-                    self.offset = int(arg[1][1:])
+                    self.disp = int(arg[1][1:])
                 else:
                     self.add_register = arg[1]
         else:
@@ -655,8 +659,8 @@ class arm_asm_arg(asm_arg_base):
                     ret += "%" + self.add_register
                 ret += ","
             ret += self.base
-            if( self.offset is not None ):
-                ret += ", #" + str(self.offset)
+            if( self.disp is not None ):
+                ret += ", #" + str(self.disp)
             if( self.multiplier is not None ):
                 ret += f",{self.multiplier}"
             ret += "]"
@@ -686,20 +690,39 @@ class instruction_base( abc.ABC ):
         cs.detail = True
         c_bytes = bytes.fromhex("".join(self.bytes))
         cs_ins_gen = cs.disasm( c_bytes, self.address )
-        from pprint import pprint
+#        from pprint import pprint
         print("self.line = '%s'" % (self.line,) )
         tbl = []
-        for cs_ins in cs_ins_gen:
-            for attr in ["prefix","mnemonic","opcode"]:
-                line = []
-                tbl.append(line)
-                line.append(attr)
-                g = getattr(self,attr,None)
-                g = str(g)
-                line.append(g)
-                c = getattr(cs_ins,attr,None)
-                c = str(c)
-                line.append(c)
+        # blindly assume there is always exactly one
+        cs_ins = next(cs_ins_gen)
+        # Its easier to handle empty lists than special casing for Nones
+#        print("cs_ins.operands = '%s'" % (cs_ins.operands,) )
+        if( cs_ins.operands is None ):
+            cs_ins.operands = []
+            print("cs_ins.operands = '%s'" % (cs_ins.operands,) )
+        # We already have something from gdb, do some cross checks
+        if( self.mnemonic ):
+            if( not cs_ins.mnemonic.startswith(self.mnemonic) ):
+                print(f"gdb ({self.mnemonic}) and capstone ({cs_ins.mnemonic}) disagree about the mnemonic name")
+            if( len(self.args) != len(cs_ins.operands) ):
+                print(f"gdb ({len(self.args)}) and capstone ({len(cs_ins.operands)}) disagree about the number of arguments")
+
+#            print("len(self.args) = '%s'" % (len(self.args),) )
+#            print("len(cs_ins.operands) = '%s'" % (len(cs_ins.operands),) )
+        # Independently of having something from gdb, we use capstone values instead
+        return
+#        for cs_ins in cs_ins_gen:
+#            for attr in ["prefix","mnemonic","opcode"]:
+        for attr in ["mnemonic"]:
+            line = []
+            tbl.append(line)
+            line.append(attr)
+            g = getattr(self,attr,None)
+            g = str(g)
+            line.append(g)
+            c = getattr(cs_ins,attr,None)
+            c = str(c)
+            line.append(c)
 
         for op in cs_ins.operands:
             print("op.reg = '%s'" % (cs_ins.reg_name(op.reg)) )
@@ -2626,11 +2649,16 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
         ret = fix_marker(ret,arg,frame,do_flow)
     update_vars(ret,frame)
 
-    import capstone
-    cs = capstone.Cs( capstone.CS_ARCH_X86, capstone.CS_MODE_64 )
-    cs.syntax = capstone.CS_OPT_SYNTAX_ATT
-    for ins in ret.instructions:
-        ins.from_capstone(cs)
+    try:
+        if( use_capstone.value ):
+            import capstone
+            cs = capstone.Cs( capstone.CS_ARCH_X86, capstone.CS_MODE_64 )
+            cs.syntax = capstone.CS_OPT_SYNTAX_ATT
+            for ins in ret.instructions:
+                ins.from_capstone(cs)
+    except:
+        traceback.print_exc()
+
 
     return ret
 
@@ -3262,6 +3290,8 @@ def register_flow( lng, frame : "gdb frame" ):
         if( ins.args is not None and len(ins.arguments) == 0 ):
             target = False
             for a in ins.args:
+                print("asm_arg(target,a) = '%s'" % (asm_arg(target,a),) )
+                print("type(asm_arg(target,a)) = '%s'" % (type(asm_arg(target,a)),) )
                 ins.arguments.append( asm_arg(target,a) )
                 target = True
 
