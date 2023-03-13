@@ -276,7 +276,7 @@ def next_id( name ):
 class table_cell:
 
     def __init__( self, s, color, dpy_len, max_size, truncate ):
-        self.s = s
+        self.s = str(s)
         self.color = color
         if( dpy_len is None ): # Default len is just the strlen
             dpy_len = len(s)
@@ -291,6 +291,10 @@ class table_cell:
 
     def render( self, width, skip_padding = False):
         if( not self.rendered ):
+#            print("self.s = '%s'" % (self.s,) )
+#            print("type(self.s) = '%s'" % (type(self.s),) )
+#            print("self.dpy_len = '%s'" % (self.dpy_len,) )
+
 #            print(f"render(width={width},.s={self.s}[{len(self.s)}],.dpy_len={self.dpy_len},.truncate={self.truncate}")
             if( len(self.s) <= self.dpy_len ): # No special chars that could interfere with truncating
                 if( self.dpy_len > width and self.truncate ): # need to truncate

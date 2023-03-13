@@ -295,7 +295,7 @@ class register_set:
     # Sets the value of a register, possible removing all alternative names that may be present
     # XXX We need to be able to handle in an easy way specifcations like %al and %ah, best would be through some extra
     # layer that can easily expanded for other archs
-    def set( self, name, value, remove_alts = True ):
+    def set( self, name, value, remove_alts = True, origin = None ):
         if( remove_alts ):
             for rname in reg_alts(name):
                 self.values.pop(rname,None)
@@ -315,7 +315,7 @@ class register_set:
             return
 
         try:
-            self.values[name] = int(value)
+            self.values[name] = ( int(value), origin )
         except gdb.error:
             pass
 
@@ -325,24 +325,24 @@ class register_set:
 
     def get( self, name, altval = None ):
         for rname in reg_alts(name):
-            rv = self.values.get(rname,None)
+            rv,origin = self.values.get(rname,(None,None) )
             if( rv is not None ):
                 rs = vdb.register.register_size(name)
                 if( rs is not None ):
                     mask = ( 1 << rs ) - 1
                     rv &= mask
-                return ( rv, rname )
-        return ( altval, name )
+                return ( rv, rname, origin )
+        return ( altval, name, None )
 
     def merge( self, other ):
-        for n,v in other.values.items():
-            self.set( n, v )
+        for n,(v,o) in other.values.items():
+            self.set( n, v, o )
 
     def copy( self, other, rlist ):
         for rn in rlist:
-            rv,rn = other.get( rn )
+            rv,rn,origin = other.get( rn )
             if( rv is not None ):
-                self.set( rn,rv )
+                self.set( rn,rv,origin )
 
     def remove( self, rname ):
         for rname in reg_alts(rname):
@@ -350,8 +350,8 @@ class register_set:
 
     def __str__( self ):
         ret = "{"
-        for r,v in self.values.items():
-            ret += f"{r}={v:#0x},"
+        for r,(v,o) in self.values.items():
+            ret += f"{r}={v:#0x}@{o},"
         ret += "}"
         return ret
 
@@ -419,6 +419,8 @@ class asm_arg_base( ):
     def _fixup_value( self, val ):
         if( val is None ):
             return val
+        if( isinstance(val,memoryview) ):
+            val = int.from_bytes(val.tobytes(),"little") # any more efficient way?
         while( val < 0 ):
             val += 2** vdb.arch.pointer_size
         if( val.bit_length() > vdb.arch.pointer_size ):
@@ -446,7 +448,7 @@ class asm_arg_base( ):
 #        print("self.jmp_target = '%s'" % (self.jmp_target,) )
 
         if( self.register is not None ):
-            val,_ = registers.get( self.register )
+            val,_,_ = registers.get( self.register )
 #            print("self.prefix = '%s'" % (self.prefix,) )
 #            print("self.register = '%s'" % (self.register,) )
 #            print("val = '%s'" % (val,) )
@@ -459,6 +461,8 @@ class asm_arg_base( ):
                     castto = "P"
                     if( target is None ):
                         dval = vdb.memory.read(val,vdb.arch.pointer_size//8)
+                        if( vdb.arch.pointer_size == 32 ):
+                            castto = "I"
                     else:
                         if( target.bitsize == 64 ):
                             dval = vdb.memory.read(val,8)
@@ -466,7 +470,14 @@ class asm_arg_base( ):
                             dval = vdb.memory.read(val,4)
                             castto = "I"
                     if( dval is not None ):
-                        dval = dval.cast(castto)[0]
+#                        print("dval = '%s'" % (dval,) )
+#                        print("dval.hex() = '%s'" % (dval.hex(),) )
+#                        print("dval.nbytes = '%s'" % (dval.nbytes,) )
+#                        print("dval.itemsize = '%s'" % (dval.itemsize,) )
+#                        print("type(dval) = '%s'" % (type(dval),) )
+#                        print("castto = '%s'" % (castto,) )
+#                        dval = dval.cast(castto)[0]
+                        dval = dval.cast(castto)
                     return self._fixup_values( dval, val )
             return self._fixup_values( val, None )
 
@@ -1568,7 +1579,7 @@ ascii mockup:
             cg_columns = len(cg_header)
 
         for i in self.instructions:
-            cg_extra = []
+            line_extra = []
             if( header_repeat.value is not None and not suppress_header ):
                 if( header_repeat.value > 0 ):
                     if( cnt % header_repeat.value == 0 ):
@@ -1643,7 +1654,7 @@ ascii mockup:
                 ci = callgrind_data.get( i.address, None )
                 if( ci is not None ):
                     for _,jump in ci.jumps.items():
-                        cg_extra.append( (str(jump),1,1) )
+                        line_extra.append( (str(jump),1,1) )
                     for cge in cg_events:
                         cv = ci.event(cge)
                         if( cv == 0 ):
@@ -1713,20 +1724,29 @@ ascii mockup:
 #                print("fillup = '%s'" % fillup )
 #                line.append( " " * fillup)
 
+            more_references = []
             if( "r" in showspec ):
                 f = ""
-                for r in i.reference:
-                    f += wrap_shorten(r) + " "
-                if( len(f) > 0 ):
-                    f = f[:-1]
-                    line.append(f)
+                match(len(i.reference) ):
+                    case 0:
+                        line.append("")
+                    case _:
+                        line.append(wrap_shorten(i.reference[0]))
+                        more_references = i.reference[1:]
+                line_extra += more_references
+
+#                for r in i.reference:
+#                    f += wrap_shorten(r) + " "
+#                if( len(f) > 0 ):
+#                    f = f[:-1]
+#                    line.append(f)
 
             if( any((c in showspec) for c in "tT" ) ):
 #                if( i.targets is not None ):
 #                    line.append( i.targets)
                 if( "T" in showspec ):
                     if( i.target_name is not None ):
-                        line.append( wrap_shorten(i.target_name))
+                        line.append( "TGT:"+wrap_shorten(i.target_name))
 
 
 #            ret.append(line)
@@ -1735,13 +1755,13 @@ ascii mockup:
 #            print("len(otbl) = '%s'" % (len(otbl),) )
 
 #            print("i.file_line = '%s'" % (i.file_line,) )
-            if( len(i.extra) > 0 or i.file_line is not None or len(cg_extra) > 0 ):
+            if( len(i.extra) > 0 or i.file_line is not None or len(line_extra) > 0 ):
                 fll = []
                 if( i.file_line is not None ):
                     fll.append( (i.file_line,1,1) )
 #                print("prejump = '%s'" % (prejump,) )
 #                print("postjump = '%s'" % (postjump,) )
-                for ex in i.extra + fll + cg_extra:
+                for ex in i.extra + fll + line_extra:
 #                    print("ex = '%s'" % (ex,) )
                     pre = ( prejump + cg_columns) * [None]
                     post = (postjump-1) * [None]
@@ -1749,6 +1769,7 @@ ascii mockup:
                         el = pre + post
                     else:
                         el = pre + [postarrows] + post
+                    el += 2*[None]
 #                    el = ["m","a","h","H","o","d","BYTES" + str(len(line)-1)]
                     el.append(ex)
                     otbl.append(el)
@@ -2040,6 +2061,7 @@ def fix_marker( ls, alt = None, frame = None, do_flow = True ):
         except:
             mark = None
 
+    # marker hasn't changed, no need to update anything
     if( ls.marker == mark ):
         return ls
 
@@ -2053,6 +2075,7 @@ def fix_marker( ls, alt = None, frame = None, do_flow = True ):
         else:
             i.marked = False
             
+    update_vars(ls,frame)
     ls.do_backtrack()
     if( do_flow ):
         register_flow(ls,frame)
@@ -2118,8 +2141,8 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
         fname = frame.function().name
     else:
         fname = "__anonymous__"
+
     lng.initial_registers.merge( function_registers.get(fname,register_set() ) )
-#    print("lng.initial_registers = '%s'" % (lng.initial_registers,) )
 
     if( debug.value ):
         print("symlist = '%s'" % (symlist,) )
@@ -2200,11 +2223,12 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                         print("bval.type = '%s'" % (bval.type,) )
                         print("bval.type.code = '%s'" % (vdb.util.gdb_type_code(bval.type.code),) )
                         print("type(lng.initial_registers) = '%s'" % (type(lng.initial_registers),) )
+                        print("lng.initial_registers = '%s'" % (lng.initial_registers,) )
         
                     if( bval.type.code == gdb.TYPE_CODE_REF ):
-                        lng.initial_registers.set( reglist[regindex] , int(bval.address))
+                        lng.initial_registers.set( reglist[regindex] , int(bval.address), origin=f"gather_vars(CODE_REF)@{bval.address}")
                     else:
-                        lng.initial_registers.set( reglist[regindex] , int(bval))
+                        lng.initial_registers.set( reglist[regindex] , int(bval), origin=f"gather_vars()@{bval.address}")
                     if( debug.value ):
                         print("lng.initial_registers = '%s'" % (lng.initial_registers,) )
                     regindex += 1
@@ -2233,6 +2257,75 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
         print("ret = '%s'" % (ret,) )
         print("lng.var_addresses = '%s'" % (lng.var_addresses,) )
     return ret
+
+def update_vars( ls, frame ):
+
+    va = function_vars.get( ls.function, {} ).copy()
+    ls.var_addresses = va.copy()
+#    print("ls.var_addresses = '%s'" % (ls.var_addresses,) )
+    ls.var_expressions = {}
+
+
+    fun = frame.function()
+#    print("fun.name = '%s'" % (fun.name,) )
+#    print("ls.function = '%s'" % (ls.function,) )
+#    print("ls.function = '%s'" % (ls.function,) )
+#    print("fun.symtab = '%s'" % (fun.symtab,) )
+    # only extract names from the block when we disassemble the current frame
+    if( fun is not None and fun.name == ls.function ):
+        block = frame.block()
+    else:
+        block = None
+#    print("block = '%s'" % (block,) )
+#    for b in block:
+#        print("b = '%s'" % (b,) )
+#        print("b.is_argument = '%s'" % (b.is_argument,) )
+#        if( b.value(frame).type.tag is None ):
+#            print("b.value(frame) = '%s'" % (b.value(frame),) )
+#        print("b.value(frame).address = '%s'" % (b.value(frame).address,) )
+
+
+    if( fun is None ):
+        funhead = "????"
+    else:
+        funhead = ls.function
+
+#    print("va = '%s'" % (va,) )
+    for a,n in va.items():
+#        print("a = '%s'" % (a,) )
+#        print("n = '%s'" % (n,) )
+        try:
+            vv = frame.read_var(n)
+#            print("vv = '%s'" % (vv,) )
+#            print("vv.type = '%s'" % (vv.type,) )
+            # XXX do we want to output this anywhere?
+#            gather_vars( frame, ls, vv.type.fields(), vv, n + "." )
+            gather_vars( frame, ls, [ fake_symbol(vv,n) ], None, n + "." )
+
+        except TypeError:
+            pass
+        except ValueError:
+#            print(f"{n} not found in frame")
+            # variable not recognized
+            pass
+
+#    print("block.function = '%s'" % (block.function,) )
+#    print("block.superblock.function = '%s'" % (block.superblock.function,) )
+    if( block is not None ):
+        gv = gather_vars( frame, ls, block )
+        # sometimes the args are in a superblock
+        if( block.function is None and block.superblock is not None ):
+            gv += gather_vars( frame, ls, block.superblock )
+    else:
+        gv = gather_vars( frame, ls, [] )
+
+    if( len(gv) > 0 ):
+        funhead += "(" + gv + ")"
+
+    ls.function_header = funhead
+#    print("var_addresses = '%s'" % (ls.var_addresses,) )
+#    print("var_expressions = '%s'" % (ret.var_expressions,) )
+
 
 
 ilinere = re.compile('Line ([0-9]*) of "(.*)"')
@@ -2362,73 +2455,9 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     if( fakedata is None ):
         parse_cache[key] = ret
 
-    va = function_vars.get( ret.function, {} ).copy()
-    ret.var_addresses = va.copy()
-#    print("ret.var_addresses = '%s'" % (ret.var_addresses,) )
-    ret.var_expressions = {}
-
     if( markers == 0 ):
-        ret = fix_marker(ret,arg,frame,do_flow)
-
-    fun = frame.function()
-#    print("fun.name = '%s'" % (fun.name,) )
-#    print("ret.function = '%s'" % (ret.function,) )
-#    print("ret.function = '%s'" % (ret.function,) )
-#    print("fun.symtab = '%s'" % (fun.symtab,) )
-    # only extract names from the block when we disassemble the current frame
-    if( fun is not None and fun.name == ret.function ):
-        block = frame.block()
-    else:
-        block = None
-#    print("block = '%s'" % (block,) )
-#    for b in block:
-#        print("b = '%s'" % (b,) )
-#        print("b.is_argument = '%s'" % (b.is_argument,) )
-#        if( b.value(frame).type.tag is None ):
-#            print("b.value(frame) = '%s'" % (b.value(frame),) )
-#        print("b.value(frame).address = '%s'" % (b.value(frame).address,) )
-
-
-    if( fun is None ):
-        funhead = "????"
-    else:
-        funhead = ret.function
-
-#    print("va = '%s'" % (va,) )
-    for a,n in va.items():
-#        print("a = '%s'" % (a,) )
-#        print("n = '%s'" % (n,) )
-        try:
-            vv = frame.read_var(n)
-#            print("vv = '%s'" % (vv,) )
-#            print("vv.type = '%s'" % (vv.type,) )
-            # XXX do we want to output this anywhere?
-#            gather_vars( frame, ret, vv.type.fields(), vv, n + "." )
-            gather_vars( frame, ret, [ fake_symbol(vv,n) ], None, n + "." )
-
-        except TypeError:
-            pass
-        except ValueError:
-#            print(f"{n} not found in frame")
-            # variable not recognized
-            pass
-
-#    print("block.function = '%s'" % (block.function,) )
-#    print("block.superblock.function = '%s'" % (block.superblock.function,) )
-    if( block is not None ):
-        gv = gather_vars( frame, ret, block )
-        # sometimes the args are in a superblock
-        if( block.function is None and block.superblock is not None ):
-            gv += gather_vars( frame, ret, block.superblock )
-    else:
-        gv = gather_vars( frame, ret, [] )
-
-    if( len(gv) > 0 ):
-        funhead += "(" + gv + ")"
-
-    ret.function_header = funhead
-#    print("var_addresses = '%s'" % (ret.var_addresses,) )
-#    print("var_expressions = '%s'" % (ret.var_expressions,) )
+        ls = fix_marker(ls,arg,frame,do_flow)
+    update_vars(ret,frame)
 
     if( do_flow ):
         register_flow(ret,frame)
@@ -2481,6 +2510,33 @@ def flag_extra( name, cmp, exp, value ):
 #    print("ret = '%s'" % (ret,) )
     return ret
 
+def arm_vt_flow_b( ins, frame, possible_registers, possible_flags ):
+    if( not annotate_jumps.value ):
+        return (possible_registers,possible_flags)
+    ins.add_extra(f"JUMP TO BE HANDLED")
+    return (possible_registers,possible_flags)
+
+def arm_vt_flow_push( ins, frame, possible_registers, possible_flags ):
+    vl,rname,_ = possible_registers.get("sp")
+    if( vl is not None ):
+        nargs = len(ins.args)
+        vl = int(vl) - nargs*( vdb.arch.pointer_size // 8 )
+        possible_registers.set(rname,vl)
+
+    for a in ins.arguments:
+        a.target = False
+        a.reset_argspec()
+
+    # no flags affected
+    return ( possible_registers, possible_flags )
+
+
+
+
+
+
+
+
 def x86_vt_flow_j( ins, frame, possible_registers, possible_flags ):
     if( not annotate_jumps.value ):
         return (possible_registers,possible_flags)
@@ -2531,7 +2587,7 @@ def x86_vt_flow_j( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 def x86_vt_flow_push( ins, frame, possible_registers, possible_flags ):
-    vl,rname = possible_registers.get("rsp")
+    vl,rname,_ = possible_registers.get("rsp")
     if( vl is not None ):
         vl = int(vl) - ( vdb.arch.pointer_size // 8 )
         possible_registers.set(rname,vl)
@@ -2540,7 +2596,7 @@ def x86_vt_flow_push( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 def x86_vt_flow_pop( ins, frame, possible_registers, possible_flags ):
-    vl,rname = possible_registers.get("rsp")
+    vl,rname,_ = possible_registers.get("rsp")
     if( vl is not None ):
         vl = int(vl) + ( vdb.arch.pointer_size // 8 )
         possible_registers.set(rname,vl)
@@ -2750,7 +2806,7 @@ def x86_vt_flow_cmp( ins, frame, possible_registers, possible_flags ):
 def x86_vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
 #            print("possible_registers = '%s'" % (possible_registers,) )
 #            ins._gen_extra()
-    rax,_ = possible_registers.get("rax",None)
+    rax,_,_ = possible_registers.get("rax",None)
     if( rax is not None ):
         sc = get_syscall( rax )
 #                    print("rax = '%s'" % (rax,) )
@@ -2768,7 +2824,7 @@ def x86_vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 def x86_vt_flow_leave( ins, frame, possible_registers, possible_flags ):
-    rbp,_ = possible_registers.get("rbp",None)
+    rbp,_,_ = possible_registers.get("rbp",None)
     if( rbp is not None ):
         possible_registers.set("rsp",rbp)
     # XXX do the "pop rbp" too
@@ -2840,7 +2896,7 @@ def current_registers( frame ):
     for reg in frame.architecture().registers():
         if( reg.name in blacklist ):
             continue
-        rset.set( reg.name, frame.read_register(reg) )
+        rset.set( reg.name, frame.read_register(reg), origin="frame" )
     return rset
 
 def arm_current_flags( frame ):
@@ -2895,12 +2951,13 @@ def register_flow( lng, frame ):
     # Try to follow execution path to figure out possible register values (and maybe later flags)
 #    possible_registers = {}
     possible_registers = lng.initial_registers.clone()
+#    print("possible_registers = '%s'" % (possible_registers,) )
     possible_flags = flag_set()
 
     rbp = frame.read_register(base_pointer)
     if( rbp  is not None ):
         if( vdb.memory.mmap.accessible(rbp) ):
-            possible_registers.set( base_pointer, rbp )
+            possible_registers.set( base_pointer, rbp, origin="frame.bp" )
 
 #    for ins in ret.instructions:
     flowstack = [ (None,None,None) ]
@@ -2929,19 +2986,19 @@ def register_flow( lng, frame ):
 
         # As per convention, rip on x86 as an argument is the next instruction
         if( ins.next is not None ):
-            possible_registers.set( "pc", ins.next.address )
+            possible_registers.set( "pc", ins.next.address, origin="ins.next" )
         elif( len(ins.bytes) > 0 ):
-            possible_registers.set( "pc", ins.address + len(ins.bytes) )
+            possible_registers.set( "pc", ins.address + len(ins.bytes),origin="len(ins.bytes)" )
 
         if( ins.marked ):
             cf = current_flags(frame)
             possible_flags.merge(cf)
             cr = current_registers(frame)
             if( debug_registers.value ):
-                for r,v in cr.values.items():
-                    ov,an = possible_registers.get(r)
+                for r,(v,o) in cr.values.items():
+                    ov,an,origin = possible_registers.get(r)
                     if( ov is not None and v != ov ):
-                        ins.add_extra( f"Real register {r} has real value {v} but we deduced {ov} for {an}")
+                        ins.add_extra( f"Real register {r} has real value {v} from {o} but we deduced {ov} for {an} from {origin}")
             possible_registers.merge(cr)
 
         # Check if we have a special function handling more than the basics
@@ -3043,7 +3100,10 @@ def register_flow( lng, frame ):
                         if( argval is not None or argaddr is not None ):
                             break
                     addr = argaddr
-                    extra.value += f", argval = {argval}, addr = {addr}"
+                    if( argval is not None ):
+                        extra.value += f", argval = {argval:#0x}, addr = {addr}"
+                    else:
+                        extra.value += f", argval = {argval}, addr = {addr}"
                     extra.value += f", argspec = {arg.argspec}"
 
                     # We have a an address, which means the value from the argument was located at some memory
@@ -3125,11 +3185,18 @@ def register_flow( lng, frame ):
 
         for pr in ins.parsed_reference:
             try:
+                # some are in brackets
+                br=""
+                pr = pr.strip()
+                if( pr[0] == "(" ):
+                    br="("
+                    pr = pr[1:]
                 prv = pr.split()
                 xr = vdb.util.xint(prv[0])
                 if xr not in printed_addrs:
                     sym,ei = extra_info(None, "~", xr, extra )
                     if( sym is None or len(sym) == 0 ):
+                        ei += br
                         ei += "".join(prv[1:])
                     ins.reference.append(ei)
             except:
@@ -3451,7 +3518,7 @@ def add_variable( argv ):
     if( fr is None ):
         fr = register_set()
         function_registers[fun] = fr
-    fr.set(vreg, vaddr)
+    fr.set(vreg, vaddr, f"add_variable({vname},{vreg},{vaddr})")
 
     print("function_vars = '%s'" % (function_vars,) )
     print("function_registers = '%s'" % (function_registers,) )
