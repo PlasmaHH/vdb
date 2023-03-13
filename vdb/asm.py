@@ -88,6 +88,7 @@ color_mnemonic = vdb.config.parameter("vdb-asm-colors-mnemonic",    None,   gdb_
 color_args     = vdb.config.parameter("vdb-asm-colors-args",        "#99f", gdb_type = vdb.config.PARAM_COLOUR)
 color_var      = vdb.config.parameter("vdb-asm-colors-variable",    "#fc8", gdb_type = vdb.config.PARAM_COLOUR)
 color_location = vdb.config.parameter("vdb-asm-colors-location",    "#08a", gdb_type = vdb.config.PARAM_COLOUR)
+color_explanation = vdb.config.parameter("vdb-asm-colors-explanation",    "#6666ff", gdb_type = vdb.config.PARAM_COLOUR)
 
 
 
@@ -125,6 +126,7 @@ direct_output      = vdb.config.parameter("vdb-asm-direct-output", True )
 gv_limit           = vdb.config.parameter("vdb-asm-variable-expansion-limit", 3 )
 default_argspec    = vdb.config.parameter("vdb-asm-default-argspec", "i@%=,o@%" )
 annotate_jumps     = vdb.config.parameter("vdb-asm-annotate-jumps", True )
+asm_explain        = vdb.config.parameter("vdb-asm-explain", True )
 
 callgrind_eventmap = {} # name to index
 callgrind_data = {}
@@ -702,6 +704,7 @@ class instruction_base( abc.ABC ):
         self.line = None
         self.unhandled = False
         self.parsed_reference = None
+        self.explanation = []
 
     def reset_argspecs( self ):
         for arg in self.arguments:
@@ -1753,6 +1756,9 @@ ascii mockup:
             cnt += 1
 #            print("cnt = '%s'" % (cnt,) )
 #            print("len(otbl) = '%s'" % (len(otbl),) )
+            if( asm_explain.value ):
+                for e in i.explanation:
+                    line_extra.append( vdb.color.colorl(e,color_explanation.value) )
 
 #            print("i.file_line = '%s'" % (i.file_line,) )
             if( len(i.extra) > 0 or i.file_line is not None or len(line_extra) > 0 ):
@@ -2588,10 +2594,22 @@ def x86_vt_flow_j( ins, frame, possible_registers, possible_flags ):
 
 def x86_vt_flow_push( ins, frame, possible_registers, possible_flags ):
     vl,rname,_ = possible_registers.get("rsp")
+    oldvl=vl
     if( vl is not None ):
         vl = int(vl) - ( vdb.arch.pointer_size // 8 )
         possible_registers.set(rname,vl)
 
+    if( asm_explain.value ):
+        pval,_ = ins.arguments[0].value(possible_registers)
+        if( pval is not None ):
+            vls=f"({pval:#0x})"
+        else:
+            vls=""
+
+        ex=f"Pushes value of {ins.args[0]}{vls} to the stack"
+        if( oldvl is not None ):
+            ex += f" @{oldvl:#0x}"
+        ins.explanation.append(ex)
     # no flags affected
     return ( possible_registers, possible_flags )
 
@@ -2624,24 +2642,51 @@ def x86_vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     frm = ins.arguments[0]
     to  = ins.arguments[1]
 
+    frmval,_ = frm.value( possible_registers )
+    toval,toloc = to.value( possible_registers )
     # the new register value will be...
     if( not to.dereference ):
         # We ignore any (initial frame setup) move of rsp to rbp to keep the value intact
         # XXX if we do it that way we can also from here on (backwards?) assume rsp=rbp. (likely just after it we
         # sub something from rsp, we should support basic calculations too)
         if( frm.register != "rsp" or to.register != "rbp" ):
-            frmval,_ = frm.value( possible_registers )
             possible_registers.set( to.register, frmval )
-        if( frm.register == "rsp" and to.register == "rbp" ):
-            toval,_ = to.value( possible_registers )
-            if( toval is not None ):
-                possible_registers.set( "rsp", toval )
+        # TODO We need to do this anyways when we are at a position before that move
+        # TODO this all seems fishy, we need a testcase for when this matters. maybe only in backpropagation?
+        possible_registers.set( to.register, frmval )
+#        if( frm.register == "rsp" and to.register == "rbp" ):
+#            if( toval is not None ):
+#                possible_registers.set( "rsp", toval )
     to.specfilter("=")
+    to.specfilter("%")
 
     if( debug.value ):
         print("possible_registers = '%s'" % (possible_registers,) )
         print("ins.possible_in_register_sets = '%s'" % (ins.possible_in_register_sets,) )
         print("ins.possible_out_register_sets = '%s'" % (ins.possible_out_register_sets,) )
+
+
+    if( asm_explain.value ):
+        frmstr=""
+        if( frmval is not None ):
+            frmstr=f"({frmval:#0x})"
+        ex = ""
+        if( frm.immediate is not None ):
+            ex += f"Store immediate value {frm} "
+        elif( frm.dereference ):
+            ex += f"Store memory value at {frm}{frmstr} "
+        else:
+            ex += f"Store register value of {frm}{frmstr} "
+
+        if( to.dereference ):
+            memtgt=""
+            if( toloc is not None ):
+                memtgt=f"({toloc:#0x})"
+            ex += f"in memory location {to}{memtgt}"
+        else:
+            ex += f"in register {to}"
+
+        ins.explanation.append(ex)
 
     # no flags affected
     return ( possible_registers, possible_flags )
@@ -2661,6 +2706,15 @@ def x86_vt_flow_sub( ins, frame, possible_registers, possible_flags ):
         possible_flags.set( "CF", int(tgtv > sub) )
     else:
         ins.arguments[0].argspec = ""
+    
+    if( asm_explain ):
+        nvs=""
+        tvs=""
+        if( nv is not None ):
+            nvs=f"({nv:#0x})"
+        if( tgtv is not None ):
+            tvs=f"({tgtv:#0x})"
+        ins.explanation.append( f"Subtracts {ins.args[0]} from {ins.args[1]}{tvs} and stores it in {ins.args[1]}{nvs}" )
 
     return ( possible_registers, possible_flags )
 
