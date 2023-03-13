@@ -431,35 +431,92 @@ def do_xmux( argv ):
     spl = old_pane.split("@")
     if( len(spl) > 1 ):
         old_pane = spl[0]
+        if( len(old_pane) == 0 ):
+            old_pane = None
         old_session = spl[1]
 
     print("old_pane = '%s'" % (old_pane,) )
     print("old_session = '%s'" % (old_session,) )
 
     print("spanes = '%s'" % (spanes,) )
+    output_pane_id = None
     created = False
     spanes,panes = tmux_panes()
+    # The old session could not be found, no matter what, we need to create it
     if( old_session is not None and old_session not in spanes ):
         print(f"tmux session {old_session} not found, creating")
         create_cmd = [ "new-session", "-d", "-s", old_session ]
         p = run_tmux( create_cmd )
         created = True
-        # Since we created it we should name it. It should currently be selected, unless in between someone else created
-        # other sessions. Don't know if there is a way to circumvent that race condition
+        spanes,panes = tmux_panes() # update information
+        # should contain onl that one element, the pane with the new session
+        npane = spanes[old_session]
+        pane_id,_ = next(iter(npane.values()))
+        print("NEW SESSION")
+        print("npane = '%s'" % (npane,) )
+        print("pane_id = '%s'" % (pane_id,) )
+
+        output_pane_id = pane_id
         if( old_pane is not None ):
-            name_cmd = [ "select-pane", "-T", old_pane ]
+            name_cmd = [ "select-pane", "-t", pane_id, "-T", old_pane ]
             p = run_tmux( name_cmd )
         spanes,panes = tmux_panes() # update information
+
+    # detailed cases:
+    # input    : oldpane@session:newpane
+    # case 0.1 : no session with that name
+    #   result : one new session, two panes, one with the old name, one with the new one
+    # case 0.2 : session with that name, no oldpane, newpane present
+    # case 0.3 : session with that name, no oldpane, no newpane present
+    # case 0.4 : session with that name, oldpane, no newpane present
+    # case 0.5 : session with that name, oldpane, newpane present
+    # input    : @session:newpane
+    # case 1.1 : no session with that name
+    #   result : session created, single pane with name newpane
+    # case 1.2 : session with that name, newpane present
+    #   result : take newpane for output
+    # case 1.3 : session with that name, no newpane present
+    #   result : create a new pane out of the last pane of that session
+    # input    : oldpane:newpane
+    # session will be determined by oldpane. If oldpane cannot be found or is duplicated, an error will be thrown
+    # case 2.4 : session with that name, oldpane, no newpane present
+    #   result : newpane is split of oldpane
+    # case 2.5 : session with that name, oldpane, newpane present
+    #   result : take newpane for the output
+    # input    : newpane
+    # case 3.1 : No way to really find any session or oldpane, no creation of new panes. If its there already, use it,
+    # if not, error out
 
     # when no old pane was chose, take the selected one and rename it to the new pane name
     if( old_pane is None ):
         name_cmd = [ "select-pane", "-T", new_pane ]
         p = run_tmux( name_cmd )
         spanes,panes = tmux_panes() # update information
-    # when we can't find the old session, 
+    else:
+        active_spanes = spanes.get(old_session,panes)
+        print("Need to find old pane@session")
+        pane_id,_ = active_spanes.get(old_pane,None)
+        # try to find the old pane by ID and select it
+        print("old_session = '%s'" % (old_session,) )
+        print("old_pane = '%s'" % (old_pane,) )
+        print("pane_id = '%s'" % (pane_id,) )
+        run_tmux( [ "select-pane", "-t", pane_id ] )
+
     active_spanes = spanes.get(old_session,panes)
     print("active_spanes = '%s'" % (active_spanes,) )
-    # 
+
+    split_options = []
+    if( argv[1][0] == "-" ):
+        split_options = [ argv[1] ]
+        argv = argv[1:]
+
+    # here either the old_pane is selected or if not present
+    if( new_pane not in active_spanes ):
+        print(f"Need to create new pane {new_pane}")
+        p = run_tmux( [ "split-window" ] + split_options )
+        p = run_tmux( [ "select-pane", "-T", new_pane ] )
+    tgt = tmux(new_pane)
+    add_board(tgt,argv)
 
     if( created ):
         print(f"tmux session '{old_session}' created. Do a tmux at -t '{old_session}' in another window/terminal to attach to it") 
