@@ -129,7 +129,8 @@ direct_output      = vdb.config.parameter("vdb-asm-direct-output", True )
 gv_limit           = vdb.config.parameter("vdb-asm-variable-expansion-limit", 3 )
 default_argspec    = vdb.config.parameter("vdb-asm-default-argspec", "i@%=,o@%" )
 annotate_jumps     = vdb.config.parameter("vdb-asm-annotate-jumps", True )
-asm_explain        = vdb.config.parameter("vdb-asm-explain", False )
+asm_explain        = vdb.config.parameter("vdb-asm-explain", False, on_set = invalidate_cache  )
+ref_width          = vdb.config.parameter("vdb-asm-reference-width", 120 )
 
 callgrind_eventmap = {} # name to index
 callgrind_data = {}
@@ -1792,13 +1793,28 @@ ascii mockup:
 #                print("fillup = '%s'" % fillup )
 #                line.append( " " * fillup)
 
+            reference_lines = []
             if( "r" in showspec ):
                 f = ""
                 if(len(i.reference) == 0 ):
                     line.append("")
                 else:
-                    line.append(wrap_shorten(i.reference[0]))
-                    line_extra += i.reference[1:]
+                    rtpl=("",0)
+                    for rf in i.reference:
+#                        print("rf = '%s'" % (rf,) )
+                        if( rtpl[1] > 0 and ( rtpl[1] + rf[1] + 1) > ref_width.value ): # would be too big, start a new one
+                            reference_lines.append(rtpl)
+                            rtpl=("",0)
+                        if( rtpl[1] > 0 ):
+                            rtpl=vdb.color.concat( [rtpl,",",rf] )
+                        else:
+                            rtpl=rf
+                    if( rtpl[1] > 0 ):
+                        reference_lines.append(rtpl)
+                    if( len(reference_lines) > 0 ):
+                        line.append(reference_lines[0])
+                        reference_lines = reference_lines[1:]
+
 
 #                for r in i.reference:
 #                    f += wrap_shorten(r) + " "
@@ -1856,6 +1872,7 @@ ascii mockup:
                     otbl.append(el)
 
 #            output_extra(["END"],0,otbl)
+            output_extra( reference_lines,2,otbl)
             output_extra(i.extra,0,otbl)
 #            output_extra(i.file_line,0,otbl)
             output_extra(line_extra,2,otbl)
@@ -2544,7 +2561,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
         parse_cache[key] = ret
 
     if( markers == 0 ):
-        ls = fix_marker(ls,arg,frame,do_flow)
+        ret = fix_marker(ret,arg,frame,do_flow)
     update_vars(ret,frame)
 
     if( do_flow ):
@@ -2668,7 +2685,7 @@ def x86_vt_flow_j( ins, frame, possible_registers, possible_flags ):
             if( taken ):
                 ins.add_extra(f"Jump taken" + extrastring)
             else:
-                ins.add_extra(f"Jump NOT taken" + extrastring + "VERY LONG STRING THAT MIGHT MESS THINGS UP")
+                ins.add_extra(f"Jump NOT taken" + extrastring)
 #        print("extrastring = '%s'" % (extrastring,) )
 #        print("possible_flags = '%s'" % (possible_flags,) )
 
@@ -3317,7 +3334,7 @@ def register_flow( lng, frame : "gdb frame" ):
                 if( ins.reference == ins_references ):
                     ins.reference = []
                 else:
-                    ins.reference.append("ALT:")
+                    ins.reference.append(("ALT:",4))
             ins.reference += ins_references
 
         for pr in ins.parsed_reference:
