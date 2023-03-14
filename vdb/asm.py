@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations # for postponed annotation evaluation
+
 import vdb.shorten
 import vdb.color
 import vdb.pointer
@@ -19,6 +21,7 @@ import sys
 import os
 import time
 import abc
+
 
 asm_colors = [
         ( "j.*", "#f0f" ),
@@ -126,7 +129,7 @@ direct_output      = vdb.config.parameter("vdb-asm-direct-output", True )
 gv_limit           = vdb.config.parameter("vdb-asm-variable-expansion-limit", 3 )
 default_argspec    = vdb.config.parameter("vdb-asm-default-argspec", "i@%=,o@%" )
 annotate_jumps     = vdb.config.parameter("vdb-asm-annotate-jumps", True )
-asm_explain        = vdb.config.parameter("vdb-asm-explain", True )
+asm_explain        = vdb.config.parameter("vdb-asm-explain", False )
 
 callgrind_eventmap = {} # name to index
 callgrind_data = {}
@@ -195,6 +198,9 @@ class string_ref:
 
     def __str__( self ):
         return self.value
+
+    def __len__( self ):
+        return len(self.value)
 
 bit_counts = bytes(bin(x).count("1") for x in range(256))  
 # similar to register_set a wrapper around a dict that stores possible flag values
@@ -661,28 +667,39 @@ class arm_asm_arg(asm_arg_base):
 
 class instruction_base( abc.ABC ):
 
+    """
+    abstract base class for instructions
+    """
+
     bytere = re.compile("^[0-9a-fA-F][0-9a-fA-F]$")
     cmpre  = re.compile("^\$(0x[0-9a-fA-F]*),.*")
 
     def __init__( self ):
-        self.mnemonic = None
-        self.args = None
-        self.arguments = []
-        self.args_string = None
-        self.reference = []
-        self.targets = set()
-        self.conditional_jump = False
-        self.call = False
-        self.return_ = False
+        self.mnemonic = None            # Instructions "name" like mov or sub or push or call
+        self.args = None                # tokenized list of argument strings
+        self.arguments = []             # objects for each arguments
+        self.args_string = None         # Original full string for the arguments
+
+        self.conditional_jump = False   # Whether this is a conditional jump type of instruction
+        self.call = False               # Whether this is a call type of instruction
+        self.return_ = False            # Whether this is a return kind of instruction (next will not be executed)
+
+        self.raw_target = None          # For jumps etc. the raw string that gdb displays
+
         self.target_name = None
         self.parsed_target_name = None
-#        self.target_offset = None
-        self.target_of = set()
-        self.address = None
-        self.offset = None
-        self.bytes = None
-        self.marked = False
-        self.xmarked = False
+
+        self.raw_reference = None       # For all kinds of operations gdb displays an address or more 
+        self.reference = []
+        self.parsed_reference = None
+
+        self.targets = set()            # jmp/call target address(es) of this instruction
+        self.target_of = set()          # instructions at these addresses may jump to us
+        self.address = None             # Address this instruction is stored at
+        self.offset = None              # Offset relative to function start
+        self.bytes = None               # Byte sequence that encodes this instruction
+        self.marked = False             # Is marked by gdbs "next to be executed" marker
+        self.xmarked = False            # marked by a user defined marker
         self.prefix = ""
         self.infix = ""
         self.jumparrows = ""
@@ -703,7 +720,6 @@ class instruction_base( abc.ABC ):
         self.file = None
         self.line = None
         self.unhandled = False
-        self.parsed_reference = None
         self.explanation = []
 
     def reset_argspecs( self ):
@@ -742,9 +758,56 @@ class instruction_base( abc.ABC ):
         self.add_extra( f"self.args      : '{self.args}'")
         self.add_extra( f"self.targets   : '{self.targets}'")
         self.add_extra( f"self.target_of : '{self.target_of}'")
+        self.add_extra( f"self.reference          : '{self.reference}'")
+        self.add_extra( f"self.parsed_reference   : '{self.parsed_reference}'")
+        self.add_extra( f"self.raw_target         : '{self.raw_target}'")
+        self.add_extra( f"self.target_name        : '{self.target_name}'")
+        self.add_extra( f"self.parsed_target_name : '{self.parsed_target_name}'")
 
-    def add_extra( self, s ):
-        self.extra.append( (s,1,1) )
+
+    """
+    Add some extra message to be displayed along with the instructions
+    lvl 
+    * 0 Aligned with mnemonic
+    * 1 Aligned with arguments
+    * 2 Aligned with the column after the instruction
+    s
+    * a string (can not be coloured)
+    * a tuple[str,int] for table cells. Third value will be extended to be 0 to not garble the table
+    * a list. Will vdb.color.concat() them to a tuple for a cell
+    """
+    def add_extra( self, s, lvl = 2 ):
+#        print(f"add_extra({type(s)}:{s})")
+        if( isinstance(s,string_ref) ):
+            s = str(s)
+        if( isinstance(s,str) ):
+            # Check, remove after it never triggers
+            unc = vdb.color.colors.strip_color(s)
+#            print(f"uncoloured: {unc}")
+            if( unc != s ):
+                raise RuntimeError(f"add_extra({s}) with colours only not allowed")
+            s = (s,0,0)
+        elif( isinstance(s,tuple) ):
+            if( len(s) == 2 ):
+                s0,s1 = s
+                s = (s0,s1,0)
+            elif( len(s) != 3 ):
+                raise RuntimeError(f"add_extra({s}) with tuple only of len 2 or 3 allowed")
+        elif( isinstance(s,list) ):
+            ns = ("",0)
+            for rs in s:
+                if( isinstance(rs,str) ):
+                    unc = vdb.color.colors.strip_color(rs)
+                    if( unc != rs ):
+                        raise RuntimeError("add_extra([{s}]) with colours only not allowed")
+                ns=vdb.color.concat(ns,rs)
+            s0,s1 = ns
+            s = (s0,s1,0)
+
+#        print("s[0] = '%s'" % (s[0],) )
+#        print("s[1] = '%s'" % (s[1],) )
+
+        self.extra.append( s )
 
     def __str__( self ):
         ta = "None"
@@ -770,7 +833,7 @@ class x86_instruction( instruction_base ):
 
     last_cmp_immediate = 1
     @vdb.overrides
-    def parse( self, line, m, oldins ):
+    def parse( self, line, m, oldins ) -> x86_instruction:
         jmpre  = re.compile("^\*(0x[0-9a-fA-F]*)\(.*")
 #        print("m.groups() = '%s'" % (m.groups(),) )
         self.line = line
@@ -862,6 +925,7 @@ class x86_instruction( instruction_base ):
                 except:
                     pass
                 self.target_name = " ".join(tokens[tpos:])
+                self.raw_target = " ".join(tokens[tpos:]) # And never change it anymore
 #            elif( self.mnemonic in conditional_jump_mnemonics ):
         elif( self.conditional_jump ):
 #                print("CONDITIONAL JUMP? %s %s" % (self.mnemonic, tokens ) )
@@ -1576,6 +1640,7 @@ ascii mockup:
         for sp,hf in headfields:
             if( any((s in showspec) for s in sp ) ):
                 header += hf
+        num_headfields = len(header)
 
         cg_columns = 0
         if( "c" in showspec ):
@@ -1657,7 +1722,7 @@ ascii mockup:
                 ci = callgrind_data.get( i.address, None )
                 if( ci is not None ):
                     for _,jump in ci.jumps.items():
-                        line_extra.append( (str(jump),1,1) )
+                        line_extra.append( (str(jump),0,0) )
                     for cge in cg_events:
                         cv = ci.event(cge)
                         if( cv == 0 ):
@@ -1727,16 +1792,13 @@ ascii mockup:
 #                print("fillup = '%s'" % fillup )
 #                line.append( " " * fillup)
 
-            more_references = []
             if( "r" in showspec ):
                 f = ""
-                match(len(i.reference) ):
-                    case 0:
-                        line.append("")
-                    case _:
-                        line.append(wrap_shorten(i.reference[0]))
-                        more_references = i.reference[1:]
-                line_extra += more_references
+                if(len(i.reference) == 0 ):
+                    line.append("")
+                else:
+                    line.append(wrap_shorten(i.reference[0]))
+                    line_extra += i.reference[1:]
 
 #                for r in i.reference:
 #                    f += wrap_shorten(r) + " "
@@ -1744,6 +1806,8 @@ ascii mockup:
 #                    f = f[:-1]
 #                    line.append(f)
 
+            # t : show our target, and only the raw_target if our target is unavailable
+            # T : Always show our target and the raw target, even when both exist
             if( any((c in showspec) for c in "tT" ) ):
 #                if( i.targets is not None ):
 #                    line.append( i.targets)
@@ -1760,14 +1824,25 @@ ascii mockup:
                 for e in i.explanation:
                     line_extra.append( vdb.color.colorl(e,color_explanation.value) )
 
-#            print("i.file_line = '%s'" % (i.file_line,) )
-            if( len(i.extra) > 0 or i.file_line is not None or len(line_extra) > 0 ):
-                fll = []
-                if( i.file_line is not None ):
-                    fll.append( (i.file_line,1,1) )
-#                print("prejump = '%s'" % (prejump,) )
-#                print("postjump = '%s'" % (postjump,) )
-                for ex in i.extra + fll + line_extra:
+            def output_extra( lst, lvl, otbl ):
+                if( lst is None ):
+                    return
+                if( len(lst) == 0 ):
+                    return
+#                print("lst = '%s'" % (lst,) )
+
+                for ex in lst:
+                    if( isinstance(ex,str) ):
+                        unc = vdb.color.colors.strip_color(ex)
+                        if( unc != ex ):
+                            raise RuntimeError(f"List contains coloured only entry: {ex}")
+#                    print("ex = '%s'" % (ex,) )
+                    if( isinstance(ex,tuple) ):
+                        if( len(ex) == 2 ):
+                            a,b = ex
+                            ex = (a,b,0)
+                    else:
+                        ex = (ex,len(ex),0)
 #                    print("ex = '%s'" % (ex,) )
                     pre = ( prejump + cg_columns) * [None]
                     post = (postjump-1) * [None]
@@ -1775,10 +1850,16 @@ ascii mockup:
                         el = pre + post
                     else:
                         el = pre + [postarrows] + post
-                    el += 2*[None]
+                    el += lvl*[None]
 #                    el = ["m","a","h","H","o","d","BYTES" + str(len(line)-1)]
                     el.append(ex)
                     otbl.append(el)
+
+#            output_extra(["END"],0,otbl)
+            output_extra(i.extra,0,otbl)
+#            output_extra(i.file_line,0,otbl)
+            output_extra(line_extra,2,otbl)
+
 
             otmap[cnt] = len(otbl)
             if( context is not None and context_end is not None and context_end <= cnt ):
@@ -2090,10 +2171,11 @@ def fix_marker( ls, alt = None, frame = None, do_flow = True ):
 
 parse_cache = {}
 
-def split_args( in_args ):
+def split_args( in_args : str ) -> list[str]:
 #    vdb.util.bark() # print("BARK")
 #    print("in_args = '%s'" % (in_args,) )
     args = in_args.split(",")
+
 #    print("args = '%s'" % (args,) )
     ret = []
     in_brackets = False
@@ -2586,7 +2668,7 @@ def x86_vt_flow_j( ins, frame, possible_registers, possible_flags ):
             if( taken ):
                 ins.add_extra(f"Jump taken" + extrastring)
             else:
-                ins.add_extra(f"Jump NOT taken" + extrastring)
+                ins.add_extra(f"Jump NOT taken" + extrastring + "VERY LONG STRING THAT MIGHT MESS THINGS UP")
 #        print("extrastring = '%s'" % (extrastring,) )
 #        print("possible_flags = '%s'" % (possible_flags,) )
 
@@ -2699,6 +2781,7 @@ def x86_vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     sub,_ = ins.arguments[0].value( possible_registers )
     tgtv,_ = ins.arguments[1].value( possible_registers )
     possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
+    nv = None
     if( tgtv is not None and sub is not None):
         nv = tgtv - sub
         possible_registers.set( ins.arguments[1].register, nv )
@@ -2707,7 +2790,7 @@ def x86_vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     else:
         ins.arguments[0].argspec = ""
     
-    if( asm_explain ):
+    if( asm_explain.value ):
         nvs=""
         tvs=""
         if( nv is not None ):
@@ -2914,7 +2997,7 @@ def gen_vtable( ):
 def short_color( symbol ):
     symbol = symbol.split("@")
     symbol[0] = vdb.shorten.symbol(symbol[0],not debug.value )
-    symbol = vdb.color.color(symbol[0],color_var.value) + "@" + "@".join(symbol[1:])
+    symbol = vdb.color.concat( [ vdb.color.colorl( symbol[0],color_var.value) , "@" , "@".join(symbol[1:]) ] )
     return symbol
 
 def extra_info( vname, spc, addr, extra ):
@@ -2930,19 +3013,18 @@ def extra_info( vname, spc, addr, extra ):
     else:
         vname = short_color(vname)
 
-
     if( vdb.memory.mmap.accessible(addr) ):
         if( spc != "@" ):
             spc += "@"
         extra.value += ",access"
         addrstr,pure = vdb.pointer.chain( addr, 32, 1, True, 1, False, asm_tailspec.value, do_annotate = False )
         if( not pure ):
-            return (symbol, vdb.color.color(vname,color_var.value) + symbol + spc + addrstr )
+            return (symbol, vdb.color.concat( [ vname, symbol ,spc , addrstr] ) )
         extra.value += ",pure"
     else:
         addrstr = f"{addr:#0x}"
 
-    return (symbol, vdb.color.color(vname,color_var.value) + symbol + spc + vdb.color.color(addrstr,color_location.value))
+    return (symbol, vdb.color.concat( [ vname ,symbol ,spc , vdb.color.colorl(addrstr,color_location.value) ] ) )
 
 def current_registers( frame ):
     blacklist = set( [ "rip", "eip", "ip", "pc" ] )
@@ -2979,7 +3061,7 @@ def x86_current_flags( frame ):
 #    print("fs = '%s'" % (fs,) )
     return fs
 
-def register_flow( lng, frame ):
+def register_flow( lng, frame : "gdb frame" ):
     global flow_vtable
     if( len(flow_vtable) == 0 ):
         gen_vtable()
@@ -3133,7 +3215,8 @@ def register_flow( lng, frame ):
                 av = lng.var_expressions.get(a,None)
                 extra.value += f", av = {av}"
                 if( av is not None ):
-                    ins_references.append(  vdb.color.color(av,color_var.value) + "@" + vdb.color.color(a,color_location.value) )
+#                    ins_references.append(  vdb.color.color(av,color_var.value) + "@" + vdb.color.color(a,color_location.value) )
+                    ins_references.append( vdb.color.concat( [  vdb.color.colorl(av,color_var.value) ,"@", vdb.color.colorl(a,color_location.value) ] ) )
 
                 try:
                     # If its a target we want to use the value after the instruction executed
@@ -3228,8 +3311,8 @@ def register_flow( lng, frame ):
                     if( debug.value ):
                         traceback.print_exc()
                     pass
-            for irx in range(0,len(ins_references)-1):
-                ins_references[irx] = ins_references[irx] + ","
+#            for irx in range(0,len(ins_references)-1):
+#                ins_references[irx] = ins_references[irx] + ","
             if( ins.passes > 1 ):
                 if( ins.reference == ins_references ):
                     ins.reference = []

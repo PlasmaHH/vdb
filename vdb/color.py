@@ -23,8 +23,20 @@ def mcolor( s, cs ):
 def colorl( s, cs ):
     return ( color(s,cs),len(s))
 
-def concat( ltpl, rtpl ):
+def concat_lst( lst ):
+    ret = lst[0]
+    if( isinstance(ret,str) ):
+        ret = (ret,len(ret))
+    for l in lst[1:] :
+        ret = concat(ret,l)
+
+    return ret
+
+def concat( ltpl, rtpl = None ):
     """concatenate a string and its display lengths"""
+    if( rtpl is None ):
+        return concat_lst(ltpl)
+
     ls,ll = ltpl
     if( isinstance(rtpl,str) ):
         rs = rtpl
