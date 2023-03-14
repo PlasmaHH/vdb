@@ -2861,6 +2861,9 @@ def x86_vt_flow_test( ins, frame, possible_registers, possible_flags ):
 
 def x86_vt_flow_pxor( ins, frame, possible_registers, possible_flags ):
     args = ins.arguments
+    v0=None
+    v1=None
+    t = None
     if( not args[1].dereference ):
         v0,_ = args[0].value( possible_registers )
         v1,_ = args[1].value( possible_registers )
@@ -2874,6 +2877,21 @@ def x86_vt_flow_pxor( ins, frame, possible_registers, possible_flags ):
             if( args[0].register == args[1].register ):
                 possible_registers.set( args[1].register ,0, origin="flow_pxor")
                 args[0].specfilter("%")
+
+    if( asm_explain.value ):
+        if( False and len(args) == 2 and args[0].register == args[1].register ):
+            ins.add_explanation( f"Performs xor on register {args[0]} with itself, setting it to 0")
+        else:
+            v0s=""
+            v1s=""
+            ts =""
+            if( v0 is not None ):
+                v0s=f"({v0})"
+            if( v1 is not None ):
+                v1s=f"({v0})"
+            if( t is not None ):
+                ts=f"({t})"
+            ins.add_explanation(f"Performs xor on register {args[0]}{v0s} with {args[1]}{v1s} and storing the result in {args[1]}{ts}")
 
     return ( possible_registers, possible_flags )
 
