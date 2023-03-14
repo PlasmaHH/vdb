@@ -345,7 +345,7 @@ class register_set:
 
     def merge( self, other ):
         for n,(v,o) in other.values.items():
-            self.set( n, v, o )
+            self.set( n, v, origin=o )
 
     def copy( self, other, rlist ):
         for rn in rlist:
@@ -2633,7 +2633,7 @@ def arm_vt_flow_push( ins, frame, possible_registers, possible_flags ):
     if( vl is not None ):
         nargs = len(ins.args)
         vl = int(vl) - nargs*( vdb.arch.pointer_size // 8 )
-        possible_registers.set(rname,vl)
+        possible_registers.set(rname,vl,origin="flow_push")
 
     for a in ins.arguments:
         a.target = False
@@ -2703,7 +2703,7 @@ def x86_vt_flow_push( ins, frame, possible_registers, possible_flags ):
     oldvl=vl
     if( vl is not None ):
         vl = int(vl) - ( vdb.arch.pointer_size // 8 )
-        possible_registers.set(rname,vl)
+        possible_registers.set(rname,vl,origin="flow_push")
 
     if( asm_explain.value ):
         pval,_ = ins.arguments[0].value(possible_registers)
@@ -2723,7 +2723,7 @@ def x86_vt_flow_pop( ins, frame, possible_registers, possible_flags ):
     vl,rname,_ = possible_registers.get("rsp")
     if( vl is not None ):
         vl = int(vl) + ( vdb.arch.pointer_size // 8 )
-        possible_registers.set(rname,vl)
+        possible_registers.set(rname,vl,origin="flow_pop")
 
     # no flags affected
     return ( possible_registers, possible_flags )
@@ -2756,10 +2756,10 @@ def x86_vt_flow_mov( ins, frame, possible_registers, possible_flags ):
         # XXX if we do it that way we can also from here on (backwards?) assume rsp=rbp. (likely just after it we
         # sub something from rsp, we should support basic calculations too)
         if( frm.register != "rsp" or to.register != "rbp" ):
-            possible_registers.set( to.register, frmval )
+            possible_registers.set( to.register, frmval,origin="flow_mov" )
         # TODO We need to do this anyways when we are at a position before that move
         # TODO this all seems fishy, we need a testcase for when this matters. maybe only in backpropagation?
-        possible_registers.set( to.register, frmval )
+        possible_registers.set( to.register, frmval,origin="flow_mov" )
 #        if( frm.register == "rsp" and to.register == "rbp" ):
 #            if( toval is not None ):
 #                possible_registers.set( "rsp", toval )
@@ -2808,7 +2808,7 @@ def x86_vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     nv = None
     if( tgtv is not None and sub is not None):
         nv = tgtv - sub
-        possible_registers.set( ins.arguments[1].register, nv )
+        possible_registers.set( ins.arguments[1].register, nv, origin="flow_sub" )
         possible_flags.set_result( nv, ins.arguments[1] )
         possible_flags.set( "CF", int(tgtv > sub) )
     else:
@@ -2832,7 +2832,7 @@ def x86_vt_flow_add( ins, frame, possible_registers, possible_flags ):
     possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
     if( tgtv is not None and add is not None):
         nv = tgtv + add
-        possible_registers.set( ins.arguments[1].register, nv )
+        possible_registers.set( ins.arguments[1].register, nv,origin="flow_add" )
         possible_flags.set_result( nv, ins.arguments[1] )
         possible_flags.set( "CF", int(tgtv > add) )
     else:
@@ -2859,6 +2859,25 @@ def x86_vt_flow_test( ins, frame, possible_registers, possible_flags ):
     # No changes in registers, so just
     return ( possible_registers, possible_flags )
 
+def x86_vt_flow_pxor( ins, frame, possible_registers, possible_flags ):
+    args = ins.arguments
+    if( not args[1].dereference ):
+        v0,_ = args[0].value( possible_registers )
+        v1,_ = args[1].value( possible_registers )
+        if( v0 is not None and v1 is not None ):
+            t = v0 ^ v1
+            possible_registers.set( args[1].register, t,origin="flow_pxor" )
+        else: # no idea about the outcome, don't set it
+            possible_registers.remove( args[1].register )
+        if( len(args) == 2 ):
+            # xor zeroeing out a register
+            if( args[0].register == args[1].register ):
+                possible_registers.set( args[1].register ,0, origin="flow_pxor")
+                args[0].specfilter("%")
+
+    return ( possible_registers, possible_flags )
+
+
 def x86_vt_flow_xor( ins, frame, possible_registers, possible_flags ):
     args = ins.arguments
 
@@ -2869,14 +2888,14 @@ def x86_vt_flow_xor( ins, frame, possible_registers, possible_flags ):
         v1,_ = args[1].value( possible_registers )
         if( v0 is not None and v1 is not None ):
             t = v0 ^ v1
-            possible_registers.set( args[1].register, t )
+            possible_registers.set( args[1].register, t,origin="flow_xor" )
             possible_flags.set_result(t)
         else: # no idea about the outcome, don't set it
             possible_registers.remove( args[1].register )
         if( len(args) == 2 ):
             # xor zeroeing out a register
             if( args[0].register == args[1].register ):
-                possible_registers.set( args[1].register ,0)
+                possible_registers.set( args[1].register ,0,origin="flow_xor")
                 possible_flags.set_result(0)
                 args[0].specfilter("%")
 
@@ -2894,7 +2913,7 @@ def x86_vt_flow_and( ins, frame, possible_registers, possible_flags ):
         v1,_ = args[1].value( possible_registers )
         if( v0 is not None and v1 is not None ):
             t = v0 & v1
-            possible_registers.set( args[1].register, t )
+            possible_registers.set( args[1].register, t ,origin="flow_and")
             possible_flags.set_result(t)
         else: # no idea about the outcome, don't set it
             possible_registers.remove( args[1].register )
@@ -2918,7 +2937,7 @@ def x86_vt_flow_neg( ins, frame, possible_registers, possible_flags ):
     possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
     if( val is not None ):
         val = 0 - val
-        possible_registers.set( ins.arguments[0].register, val )
+        possible_registers.set( ins.arguments[0].register, val ,origin="flow_neg")
         if( val == 0 ):
             possible_flags.set("CF",0)
         else:
@@ -2939,7 +2958,7 @@ def x86_vt_flow_lea( ins, frame, possible_registers, possible_flags ):
     possible_registers.remove( a1.register )
     if( fa is not None ):
         if( not a1.dereference and a1.register is not None):
-            possible_registers.set( a1.register, fa )
+            possible_registers.set( a1.register, fa ,origin="flow_lea")
 
     # no flags affected
     return ( possible_registers, possible_flags )
@@ -2987,7 +3006,7 @@ def x86_vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
 def x86_vt_flow_leave( ins, frame, possible_registers, possible_flags ):
     rbp,_,_ = possible_registers.get("rbp",None)
     if( rbp is not None ):
-        possible_registers.set("rsp",rbp)
+        possible_registers.set("rsp",rbp,origin="flow_leave")
     # XXX do the "pop rbp" too
     # no flags affected
     return ( possible_registers, possible_flags )
@@ -3109,15 +3128,14 @@ def register_flow( lng, frame : "gdb frame" ):
     ins = lng.instructions[0]
 #    print("lng.var_addresses = '%s'" % (lng.var_addresses,) )
     # Try to follow execution path to figure out possible register values (and maybe later flags)
-#    possible_registers = {}
     possible_registers = lng.initial_registers.clone()
 #    print("possible_registers = '%s'" % (possible_registers,) )
     possible_flags = flag_set()
 
     rbp = frame.read_register(base_pointer)
-    if( rbp  is not None ):
+    if( rbp is not None ):
         if( vdb.memory.mmap.accessible(rbp) ):
-            possible_registers.set( base_pointer, rbp, origin="frame.bp" )
+            possible_registers.set( base_pointer, rbp, origin="frame.bp" ,)
 
 #    for ins in ret.instructions:
     flowstack = [ (None,None,None) ]
@@ -3128,6 +3146,7 @@ def register_flow( lng, frame : "gdb frame" ):
     # XXX make it perhaps possible to pre-populate it by an option so we can disable handling this way?
     unhandled_mnemonics = set()
 
+    
     while ins is not None:
         # Simple protection against any kinds of endless loops
         # XXX Better would be to check (additionally?) if the register and flag sets are the same as in previous runs
