@@ -2859,6 +2859,32 @@ def x86_vt_flow_test( ins, frame, possible_registers, possible_flags ):
     # No changes in registers, so just
     return ( possible_registers, possible_flags )
 
+def explain_xor( ins, v0, v1, t, args ):
+    print("len(args) = '%s'" % (len(args),) )
+    print("args = '%s'" % (args,) )
+    if( len(args) == 2 and args[0].register == args[1].register ):
+        ins.add_explanation( f"Performs xor on register {args[0]} with itself, setting it to 0")
+    else:
+        v0s=""
+        v1s=""
+        ts =""
+        if( v0 is not None ):
+            v0s=f"({v0:#0x})"
+        if( v1 is not None ):
+            v1s=f"({v0:#0x})"
+        if( t is not None ):
+            ts=f"({t:#0x})"
+        if( args[0].dereference ):
+            a0loc = "memory location"
+        else:
+            a0loc = "register"
+        if( args[1].dereference ):
+            a1loc = "memory location"
+        else:
+            a1loc = "register"
+        ins.add_explanation(f"Performs xor on {a0loc} {args[0]}{v0s} with {a1loc} {args[1]}{v1s} and storing the result in {a1loc} {args[1]}{ts}")
+
+
 def x86_vt_flow_pxor( ins, frame, possible_registers, possible_flags ):
     args = ins.arguments
     v0=None
@@ -2879,19 +2905,7 @@ def x86_vt_flow_pxor( ins, frame, possible_registers, possible_flags ):
                 args[0].specfilter("%")
 
     if( asm_explain.value ):
-        if( False and len(args) == 2 and args[0].register == args[1].register ):
-            ins.add_explanation( f"Performs xor on register {args[0]} with itself, setting it to 0")
-        else:
-            v0s=""
-            v1s=""
-            ts =""
-            if( v0 is not None ):
-                v0s=f"({v0})"
-            if( v1 is not None ):
-                v1s=f"({v0})"
-            if( t is not None ):
-                ts=f"({t})"
-            ins.add_explanation(f"Performs xor on register {args[0]}{v0s} with {args[1]}{v1s} and storing the result in {args[1]}{ts}")
+        explain_xor(ins,v0,v1,t,args)
 
     return ( possible_registers, possible_flags )
 
@@ -2899,6 +2913,9 @@ def x86_vt_flow_pxor( ins, frame, possible_registers, possible_flags ):
 def x86_vt_flow_xor( ins, frame, possible_registers, possible_flags ):
     args = ins.arguments
 
+    v0=None
+    v1=None
+    t = None
     # We only do it when not writing to memory
     possible_flags.unset( [ "SF","ZF","AF","PF"] )
     if( not args[1].dereference ):
@@ -2915,10 +2932,14 @@ def x86_vt_flow_xor( ins, frame, possible_registers, possible_flags ):
             if( args[0].register == args[1].register ):
                 possible_registers.set( args[1].register ,0,origin="flow_xor")
                 possible_flags.set_result(0)
-                args[0].specfilter("%")
+                args[0].specfilter(None)
 
     possible_flags.set("OF",0)
     possible_flags.set("CF",0)
+
+    if( asm_explain.value ):
+        explain_xor(ins,v0,v1,t,args)
+
     return ( possible_registers, possible_flags )
 
 def x86_vt_flow_and( ins, frame, possible_registers, possible_flags ):
