@@ -1666,6 +1666,7 @@ ascii mockup:
                 if( i.file is None ):
                     i.file,i.line = info_line( i.address )
                 fl = f"{i.file}:{i.line}"
+                fl = [ (fl,0,0) ]
                 if( fl != file_line ):
                     file_line = fl
                     i.file_line = file_line
@@ -1880,7 +1881,7 @@ ascii mockup:
 #            output_extra(["END"],0,otbl)
             output_extra( reference_lines,2,otbl)
             output_extra(i.extra,0,otbl)
-#            output_extra(i.file_line,0,otbl)
+            output_extra(i.file_line,0,otbl)
             output_extra(line_extra,2,otbl)
 
 
