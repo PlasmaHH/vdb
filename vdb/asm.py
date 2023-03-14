@@ -723,6 +723,12 @@ class instruction_base( abc.ABC ):
         self.unhandled = False
         self.explanation = []
 
+    def add_explanation( self, ex ):
+        if( len(self.explanation) > 0 ):
+            if( ex == self.explanation[0] ):
+                return
+        self.explanation.append(ex)
+
     def reset_argspecs( self ):
         for arg in self.arguments:
             arg.reset_argspec()
@@ -2708,7 +2714,7 @@ def x86_vt_flow_push( ins, frame, possible_registers, possible_flags ):
         ex=f"Pushes value of {ins.args[0]}{vls} to the stack"
         if( oldvl is not None ):
             ex += f" @{oldvl:#0x}"
-        ins.explanation.append(ex)
+        ins.add_explanation(ex)
     # no flags affected
     return ( possible_registers, possible_flags )
 
@@ -2785,7 +2791,7 @@ def x86_vt_flow_mov( ins, frame, possible_registers, possible_flags ):
         else:
             ex += f"in register {to}"
 
-        ins.explanation.append(ex)
+        ins.add_explanation(ex)
 
     # no flags affected
     return ( possible_registers, possible_flags )
@@ -2814,7 +2820,7 @@ def x86_vt_flow_sub( ins, frame, possible_registers, possible_flags ):
             nvs=f"({nv:#0x})"
         if( tgtv is not None ):
             tvs=f"({tgtv:#0x})"
-        ins.explanation.append( f"Subtracts {ins.args[0]} from {ins.args[1]}{tvs} and stores it in {ins.args[1]}{nvs}" )
+        ins.add_explanation( f"Subtracts {ins.args[0]} from {ins.args[1]}{tvs} and stores it in {ins.args[1]}{nvs}" )
 
     return ( possible_registers, possible_flags )
 
