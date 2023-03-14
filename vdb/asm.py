@@ -2860,8 +2860,6 @@ def x86_vt_flow_test( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 def explain_xor( ins, v0, v1, t, args ):
-    print("len(args) = '%s'" % (len(args),) )
-    print("args = '%s'" % (args,) )
     if( len(args) == 2 and args[0].register == args[1].register ):
         ins.add_explanation( f"Performs xor on register {args[0]} with itself, setting it to 0")
     else:
@@ -3196,7 +3194,7 @@ def register_flow( lng, frame : "gdb frame" ):
             next = ins.next
 
         # Assumes the last one is the target, might be different for different archs
-        if( ins.args is not None ):
+        if( ins.args is not None and len(ins.arguments) == 0 ):
             target = False
             for a in ins.args:
                 ins.arguments.append( asm_arg(target,a) )
