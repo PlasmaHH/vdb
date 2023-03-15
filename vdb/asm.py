@@ -1040,7 +1040,8 @@ class arm_instruction( instruction_base ):
         if( len(tokens) == 1 ): ## aarch64 uses // instead of ;
             tokens = tokens[0].split("//")
         if( len(tokens) > 1 ):
-            self.reference = tokens[1:]
+            self.reference = "".join(tokens[1:])
+            self.reference = [ ( self.reference, len(self.reference) ) ]
         args = tokens[0].strip()
 #        print(f"{args=}")
         if( len(args) > 0 and args[-1] == ">" and ( ( lbi := args.find("<") ) > 0 ) ):
@@ -1807,7 +1808,10 @@ ascii mockup:
                     line.append("")
                 else:
                     rtpl=("",0)
+#                    print("i.reference = '%s'" % (i.reference,) )
                     for rf in i.reference:
+#                        print("rtpl = '%s'" % (rtpl,) )
+#                        print("rf = '%s'" % (rf,) )
 #                        print("rf = '%s'" % (rf,) )
                         if( rtpl[1] > 0 and ( rtpl[1] + rf[1] + 1) > ref_width.value ): # would be too big, start a new one
                             reference_lines.append(rtpl)
@@ -1816,6 +1820,7 @@ ascii mockup:
                             rtpl=vdb.color.concat( [rtpl,",",rf] )
                         else:
                             rtpl=rf
+#                    print("rtpl = '%s'" % (rtpl,) )
                     if( rtpl[1] > 0 ):
                         reference_lines.append(rtpl)
                     if( len(reference_lines) > 0 ):
@@ -2621,6 +2626,12 @@ def flag_extra( name, cmp, exp, value ):
         ret = f", {name}[{value}] {cmp} {exp}"
 #    print("ret = '%s'" % (ret,) )
     return ret
+
+def arm_vt_flow_bl( ins, frame, possible_registers, possible_flags ):
+    if( not annotate_jumps.value ):
+        return (possible_registers,possible_flags)
+    ins.add_extra(f"BL TO BE HANDLED")
+    return (possible_registers,possible_flags)
 
 def arm_vt_flow_b( ins, frame, possible_registers, possible_flags ):
     if( not annotate_jumps.value ):
