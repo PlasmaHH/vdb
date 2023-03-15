@@ -384,10 +384,10 @@ def show_config( argv ):
 
         first = True
         line = []
-        print("n = '%s'" % (n,) )
-        print("val = '%s'" % (val,) )
+#        print("n = '%s'" % (n,) )
+#        print("val = '%s'" % (val,) )
         for v in val:
-            print("v = '%s'" % (v,) )
+#            print("v = '%s'" % (v,) )
             if( first ):
                 line = [ n, type_map.get(c.gdb_type,c.gdb_type), hooked, v]
                 if( verbose ):
