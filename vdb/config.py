@@ -206,21 +206,41 @@ class parameter(gdb.Parameter):
         return '%s (currently: %r)' % (self.showstring, self.value)
 
     def get_vdb_show_string(self ):
-        val = self.value
+        xval = []
         if( self.gdb_type == PARAM_COLOR ):
-            val = vdb.color.colorl( val, val )
+            val = vdb.color.colorl( self.value, self.value )
+            xval.append(val)
         elif( self.gdb_type == PARAM_COLOUR_LIST ):
-            cval = []
-            pval = 0
-            for e in self.elements:
-                cv,pv = vdb.color.colorl(e,e)
-                cval.append(cv)
-                pval += pv
+            cval = ("",0)
+            for i,e in enumerate(self.elements):
+                cv = vdb.color.colorl(e,e)
+                vdb.color.concat( cval, cv )
+            xval.append(cval)
+        else:
+            if( self.value is None ):
+                xval.append( ("",0) )
+            else:
+                xtpl = (str(self.value),len(str(self.value)))
+                # , separated lists can be wrapped
+                if( xtpl[1] > 42 ):
+                    for sc in (",","}{"):
+                        xv = xtpl[0].split(sc)
+                        if( len(xv) > 1 ):
+                            xs = ""
+                            for v in xv:
+                                if( len(xs) > 42 ):
+                                    xval.append( (xs,len(xs)) )
+                                    xs = ""
+                                xs += v
+                                xs += sc
+                            # last one got a , where it should not
+                            xs = xs[:-1]
+                            xval.append( (xs,len(xs)) )
+                            return xval
 
-            cval = ";".join(cval)
-            val = (cval,pval)
+                xval.append( xtpl )
 
-        return val
+        return xval
 
 
 verbosity = parameter("vdb-config-verbosity",3)
@@ -361,10 +381,21 @@ def show_config( argv ):
         hooked = None
         if( c.on_set is not None ):
             hooked = "X"
-        line = [ n, type_map.get(c.gdb_type,c.gdb_type), hooked, val ]
-        if( verbose ):
-            line.append(c.origin)
-        otbl.append( line )
+
+        first = True
+        line = []
+        print("n = '%s'" % (n,) )
+        print("val = '%s'" % (val,) )
+        for v in val:
+            print("v = '%s'" % (v,) )
+            if( first ):
+                line = [ n, type_map.get(c.gdb_type,c.gdb_type), hooked, v]
+                if( verbose ):
+                    line.append(c.origin)
+                first = False
+            else:
+                line = [ None, None, None, v ]
+            otbl.append( line )
 
     print( vdb.util.format_table(otbl) )
 
