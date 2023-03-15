@@ -113,6 +113,11 @@ class cmd_wrap(vdb.command.command):
         arg = self.saved_arg
         from_tty = self.saved_from_tty
         try:
+            slpos = argv[0].find("/")
+            if( slpos != -1 ):
+                cmd = argv[0][:slpos]
+                par = argv[0][slpos:]
+                argv = [ cmd, par ] + argv[1:]
             sc = vdb.subcommands.globals.get( [ self.cmdname ] + argv )
 #            print("sc = '%s'" % (sc,) )
             if( sc is None ):
