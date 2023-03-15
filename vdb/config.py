@@ -320,7 +320,7 @@ def show_config( argv ):
         if( argv[0] == "/v" ):
             argv = argv[1:]
             verbose = True
-        if( argv[0] == "/s" ):
+        if( len(argv) > 0 and argv[0] == "/s" ):
             argv = argv[1:]
             short = True
 
@@ -340,7 +340,7 @@ def show_config( argv ):
         return
 
     otbl = []
-    hl = ["Name","Type","Hooked","Value" ]
+    hl = ["Name","Type",("Hooked",6,-4),"Value" ]
     if( verbose ):
         hl.append("Origin")
     otbl.append( hl )
@@ -358,7 +358,10 @@ def show_config( argv ):
             continue
         val = c.get_vdb_show_string()
 
-        line = [ n, type_map.get(c.gdb_type,c.gdb_type), None, val ]
+        hooked = None
+        if( c.on_set is not None ):
+            hooked = "X"
+        line = [ n, type_map.get(c.gdb_type,c.gdb_type), hooked, val ]
         if( verbose ):
             line.append(c.origin)
         otbl.append( line )
