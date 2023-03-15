@@ -48,8 +48,9 @@ enable_pipe      = vdb.config.parameter( "vdb-enable-pipe",True)
 enable_va        = vdb.config.parameter( "vdb-enable-va",True)
 enable_llist     = vdb.config.parameter( "vdb-enable-llist",True)
 enable_misc      = vdb.config.parameter( "vdb-enable-misc",True)
+enable_svd       = vdb.config.parameter( "vdb-enable-svd",True)
 
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,pahole,ftree,dashboard,hashtable,ssh,track,graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc" )
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,pahole,ftree,dashboard,hashtable,ssh,track,graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd" )
 
 home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)
 search_down     = vdb.config.parameter( "vdb-plugin-search-down",True)

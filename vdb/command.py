@@ -41,6 +41,9 @@ class command(gdb.Command,abc.ABC):
         self.repeat = True
         self.from_tty = None
 
+    def usage( self ):
+        print(self.__doc__)
+
     def dont_repeat( self ):
         self.repeat = False
         super().dont_repeat()

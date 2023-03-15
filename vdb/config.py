@@ -363,6 +363,7 @@ def show_config( argv ):
     hl = ["Name","Type",("Hooked",6,-4),"Value" ]
     if( verbose ):
         hl.append("Origin")
+        hl.append("Documentation")
     otbl.append( hl )
     type_map = {
             PARAM_COLOR : "color",
@@ -392,6 +393,9 @@ def show_config( argv ):
                 line = [ n, type_map.get(c.gdb_type,c.gdb_type), hooked, v]
                 if( verbose ):
                     line.append(c.origin)
+                    # Hopefully nobody ever starts their documentation with this one
+                    if( not c.docstring.startswith("Documentation of ")):
+                        line.append(c.docstring)
                 first = False
             else:
                 line = [ None, None, None, v ]

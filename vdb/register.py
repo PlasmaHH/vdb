@@ -1128,9 +1128,6 @@ We recommend having an alias reg = registers in your .gdbinit
     def __init__ (self):
         super (cmd_registers, self).__init__ ("registers", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
-    def usage( self ):
-        print(self.__doc__)
-
     def update( self ):
 #        print("Updating registers...",file=sys.stderr)
 #        with open("register.log","a") as f:
