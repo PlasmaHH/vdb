@@ -979,6 +979,8 @@ class Registers():
         return [(ret,retlen)]
 
     def bitextract( self, bit, sz, iflags ):
+        print(f"bitextract({bit},{sz},{iflags:#0x})")
+        sbit=bit
 #        print("bit = '%s'" % (bit,) )
         mask = omask = 1 << bit
         bit += (sz-1)
@@ -987,7 +989,8 @@ class Registers():
             mask |= omask
             omask = omask << 1
 #            print(f"{mask=:#0x}")
-        ex = (iflags >> bit) & ((1 << sz)-1)
+        iflags &= mask
+        ex = (iflags >> sbit)
         return (ex,mask)
 
     def format_flags( self, flags,name, count, descriptions, rawname ):
@@ -1056,7 +1059,8 @@ class Registers():
                     wraps = textwrap.wrap(text,text_len.value)
                     text = wraps[0]
                     wraprest = wraps[1:]
-
+                if( ex > 9 ):
+                    ex=f"{ex:#0{sz//4}x}"
                 ftbl.append( [ tbit, mask, short, text, ex, meaning ] )
                 for w in wraprest:
                     ftbl.append( [ None, None, None, w, None, None ] )
@@ -1101,7 +1105,11 @@ class Registers():
             else:
                 ival = int(fv)
 
-            line = [ (fr.name,color_names.value), f"0x{ival:016x}" ]
+            if( count <= 32 ):
+                valstr = f"{ival:#010x}"
+            else:
+                valstr = f"{ival:#018x}"
+            line = [ (fr.name,color_names.value), valstr ]
             flagtable.append(line)
 
             if( mini ):
@@ -1189,6 +1197,8 @@ class Registers():
                 print(self.mmapped(filter,short=True))
             elif( s == "M" ):
                 print(self.mmapped(filter,full=True))
+            elif( s == "d" ):
+                print(self.mmapped(filter,mini=True))
             elif( s == "." ):
                 pass
             elif( s == "?" ):
