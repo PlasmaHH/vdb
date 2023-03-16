@@ -7,6 +7,7 @@ import vdb.pointer
 import vdb.memory
 import vdb.command
 import vdb.arch
+import textwrap
 
 import gdb
 
@@ -19,6 +20,7 @@ reg_default = vdb.config.parameter("vdb-register-default","/e")
 flag_colour = vdb.config.parameter("vdb-register-colors-flags", "#adad00", gdb_type = vdb.config.PARAM_COLOUR)
 int_int = vdb.config.parameter("vdb-register-int-as-int",True)
 short_columns = vdb.config.parameter("vdb-register-short-columns",6)
+text_len = vdb.config.parameter("vdb-register-text-len",80)
 tailspec = vdb.config.parameter("vdb-register-tailspec", "axdn" )
 
 
@@ -255,6 +257,10 @@ register_sizes = {
                 ]
         }
 
+# same format as flag_info basically
+mmapped_descriptions = {}
+mmapped_positions    = {}
+
 possible_prefixes = [
 		"cs", "ds", "es", "fs", "gs", "ss"
 		]
@@ -329,7 +335,9 @@ class Registers():
 
         self.collect_registers()
 
+        
     def get( self, name ):
+        """Gets gdb register descriptor"""
         return self.all.get(name,None)
 
     def in_group( self, name, group ):
@@ -875,14 +883,33 @@ class Registers():
             ret += vdb.util.format_table(rtbl,padbefore=" ", padafter="")
         return ret
 
-    def format_flags_mini( self, name, val ):
+    def format_flags_mini( self, name, rawname, val, desc ):
         """Never returns colour"""
-        count,descriptions,rawname = flag_info.get(name)
+#        print("name = '%s'" % (name,) )
+#        print("rawname = '%s'" % (rawname,) )
 
         if( rawname is None ):
+#            oval = val
             val=str(val)
+#            print("val = '%s'" % (val,) )
             try:
-                return f"{int(val):#0x}"
+#                val=oval
+                val=int(val)
+                if( len(desc) == 0 ):
+                    ret=f"{val:#0x}"
+                    return ret
+                ret = []
+                for bit,d in desc.items():
+                    ex,mask = self.bitextract( bit, d[0], val )
+                    mval = val & mask
+                    if( mval > 0 ):
+                        ret.append(d[1])
+#                    print("mval = '%s'" % (mval,) )
+#                    print("bit = '%s'" % (bit,) )
+#                    print("d = '%s'" % (d,) )
+                ret = " ".join(ret)
+#                print("oval = '%s'" % (oval,) )
+                return "[ " + ret + " ] "
             except ValueError:
                 return val
 
@@ -894,13 +921,14 @@ class Registers():
             sv = val[rawname[1]][f]
             ret += f"{f.name}[{sv}] "
 
-
         return "[" + ret + "]"
 
-    def format_flags_short( self, name, abbrval ):
-        count,descriptions,rawname = flag_info.get(name)
+    def format_flags_short( self, flags, name, abbrval, count, descriptions, rawname ):
+#        count,descriptions,rawname = flag_info.get(name)
         regdesc = self.get(name)
-        flags,valtype = self.rflags.get(regdesc)
+#        print("name = '%s'" % (name,) )
+#        print("regdesc = '%s'" % (regdesc,) )
+#        flags,valtype = rflags.get(regdesc)
 
         if( rawname is not None ):
             iflags = int(flags[rawname[0]])
@@ -928,12 +956,7 @@ class Registers():
                 sz = desc[0]
                 if( sz > 1 ):
                     tbit = f"{bit:02x}-{bit+sz-1:02x}"
-                    bit += (sz-1)
-                    omask = mask
-                    for mb in range(0,sz):
-                        mask |= omask
-                        omask = omask << 1
-                    ex = (iflags >> bit) & ((1 << sz)-1)
+                    ex,mask = self.bitextract(bit,sz,iflags)
                 short = f"{dshort}[{ex}]"
                 if( abbrval ):
                     if( mp is not None ):
@@ -942,6 +965,9 @@ class Registers():
                             short = f"{dshort}[{ms},{ex}]"
 
                 shorteln = len(short)
+#                print("iflags = '%s'" % (iflags,) )
+#                print("mask = '%s'" % (mask,) )
+#                print("ex = '%s'" % (ex,) )
                 if( ex != 0 ):
                     short,shortlen = vdb.color.colorl(short,flag_colour.value)
 
@@ -952,10 +978,19 @@ class Registers():
 
         return [(ret,retlen)]
 
-    def format_flags( self, name ):
-        count,descriptions,rawname = flag_info.get(name)
-        regdesc = self.get(name)
-        flags,valtype = self.rflags.get(regdesc)
+    def bitextract( self, bit, sz, iflags ):
+#        print("bit = '%s'" % (bit,) )
+        mask = omask = 1 << bit
+        bit += (sz-1)
+#        print(f"{mask=:#0x}")
+        for mb in range(0,sz):
+            mask |= omask
+            omask = omask << 1
+#            print(f"{mask=:#0x}")
+        ex = (iflags >> bit) & ((1 << sz)-1)
+        return (ex,mask)
+
+    def format_flags( self, flags,name, count, descriptions, rawname ):
 
         if( rawname is not None ):
             iflags = int(flags[rawname[0]])
@@ -996,13 +1031,16 @@ class Registers():
                 mp = desc[3]
                 sz = desc[0]
                 if( sz > 1 ):
+                    ex,mask = self.bitextract( bit,sz,iflags)
+#                    print("bit = '%s'" % (bit,) )
                     tbit = f"{bit:02x}-{bit+sz-1:02x}"
-                    bit += (sz-1)
-                    omask = mask
-                    for mb in range(0,sz):
-                        mask |= omask
-                        omask = omask << 1
-                    ex = (iflags >> bit) & ((1 << sz)-1)
+#                    omask = mask = 1 << bit
+#                    bit += (sz-1)
+#                    for mb in range(0,sz):
+#                        mask |= omask
+#                        omask = omask << 1
+#                        print(f"{mask=:#0x}")
+#                    ex = (iflags >> bit) & ((1 << sz)-1)
                 if( ex != 0 ):
                     short = ( vdb.color.color(short,flag_colour.value), len(short))
                 if( mp is not None ):
@@ -1013,7 +1051,15 @@ class Registers():
                         meaning = ms+" "+ml
 
                 mask = f"0x{mask:04x}"
+                wraprest = []
+                if( len(text) > text_len.value ):
+                    wraps = textwrap.wrap(text,text_len.value)
+                    text = wraps[0]
+                    wraprest = wraps[1:]
+
                 ftbl.append( [ tbit, mask, short, text, ex, meaning ] )
+                for w in wraprest:
+                    ftbl.append( [ None, None, None, w, None, None ] )
             else:
                 if( con_mask == 0 ):
                     con_mask = mask
@@ -1029,6 +1075,11 @@ class Registers():
         return ftbl
 
     def flags( self, extended , short , mini ):
+        ret = self._flags( self.rflags, flag_info, extended, short, mini )
+        ret = vdb.util.format_table( ret )
+        return ret
+
+    def _flags( self, rflags, flag_inf, extended , short , mini ):
         flagtable = []
 #        return vdb.util.format_table( [
 #            ["a","b","c","d","e","f"],
@@ -1037,13 +1088,13 @@ class Registers():
 #            [("AB","#ff3"),("AB",2),("DEFLOL","#876",300,0),("abcd")],
 #            ],"_",".")
 
-        for fr,v in self.rflags.items():
+        for fr,v in rflags.items():
             fv,ft = v
             abbr = False
             if( fr.name in abbrflags ):
                 abbr = True
 
-            _,_,rawfield = flag_info.get(fr.name,(None,None,None))
+            count,desc,rawfield = flag_inf.get(fr.name,(None,None,None))
             
             if( rawfield is not None ):
                 ival = int(fv[rawfield[0]])
@@ -1054,19 +1105,59 @@ class Registers():
             flagtable.append(line)
 
             if( mini ):
-                fvm = self.format_flags_mini( fr.name, fv )
+                fvm = self.format_flags_mini( fr.name, rawfield, fv, desc )
                 line.append(fvm)
 
             if( short ):
-                line += self.format_flags_short(fr.name,abbr)
+                line += self.format_flags_short(fv,fr.name,abbr,count,desc,rawfield)
 
             if( extended ):
-                flagtable += self.format_flags(fr.name)
+                flagtable += self.format_flags(fv,fr.name,count,desc,rawfield)
 
-        ret = vdb.util.format_table( flagtable )
-        return ret
+        return flagtable
 
-    def print( self, showspec ):
+    class mmap_register:
+        def __init__( self, name ):
+            self.name = name
+
+    class mmap_reg:
+        def __init__( self ):
+            self.item_list = []
+
+        def add( self, name, value ):
+            self.item_list.append( ( Registers.mmap_register(name),(value,None) ) )
+
+        def items( self ):
+            return self.item_list
+
+    def mmapped( self, filter, full = False, short=False, mini=False ):
+        if( filter is not None ):
+            filter = re.compile(filter)
+        itlist = Registers.mmap_reg()
+
+        for reg,rpos in mmapped_positions.items():
+            if( filter is not None ):
+                if( filter.search(reg) is None ):
+                    continue
+            raddr,rbit,rtype = rpos
+            val = vdb.memory.read(raddr,rbit//8)
+            if( val is None ): # unable to read or otherwise not accessible
+                continue
+            val = gdb.Value(val,rtype)
+            itlist.add(reg,val)
+        #ret=self._flags( it, mmapped_descriptions, True, True, True )
+        ret=[]
+        if( full ):
+            ret+=self._flags( itlist, mmapped_descriptions, True, False, False )
+        if( short ):
+            ret+=self._flags( itlist, mmapped_descriptions, False, True, False )
+        if( mini ):
+            ret+=self._flags( itlist, mmapped_descriptions, False, False, True )
+
+        return vdb.util.format_table(ret)
+#        print("mmapped_descriptions = '%s'" % (mmapped_descriptions,) )
+
+    def print( self, showspec, filter = None ):
         for s in showspec:
             if( s == "i" ):
                 print(self.ints(extended=False))
@@ -1094,6 +1185,10 @@ class Registers():
                 print(self.prefixes())
             elif( s == "P" ):
                 print(self.ex_prefixes())
+            elif( s == "m" ):
+                print(self.mmapped(filter,short=True))
+            elif( s == "M" ):
+                print(self.mmapped(filter,full=True))
             elif( s == "." ):
                 pass
             elif( s == "?" ):
@@ -1149,6 +1244,10 @@ We recommend having an alias reg = registers in your .gdbinit
 #            print("Need to call update")
         self.update()
 
+    def usage( self ):
+        super().usage()
+        Registers().print("?")
+
     def do_invoke (self, argv ):
 #        print("do_invoke()")
         global registers
@@ -1163,20 +1262,25 @@ We recommend having an alias reg = registers in your .gdbinit
 
             if( len(argv) == 0 ):
                 argv.append(reg_default.value)
+            filter = None
+            if( len(argv) == 2 ): # second is a regexp for filtering registers
+                filter = argv[1]
+                argv = argv[:1]
+
             if( len(argv) == 1 ):
                 if( argv[0].startswith("/") ):
                     if( argv[0] == "/s" ):
-                        registers.print("ipx")
+                        registers.print("ipx",filter)
                     elif( argv[0] == "/e" ):
-                        registers.print("Ipx")
+                        registers.print("Ipx",filter)
                     elif( argv[0] == "/a" ):
-                        registers.print("ixofpmv")
+                        registers.print("ixofpmv",filter)
                     elif( argv[0] == "/E" ):
-                        registers.print("IXOFPMV")
+                        registers.print("IXOFPMV",filter)
                     elif( argv[0] == "/_d" ):
                         registers._dump()
                     else:
-                        registers.print(argv[0][1:])
+                        registers.print(argv[0][1:],filter)
                 else:
                     self.usage()
             else:
