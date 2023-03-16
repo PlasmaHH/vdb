@@ -979,7 +979,7 @@ class Registers():
         return [(ret,retlen)]
 
     def bitextract( self, bit, sz, iflags ):
-        print(f"bitextract({bit},{sz},{iflags:#0x})")
+#        print(f"bitextract({bit},{sz},{iflags:#0x})")
         sbit=bit
 #        print("bit = '%s'" % (bit,) )
         mask = omask = 1 << bit
