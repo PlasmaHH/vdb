@@ -16,11 +16,13 @@ import re
 import bisect
 from enum import Enum,auto
 import time
+import sys
 
 
 
 
-vdb.enabled_modules.append("memory")
+mod=sys.modules[__name__]
+vdb.enabled_modules["memory"] = mod
 # Color concept:
 # - first more generic colours like for stack/heap/etc.
 # - then if there is none, use the more specific ones for sections
@@ -321,6 +323,7 @@ def read( ptr, count = 1 ):
         if( addr.bit_length() > vdb.arch.pointer_size ):
             addr &= ( 2 ** vdb.arch.pointer_size - 1 )
             
+#        addr = vdb.util.gint("&main")
 #        print("addr = '%s'" % (addr,) )
 #        print("count = '%s'" % (count,) )
 #        print("addr.bit_length() = '%s'" % (addr.bit_length(),) )

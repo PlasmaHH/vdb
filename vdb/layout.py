@@ -11,9 +11,11 @@ import gdb
 import itertools
 import re
 import traceback
+import sys
 
 
-vdb.enabled_modules.append("layout")
+mod=sys.modules[__name__]
+vdb.enabled_modules["layout"] = mod
 
 class byte_descriptor:
     def __init__(self,prefix,fname,ftype):

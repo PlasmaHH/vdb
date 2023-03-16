@@ -15,9 +15,11 @@ import string
 import re
 import math
 import struct
+import sys
 from enum import Enum,auto
 
-vdb.enabled_modules.append("pointer")
+mod=sys.modules[__name__]
+vdb.enabled_modules["pointer"] = mod
 
 arrow_right = vdb.config.parameter("vdb-pointer-arrow-right", " → " )
 arrow_left = vdb.config.parameter("vdb-pointer-arrow-left", " ←  " )

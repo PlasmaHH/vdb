@@ -5,10 +5,12 @@ import vdb
 import vdb.util
 
 import gdb
+import sys
 
 import time
 
-vdb.enabled_modules.append("cache")
+mod=sys.modules[__name__]
+vdb.enabled_modules["cache"] = mod
 
 cumulative_time = { }
 
@@ -60,8 +62,8 @@ class execute_cache:
 type_cache = cache_entry()
 
 def lookup_type( name ):
-    sw = vdb.util.stopwatch()
-    sw.start()
+#    sw = vdb.util.stopwatch()
+#    sw.start()
     global type_cache
     t = type_cache.cache.get(name)
     if( t is None ):
@@ -70,8 +72,8 @@ def lookup_type( name ):
         type_cache.misses += 1
     else:
         type_cache.hits += 1
-    sw.stop()
-    add_time(sw.get(),"gdb.lookup_type")
+#    sw.stop()
+#    add_time(sw.get(),"gdb.lookup_type")
 #    sw.print("gdb.lookup_type(…) took {}s")
     return t
 

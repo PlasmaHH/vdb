@@ -12,11 +12,13 @@ import gdb
 import os
 import traceback
 import time
+import sys
 
 from collections.abc import Iterable
 
 
-vdb.enabled_modules.append("shorten")
+mod=sys.modules[__name__]
+vdb.enabled_modules["shorten"] = mod
 
 color_shorten = vdb.config.parameter("vdb-shorten-colors-templates", "#f60", gdb_type = vdb.config.PARAM_COLOUR)
 fold_ellipsis = vdb.config.parameter("vdb-shorten-fold-ellipsis", "…" )
