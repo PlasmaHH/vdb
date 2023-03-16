@@ -304,7 +304,11 @@ def extract_gdb_history( ):
     hsize = hsize.split()[-1]
     hsize = int(hsize[:-1])
     retd = {} 
-    for i in range(0,hsize,10):
+    # For limiting the first starts with a higher number
+    first = gdb.execute("show commands 1",False,True)
+    first = int(first.split()[0])
+
+    for i in range(first,first+hsize,10):
 #        print("i = '%s'" % (i,) )
         cmds = gdb.execute(f"show commands {i}",False,True).splitlines()
 #        print("cmds = '%s'" % (cmds,) )
