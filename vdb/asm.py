@@ -132,6 +132,7 @@ annotate_jumps     = vdb.config.parameter("vdb-asm-annotate-jumps", True )
 asm_explain        = vdb.config.parameter("vdb-asm-explain", False, on_set = invalidate_cache  )
 ref_width          = vdb.config.parameter("vdb-asm-reference-width", 120 )
 use_capstone       = vdb.config.parameter("vdb-asm-capstone",True,"Whether or not to use capstone instead of gdb for disassembly")
+use_capstone       = vdb.config.parameter("vdb-asm-capstone",True,"Whether or not to use capstone instead of gdb for disassembly")
 
 callgrind_eventmap = {} # name to index
 callgrind_data = {}
