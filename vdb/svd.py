@@ -220,7 +220,7 @@ def parse_device(xml):
 def svd_load_file(fname,at):
     if( at is None ):
         print(f"Loading {fname}")
-    print(f"Loading {fname}")
+
     xml = parse(fname)
     root = xml.getroot()
     ndev=parse_device(root)
@@ -258,8 +258,7 @@ def do_svd_scan_one(dirname,at):
 
 
 def do_svd_scan(at):
-    vdb.util.bark() # print("BARK")
-    print("at = '%s'" % (at,) )
+#    print("at = '%s'" % (at,) )
     if( at is not None ):
         at.set_progress("[svd #/#]")
     for d in scan_dirs.elements:
@@ -273,7 +272,6 @@ lazy_task = None
 def svd_scan():
     # later chose between background and foreground
     if( scan_background.value ):
-        vdb.util.bark() # print("BARK")
         global lazy_task
         lazy_task = vdb.util.async_task( do_svd_scan )
         lazy_task.start()
@@ -295,9 +293,23 @@ svd scan      - Scan configured list of directories and (re)reads the found svd 
 """
 
     def __init__ (self):
-        super (cmd_svd, self).__init__ ("svd", gdb.COMMAND_DATA, gdb.COMPLETE_SYMBOL)
+        super (cmd_svd, self).__init__ ("svd", gdb.COMMAND_DATA)
+
+    def complete( self, text, word ):
+#        print("text = '%s'" % (text,) )
+#        print("word = '%s'" % (word,) )
+        if( word is None and len(text) == 0 ):
+            return []
+        subcommands = [ "load", "list", "scan" ]
+        if( text == word ):
+            return self.matches(word,subcommands)
+        elif( text.startswith("load ") ):
+#            print("devices.keys() = '%s'" % (devices.keys(),) )
+            return self.matches(word,devices.keys())
+        return []
 
     def do_invoke (self, argv ):
+        self.dont_repeat()
 
         if len(argv) < 1:
             raise gdb.GdbError('svd takes arguments.')
