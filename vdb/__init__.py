@@ -60,7 +60,7 @@ inithome_first  = vdb.config.parameter( "vdb-init-home-first",True)
 initsearch_down = vdb.config.parameter( "vdb-init-search-down",True)
 
 
-enabled_modules = [ ]
+enabled_modules = {}
 vdb_dir = None
 vdb_init = None
 texe = None
@@ -128,7 +128,7 @@ class cmd_vdb (vdb.command.command):
                 return
             vdb.subcommands.run_subcommand(argv)
             return
-        print(f"vdb is loaded with the following modules: {enabled_modules}")
+        print(f"vdb is loaded with the following modules: {enabled_modules.keys()}")
         print("Available subcommands:")
         vdb.subcommands.show([])
         print("Available module commands:")
@@ -189,7 +189,7 @@ def load_plugins( plugindir ):
 
         print(f"Loading plugins in {plugindir}…")
 
-        for pt in enabled_modules + [ "plugins" ]:
+        for pt in list(enabled_modules.keys()) + [ "plugins" ]:
             pdir = f"{plugindir}/{pt}/"
             if( os.path.isdir(pdir) ):
                 for fn in filter( lambda x : x.endswith(".py"), os.listdir(pdir) ):
@@ -261,8 +261,8 @@ def start( vdbd = None, vdbinit = None ):
             bval = gdb.parameter( f"vdb-enable-{mod}")
             if( bval ):
                 vdb.util.log(f"Loading module {mod}…")
-                importlib.import_module(f"vdb.{mod}")
-                enabled_modules.append(mod)
+                lmod=importlib.import_module(f"vdb.{mod}")
+                enabled_modules[mod] = lmod
             else:
                 vdb.util.log(f"Skipping load of module {mod}…")
         except:
@@ -309,6 +309,12 @@ def start( vdbd = None, vdbinit = None ):
 
     for d in plug_dirs:
         load_themes(d)
+
+
+    for name,mod in enabled_modules.items():
+        if( hasattr(mod,"start") ):
+            print(f"Calling second stage start of {name}")
+            mod.start()
 
 def enabled( mod ):
     if( mod in enabled_modules ):
