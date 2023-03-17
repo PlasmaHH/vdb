@@ -3904,6 +3904,7 @@ if __name__ == "__main__":
 # TODO/Ideas
 # Go through the code, check for push/pop and stackpointer modifications, try to estimate stack usagee
 # Theoretically we should be able to start at the entry point and build a callgraph
+# Special marker chars for breakpoints and similar
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

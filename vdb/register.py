@@ -1258,7 +1258,7 @@ We recommend having an alias reg = registers in your .gdbinit
 """
 
     def __init__ (self):
-        super (cmd_registers, self).__init__ ("registers", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        super (cmd_registers, self).__init__ ("registers", gdb.COMMAND_DATA)
 
     def update( self ):
 #        print("Updating registers...",file=sys.stderr)
@@ -1284,6 +1284,16 @@ We recommend having an alias reg = registers in your .gdbinit
     def usage( self ):
         super().usage()
         Registers().print("?")
+
+    def complete( self, text, word ):
+        if( word is None and len(text) == 0 ):
+            return []
+        global registers
+        allregs = []
+        vdb.util.bark() # print("BARK")
+        vdb.util.bark() # print("BARK")
+        print("allregs = '%s'" % (allregs,) )
+        return self.matches(word,allregs)
 
     def do_invoke (self, argv, legend = True ):
 #        print("do_invoke()")
