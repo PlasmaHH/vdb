@@ -846,6 +846,7 @@ def memoize( reset_events = [] ):
                 re.connect( self.reset )
 
         def reset( self, xxx = None ):
+#            print(f"reset({self},{xxx}")
 #            bark() # print("BARK")
             self.cache = {}
 

@@ -41,6 +41,7 @@ def register_hook( ev, f ):
     hl.append(f)
 
 def on_hook( ev, darg ):
+    print(f"on_hook({ev},{darg})")
     def decorator( func ):
         def wrapper(*arg):
 #            print("type(arg) = '%s'" % type(arg) )
@@ -58,6 +59,7 @@ def on_hook( ev, darg ):
     return decorator
 
 def exec_hook( ev ):
+    print(f"exec_hook({ev})")
     hl = hooks.get(ev,[])
     for h in hl:
         h(ev)

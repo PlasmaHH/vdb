@@ -1175,9 +1175,14 @@ class Registers():
                 if( filter.search(reg) is None ):
                     continue
             raddr,rbit,rtype = rpos
+#            print(f"{reg}@{raddr:#0x},{rbit},{rtype}")
             val = vdb.memory.read(raddr,rbit//8)
             if( val is None ): # unable to read or otherwise not accessible
                 continue
+#            print("type(val) = '%s'" % (type(val),) )
+#            print("val = '%s'" % (val,) )
+#            print("type(rtype) = '%s'" % (type(rtype),) )
+#            print("rtype = '%s'" % (rtype,) )
             val = gdb.Value(val,rtype)
             itlist.add(reg,val)
         #ret=self._flags( it, mmapped_descriptions, True, True, True )
