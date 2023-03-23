@@ -672,7 +672,8 @@ class instruction_base( abc.ABC ):
     abstract base class for instructions
     """
 
-    bytere = re.compile("^[0-9a-fA-F][0-9a-fA-F]$")
+    bytere  = re.compile("^[0-9a-fA-F][0-9a-fA-F]$")
+    bytere2 = re.compile("^[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]$")
     cmpre  = re.compile("^\$(0x[0-9a-fA-F]*),.*")
 
     def __init__( self ):
@@ -1019,7 +1020,7 @@ class arm_instruction( instruction_base ):
         self.address = vdb.util.xint(addr)
 
         ibytes = []
-        while( self.bytere.match(tokens[0]) ):
+        while( self.bytere2.match(tokens[0]) ):
             ibytes.append(tokens[0])
             del tokens[0]
         self.bytes = ibytes
@@ -1039,6 +1040,8 @@ class arm_instruction( instruction_base ):
         tokens = tokens.split(";")
         if( len(tokens) == 1 ): ## aarch64 uses // instead of ;
             tokens = tokens[0].split("//")
+        if( len(tokens) == 1 ): ## sometimes there is an @
+            tokens = tokens[0].split("@")
         if( len(tokens) > 1 ):
             self.reference = "".join(tokens[1:])
             self.reference = [ ( self.reference, len(self.reference) ) ]
@@ -1361,6 +1364,7 @@ ascii mockup:
             self.add_target(ins)
             if( ins.marked ):
                 self.marker = int(ins.address)
+#                print(f"{self.marker=:#0x}")
 
         for ins in self.instructions:
 #            print("INS_----------------------------------")
@@ -2095,7 +2099,7 @@ arm_prefixes = set([ ])
 arm_base_pointer = "r11" # can be different
 aarch64_base_pointer = "sp"
 
-pc_list = [ "rip", "eip", "ip", "pc" ]
+pc_list = [ "pc", "rip", "eip", "ip" ]
 last_working_pc = ""
 
 current_arch = None
@@ -2168,20 +2172,28 @@ class fake_frame:
         return []
 
 def fix_marker( ls, alt = None, frame = None, do_flow = True ):
-#    mark = vdb.util.gint("$rip")
+#    print(f"{ls},{alt},frame,{do_flow}")
+
     try:
         mark = vdb.util.gint(f"${last_working_pc}")
+#        print(f"{last_working_pc=} = {mark=:#0x}")
     except:
         try:
             mark = vdb.util.gint(alt)
+#            print(f"{alt=:#0x}")
         except:
             mark = None
+#    if( mark is not None ):
+#        print(f"{mark=:#0x}")
+#    if( ls.marker is not None ):
+#            print(f"{ls.marker=:#0x}")
 
     # marker hasn't changed, no need to update anything
     if( ls.marker == mark ):
         return ls
 
     if( mark is not None ):
+#        print(f"{mark=:#0x} => {ls.marker=:#0x}")
         ls.marker = int(mark)
     for i in ls.instructions:
         i.xmarked = False
@@ -3212,10 +3224,16 @@ def register_flow( lng, frame : "gdb frame" ):
                 target = True
 
         # As per convention, rip on x86 as an argument is the next instruction
-        if( ins.next is not None ):
-            possible_registers.set( "pc", ins.next.address, origin="ins.next" )
-        elif( len(ins.bytes) > 0 ):
-            possible_registers.set( "pc", ins.address + len(ins.bytes),origin="len(ins.bytes)" )
+        if( current_arch == "arm" ):
+            if( ins.next is not None ):
+                possible_registers.set( "pc", ins.next.address+2, origin="ins.next" )
+            elif( len(ins.bytes) > 0 ):
+                possible_registers.set( "pc", ins.address + len(ins.bytes),origin="len(ins.bytes)" )
+        else:
+            if( ins.next is not None ):
+                possible_registers.set( "pc", ins.next.address, origin="ins.next" )
+            elif( len(ins.bytes) > 0 ):
+                possible_registers.set( "pc", ins.address + len(ins.bytes),origin="len(ins.bytes)" )
 
         if( ins.marked ):
             cf = current_flags(frame)
@@ -3779,7 +3797,11 @@ def disassemble( argv ):
                     argv=["fake"]
                     break
                 elif( argv0[0] == "r" ):
-                    gdb.execute("disassemble " + " ".join(argv))
+                    gdb.execute("disassemble/r " + " ".join(argv))
+                    return None
+                elif( argv0[0] == "F" ):
+                    invalidate_cache(None)
+                    print("Flushed disassembler parse cache")
                     return None
                 elif( argv0[0] == "s" ):
                     source = True
@@ -3863,6 +3885,7 @@ dis/<N>     - Have N instructions of context before and after the current marker
 dis/+<N>    - Have N Instructions of context after the marker
 dis/-<N>    - Have N Instructions of context before the marker
 dis/<N>,<M> - Have N Instructions of context before and M after the Marker
+dis/F       - Flushes some internal caches
 
 All further parameters are handled like for the built in disasemble command with the exception of addresses that are not
 part of a function, unlike the disassemble command those are right away disassembled vdb-asm-nonfunction-bytes (default
@@ -3904,6 +3927,7 @@ if __name__ == "__main__":
 # TODO/Ideas
 # Go through the code, check for push/pop and stackpointer modifications, try to estimate stack usagee
 # Theoretically we should be able to start at the entry point and build a callgraph
+# Special marker chars for breakpoints and similar
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
