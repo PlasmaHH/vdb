@@ -303,7 +303,7 @@ default_region_prefixes = [
         ( ".fini", memory_type.CODE ),
 ]
 
-@vdb.util.memoize( [gdb.events.stop, gdb.events.memory_changed] )
+@vdb.util.memoize( [gdb.events.stop, gdb.events.memory_changed, gdb.events.inferior_call] )
 def read( ptr, count = 1 ):
 #    vdb.util.bark(-2) # print("BARK")
 #    vdb.util.bark(-1) # print("BARK")
@@ -342,6 +342,12 @@ def write( ptr, buf ):
     except gdb.error:
         pass
 
+def memset( ptr, val, size ):
+    if( isinstance(ptr,str) ):
+        ptr = vdb.util.gint(ptr)
+    val=chr(val)
+    buf=size*val
+    gdb.selected_inferior().write_memory( addr, buf )
 
 
 
