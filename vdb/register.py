@@ -656,7 +656,7 @@ class Registers():
 #            gdb.execute( "set *(void**)($rsp) = $__vdb_save_value" )
 #            gdb.execute( "p *(void**)($rsp)" )
 
-    def ex_prefixes( self ):
+    def ex_prefixes( self, filter ):
         try:
             fs_base = self.read("fs_base")
             if( fs_base is None ):
@@ -675,7 +675,7 @@ class Registers():
         except:
             traceback.print_exc()
             pass
-        return self.prefixes()
+        return self.prefixes(filter)
 
     def format_special( self, name ):
         if( name == "pkru" ):
@@ -711,7 +711,7 @@ class Registers():
             return ret
         return None
 
-    def format_ints( self, regs, extended = False, wrapat = None ):
+    def format_ints( self, filter, regs, extended = False, wrapat = None ):
         if( wrapat is None ):
             wrapat = short_columns.value
         ret = ""
@@ -719,7 +719,12 @@ class Registers():
 
         rtbl = []
         rtline = []
+        if( filter is not None ):
+            filter = re.compile(filter)
         for regdesc,valt in regs.items():
+            if( filter is not None ):
+                if( filter.search(regdesc.name) is None ):
+                    continue
             special = self.format_special(regdesc.name)
             if( special is not None ):
                 cnt += 1
@@ -762,16 +767,21 @@ class Registers():
             ret += "\n"
         return ret
 
-    def ints( self, extended = False, wrapat = None ):
-        return self.format_ints( self.regs, extended, wrapat )
+    def ints( self, filter, extended = False, wrapat = None ):
+        return self.format_ints( filter, self.regs, extended, wrapat )
 
-    def other( self, extended = False, wrapat = None ):
-        return self.format_ints( self.others, extended, wrapat )
+    def other( self, filter, extended = False, wrapat = None ):
+        return self.format_ints( filter, self.others, extended, wrapat )
 
-    def prefixes( self ):
+    def prefixes( self, filter ):
         ret = ""
         cnt=0
+        if( filter is not None ):
+            filter = re.compile(filter)
         for regdesc,valt in self.segs.items():
+            if( filter is not None ):
+                if( filter.search(regdesc.name) is None ):
+                    continue
             val,t =valt
             cnt += 1
             ret += self.format_prefix(regdesc,val,t)
@@ -780,9 +790,14 @@ class Registers():
         return ret
 # mxcsr          0x1fa0              [ PE IM DM ZM OM UM PM ]
 
-    def floats( self ):
+    def floats( self, filter ):
         ret = ""
+        if( filter is not None ):
+            filter = re.compile(filter)
         for name in possible_fpu:
+            if( filter is not None ):
+                if( filter.search(name) is None ):
+                    continue
 #        for name,valt in self.fpus.items():
 #            valt = self.fpus.get(reg,None)
             if( len(name) == 0 ):
@@ -853,13 +868,18 @@ class Registers():
 
         return vector[0]
 
-    def vectors( self, extended = False ):
+    def vectors( self, filter, extended = False ):
         ret=""
         cnt=0
         xvec = []
 
+        if( filter is not None ):
+            filter = re.compile(filter)
         rtbl = []
         for regdesc,valt in self.vecs.items():
+            if( filter is not None ):
+                if( filter.search(regdesc.name) is None ):
+                    continue
             val,t =valt
             cnt += 1
 
@@ -878,6 +898,8 @@ class Registers():
                 if( cnt % 4 == 0 ):
                     ret += self.format_vector(xvec)
                     xvec = []
+        if( len(xvec) > 0 ):
+            ret += self.format_vector(xvec)
 
         if( extended ):
             ret += vdb.util.format_table(rtbl,padbefore=" ", padafter="")
@@ -979,7 +1001,7 @@ class Registers():
         return [(ret,retlen)]
 
     def bitextract( self, bit, sz, iflags ):
-        print(f"bitextract({bit},{sz},{iflags:#0x})")
+#        print(f"bitextract({bit},{sz},{iflags:#0x})")
         sbit=bit
 #        print("bit = '%s'" % (bit,) )
         mask = omask = 1 << bit
@@ -1078,12 +1100,12 @@ class Registers():
         ftbl.append(None)
         return ftbl
 
-    def flags( self, extended , short , mini ):
-        ret = self._flags( self.rflags, flag_info, extended, short, mini )
+    def flags( self, filter, extended , short , mini ):
+        ret = self._flags( filter, self.rflags, flag_info, extended, short, mini )
         ret = vdb.util.format_table( ret )
         return ret
 
-    def _flags( self, rflags, flag_inf, extended , short , mini ):
+    def _flags( self, filter, rflags, flag_inf, extended , short , mini ):
         flagtable = []
 #        return vdb.util.format_table( [
 #            ["a","b","c","d","e","f"],
@@ -1092,7 +1114,12 @@ class Registers():
 #            [("AB","#ff3"),("AB",2),("DEFLOL","#876",300,0),("abcd")],
 #            ],"_",".")
 
+        if( filter is not None ):
+            filter = re.compile(filter)
         for fr,v in rflags.items():
+            if( filter is not None ):
+                if( filter.search(fr.name) is None ):
+                    continue
             fv,ft = v
             abbr = False
             if( fr.name in abbrflags ):
@@ -1156,11 +1183,11 @@ class Registers():
         #ret=self._flags( it, mmapped_descriptions, True, True, True )
         ret=[]
         if( full ):
-            ret+=self._flags( itlist, mmapped_descriptions, True, False, False )
+            ret+=self._flags( None, itlist, mmapped_descriptions, True, False, False )
         if( short ):
-            ret+=self._flags( itlist, mmapped_descriptions, False, True, False )
+            ret+=self._flags( None, itlist, mmapped_descriptions, False, True, False )
         if( mini ):
-            ret+=self._flags( itlist, mmapped_descriptions, False, False, True )
+            ret+=self._flags( None, itlist, mmapped_descriptions, False, False, True )
 
         return vdb.util.format_table(ret)
 #        print("mmapped_descriptions = '%s'" % (mmapped_descriptions,) )
@@ -1168,31 +1195,31 @@ class Registers():
     def print( self, showspec, filter = None ):
         for s in showspec:
             if( s == "i" ):
-                print(self.ints(extended=False))
+                print(self.ints(filter,extended=False))
             elif( s == "I" ):
-                print(self.ints(extended=True,wrapat=1))
+                print(self.ints(filter,extended=True,wrapat=1))
             elif( s == "v" ):
-                print(self.vectors(extended=False))
+                print(self.vectors(filter,extended=False))
             elif( s == "V" ):
-                print(self.vectors(extended=True))
+                print(self.vectors(filter,extended=True))
             elif( s == "f" ):
-                print(self.floats())
+                print(self.floats(filter))
             elif( s == "F" ):
-                print(self.ex_floats())
+                print(self.ex_floats(filter))
             elif( s == "y" ):
-                print(self.flags(extended=False,short=False,mini=True))
+                print(self.flags(filter,extended=False,short=False,mini=True))
             elif( s == "x" ):
-                print(self.flags(extended=False,short=True,mini=False))
+                print(self.flags(filter,extended=False,short=True,mini=False))
             elif( s == "X" ):
-                print(self.flags(extended=True,short=False,mini=False))
+                print(self.flags(filter,extended=True,short=False,mini=False))
             elif( s == "o" ):
-                print(self.other(extended=False))
+                print(self.other(filter,extended=False))
             elif( s == "O" ):
-                print(self.other(extended=True,wrapat=1))
+                print(self.other(filter,extended=True,wrapat=1))
             elif( s == "p" ):
-                print(self.prefixes())
+                print(self.prefixes(filter))
             elif( s == "P" ):
-                print(self.ex_prefixes())
+                print(self.ex_prefixes(filter))
             elif( s == "m" ):
                 print(self.mmapped(filter,short=True))
             elif( s == "M" ):
@@ -1231,7 +1258,7 @@ We recommend having an alias reg = registers in your .gdbinit
 """
 
     def __init__ (self):
-        super (cmd_registers, self).__init__ ("registers", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        super (cmd_registers, self).__init__ ("registers", gdb.COMMAND_DATA)
 
     def update( self ):
 #        print("Updating registers...",file=sys.stderr)
@@ -1258,7 +1285,17 @@ We recommend having an alias reg = registers in your .gdbinit
         super().usage()
         Registers().print("?")
 
-    def do_invoke (self, argv ):
+    def complete( self, text, word ):
+        if( word is None and len(text) == 0 ):
+            return []
+        global registers
+        allregs = []
+        vdb.util.bark() # print("BARK")
+        vdb.util.bark() # print("BARK")
+        print("allregs = '%s'" % (allregs,) )
+        return self.matches(word,allregs)
+
+    def do_invoke (self, argv, legend = True ):
 #        print("do_invoke()")
         global registers
         try:
@@ -1267,8 +1304,8 @@ We recommend having an alias reg = registers in your .gdbinit
             if( registers is None or registers.thread == 0 ):
                 print("No running thread to read registers from")
                 return
-
-            vdb.memory.print_legend("Ama")
+            if( legend ):
+                vdb.memory.print_legend("Ama")
 
             if( len(argv) == 0 ):
                 argv.append(reg_default.value)
@@ -1291,8 +1328,8 @@ We recommend having an alias reg = registers in your .gdbinit
                         registers._dump()
                     else:
                         registers.print(argv[0][1:],filter)
-                else:
-                    self.usage()
+                else: # a register filter
+                    self.do_invoke( [ reg_default.value, argv[0] ], legend = False )
             else:
                 print("Invalid argument(s) to registers: '%s'" % argv )
                 self.usage()

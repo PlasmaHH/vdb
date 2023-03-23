@@ -17,6 +17,7 @@ import traceback
 auto_scan = vdb.config.parameter("vdb-svd-auto-scan",True,docstring="scan configured directories on start")
 scan_dirs = vdb.config.parameter("vdb-svd-directories",".,~/Downloads/",gdb_type=vdb.config.PARAM_ARRAY )
 scan_recur= vdb.config.parameter("vdb-svd-scan-recursive",True,docstring="Whether to scan directories recursively")
+scan_background = vdb.config.parameter("vdb-svd-scan-background",True,docstring="Do the scan in the background")
 
 
 try:
@@ -216,8 +217,10 @@ def parse_device(xml):
     ndev.parse_from_xml(xml)
     return ndev
 
-def svd_load_file(fname):
-    print(f"Loading {fname}")
+def svd_load_file(fname,at):
+    if( at is None ):
+        print(f"Loading {fname}")
+
     xml = parse(fname)
     root = xml.getroot()
     ndev=parse_device(root)
@@ -236,30 +239,44 @@ def svd_list():
         otbl.append(line)
     vdb.util.print_table(otbl)
 
-def do_svd_scan_one(dirname):
+def do_svd_scan_one(dirname,at):
+    pathlist = []
     dirname = os.path.expanduser(dirname)
     for root, dirs, files in os.walk(dirname,followlinks=True):
         for f in files:
             if( f.endswith(".svd") ):
                 fullpath = root + "/" + f
-                try:
-                    svd_load_file(fullpath)
-                except:
-                    traceback.print_exc()
-                    print(f"Failed to load {fullpath}")
+                pathlist.append(fullpath)
+    for i,p in enumerate(pathlist):
+        if( at is not None ):
+            at.set_progress(f"[svd {i}/{len(pathlist)}]")
+        try:
+            svd_load_file(p,at)
+        except:
+            traceback.print_exc()
+            print(f"Failed to load {p}")
 
 
-def do_svd_scan():
+def do_svd_scan(at):
+#    print("at = '%s'" % (at,) )
+    if( at is not None ):
+        at.set_progress("[svd #/#]")
     for d in scan_dirs.elements:
         try:
-            do_svd_scan_one(d)
+            do_svd_scan_one(d,at)
         except:
             traceback.print_exc()
             print(f"Failed to scan directory '{d}'")
 
+lazy_task = None
 def svd_scan():
     # later chose between background and foreground
-    do_svd_scan()
+    if( scan_background.value ):
+        global lazy_task
+        lazy_task = vdb.util.async_task( do_svd_scan )
+        lazy_task.start()
+    else:
+        do_svd_scan(None)
 
 def start():
     if( not auto_scan.value ):
@@ -276,9 +293,23 @@ svd scan      - Scan configured list of directories and (re)reads the found svd 
 """
 
     def __init__ (self):
-        super (cmd_svd, self).__init__ ("svd", gdb.COMMAND_DATA, gdb.COMPLETE_SYMBOL)
+        super (cmd_svd, self).__init__ ("svd", gdb.COMMAND_DATA)
+
+    def complete( self, text, word ):
+#        print("text = '%s'" % (text,) )
+#        print("word = '%s'" % (word,) )
+        if( word is None and len(text) == 0 ):
+            return []
+        subcommands = [ "load", "list", "scan" ]
+        if( text == word ):
+            return self.matches(word,subcommands)
+        elif( text.startswith("load ") ):
+#            print("devices.keys() = '%s'" % (devices.keys(),) )
+            return self.matches(word,devices.keys())
+        return []
 
     def do_invoke (self, argv ):
+        self.dont_repeat()
 
         if len(argv) < 1:
             raise gdb.GdbError('svd takes arguments.')
