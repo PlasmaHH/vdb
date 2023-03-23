@@ -24,6 +24,7 @@ scan_filter = vdb.config.parameter("vdb-svd-scan-filter","",docstring="Regexp to
 
 verbose = False
 try:
+#    test_xml_etree()
     import defusedxml.ElementTree as ET
 #    from defusedxml.ElementTree import parse
 except:
@@ -341,10 +342,9 @@ def svd_load_file(fname,at):
     if( len(data) < 16 ):
         print("File too small, does it contain anything?")
         return None
-#    xml = ET.parse(fname)
-    xml = ET.ElementTree(ET.fromstring(data))
 
-    root = xml.getroot()
+    xml = ET.fromstring(data)
+    root = xml
     ndev=parse_device(root)
     if( ndev.name is None ):
         print(" contains no named CPU, discarding")
