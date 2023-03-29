@@ -305,6 +305,9 @@ default_region_prefixes = [
 
 @vdb.util.memoize( [gdb.events.stop, gdb.events.memory_changed, gdb.events.inferior_call] )
 def read( ptr, count = 1 ):
+    return read_uncached(ptr,count)
+
+def read_uncached( ptr, count = 1 ):
 #    vdb.util.bark(-2) # print("BARK")
 #    vdb.util.bark(-1) # print("BARK")
 #    print("type(ptr) = '%s'" % (type(ptr),) )
