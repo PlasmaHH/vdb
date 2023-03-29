@@ -260,6 +260,7 @@ register_sizes = {
 # same format as flag_info basically
 mmapped_descriptions = {}
 mmapped_positions    = {}
+mmapped_blacklist = set()
 
 possible_prefixes = [
 		"cs", "ds", "es", "fs", "gs", "ss"
@@ -381,6 +382,10 @@ class Registers():
             else:
                 self.others[reg] = ( v, v.type )
 
+    def set( self, arg0, arg1 ):
+        print("arg0 = '%s'" % (arg0,) )
+        print("arg1 = '%s'" % (arg1,) )
+        pass
 
 
     def _dump( self ):
@@ -642,12 +647,12 @@ class Registers():
         return self.floats()
 
     def arch_prctl( self, code ):
-        ret = vdb.memory.read("$sp",8)
+        ret = vdb.memory.read_uncached("$sp",8)
 
         if( ret is not None ):
             try:
                 gdb.execute( f"call (int)arch_prctl({code},$sp)", False, True )
-                ap_ret = vdb.memory.read("$sp",8)
+                ap_ret = vdb.memory.read_uncached("$sp",8)
                 return ap_ret
             except:
                 pass
@@ -1101,11 +1106,11 @@ class Registers():
         return ftbl
 
     def flags( self, filter, extended , short , mini ):
-        ret = self._flags( filter, self.rflags, flag_info, extended, short, mini )
+        ret = self._flags( filter, self.rflags, flag_info, extended, short, mini, None )
         ret = vdb.util.format_table( ret )
         return ret
 
-    def _flags( self, filter, rflags, flag_inf, extended , short , mini ):
+    def _flags( self, filter, rflags, flag_inf, extended , short , mini, addr_map ):
         flagtable = []
 #        return vdb.util.format_table( [
 #            ["a","b","c","d","e","f"],
@@ -1138,6 +1143,10 @@ class Registers():
                 valstr = f"{ival:#018x}"
             line = [ (fr.name,color_names.value), valstr ]
             flagtable.append(line)
+            if( addr_map is not None ):
+                addr = addr_map.get(fr.name,None)
+                if( addr is not None ):
+                    flagtable.append( [ None, (addr,0,0) ] )
 
             if( mini ):
                 fvm = self.format_flags_mini( fr.name, rawfield, fv, desc )
@@ -1166,18 +1175,30 @@ class Registers():
             return self.item_list
 
     def mmapped( self, filter, full = False, short=False, mini=False ):
-        if( filter is not None ):
-            filter = re.compile(filter)
+        show_address = False
+        if( filter is not None and len(filter) > 0 ):
+            if( filter[0] == "&" ):
+                show_address = True
+                filter = filter[1:]
+            if( len(filter) > 0 ):
+                filter = re.compile(filter)
         itlist = Registers.mmap_reg()
+
+        addrmap = {}
 
         for reg,rpos in mmapped_positions.items():
             if( filter is not None ):
                 if( filter.search(reg) is None ):
                     continue
             raddr,rbit,rtype = rpos
+            global mmapped_blacklist
+            if( raddr in mmapped_blacklist ):
+                continue
 #            print(f"{reg}@{raddr:#0x},{rbit},{rtype}")
-            val = vdb.memory.read(raddr,rbit//8)
+            val = vdb.memory.read_uncached(raddr,rbit//8)
             if( val is None ): # unable to read or otherwise not accessible
+                print(f"{reg}@{raddr:#0x} blacklisted: memory not accessible")
+                mmapped_blacklist.add(raddr)
                 continue
 #            print("type(val) = '%s'" % (type(val),) )
 #            print("val = '%s'" % (val,) )
@@ -1185,14 +1206,18 @@ class Registers():
 #            print("rtype = '%s'" % (rtype,) )
             val = gdb.Value(val,rtype)
             itlist.add(reg,val)
+            p,_ = vdb.pointer.chain(raddr)
+            addrmap[reg] = p
+        if( not show_address ):
+            addrmap = None
         #ret=self._flags( it, mmapped_descriptions, True, True, True )
         ret=[]
         if( full ):
-            ret+=self._flags( None, itlist, mmapped_descriptions, True, False, False )
+            ret+=self._flags( None, itlist, mmapped_descriptions, True, False, False, addrmap )
         if( short ):
-            ret+=self._flags( None, itlist, mmapped_descriptions, False, True, False )
+            ret+=self._flags( None, itlist, mmapped_descriptions, False, True, False, addrmap )
         if( mini ):
-            ret+=self._flags( None, itlist, mmapped_descriptions, False, False, True )
+            ret+=self._flags( None, itlist, mmapped_descriptions, False, False, True, addrmap )
 
         return vdb.util.format_table(ret)
 #        print("mmapped_descriptions = '%s'" % (mmapped_descriptions,) )
@@ -1315,9 +1340,15 @@ We recommend having an alias reg = registers in your .gdbinit
             if( len(argv) == 0 ):
                 argv.append(reg_default.value)
             filter = None
+
+
             if( len(argv) == 2 ): # second is a regexp for filtering registers
                 filter = argv[1]
                 argv = argv[:1]
+
+            if( len(argv) == 3 and argv[1] == "=" ):
+                filter = "="+argv[2]
+                argv = [ argv[0] ]
 
             if( len(argv) == 1 ):
                 if( argv[0].startswith("/") ):
@@ -1333,6 +1364,8 @@ We recommend having an alias reg = registers in your .gdbinit
                         registers._dump()
                     else:
                         registers.print(argv[0][1:],filter)
+                elif( argv[0].find("=") != -1 or filter.find("=") != -1 ): # reg pc=55 // set a register
+                    registers.set(argv[0],filter)
                 else: # a register filter
                     self.do_invoke( [ reg_default.value, argv[0] ], legend = False )
             else:

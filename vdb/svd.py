@@ -19,7 +19,7 @@ auto_scan = vdb.config.parameter("vdb-svd-auto-scan",True,docstring="scan config
 scan_dirs = vdb.config.parameter("vdb-svd-directories","~/Downloads/",gdb_type=vdb.config.PARAM_ARRAY )
 scan_recur= vdb.config.parameter("vdb-svd-scan-recursive",True,docstring="Whether to scan directories recursively")
 scan_background = vdb.config.parameter("vdb-svd-scan-background",False,docstring="Do the scan in the background")
-scan_filter = vdb.config.parameter("vdb-svd-scan-filter","",docstring="Regexp to filter file names before loading")
+scan_filter = vdb.config.parameter("vdb-svd-scan-filter","33|585",docstring="Regexp to filter file names before loading")
 
 
 verbose = False
@@ -226,6 +226,7 @@ class svd_device:
 #                    rtype=vdb.arch.uint(bitsize)
 
                 vdb.register.mmapped_descriptions[name] = (bitsize, r.description, None )
+#                print(f"{name} => @{r.mmap_address}[{bitsize}] = {rtype}")
                 vdb.register.mmapped_positions[name] = ( r.mmap_address, bitsize, rtype )
         if( skip > 0 ):
             print(f"Skipped {skip} registers due to unkonwn mapping position.")
@@ -279,6 +280,7 @@ class svd_device:
             print(f"Duplicate register name {reg.name}")
         if( reg.bit_size is None and self.group_bit_size is not None ):
             reg.bit_size = self.group_bit_size
+            reg.type=vdb.arch.uint(reg.bit_size)
         self.registers.append(reg)
 
     def _parse_registers( self, node, base_address ):

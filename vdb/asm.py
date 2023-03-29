@@ -543,6 +543,7 @@ class x86_asm_arg(asm_arg_base):
 
     @vdb.overrides
     def parse( self, arg ):
+        vdb.util.bark() # print("BARK")
 #        print("arg = '%s'" % (arg,) )
         oarg = arg
         if( arg.find(":") != -1 ):
@@ -993,6 +994,7 @@ class arm_instruction( instruction_base ):
 
     @vdb.overrides
     def parse( self, line, m, oldins ):
+#        vdb.util.bark() # print("BARK")
 #        print("line = '%s'" % (line,) )
         self.line = line
         marker = m.group(1)
@@ -1103,9 +1105,11 @@ class arm_instruction( instruction_base ):
                         csz  = 1
                     tbllen = int(arm_instruction.last_cmp_immediate)
 #                    print("tbllen = '%s'" % (tbllen,) )
+#                    print("self.address = '%s'" % (self.address,) )
                     for i in range(0,tbllen):
-                        gexp = f"$pc +4+ *({ctyp}*)($pc+4+{csz}*{i})*2"
+                        gexp = f"{self.address} +4+ *({ctyp}*)({self.address}+4+{csz}*{i})*2"
 #                        print("gexp = '%s'" % (gexp,) )
+#                        gdb.execute(f"p *({ctyp}*)({self.address}+4+{csz}*{i})*2")
                         gexp = gdb.parse_and_eval( gexp )
 #                        print("gexp = '%x'" % (gexp,) )
                         self.targets.add( int(gexp) )
@@ -2117,7 +2121,14 @@ def configure_arch( arch = None ):
         archname = arch_aliases.get(archname,archname)
 #        print("archname = '%s'" % (archname,) )
     except:
-        print("Not configured for architecture %s, falling back to x86" % archname )
+        try:
+            archname = gdb.execute("show architecture",False,True)
+            print("archname = '%s'" % (archname,) )
+            archname = archname.split('"')
+            archname = archname[3]
+            print("archname = '%s'" % (archname,) )
+        except:
+            print("Not configured for architecture %s, falling back to x86" % archname )
     if( archname.startswith("armv") ):
         archname = "arm"
 
@@ -2127,24 +2138,25 @@ def configure_arch( arch = None ):
 
     try:
         module = sys.modules[__name__]
+        # First set them to the default architecture
         for gv in dir(module):
             if( gv.startswith("x86_") ):
                 varn = gv[4:]
+                def_val = getattr(module,gv,None)
+                if( def_val is not None ):
+                    setattr( module, varn, def_val )
+#                    print(f"{varn} => {def_val}")
+
+        # Now overwrite with the architecture name ( note that the vt_flow stuff does it in its own way so we don't
+        # interfere here with setting those
+        arch_prefix = archname + "_"
+#        print("arch_prefix = '%s'" % (arch_prefix,) )
+        for gv in dir(module):
+            if( gv.startswith(arch_prefix) ):
+                varn = gv[len(arch_prefix):]
                 xval = getattr(module,gv)
-                avarname = archname + "_" + varn
-                ovarname = origarch + "_" + varn
-#                print("varn = '%s'" % (varn,) )
-#                print("avarname = '%s'" % (avarname,) )
-                orval = getattr(module,ovarname,None)
-                if( orval is not None ):
-                    setattr( module, varn, orval )
-                else:
-                    avval = getattr(module,avarname,None)
-                    if( avval is not None ):
-                        setattr( module, varn, avval )
-                    else: # fall back to x86 default
-                        setattr( module, varn, xval )
-#            print("gv = '%s'" % (gv,) )
+                setattr( module, varn, xval )
+#                print(f"{varn} => {xval}")
     except:
         pass
 
