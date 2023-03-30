@@ -19,7 +19,7 @@ auto_scan = vdb.config.parameter("vdb-svd-auto-scan",True,docstring="scan config
 scan_dirs = vdb.config.parameter("vdb-svd-directories","~/Downloads/,~/git/",gdb_type=vdb.config.PARAM_ARRAY )
 scan_recur= vdb.config.parameter("vdb-svd-scan-recursive",True,docstring="Whether to scan directories recursively")
 scan_background = vdb.config.parameter("vdb-svd-scan-background",False,docstring="Do the scan in the background")
-scan_filter = vdb.config.parameter("vdb-svd-scan-filter","f0x1",docstring="Regexp to filter file names before loading")
+scan_filter = vdb.config.parameter("vdb-svd-scan-filter","",docstring="Regexp to filter file names before loading")
 
 
 verbose = False
@@ -59,6 +59,7 @@ class svd_device:
             self.name = None
             self.revision = None
             self.endian = None
+            self.size = None
 
         def get_name( self ):
             ret = ""
@@ -177,7 +178,10 @@ class svd_device:
             return self.name
 
         
-        def parse_xml( self, node, base_address ):
+        def parse_xml( self, node, base_address,def_bit_size ):
+            if( len(node.attrib) > 0 ):
+                print("node.attrib = '%s'" % (node.attrib,) )
+            self.bit_size = def_bit_size
             for n in node:
                 match(n.tag):
                     case "name":
@@ -200,6 +204,9 @@ class svd_device:
                     case _:
 #                        print("n.tag = '%s'" % (n.tag,) )
                         pass
+            if( self.bit_size is None ):
+                self._dump()
+                print("NO BIT_SIZE")
 #            print(self)
 
         def __str__( self ):
@@ -248,6 +255,8 @@ class svd_device:
         self.name = node.text
 
     def _parse_group( self, node ):
+        if( len(node.attrib) > 0 ):
+            print("node.attrib = '%s'" % (node.attrib,) )
         deferred_list=[]
         for tag in node:
             match(tag.tag):
@@ -278,6 +287,8 @@ class svd_device:
 
 
     def _parse_cpu( self, node ):
+        if( len(node.attrib) > 0 ):
+            print("node.attrib = '%s'" % (node.attrib,) )
         dp_name=None
         for tag in node:
             match(tag.tag):
@@ -301,8 +312,10 @@ class svd_device:
 #            print("Display name cpu only {dp_name}")
 
     def _parse_cluster_register( self, node, base_address, peripheral_name, prefix ):
+        if( len(node.attrib) > 0 ):
+            print("node.attrib = '%s'" % (node.attrib,) )
         reg = svd_device.register()
-        reg.parse_xml(node,base_address)
+        reg.parse_xml(node,base_address,self.group_bit_size)
 #        print("reg.get_short_name() = '%s'" % (reg.get_short_name(),) )
         if( reg.name is not None ):
             reg.name = prefix + "." + reg.name
@@ -320,6 +333,8 @@ class svd_device:
 
 
     def _parse_cluster( self, node, base_base, peripheral_name ):
+        if( len(node.attrib) > 0 ):
+            print("node.attrib = '%s'" % (node.attrib,) )
         dim = None
         dim_increment = None
         dim_index = None
@@ -365,8 +380,10 @@ class svd_device:
 #        sys.exit(1)
 
     def _parse_register( self, node, base_address, peripheral_name ):
+        if( len(node.attrib) > 0 ):
+            print("node.attrib = '%s'" % (node.attrib,) )
         reg = svd_device.register()
-        reg.parse_xml(node,base_address)
+        reg.parse_xml(node,base_address,self.group_bit_size)
         if( reg.name in self.register_names ):
             print(f"Duplicate register name {reg.name}")
         if( reg.bit_size is None and self.group_bit_size is not None ):
@@ -376,6 +393,8 @@ class svd_device:
         self.registers.append(reg)
 
     def _parse_registers( self, node, base_address, peripheral_name ):
+        if( len(node.attrib) > 0 ):
+            print("node.attrib = '%s'" % (node.attrib,) )
         for tag in node:
             match(tag.tag):
                 case "register":
@@ -406,11 +425,13 @@ class svd_device:
                     base_address = vdb.util.rxint(tag.text)
                 case "name":
                     peripheral_name = tag.text
+                case "size":
+                    self.group_bit_size = tag.text
                 case "groupName":
                     # should that be part of the register?
                     pass
                 case _:
-                    if( tag.tag not in {"disableCondition","addressBlock","description","interrupt" } ):
+                    if( tag.tag not in {"disableCondition","version","addressBlock","description","interrupt","size","access" } ):
                         print(f"Never before seen peripheral tag <{tag.tag}>{tag.text}</{tag.tag}>")
 
 #        print("deferred_list = '%s'" % (deferred_list,) )
@@ -447,6 +468,9 @@ class svd_device:
                 case "peripherals":
                     deferred_list.append( (self._parse_peripherals,node) )
 #                    self._parse_peripherals(node)
+                case "size":
+                    if( self.group_bit_size is None ):
+                        self.group_bit_size = node.text
                 case "description":
                     self.description=node.text
                 case "access":
@@ -456,7 +480,7 @@ class svd_device:
                     if( node.text != "8" ):
                         print(f"Unsupported address unit bits {node.text}")
                 case _:
-                    if( node.tag not in { "version", "width", "size", "resetValue", "resetMask", "vendor", "series", "licenseText", "vendorID" } ):
+                    if( node.tag not in { "version", "width", "resetValue", "resetMask", "vendor", "series", "licenseText", "vendorID" } ):
                         print(f"Never before seen device tag <{node.tag}>{node.text}</{node.tag}>")
         # Sometimes we need default values defined at this level to fill into the others, so parse breadth first
         for f,p in deferred_list:
