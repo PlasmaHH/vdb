@@ -19,7 +19,7 @@ auto_scan = vdb.config.parameter("vdb-svd-auto-scan",True,docstring="scan config
 scan_dirs = vdb.config.parameter("vdb-svd-directories","~/Downloads/,~/git/",gdb_type=vdb.config.PARAM_ARRAY )
 scan_recur= vdb.config.parameter("vdb-svd-scan-recursive",True,docstring="Whether to scan directories recursively")
 scan_background = vdb.config.parameter("vdb-svd-scan-background",False,docstring="Do the scan in the background")
-scan_filter = vdb.config.parameter("vdb-svd-scan-filter","585",docstring="Regexp to filter file names before loading")
+scan_filter = vdb.config.parameter("vdb-svd-scan-filter","f0x1",docstring="Regexp to filter file names before loading")
 
 
 verbose = False
@@ -300,10 +300,26 @@ class svd_device:
 #        if( dp_name is not None and self.cpu.name is None ):
 #            print("Display name cpu only {dp_name}")
 
-    def _parse_cluster_register( self, node ):
-        pass
+    def _parse_cluster_register( self, node, base_address, peripheral_name, prefix ):
+        reg = svd_device.register()
+        reg.parse_xml(node,base_address)
+#        print("reg.get_short_name() = '%s'" % (reg.get_short_name(),) )
+        if( reg.name is not None ):
+            reg.name = prefix + "." + reg.name
+        if( reg.display_name is not None ):
+            reg.display_name = prefix + "." + reg.display_name
+#        print("reg.get_short_name() = '%s'" % (reg.get_short_name(),) )
+        if( reg.name in self.register_names ):
+            print(f"Duplicate register name {reg.name}")
+        if( reg.bit_size is None and self.group_bit_size is not None ):
+            reg.bit_size = self.group_bit_size
+            reg.type=vdb.arch.uint(reg.bit_size)
+        reg.peripheral_name = peripheral_name
+#        reg._dump()
+        self.registers.append(reg)
 
-    def _parse_cluster( self, node, peripheral_name ):
+
+    def _parse_cluster( self, node, base_base, peripheral_name ):
         dim = None
         dim_increment = None
         dim_index = None
@@ -331,8 +347,22 @@ class svd_device:
                 case _:
                     if( tag.tag not in { } ):
                         print(f"Never before seen cluster tag <{tag.tag}>{tag.text}</{tag.tag}>")
+#        vdb.util.bark() # print("BARK")
         for rnode in register_nodes:
-            self._parse_cluster_register(rnode)
+#            print("name = '%s'" % (name,) )
+            if( dim is not None ):
+                itme=range(0,int(dim))
+            if( dim_index is not None ):
+                itme=dim_index.split(",")
+            base_address = base_base
+            dim_increment = vdb.util.rxint(dim_increment)
+            for it in itme:
+                reg_name = name % it
+#                print("it = '%s'" % (it,) )
+#                print("reg_name = '%s'" % (reg_name,) )
+                self._parse_cluster_register(rnode,base_address, peripheral_name, reg_name)
+                base_address += dim_increment
+#        sys.exit(1)
 
     def _parse_register( self, node, base_address, peripheral_name ):
         reg = svd_device.register()
@@ -351,18 +381,19 @@ class svd_device:
                 case "register":
                     self._parse_register(tag,base_address,peripheral_name)
                 case "cluster":# TODO Wait, whats that? We need to support them for the stm32-svd tinygo files
-                    self._parse_cluster(tag,peripheral_name)
+                    self._parse_cluster(tag,base_address,peripheral_name)
                 case _:
                     if( tag.tag not in { } ):
                         print(f"Never before seen group tag <{tag.tag}>{tag.text}</{tag.tag}>")
+#                    pass
 
     def _parse_peripheral( self, node ):
         derived = node.attrib.get("derivedFrom",None)
         dnode = None
         if( derived is not None ):
-            print("derived = '%s'" % (derived,) )
+#            print("derived = '%s'" % (derived,) )
             dnode = self.peripherals.get(derived,None)
-            print("dnode = '%s'" % (dnode,) )
+#            print("dnode = '%s'" % (dnode,) )
         base_address = None
         deferred_list=[]
         peripheral_name = None
@@ -375,12 +406,20 @@ class svd_device:
                     base_address = vdb.util.rxint(tag.text)
                 case "name":
                     peripheral_name = tag.text
+                case "groupName":
+                    # should that be part of the register?
+                    pass
                 case _:
-                    if( tag.tag not in { } ):
+                    if( tag.tag not in {"disableCondition","addressBlock","description","interrupt" } ):
                         print(f"Never before seen peripheral tag <{tag.tag}>{tag.text}</{tag.tag}>")
 
+#        print("deferred_list = '%s'" % (deferred_list,) )
         if( len(deferred_list) == 0 and dnode is not None ):
-            self._parse_registers(dnode,base_address,peripheral_name)
+#            print(f"_parse_registers({dnode},{base_address},{peripheral_name})")
+            for nn in dnode:
+                if( nn.tag == "registers" ):
+#                    print("nn.tag = '%s'" % (nn.tag,) )
+                    self._parse_registers(nn,base_address,peripheral_name)
 
         for f,p in deferred_list:
             f(p,base_address,peripheral_name)
