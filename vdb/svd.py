@@ -16,7 +16,7 @@ import re
 
 
 auto_scan = vdb.config.parameter("vdb-svd-auto-scan",True,docstring="scan configured directories on start")
-scan_dirs = vdb.config.parameter("vdb-svd-directories","~/Downloads/,~/git/",gdb_type=vdb.config.PARAM_ARRAY )
+scan_dirs = vdb.config.parameter("vdb-svd-directories","~/svd/",gdb_type=vdb.config.PARAM_ARRAY )
 scan_recur= vdb.config.parameter("vdb-svd-scan-recursive",True,docstring="Whether to scan directories recursively")
 scan_background = vdb.config.parameter("vdb-svd-scan-background",False,docstring="Do the scan in the background")
 scan_filter = vdb.config.parameter("vdb-svd-scan-filter","",docstring="Regexp to filter file names before loading")
@@ -257,14 +257,16 @@ class svd_device:
     def _parse_group( self, node ):
         if( len(node.attrib) > 0 ):
             print("node.attrib = '%s'" % (node.attrib,) )
-        deferred_list=[]
+        deferred_list_r=[]
+        deferred_list_p=[]
         for tag in node:
             match(tag.tag):
+                # TODO check file formats, we are missing base address and peripheral name here. Whats our parent data?
                 case "registers":
-                    deferred_list.append( (self._parse_registers,tag,0) )
+                    deferred_list_r.append( (self._parse_registers,tag,0) )
 #                    self._parse_registers(tag,0)
                 case "peripherals":
-                    deferred_list.append( (self._parse_peripheral,tag) )
+                    deferred_list_p.append( (self._parse_peripheral,tag) )
 #                    self._parse_peripherals(tag)
                 case "size":
                     self.group_bit_size = int(tag.text)
@@ -272,8 +274,10 @@ class svd_device:
                     if( tag.tag not in { } ):
                         print(f"Never before seen group tag <{tag.tag}>{tag.text}</{tag.tag}>")
 
-        for f,p in deferred_list:
+        for f,p in deferred_list_p:
             f(p)
+        for f,p0,p1 in deferred_list_r:
+            f(p0,p1,None)
 #        self.group_bit_size = None
 
     def _parse_groups( self, node ):
@@ -673,4 +677,9 @@ svd/v <cmd>   - Add more information to the command
             traceback.print_exc()
 
 cmd_svd()
+
+
+# TODO:
+# Rewrite hierarchial data to pass along some context object with a dict or members that tells for the lower levels what
+# attributes are to be inherited. It shall not leak into siblings.
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
