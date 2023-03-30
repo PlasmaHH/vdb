@@ -458,8 +458,9 @@ def requires( check, msg ):
         raise Exception("Requirement not met: %s" % msg )
 
 class async_task:
-    def __init__( self, task ):
+    def __init__( self, task, *args ):
         self.task = task
+        self.args = args
         self.progress = None
         self.thread = None
 
@@ -476,7 +477,7 @@ class async_task:
         try:
             while( self.thread is None ):
                 time.sleep(0) # necessary so the start function below can exit
-            self.task(self)
+            self.task(self,*args)
         except:
             traceback.print_exc()
         finally:

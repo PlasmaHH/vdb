@@ -16,10 +16,10 @@ import re
 
 
 auto_scan = vdb.config.parameter("vdb-svd-auto-scan",True,docstring="scan configured directories on start")
-scan_dirs = vdb.config.parameter("vdb-svd-directories","~/Downloads/",gdb_type=vdb.config.PARAM_ARRAY )
+scan_dirs = vdb.config.parameter("vdb-svd-directories","~/Downloads/,~/git/",gdb_type=vdb.config.PARAM_ARRAY )
 scan_recur= vdb.config.parameter("vdb-svd-scan-recursive",True,docstring="Whether to scan directories recursively")
 scan_background = vdb.config.parameter("vdb-svd-scan-background",False,docstring="Do the scan in the background")
-scan_filter = vdb.config.parameter("vdb-svd-scan-filter","33|585",docstring="Regexp to filter file names before loading")
+scan_filter = vdb.config.parameter("vdb-svd-scan-filter","585",docstring="Regexp to filter file names before loading")
 
 
 verbose = False
@@ -58,6 +58,7 @@ class svd_device:
         def __init__( self ):
             self.name = None
             self.revision = None
+            self.endian = None
 
         def get_name( self ):
             ret = ""
@@ -83,12 +84,14 @@ class svd_device:
             self.reset_value = None # Later we might want to highlight changes
             self.access = None
             self.type = None
+            self.group = None
+            self.peripheral_name = None
 
         def _dump( self ):
             addr=self.mmap_address
             if( addr is None ):
                 addr = 0
-            print(f"{self.display_name} {self.name} @{addr:#0x}[{self.bit_size}]")
+            print(f"{self.peripheral_name} {self.display_name} {self.name} @{addr:#0x}[{self.bit_size}] => {self.get_key_name()}")
             for pos,t5 in self.description.items():
                 sz,name,desc,_,amap = t5
                 print(f"    {name}[{sz}]\t{desc} {amap=}")
@@ -159,6 +162,13 @@ class svd_device:
 #            print("self.name = '%s'" % (self.name,) )
 #            print("self.description = '%s'" % (self.description,) )
 
+        def get_key_name( self ):
+            sname = self.get_short_name()
+#            print("self.peripheral_name = '%s'" % (self.peripheral_name,) )
+            if( self.peripheral_name is not None ):
+                sname = self.peripheral_name + "." + sname
+            return sname
+
         def get_short_name( self ):
             if( self.display_name is None ):
                 return self.name
@@ -198,10 +208,13 @@ class svd_device:
 
     def __init__( self ):
         self.name = None
+        self.description = None
         self.registers = []
         self.register_names = set()
         self.cpu = svd_device.cpu_description()
         self.group_bit_size = None
+        self.origin = None # file name, set externally after parsing completed
+        self.peripherals = {}
 
     def load( self, unload = True ):
         print(f"Loading {len(self.registers)} register descriptions")
@@ -210,7 +223,7 @@ class svd_device:
             vdb.register.mmapped_positions = {}
         skip=0
         for r in self.registers:
-            name=r.get_short_name()
+            name=r.get_key_name()
             if( verbose ):
                 r._dump()
             if( r.mmap_address is None ):
@@ -235,23 +248,34 @@ class svd_device:
         self.name = node.text
 
     def _parse_group( self, node ):
+        deferred_list=[]
         for tag in node:
             match(tag.tag):
                 case "registers":
-                    self._parse_registers(tag,0)
+                    deferred_list.append( (self._parse_registers,tag,0) )
+#                    self._parse_registers(tag,0)
                 case "peripherals":
-                    self._parse_peripherals(tag)
+                    deferred_list.append( (self._parse_peripheral,tag) )
+#                    self._parse_peripherals(tag)
                 case "size":
                     self.group_bit_size = int(tag.text)
-#                case _:
-#                    print("tag.tag = '%s'" % (tag.tag,) )
-        self.group_bit_size = None
+                case _:
+                    if( tag.tag not in { } ):
+                        print(f"Never before seen group tag <{tag.tag}>{tag.text}</{tag.tag}>")
+
+        for f,p in deferred_list:
+            f(p)
+#        self.group_bit_size = None
 
     def _parse_groups( self, node ):
         for tag in node:
             match(tag.tag):
                 case "group":
                     self._parse_group(tag)
+                case _:
+                    if( tag.tag not in { } ):
+                        print(f"Never before seen groups tag <{tag.tag}>{tag.text}</{tag.tag}>")
+
 
     def _parse_cpu( self, node ):
         dp_name=None
@@ -265,15 +289,52 @@ class svd_device:
                     dp_name = tag.text
                 case "revision":
                     self.cpu.revision = tag.text
+                case "endian":
+                    self.endian = tag.text
                 case _:
-#                    print("tag.tag = '%s'" % (tag.tag,) )
-                    pass
+                    if( tag.tag not in { "fpuPresent","mpuPresent","nvicPrioBits","vendorSystickConfig","vtorPresent", "fpuDP", "sauNumRegions", "sauRegionsConfig", "dspPresent","icachePresent", "pmuPresent","dcachePresent", "pmuNumEventCnt", "itcmPresent","dtcmPresent" } ):
+                        print(f"Never before seen cpu tag <{tag.tag}>{tag.text}</{tag.tag}>")
+
         if( dp_name is not None and self.cpu.name is not None ):
             self.cpu_description.cpu_map[self.cpu.name] = dp_name
 #        if( dp_name is not None and self.cpu.name is None ):
 #            print("Display name cpu only {dp_name}")
 
-    def _parse_register( self, node, base_address ):
+    def _parse_cluster_register( self, node ):
+        pass
+
+    def _parse_cluster( self, node, peripheral_name ):
+        dim = None
+        dim_increment = None
+        dim_index = None
+        name = None
+        description = None
+        address_offset = None
+
+        register_nodes = []
+        for tag in node:
+            match(tag.tag):
+                case "dim":
+                    dim = tag.text
+                case "dimIncrement":
+                    dim_increment = tag.text
+                case "dimIndex":
+                    dim_index = tag.text
+                case "name":
+                    name = tag.text
+                case "description":
+                    description = tag.text
+                case "addressOffset":
+                    address_offset = vdb.util.rxint(tag.text)
+                case "register":
+                    register_nodes.append(tag)
+                case _:
+                    if( tag.tag not in { } ):
+                        print(f"Never before seen cluster tag <{tag.tag}>{tag.text}</{tag.tag}>")
+        for rnode in register_nodes:
+            self._parse_cluster_register(rnode)
+
+    def _parse_register( self, node, base_address, peripheral_name ):
         reg = svd_device.register()
         reg.parse_xml(node,base_address)
         if( reg.name in self.register_names ):
@@ -281,29 +342,49 @@ class svd_device:
         if( reg.bit_size is None and self.group_bit_size is not None ):
             reg.bit_size = self.group_bit_size
             reg.type=vdb.arch.uint(reg.bit_size)
+        reg.peripheral_name = peripheral_name
         self.registers.append(reg)
 
-    def _parse_registers( self, node, base_address ):
-        for r in node:
-            match(r.tag):
+    def _parse_registers( self, node, base_address, peripheral_name ):
+        for tag in node:
+            match(tag.tag):
                 case "register":
-                    self._parse_register(r,base_address)
+                    self._parse_register(tag,base_address,peripheral_name)
                 case "cluster":# TODO Wait, whats that? We need to support them for the stm32-svd tinygo files
-                    pass
+                    self._parse_cluster(tag,peripheral_name)
                 case _:
-                    print("r.tag = '%s'" % (r.tag,) )
+                    if( tag.tag not in { } ):
+                        print(f"Never before seen group tag <{tag.tag}>{tag.text}</{tag.tag}>")
 
     def _parse_peripheral( self, node ):
+        derived = node.attrib.get("derivedFrom",None)
+        dnode = None
+        if( derived is not None ):
+            print("derived = '%s'" % (derived,) )
+            dnode = self.peripherals.get(derived,None)
+            print("dnode = '%s'" % (dnode,) )
         base_address = None
-        for n in node:
-            match(n.tag):
+        deferred_list=[]
+        peripheral_name = None
+        for tag in node:
+            match(tag.tag):
                 case "registers":
-                    self._parse_registers(n,base_address)
+                    deferred_list.append( (self._parse_registers, tag) )
+#                    self._parse_registers(tag,base_address)
                 case "baseAddress":
-                    base_address = vdb.util.rxint(n.text)
+                    base_address = vdb.util.rxint(tag.text)
+                case "name":
+                    peripheral_name = tag.text
                 case _:
-#                    print("n.tag = '%s'" % (n.tag,) )
-                    pass
+                    if( tag.tag not in { } ):
+                        print(f"Never before seen peripheral tag <{tag.tag}>{tag.text}</{tag.tag}>")
+
+        if( len(deferred_list) == 0 and dnode is not None ):
+            self._parse_registers(dnode,base_address,peripheral_name)
+
+        for f,p in deferred_list:
+            f(p,base_address,peripheral_name)
+        self.peripherals[peripheral_name] = node
 
     def _parse_peripherals( self, node ):
         for p in node:
@@ -315,23 +396,41 @@ class svd_device:
                     pass
 
     def parse_from_xml( self, xml ):
+        deferred_list=[]
         for node in xml:
             match(node.tag):
                 case "name":
-                    self._parse_name(node)
+                    deferred_list.append( (self._parse_name,node) )
+#                    self._parse_name(node)
                 case "cpu":
-                    self._parse_cpu(node)
+                    deferred_list.append( (self._parse_cpu,node) )
+#                    self._parse_cpu(node)
                 case "peripherals":
-                    self._parse_peripherals(node)
-                case _:
-#                    print("node.tag = '%s'" % (node.tag,) )
+                    deferred_list.append( (self._parse_peripherals,node) )
+#                    self._parse_peripherals(node)
+                case "description":
+                    self.description=node.text
+                case "access":
+                    # TODO: save and give as default for lower layers
                     pass
+                case "addressUnitBits":
+                    if( node.text != "8" ):
+                        print(f"Unsupported address unit bits {node.text}")
+                case _:
+                    if( node.tag not in { "version", "width", "size", "resetValue", "resetMask", "vendor", "series", "licenseText", "vendorID" } ):
+                        print(f"Never before seen device tag <{node.tag}>{node.text}</{node.tag}>")
+        # Sometimes we need default values defined at this level to fill into the others, so parse breadth first
+        for f,p in deferred_list:
+            f(p)
 
 def parse_device(xml):
     ndev = svd_device()
     ndev.parse_from_xml(xml)
     if( ndev.name is None ):
-        ndev.name = ndev.cpu.name
+        if( ndev.description is not None ):
+            ndev.name = ndev.description
+        else:
+            ndev.name = ndev.cpu.name
     return ndev
 
 def svd_load_file(fname,at):
@@ -352,15 +451,31 @@ def svd_load_file(fname,at):
         print(" contains no named CPU, discarding")
     else:
         print(f"=> {ndev.name}")
+        ndev.origin = fname
         global devices
-        devices[ndev.name] = ndev
+        key_name = ndev.name
+        cnt = 0
+#        while( key_name in devices ):
+        while( ( odev := devices.get(key_name,None) ) is not None ):
+            # already there, check if it is from the same file, in that case we can just overwrite it
+            if( odev.origin == ndev.origin ):
+                break
+            cnt += 1
+            key_name = ndev.name + "." + str(cnt)
+        if( key_name != ndev.name ):
+            print(f"Duplicate CPU {ndev.name}, renaming to {key_name}")
+        devices[key_name] = ndev
 
 def svd_list( flt = None):
     otbl = []
-    otbl.append( ["Name","CPU","Registers"] )
+
+    header = ["Key","Name","CPU","Registers"]
+    if( verbose ):
+        header.append("Origin")
+    otbl.append( header )
     if( flt is not None ):
         flt_re = re.compile(flt)
-    for d in devices.values():
+    for k,d in sorted(devices.items()):
         if( flt is not None ):
             m = flt_re.search(d.name)
             if( m is None ):
@@ -368,20 +483,25 @@ def svd_list( flt = None):
                 if( m is None ):
                     continue
         line = []
+        line.append(k)
         line.append(d.name)
         line.append(d.cpu.get_name() )
         line.append(len(d.registers))
+        if( verbose ):
+            line.append(d.origin)
 
         otbl.append(line)
     vdb.util.print_table(otbl)
 
-def do_svd_scan_one(dirname,at):
+def do_svd_scan_one(dirname,at,filter_re):
     pathlist = []
     dirname = os.path.expanduser(dirname)
     for root, dirs, files in os.walk(dirname,followlinks=True):
         for f in files:
             if( f.endswith(".svd") ):
                 fullpath = root + "/" + f
+                if( filter_re is not None and filter_re.search(fullpath) is None ):
+                    continue
                 pathlist.append(fullpath)
     filter_re = None
     if( scan_filter.value is not None and len(scan_filter.value) > 0 ):
@@ -393,37 +513,42 @@ def do_svd_scan_one(dirname,at):
             at.set_progress(f"[svd {i}/{len(pathlist)}]")
         try:
             svd_load_file(p,at)
+        except KeyboardInterrupt:
+            return
         except:
             traceback.print_exc()
             print(f"Failed to load {p}")
 
-def do_svd_scan(at):
+def do_svd_scan(at,argv):
+    filter_re = None
+    if( len(argv) > 0 ):
+        filter_re = re.compile(argv[0])
 #    print("at = '%s'" % (at,) )
     if( at is not None ):
         at.set_progress("[svd #/#]")
     for d in scan_dirs.elements:
         try:
-            do_svd_scan_one(d,at)
+            do_svd_scan_one(d,at,filter_re)
         except:
             traceback.print_exc()
             print(f"Failed to scan directory '{d}'")
 
 lazy_task = None
-def svd_scan():
+def svd_scan(argv):
     # later chose between background and foreground
     if( scan_background.value ):
         global lazy_task
-        lazy_task = vdb.util.async_task( do_svd_scan )
+        lazy_task = vdb.util.async_task( do_svd_scan, argv )
         lazy_task.start()
     else:
-        do_svd_scan(None)
+        do_svd_scan(None,argv)
 
 # XXX mv to some "at first promp" logic
 def start():
     if( not auto_scan.value ):
         print("svd not auto scanning due to vdb-svd-auto-scan False")
         return
-    svd_scan()
+    svd_scan([])
 
 def get( ar, ix, alt ):
     try:
@@ -437,6 +562,7 @@ class cmd_svd(vdb.command.command):
 svd list      - Lists known CPU definitions
 svd load <ID> - Loads svd CPU definitions
 svd scan      - Scan configured list of directories and (re)reads the found svd definitions
+svd/v <cmd>   - Add more information to the command
 """
 
     def __init__ (self):
@@ -477,7 +603,7 @@ svd scan      - Scan configured list of directories and (re)reads the found svd 
                 case "list":
                     svd_list(get(argv,1,None))
                 case "scan":
-                    svd_scan()
+                    svd_scan(argv[1:])
                 case _:
                     self.usage()
         except Exception as e:

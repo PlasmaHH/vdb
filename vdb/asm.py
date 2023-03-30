@@ -22,10 +22,12 @@ import os
 import time
 import abc
 
+# TODO: have instruction "classes" and colour then accordingly, then define the clases in terms of these settings
 
 asm_colors = [
         ( "j.*", "#f0f" ),
         ( "b.*", "#f0f" ),
+        ( "cb.*", "#f0f" ),
         ( "mov.*", "#0ff" ),
         ( "cmp.*|test.*|cmov.*", "#f99" ),
         ( "call.*", "#6666ff" ),
@@ -42,6 +44,7 @@ asm_colors = [
 asm_colors_dot = [
         ( "j.*", "#f000f0" ),
         ( "b.*", "#f000f0" ),
+        ( "cb.*", "#f000f0" ),
         ( "mov.*", "#007f7f" ),
         ( "cmp.*|test.*", "#f09090" ),
         ( "call.*", "#6666ff" ),
@@ -1087,8 +1090,11 @@ class arm_instruction( instruction_base ):
             print("reargs = '%s'" % (reargs,) )
             self.add_extra(reargs)
 
+        
         if( self.mnemonic in arm_conditional_jump_mnemonics ):
-            self.targets.add( vdb.util.xint(oargs) )
+#            print("oargs = '%s'" % (oargs,) )
+#            print("self.args = '%s'" % (self.args,) )
+            self.targets.add( vdb.util.xint(self.args[-1]) )
             self.conditional_jump = True
         elif( self.mnemonic in arm_unconditional_jump_mnemonics ):
             self.targets.add( vdb.util.xint(oargs) )
@@ -2084,9 +2090,9 @@ x86_base_pointer = "rbp" # what for 32bit?
 
 call_preserved_registers = [ "rbx", "rsp", "rbp", "r12", "r13", "r14", "r15" ]
 
-arm_conditional_suffixes = [ "eq","ne","cs","hs","cc","lo","mi","pl","vs","vc","hi","ls","ge","lt","gt","le" ]
+arm_conditional_suffixes = [ "eq","ne","cs","hs","cc","lo","mi","pl","vs","vc","hi","ls","ge","lt","gt","le","z","nz" ]
 arm_encoding_suffixes = [ "n","w" ]
-arm_unconditional_jump_mnemonics = set([ "b" ] )
+arm_unconditional_jump_mnemonics = set([ "b", "cb" ] )
 arm_conditional_jump_mnemonics = set()
 for uj in arm_unconditional_jump_mnemonics:
     for csuf in arm_conditional_suffixes:
