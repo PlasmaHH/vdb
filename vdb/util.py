@@ -477,7 +477,7 @@ class async_task:
         try:
             while( self.thread is None ):
                 time.sleep(0) # necessary so the start function below can exit
-            self.task(self,*args)
+            self.task(self,*self.args)
         except:
             traceback.print_exc()
         finally:
