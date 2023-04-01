@@ -247,6 +247,35 @@ def fixup_type( t ):
     return fxre.sub(fixup_intparam,t)
 
 
+process = None
+
+try:
+    import psutil
+    import os
+    process = psutil.Process(os.getpid())
+except:
+    pass
+
+def memory_info( ):
+    if( process is None ):
+        return None
+    return process.memory_info()
+
+
+byte_factors = {
+        "TiB" : 1024*1024*1024*1024,
+        "GiB" : 1024*1024*1024,
+        "MiB" : 1024*1024,
+        "kiB" : 1024,
+        }
+
+def bytestr( b, cf = 1.1 ):
+    fb = b / cf
+    for suf,fac in byte_factors.items():
+        if( fb >= fac ):
+            return ( b / fac, suf )
+    return ( b, "B" )
+
 
 def guess_vptr_type( val ):
     """ Takes a pointer and tries to figure out if it points to an object that has a virtual table and then returns the

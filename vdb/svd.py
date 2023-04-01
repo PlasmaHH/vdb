@@ -13,6 +13,7 @@ import gdb.types
 import os
 import traceback
 import re
+import sys
 
 
 auto_scan = vdb.config.parameter("vdb-svd-auto-scan",True,docstring="scan configured directories on start")
@@ -30,6 +31,7 @@ try:
 except:
     import xml.etree.ElementTree as ET
 #    from xml.etree.ElementTree import parse
+
 
 def svd_load(idname):
     d = devices.get(idname,None)
@@ -74,6 +76,8 @@ class svd_device:
             return ret
 
     class register:
+        __slots__ = "name","display_name","mmap_address","bit_size","description","reset_value","access","peripheral_name"
+
 
         def __init__( self ):
             self.name = None
@@ -81,11 +85,11 @@ class svd_device:
             self.mmap_address = None
             self.bit_size = None
             self.description = {}
-            self.description_text = None
+#            self.description_text = None
             self.reset_value = None # Later we might want to highlight changes
             self.access = None
-            self.type = None
-            self.group = None
+#            self.type = None
+#            self.group = None
             self.peripheral_name = None
 
         def _dump( self ):
@@ -189,16 +193,19 @@ class svd_device:
                     case "displayName":
                         self.display_name = n.text
                     case "addressOffset":
-                        self.mmap_address = base_address + vdb.util.rxint(n.text)
+                        self.mmap_address = int(base_address + vdb.util.rxint(n.text))
                     case "resetValue":
                         self.reset_value = vdb.util.rxint(n.text)
                     case "size":
                         self.bit_size = vdb.util.rxint(n.text)
-                        self.type=vdb.arch.uint(self.bit_size)
+#                        print("sys.getsizeof(self.bit_size) = '%s'" % (sys.getsizeof(self.bit_size),) )
+#                        self.type=vdb.arch.uint(self.bit_size)
+#                        print("sys.getsizeof(self.bit_size) = '%s'" % (sys.getsizeof(self.bit_size),) )
                     case "access":
                         self.access = n.text
                     case "description":
-                        self.description_text = n.text
+                        pass # Save some memory
+#                        self.description_text = n.text
                     case "fields":
                         self._parse_fields(n)
                     case _:
@@ -222,6 +229,7 @@ class svd_device:
         self.group_bit_size = None
         self.origin = None # file name, set externally after parsing completed
         self.peripherals = {}
+        self.memory_estimation = None
 
     def load( self, unload = True ):
         print(f"Loading {len(self.registers)} register descriptions")
@@ -237,7 +245,8 @@ class svd_device:
                 skip += 1
             else:
                 bitsize = r.bit_size
-                rtype=r.type
+#                rtype=r.type
+                rtype=vdb.arch.uint(r.bit_size)
                 if( bitsize is None ):
                     print(f"{r.name} has no bit_size")
                 # TODO configureable? intresting at all?
@@ -330,7 +339,7 @@ class svd_device:
             print(f"Duplicate register name {reg.name}")
         if( reg.bit_size is None and self.group_bit_size is not None ):
             reg.bit_size = self.group_bit_size
-            reg.type=vdb.arch.uint(reg.bit_size)
+#            reg.type=vdb.arch.uint(reg.bit_size)
         reg.peripheral_name = peripheral_name
 #        reg._dump()
         self.registers.append(reg)
@@ -392,7 +401,7 @@ class svd_device:
             print(f"Duplicate register name {reg.name}")
         if( reg.bit_size is None and self.group_bit_size is not None ):
             reg.bit_size = self.group_bit_size
-            reg.type=vdb.arch.uint(reg.bit_size)
+#            reg.type=vdb.arch.uint(reg.bit_size)
         reg.peripheral_name = peripheral_name
         self.registers.append(reg)
 
@@ -489,10 +498,17 @@ class svd_device:
         # Sometimes we need default values defined at this level to fill into the others, so parse breadth first
         for f,p in deferred_list:
             f(p)
+        # Save some memory by removing the references to the xml tree
+        self.peripherals = None
 
 def parse_device(xml):
+    membefore = vdb.util.memory_info()
     ndev = svd_device()
     ndev.parse_from_xml(xml)
+    memafter = vdb.util.memory_info()
+    if( membefore is not None and memafter is not None ):
+        rssdif = memafter.rss - membefore.rss
+        ndev.memory_estimation = rssdif
     if( ndev.name is None ):
         if( ndev.description is not None ):
             ndev.name = ndev.description
@@ -539,6 +555,8 @@ def svd_list( flt = None):
     header = ["Key","Name","CPU","Registers"]
     if( verbose ):
         header.append("Origin")
+        header.append("Memory")
+
     otbl.append( header )
     if( flt is not None ):
         flt_re = re.compile(flt)
@@ -556,6 +574,8 @@ def svd_list( flt = None):
         line.append(len(d.registers))
         if( verbose ):
             line.append(d.origin)
+#            line.append(d.memory_estimation)
+            line.append("%.3f %s" % vdb.util.bytestr(d.memory_estimation))
 
         otbl.append(line)
     vdb.util.print_table(otbl)
@@ -566,7 +586,7 @@ def do_svd_scan_one(dirname,at,filter_re):
     for root, dirs, files in os.walk(dirname,followlinks=True):
         for f in files:
             if( f.endswith(".svd") ):
-                fullpath = root + "/" + f
+                fullpath = os.path.join(root,f)
                 if( filter_re is not None and filter_re.search(fullpath) is None ):
                     continue
                 pathlist.append(fullpath)
