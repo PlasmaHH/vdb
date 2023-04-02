@@ -44,10 +44,16 @@ def svd_load(idname):
 amap = {
         "read-write" : "RW",
         "write-only" : "W",
-        "read-only" : "R"
+        "read-only" : "R",
+        None : "",
+#        "RW" : "RW",
+#        "W" : "W",
+#        "R" : "R"
         }
 
 def access_map( am ):
+#    if( am not in amap ):
+#        print("am = '%s'" % (am,) )
     return amap.get(am,am)
 
 devices = {}
@@ -78,6 +84,16 @@ class svd_device:
     class register:
         __slots__ = "name","display_name","mmap_address","bit_size","description","reset_value","access","peripheral_name"
 
+        _identity_pool = {}
+
+        def _i_get( k ):
+            r = svd_device.register._identity_pool.get(k,None)
+            if( r is None ):
+                svd_device.register._identity_pool[k] = k
+                r = k
+#            print("id(r) = '%s'" % (id(r),) )
+#            print("sys.getrefcount(r) = '%s'" % (sys.getrefcount(r),) )
+            return r
 
         def __init__( self ):
             self.name = None
@@ -122,7 +138,10 @@ class svd_device:
                     case "bitWidth":
                         sz = vdb.util.rxint(n.text)
                     case "access":
-                        access=n.text
+                        access=access_map(n.text)
+#                        access=n.text
+#                        access=svd_device.register._i_get(n.text)
+#                        print("sys.getrefcount(access) = '%s'" % (sys.getrefcount(access),) )
                     case "enumeratedValues":
                         # TODO the register description already can handle something like this, parse it and check for
                         # compatibility and when to output what and when to output what
@@ -154,8 +173,8 @@ class svd_device:
                     case "readAction": # afaik we can ignore this for our needs
                         pass
                     case _:
-                        print("n.tag = '%s'" % (n.tag,) )
-                        print("n.text = '%s'" % (n.text,) )
+                        if( n.tag not in { "modifiedWriteValues", "lsb", "msb" } ):
+                            print(f"Never before seen register field tag <{n.tag}>{n.text}</{n.tag}>")
                         pass
             self.description[pos] = ( sz, name, desc, None, access_map(access) )
 
@@ -202,7 +221,7 @@ class svd_device:
 #                        self.type=vdb.arch.uint(self.bit_size)
 #                        print("sys.getsizeof(self.bit_size) = '%s'" % (sys.getsizeof(self.bit_size),) )
                     case "access":
-                        self.access = n.text
+                        self.access = access_map(n.text)
                     case "description":
                         pass # Save some memory
 #                        self.description_text = n.text
@@ -324,16 +343,16 @@ class svd_device:
 #        if( dp_name is not None and self.cpu.name is None ):
 #            print("Display name cpu only {dp_name}")
 
-    def _parse_cluster_register( self, node, base_address, peripheral_name, prefix ):
+    def _parse_cluster_register( self, node, base_address, peripheral_name, grp_prefix,prefix,suffix ):
         if( len(node.attrib) > 0 ):
             print("node.attrib = '%s'" % (node.attrib,) )
         reg = svd_device.register()
         reg.parse_xml(node,base_address,self.group_bit_size)
 #        print("reg.get_short_name() = '%s'" % (reg.get_short_name(),) )
         if( reg.name is not None ):
-            reg.name = prefix + "." + reg.name
+            reg.name = grp_prefix + "." + prefix + reg.name + suffix
         if( reg.display_name is not None ):
-            reg.display_name = prefix + "." + reg.display_name
+            reg.display_name = grp_prefix + "." + reg.display_name
 #        print("reg.get_short_name() = '%s'" % (reg.get_short_name(),) )
         if( reg.name in self.register_names ):
             print(f"Duplicate register name {reg.name}")
@@ -345,7 +364,7 @@ class svd_device:
         self.registers.append(reg)
 
 
-    def _parse_cluster( self, node, base_base, peripheral_name ):
+    def _parse_cluster( self, node, base_base, peripheral_name,prefix,suffix ):
         if( len(node.attrib) > 0 ):
             print("node.attrib = '%s'" % (node.attrib,) )
         dim = None
@@ -373,30 +392,37 @@ class svd_device:
                 case "register":
                     register_nodes.append(tag)
                 case _:
-                    if( tag.tag not in { } ):
+                    # TODO alternateCluster to get the description from
+                    if( tag.tag not in { "alternateCluster", "headerStructName"} ):
                         print(f"Never before seen cluster tag <{tag.tag}>{tag.text}</{tag.tag}>")
 #        vdb.util.bark() # print("BARK")
         for rnode in register_nodes:
+            itme = None
 #            print("name = '%s'" % (name,) )
             if( dim is not None ):
                 itme=range(0,int(dim))
             if( dim_index is not None ):
                 itme=dim_index.split(",")
             base_address = base_base
-            dim_increment = vdb.util.rxint(dim_increment)
-            for it in itme:
-                reg_name = name % it
+            if( dim_increment is not None ):
+                dim_increment = vdb.util.rxint(dim_increment)
+            if( itme is None ):
+                self._parse_cluster_register(rnode,base_address, peripheral_name, name,prefix,suffix)
+            else:
+                for it in itme:
+                    reg_name = name % it
 #                print("it = '%s'" % (it,) )
 #                print("reg_name = '%s'" % (reg_name,) )
-                self._parse_cluster_register(rnode,base_address, peripheral_name, reg_name)
-                base_address += dim_increment
+                    self._parse_cluster_register(rnode,base_address, peripheral_name, reg_name,prefix,suffix)
+                    base_address += dim_increment
 #        sys.exit(1)
 
-    def _parse_register( self, node, base_address, peripheral_name ):
+    def _parse_register( self, node, base_address, peripheral_name,prefix,suffix ):
         if( len(node.attrib) > 0 ):
             print("node.attrib = '%s'" % (node.attrib,) )
         reg = svd_device.register()
         reg.parse_xml(node,base_address,self.group_bit_size)
+        reg.name = prefix + reg.name + suffix
         if( reg.name in self.register_names ):
             print(f"Duplicate register name {reg.name}")
         if( reg.bit_size is None and self.group_bit_size is not None ):
@@ -405,15 +431,15 @@ class svd_device:
         reg.peripheral_name = peripheral_name
         self.registers.append(reg)
 
-    def _parse_registers( self, node, base_address, peripheral_name ):
+    def _parse_registers( self, node, base_address, peripheral_name,prefix,suffix ):
         if( len(node.attrib) > 0 ):
             print("node.attrib = '%s'" % (node.attrib,) )
         for tag in node:
             match(tag.tag):
                 case "register":
-                    self._parse_register(tag,base_address,peripheral_name)
+                    self._parse_register(tag,base_address,peripheral_name,prefix,suffix)
                 case "cluster":# TODO Wait, whats that? We need to support them for the stm32-svd tinygo files
-                    self._parse_cluster(tag,base_address,peripheral_name)
+                    self._parse_cluster(tag,base_address,peripheral_name,prefix,suffix)
                 case _:
                     if( tag.tag not in { } ):
                         print(f"Never before seen group tag <{tag.tag}>{tag.text}</{tag.tag}>")
@@ -429,6 +455,12 @@ class svd_device:
         base_address = None
         deferred_list=[]
         peripheral_name = None
+        prefix=""
+        suffix=""
+        dim = 1
+        dim_increment = 0
+        dim_index = None
+
         for tag in node:
             match(tag.tag):
                 case "registers":
@@ -440,6 +472,16 @@ class svd_device:
                     peripheral_name = tag.text
                 case "size":
                     self.group_bit_size = tag.text
+                case "prependToName":
+                    prefix = tag.text
+                case "appendToName":
+                    suffix = tag.text
+                case "dimIndex":
+                    dim_index = tag.text
+                case "dim":
+                    dim = tag.text
+                case "dimIncrement":
+                    dim_increment = tag.text
                 case "groupName":
                     # should that be part of the register?
                     pass
@@ -448,15 +490,24 @@ class svd_device:
                         print(f"Never before seen peripheral tag <{tag.tag}>{tag.text}</{tag.tag}>")
 
 #        print("deferred_list = '%s'" % (deferred_list,) )
-        if( len(deferred_list) == 0 and dnode is not None ):
-#            print(f"_parse_registers({dnode},{base_address},{peripheral_name})")
-            for nn in dnode:
-                if( nn.tag == "registers" ):
+        if( dim is not None ):
+            itme=range(0,int(dim))
+        if( dim_index is not None ):
+            itme=dim_index.split(",")
+        for d in itme:
+            full_peripheral_name = peripheral_name
+            try:
+                full_peripheral_name = peripheral_name % dim
+            except:
+                pass
+            if( len(deferred_list) == 0 and dnode is not None ):
+                for nn in dnode:
+                    if( nn.tag == "registers" ):
 #                    print("nn.tag = '%s'" % (nn.tag,) )
-                    self._parse_registers(nn,base_address,peripheral_name)
+                        self._parse_registers(nn,base_address,full_peripheral_name,prefix,suffix)
 
-        for f,p in deferred_list:
-            f(p,base_address,peripheral_name)
+            for f,p in deferred_list:
+                f(p,base_address,full_peripheral_name,prefix,suffix)
         self.peripherals[peripheral_name] = node
 
     def _parse_peripherals( self, node ):
