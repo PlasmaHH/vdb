@@ -22,6 +22,7 @@ int_int = vdb.config.parameter("vdb-register-int-as-int",True)
 short_columns = vdb.config.parameter("vdb-register-short-columns",6)
 text_len = vdb.config.parameter("vdb-register-text-len",80)
 tailspec = vdb.config.parameter("vdb-register-tailspec", "axdn" )
+mmapfake = vdb.config.parameter("vdb-register-mmaped-unavilable-zero",True, docstring="When the register memory is unavailable, use 0 for the value instead of blacklisting it")
 
 
 flag_descriptions = {
@@ -1036,6 +1037,8 @@ class Registers():
         con_mask = 0
 #        for bit in range(0,count):
         while bit <= count:
+#            vdb.util.bark() # print("BARK")
+#            print("bit = '%s'" % (bit,) )
             mask = 1 << bit
             ex = iflags >> bit
             ex &= 1
@@ -1047,12 +1050,19 @@ class Registers():
             tbit = f"{bit:02x}"
             desc = descriptions.get(bit,None)
             if( desc is not None ):
+#                vdb.util.bark() # print("BARK")
+#                print("bit = '%s'" % (bit,) )
+#                print("desc = '%s'" % (desc,) )
+#                print("con_start = '%s'" % (con_start,) )
+#                print("con_end = '%s'" % (con_end,) )
+#                print("con_mask = '%s'" % (con_mask,) )
                 if( con_mask != 0 ):
                     if( con_start == con_end ):
                         con_tbit = f"{con_start:02x}"
                     else:
                         con_tbit = f"{con_start:02x}-{con_end:02x}"
                     scon_mask = f"0x{con_mask:04x}"
+#                    vdb.util.bark() # print("BARK")
                     ftbl.append( [ con_tbit, scon_mask, short, text, "", meaning ] )
                     con_mask = 0
 
@@ -1088,10 +1098,16 @@ class Registers():
                     wraprest = wraps[1:]
                 if( ex > 9 ):
                     ex=f"{ex:#0{sz//4}x}"
+#                vdb.util.bark() # print("BARK")
                 ftbl.append( [ tbit, mask, short, text, ex, meaning ] )
                 for w in wraprest:
                     ftbl.append( [ None, None, None, w, None, None ] )
+                bit += sz
             else:
+#                vdb.util.bark() # print("BARK")
+#                print("con_mask = '%s'" % (con_mask,) )
+#                print("con_start = '%s'" % (con_start,) )
+#                print("con_end = '%s'" % (con_end,) )
                 if( con_mask == 0 ):
                     con_mask = mask
                     con_start = bit
@@ -1100,7 +1116,7 @@ class Registers():
                     con_end += 1
                     con_mask |= mask
 
-            bit += 1
+                bit += 1
 
         ftbl.append(None)
         return ftbl
@@ -1197,9 +1213,12 @@ class Registers():
 #            print(f"{reg}@{raddr:#0x},{rbit},{rtype}")
             val = vdb.memory.read_uncached(raddr,rbit//8)
             if( val is None ): # unable to read or otherwise not accessible
-                print(f"{reg}@{raddr:#0x} blacklisted: memory not accessible")
-                mmapped_blacklist.add(raddr)
-                continue
+                if( not mmapfake.value ):
+                    print(f"{reg}@{raddr:#0x} blacklisted: memory not accessible")
+                    mmapped_blacklist.add(raddr)
+                    continue
+                else:
+                    val = b"\0\0\0\0"
 #            print("type(val) = '%s'" % (type(val),) )
 #            print("val = '%s'" % (val,) )
 #            print("type(rtype) = '%s'" % (type(rtype),) )
