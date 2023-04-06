@@ -1070,6 +1070,8 @@ class Registers():
                 text = desc[2]
                 mp = desc[3]
                 sz = desc[0]
+                if( text is None ):
+                    text = ""
                 if( sz > 1 ):
                     ex,mask = self.bitextract( bit,sz,iflags)
 #                    print("bit = '%s'" % (bit,) )
@@ -1198,6 +1200,8 @@ class Registers():
                 filter = filter[1:]
             if( len(filter) > 0 ):
                 filter = re.compile(filter)
+            else:
+                filter = None
         itlist = Registers.mmap_reg()
 
         addrmap = {}
