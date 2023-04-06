@@ -804,7 +804,7 @@ class progress_indicator:
             text0 = text
             text1 = ""
         if( pos is not None ):
-            self.set(pos)
+            self.set(pos,now)
         else:
             pos = self.current_pos
 

@@ -21,7 +21,8 @@ auto_scan = vdb.config.parameter("vdb-svd-auto-scan",True,docstring="scan config
 scan_dirs = vdb.config.parameter("vdb-svd-directories","~/svd/",gdb_type=vdb.config.PARAM_ARRAY )
 scan_recur= vdb.config.parameter("vdb-svd-scan-recursive",True,docstring="Whether to scan directories recursively")
 scan_background = vdb.config.parameter("vdb-svd-scan-background",False,docstring="Do the scan in the background")
-scan_filter = vdb.config.parameter("vdb-svd-scan-filter","STM32",docstring="Regexp to filter file names before loading")
+scan_filter = vdb.config.parameter("vdb-svd-scan-filter","",docstring="Regexp to filter file names before loading")
+scan_silent = vdb.config.parameter("vdb-svd-scan-silent",True,docstring="Don't ouput every file being scanned")
 parse_delayed = vdb.config.parameter("vdb-svd-parse-delayed",False,docstring="When true, parse only fully when an svd load command is issued")
 
 
@@ -38,9 +39,14 @@ except:
 def svd_load(idname):
     d = devices.get(idname,None)
     if( d is None ):
-        print(f"Uncrecognized µC name '{idname}', list of known ones:")
-        svd_list()
-        return
+        d = dev_queue.get(idname,None)
+        if( d is None ):
+            print(f"Uncrecognized µC name '{idname}', list of known ones:")
+            svd_list()
+            return
+        svd_load_file(d,None)
+        d = devices.get(idname,None)
+        d.load()
     d.load()
 
 amap = {
@@ -842,13 +848,43 @@ def parse_device(xml):
     ndev.finish()
     return ndev
 
+
+dev_queue = {}
+
+def svd_queue_file(fname,at):
+#    if( at is None ):
+#        print(f"\r{fname}",flush=True,end="")
+
+    device_re = re.compile("<device")
+#    name_re = re.compile("<name>")
+    device_name_re = re.compile("name>(.*?)</name")
+    within_device = False
+    global dev_queue
+    with open(fname,"r") as f:
+        for line in f.readlines():
+            if( device_re.search(line) is not None ):
+#                print("line = '%s'" % (line,) )
+                within_device = True
+            if( within_device ):
+                m = device_name_re.search(line)
+                if( m is not None ):
+                    name = m.group(1)
+#                    print(f" => {name}",end="")
+#                    print(" "*16,flush=True,end="")
+                    dev_queue[name] = fname
+#                    print("m.group(1) = '%s'" % (m.group(1),) )
+#                    print("line = '%s'" % (line,) )
+                    break
+
+
 def svd_load_file(fname,at):
     if( at is None ):
-        print(f"Loading {fname}… ",end="")
+        if( not scan_silent.value ):
+            print(f"Loading {fname}… ",end="")
 
     with open(fname,"r") as f:
         data = f.read()
-        data = data.replace(" & "," &amp; ");
+        data = data.replace(" & "," &amp; ")
     if( len(data) < 16 ):
         print("File too small, does it contain anything?")
         return None
@@ -859,7 +895,8 @@ def svd_load_file(fname,at):
     if( ndev.name is None ):
         print(" contains no named CPU, discarding")
     else:
-        print(f"=> {ndev.name}")
+        if( not scan_silent.value ):
+            print(f"=> {ndev.name}")
         ndev.origin = fname
         global devices
         key_name = ndev.name
@@ -886,6 +923,22 @@ def svd_list( flt = None):
     otbl.append( header )
     if( flt is not None ):
         flt_re = re.compile(flt)
+
+    for k,f in sorted(dev_queue.items()):
+        if( flt is not None ):
+            m = flt_re.search(k)
+            if( m is None ):
+                continue
+        line = []
+        line.append(k)
+        line.append(k)
+        line.append(None)
+        line.append("?")
+        if( verbose ):
+            line.append(f)
+            line.append("?")
+        otbl.append(line)
+
     for k,d in sorted(devices.items()):
         if( flt is not None ):
             m = flt_re.search(d.name)
@@ -919,18 +972,36 @@ def do_svd_scan_one(dirname,at,filter_re):
     filter_re = None
     if( scan_filter.value is not None and len(scan_filter.value) > 0 ):
         filter_re = re.compile(scan_filter.value)
+    pi = None
+    if( parse_delayed.value and at is None ):
+        pi = vdb.util.progress_indicator(f"\rQueueing {len(pathlist)} SVD Files ",total=len(pathlist),use_eta=True,cps=20,avg_steps=200)
+    if( not parse_delayed.value and at is None and scan_silent.value ):
+        pi = vdb.util.progress_indicator(f"\rParsing {len(pathlist)} SVD Files ",total=len(pathlist),use_eta=True,cps=2,avg_steps=20)
+
     for i,p in enumerate(pathlist):
         if( filter_re is not None and filter_re.search(p) is None ):
             continue
         if( at is not None ):
             at.set_progress(f"[svd {i}/{len(pathlist)}]")
         try:
-            svd_load_file(p,at)
+            if( parse_delayed.value ):
+                if( pi is not None ):
+                    print(pi.get(pos=i),end="",flush=True)
+                svd_queue_file(p,at)
+            else:
+                if( pi is not None ):
+                    print(pi.get(pos=i),end="",flush=True)
+                svd_load_file(p,at)
         except KeyboardInterrupt:
             return
         except:
             traceback.print_exc()
             print(f"Failed to load {p}")
+    if( pi is not None ):
+        print(pi.get(pos=len(pathlist)),flush=True)
+
+#    if( parse_delayed.value and at is None ):
+#        print("Done")
 
 def do_svd_scan(at,argv):
     filter_re = None
