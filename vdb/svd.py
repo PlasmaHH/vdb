@@ -21,7 +21,7 @@ auto_scan = vdb.config.parameter("vdb-svd-auto-scan",True,docstring="scan config
 scan_dirs = vdb.config.parameter("vdb-svd-directories","~/svd/",gdb_type=vdb.config.PARAM_ARRAY )
 scan_recur= vdb.config.parameter("vdb-svd-scan-recursive",True,docstring="Whether to scan directories recursively")
 scan_background = vdb.config.parameter("vdb-svd-scan-background",False,docstring="Do the scan in the background")
-scan_filter = vdb.config.parameter("vdb-svd-scan-filter","",docstring="Regexp to filter file names before loading")
+scan_filter = vdb.config.parameter("vdb-svd-scan-filter","STM32",docstring="Regexp to filter file names before loading")
 parse_delayed = vdb.config.parameter("vdb-svd-parse-delayed",False,docstring="When true, parse only fully when an svd load command is issued")
 
 
@@ -149,10 +149,17 @@ class svd_device:
         def finish( self ):
             if( len(self.description) > 0 ):
                 raise RuntimeError("Non empty register descriptions, something went wrong on loading")
+            for s in self.__slots__:
+                attr = getattr(self,s)
+                if( attr is not None ):
+                    if( isinstance(attr,str) ):
+                        setattr( self, s, pool_get(attr) )
             for f in self.fields:
                 desc = None
                 if( f.description is not None ):
                     desc = f.description.replace("\n"," ")
+                    desc = pool_get(desc)
+                f.name = pool_get(f.name)
                 # see registery.py for the layout#
                 # TODO In case we have "enums" add them here too instead of the None
                 # TODO add to the register format there also something for the access specifier in order to support
