@@ -105,6 +105,7 @@ class svd_device:
             self.prefix = ""
             self.suffix = ""
             self.reset_value = None
+            self.group = None
 
         def clone( self ):
             return copy.copy(self)
@@ -233,6 +234,8 @@ class svd_device:
                         pass
                     case "readAction": # afaik we can ignore this for our needs
                         pass
+                    case "resetValue":
+                        pass
                     case _:
                         if( n.tag not in { "modifiedWriteValues" } ):
                             print(f"Never before seen register field tag <{n.tag}>{n.text}</{n.tag}>")
@@ -249,7 +252,9 @@ class svd_device:
                 items = ( name % i for i in range(0,dim) )
             else:
                 items = [ name ]
-
+            
+            if( pos is None ):
+                return
             for it in items:
 #                self.description[pos] = svd_device.register.field( sz, it, desc, None, access_map(access) )
                 f = svd_device.register.field( )
@@ -337,27 +342,35 @@ class svd_device:
         if( len(node.attrib) > 0 ):
             vdb.util.bark() # print("BARK")
             print("node.attrib = '%s'" % (node.attrib,) )
-        deferred_list_r=[]
-        deferred_list_p=[]
+        access = ctx.access
+        group = ctx.group
+        deferred_list=[]
         for tag in node:
             match(tag.tag):
                 # TODO check file formats, we are missing base address and peripheral name here. Whats our parent data?
                 case "registers":
-                    deferred_list_r.append( (self._parse_registers,tag,0) )
+                    deferred_list.append( (self._parse_registers,tag) )
 #                    self._parse_registers(tag,0)
                 case "peripherals":
-                    deferred_list_p.append( (self._parse_peripherals,ctx,tag) )
+                    deferred_list.append( (self._parse_peripherals,tag) )
 #                    self._parse_peripherals(tag)
                 case "size":
                     self.group_bit_size = int(tag.text)
+                case "access":
+                    access = access_map(tag.text)
+                case "name":
+                    group = tag.text
+                case "groups":
+                    self._parse_groups(ctx,tag)
                 case _:
-                    if( tag.tag not in { } ):
+                    if( tag.tag not in {"type","description","type","IsCPUModeItem" } ):
                         print(f"Never before seen group tag <{tag.tag}>{tag.text}</{tag.tag}>")
 
-        for f,p in deferred_list_p:
-            f(p)
-        for f,p0,p1 in deferred_list_r:
-            f(p0,p1,None)
+        ctx = ctx.clone()
+        ctx.access = access
+        ctx.group = group
+        for f,p in deferred_list:
+            f(ctx,p)
 #        self.group_bit_size = None
 
     def _parse_groups( self,ctx, node ):
@@ -413,9 +426,8 @@ class svd_device:
         description = None
         address_offset = None
         base_address = ctx.base_address
-        peripheral_name = ctx.peripheral_name
-        prefix = ctx.prefix
-        suffix = ctx.suffix
+        bit_size = ctx.bit_size
+        access = ctx.access
 
         register_nodes = []
         for tag in node:
@@ -437,6 +449,10 @@ class svd_device:
                     address_offset = vdb.util.rxint(tag.text)
                 case "register":
                     register_nodes.append(tag)
+                case "size":
+                    bit_size = vdb.util.rxint(tag.text)
+                case "access":
+                    access = tag.text
                 case "cluster":
                     # I don't think this is as per spec but there are files doing it
                     self._parse_cluster( ctx, tag )
@@ -448,6 +464,10 @@ class svd_device:
 #                        vdb.util.bark(-1) # print("BARK")
 #                        vdb.util.bark() # print("BARK")
 #        vdb.util.bark() # print("BARK")
+        ctx = ctx.clone()
+        ctx.bit_size = bit_size
+        ctx.base_address = base_address
+        ctx.access = access
         for rnode in register_nodes:
             itme = None
 #            print("name = '%s'" % (name,) )
@@ -455,7 +475,7 @@ class svd_device:
                 itme=range(0,int(dim))
             if( dim_index is not None ):
                 itme=dim_index.split(",")
-            base_address = base_address
+            base_address = ctx.base_address
             if( dim_increment is not None ):
                 dim_increment = vdb.util.rxint(dim_increment)
             if( itme is None ):
@@ -487,6 +507,7 @@ class svd_device:
         description = None
         reset_value = ctx.reset_value
         altname = None
+        group = ctx.group
 
         dim = None
         dim_index = None
@@ -508,6 +529,8 @@ class svd_device:
                     reset_value = vdb.util.rxint(n.text)
                 case "size":
                     bit_size = vdb.util.rxint(n.text)
+                case "width":
+                    bit_size = vdb.util.rxint(n.text)
                 case "access":
                     access = access_map(n.text)
                 case "description":
@@ -522,10 +545,21 @@ class svd_device:
                     dim_index = n.text
                 case "alternateRegister":
                     altname = n.text
+                case "groupName":
+                    group = n.text
+                case "type":
+                    pass
+                case "dataType":
+                    # TODO this might be useful for the register descriptions stuff
+                    pass
+                case "field":
+                    # TODO some files are broken and have this here
+                    pass
                 case _:
                     # TODO write Constraint is very intresting for preventing crashes, but we would need extensive
                     # register support for that
-                    if( n.tag not in { "resetMask", "modifiedWriteValue", "modifiedWriteValues", "writeConstraint", "alternateGroup", "readAction" } ):
+                    if( n.tag not in { "resetMask", "modifiedWriteValue", "modifiedWriteValues", "writeConstraint", "alternateGroup", "readAction", "range", "enumeratedValues", "Index","AliasName","reset","Index","ID","Index1","Index2" } ):
+#                        print("name = '%s'" % (name,) )
                         print(f"Never before seen register tag <{n.tag}>{n.text}</{n.tag}>")
 #                        print("n.tag = '%s'" % (n.tag,) )
                     pass
@@ -535,6 +569,7 @@ class svd_device:
         ctx.access = access
         ctx.reset_value = reset_value
         ctx.base_address = base_address
+        ctx.group = group
         derived = node.attrib.get("derivedFrom",None)
 
         num_items = 0
@@ -545,13 +580,25 @@ class svd_device:
                 altitems = ( altname % i for i in dim_index )
             if( derived is not None ):
                 ditems = ( derived % i for i in dim_index )
+            if( display_name is not None ):
+                dpyitems = ( display_name % i for i in dim_index )
         elif( dim is not None ):
             num_items = dim
-            items = ( name % i for i in range(0,dim) )
+#            print("self.name = '%s'" % (self.name,) )
+#            print("name = '%s'" % (name,) )
+            try:
+                items = list( name % i for i in range(0,dim) )
+            except:
+                items = [ name ] * num_items
             if( altname is not None ):
-                altitems = ( altname % i for i in range(0,dim) )
+                try:
+                    altitems = list( altname % i for i in range(0,dim) )
+                except TypeError:
+                    altitems = [ altname ] * num_items
             if( derived is not None ):
                 ditems = ( derived % i for i in range(0,dim) )
+            if( display_name is not None ):
+                dpyitems = ( display_name % i for i in range(0,dim) )
         else:
             num_items = 1
             items = [ name ]
@@ -559,11 +606,16 @@ class svd_device:
                 altitems = [ altname ]
             if( derived is not None ):
                 ditems = [ derived ]
+            if( display_name is not None ):
+                dpyitems = [display_name]
 
         if( altname is None ):
             altitems = [ None ] * num_items
         if( derived is None ):
             ditems = [ None ] * num_items
+
+        if( mmap_address is None ):
+            return
 
         for it,alt,der in zip(items,altitems,ditems):
             rctx = ctx.clone()
@@ -600,6 +652,7 @@ class svd_device:
                 reg._parse_fields(rctx,f)
             self.registers.append(reg)
             self.derive_registers[it] = reg
+#            reg._dump()
             mmap_address += dim_increment
 
 
@@ -611,17 +664,28 @@ class svd_device:
         if( len(node.attrib) > 0 ):
             vdb.util.bark() # print("BARK")
             print("node.attrib = '%s'" % (node.attrib,) )
+
+        access = ctx.access
+        deferred_list = []
         for tag in node:
             match(tag.tag):
                 case "register":
-                    self._parse_register(ctx,tag)
+                    deferred_list.append( (self._parse_register,tag) )
+#                    self._parse_register(ctx,tag)
                 case "cluster":
-#                    print("tag.tag = '%s'" % (tag.tag,) )
-                    self._parse_cluster(ctx,tag)
+                    deferred_list.append( (self._parse_cluster,tag) )
+#                    self._parse_cluster(ctx,tag)
+                case "access":
+                    access = access_map(tag.text)
                 case _:
                     if( tag.tag not in { } ):
-                        print(f"Never before seen group tag <{tag.tag}>{tag.text}</{tag.tag}>")
+                        print(f"Never before seen registers tag <{tag.tag}>{tag.text}</{tag.tag}>")
 #                    pass
+        ctx = ctx.clone()
+        ctx.access = access
+
+        for f,n in deferred_list:
+            f(ctx,n)
 
     def _parse_peripheral( self, ctx, node ):
         derived = node.attrib.get("derivedFrom",None)
@@ -634,12 +698,13 @@ class svd_device:
         base_address = None
         deferred_list=[]
         peripheral_name = None
-        prefix=""
-        suffix=""
+        prefix=ctx.prefix
+        suffix=ctx.suffix
         dim = 1
         dim_increment = 0
         dim_index = None
-        group = None
+        group = ctx.group
+        reset_value = ctx.reset_value
 
         for tag in node:
             match(tag.tag):
@@ -664,8 +729,10 @@ class svd_device:
                     dim_increment = tag.text
                 case "groupName":
                     group = tag.text
+                case "resetValue":
+                    reset_value = vdb.util.rxint(tag.text)
                 case _:
-                    if( tag.tag not in {"disableCondition","version","addressBlock","description","interrupt","size","access" } ):
+                    if( tag.tag not in {"disableCondition","version","addressBlock","description","interrupt","size","access","headerStructName","resetMask","alternatePeripheral" } ):
                         print(f"Never before seen peripheral tag <{tag.tag}>{tag.text}</{tag.tag}>")
 
         ctx = ctx.clone()
@@ -736,11 +803,15 @@ class svd_device:
                     self.description=node.text
                 case "access":
                     ctx.access = access_map(node.text)
+                case "vendorExtensions":
+                    # Some svd files tell us about the flash and (s)ram layout here, we could put that into the vmmap
+                    # stuff
+                    pass
                 case "addressUnitBits":
                     if( node.text != "8" ):
                         print(f"Unsupported address unit bits {node.text}")
                 case _:
-                    if( node.tag not in { "version", "width", "resetValue", "resetMask", "vendor", "series", "licenseText", "vendorID", "headerSystemFilename", "deviceNumInterrupts" } ):
+                    if( node.tag not in { "version", "width", "resetValue", "resetMask", "vendor", "series", "licenseText", "vendorID", "headerSystemFilename", "deviceNumInterrupts", "headerDefinitionsPrefix" } ):
                         print(f"Never before seen device tag <{node.tag}>{node.text}</{node.tag}>")
         # Sometimes we need default values defined at this level to fill into the others, so parse breadth first
         for f,p in deferred_list:
