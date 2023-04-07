@@ -22,7 +22,7 @@ int_int = vdb.config.parameter("vdb-register-int-as-int",True)
 short_columns = vdb.config.parameter("vdb-register-short-columns",6)
 text_len = vdb.config.parameter("vdb-register-text-len",80)
 tailspec = vdb.config.parameter("vdb-register-tailspec", "axdn" )
-mmapfake = vdb.config.parameter("vdb-register-mmaped-unavilable-zero",True, docstring="When the register memory is unavailable, use 0 for the value instead of blacklisting it")
+mmapfake = vdb.config.parameter("vdb-register-mmaped-unavilable-zero",False, docstring="When the register memory is unavailable, use 0 for the value instead of blacklisting it")
 
 
 flag_descriptions = {

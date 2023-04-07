@@ -973,10 +973,14 @@ def do_svd_scan_one(dirname,at,filter_re):
     if( scan_filter.value is not None and len(scan_filter.value) > 0 ):
         filter_re = re.compile(scan_filter.value)
     pi = None
+
+    xtra=""
+    if( filter_re is not None ):
+        xtra="up to "
     if( parse_delayed.value and at is None ):
-        pi = vdb.util.progress_indicator(f"\rQueueing {len(pathlist)} SVD Files ",total=len(pathlist),use_eta=True,cps=20,avg_steps=len(pathlist)*0.3)
+        pi = vdb.util.progress_indicator(f"\rQueueing {xtra}{len(pathlist)} SVD Files ",total=len(pathlist),use_eta=True,cps=20,avg_steps=len(pathlist)*0.3)
     if( not parse_delayed.value and at is None and scan_silent.value ):
-        pi = vdb.util.progress_indicator(f"\rParsing {len(pathlist)} SVD Files ",total=len(pathlist),use_eta=True,cps=2,avg_steps=len(pathlist)*0.1)
+        pi = vdb.util.progress_indicator(f"\rParsing {xtra}{len(pathlist)} SVD Files ",total=len(pathlist),use_eta=True,cps=2,avg_steps=len(pathlist)*0.1)
 
     for i,p in enumerate(pathlist):
         if( filter_re is not None and filter_re.search(p) is None ):

@@ -58,3 +58,23 @@ Same as `reg/ixfpmv`.
 ### `reg/E` (extended)
 Same as `reg/IXFPMV`.
 
+### `reg/m` and `reg/M` ( memory mapped registers )
+Together with the svd module we support memory mapped registers. The `M` version shows an extended display of the
+registers, `m` a condensed, similar to the flags registers.
+
+Using `&` in front of the filter (which can be empty in that case) will cause the command to show the address where the
+register resides at too.
+
+Sometimes the memory is not accessible, in that case we will automatically blacklist that register and never try to
+display it again. Set `vdb-register-mmaped-unavailable-zero` to instead use zero as the value for the register.
+## Register filter
+An additional parameter will most of the time be interpreted as a regexp filter.
+
+## Settings
+The settings `vdb-register-colors-names` and `vdb-register-colors-flags` will control the colour of the register name
+and the text of flags if they are set.
+
+`vdb-register-text-len` will define how wide the text of extended descriptions will be before wrapping ( if possible ).
+
+`vdb-register-tailspec` controls the pointer specification ( see there ) to show for output that does chaining.
+
