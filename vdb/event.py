@@ -8,6 +8,7 @@ from enum import Enum,auto
 class events(Enum):
     start = auto()
     run   = auto()
+    first_prompt = auto()
 
 def on_event( gdbreg, darg ):
     def decorator( func ):
@@ -41,7 +42,7 @@ def register_hook( ev, f ):
     hl.append(f)
 
 def on_hook( ev, darg ):
-    print(f"on_hook({ev},{darg})")
+#    print(f"on_hook({ev},{darg})")
     def decorator( func ):
         def wrapper(*arg):
 #            print("type(arg) = '%s'" % type(arg) )
@@ -59,7 +60,7 @@ def on_hook( ev, darg ):
     return decorator
 
 def exec_hook( ev ):
-    print(f"exec_hook({ev})")
+#    print(f"exec_hook({ev})")
     hl = hooks.get(ev,[])
     for h in hl:
         h(ev)
@@ -95,6 +96,9 @@ def run( *darg ):
 def start( *darg ):
     return on_hook( events.start, darg )
 
+def before_first_prompt( *darg ):
+    return on_hook( events.first_prompt, darg )
+
 def run_hook():
     exec_hook(events.run)
 
@@ -109,6 +113,12 @@ define hook-start
     python vdb.event.start_hook()
 end
 """)
+
+def first_prompt_handler( ):
+#    print("first_prompt_handler")
+    exec_hook(events.first_prompt)
+    gdb.events.before_prompt.disconnect(first_prompt_handler)
+gdb.events.before_prompt.connect(first_prompt_handler)
 
 #@new_objfile()
 #@new_inferior()

@@ -974,9 +974,9 @@ def do_svd_scan_one(dirname,at,filter_re):
         filter_re = re.compile(scan_filter.value)
     pi = None
     if( parse_delayed.value and at is None ):
-        pi = vdb.util.progress_indicator(f"\rQueueing {len(pathlist)} SVD Files ",total=len(pathlist),use_eta=True,cps=20,avg_steps=200)
+        pi = vdb.util.progress_indicator(f"\rQueueing {len(pathlist)} SVD Files ",total=len(pathlist),use_eta=True,cps=20,avg_steps=len(pathlist)*0.3)
     if( not parse_delayed.value and at is None and scan_silent.value ):
-        pi = vdb.util.progress_indicator(f"\rParsing {len(pathlist)} SVD Files ",total=len(pathlist),use_eta=True,cps=2,avg_steps=20)
+        pi = vdb.util.progress_indicator(f"\rParsing {len(pathlist)} SVD Files ",total=len(pathlist),use_eta=True,cps=2,avg_steps=len(pathlist)*0.1)
 
     for i,p in enumerate(pathlist):
         if( filter_re is not None and filter_re.search(p) is None ):
@@ -1027,8 +1027,8 @@ def svd_scan(argv):
     else:
         do_svd_scan(None,argv)
 
-# XXX mv to some "at first promp" logic
-def start():
+@vdb.event.before_first_prompt()
+def startup():
     if( not auto_scan.value ):
         print("svd not auto scanning due to vdb-svd-auto-scan False")
         return
