@@ -546,7 +546,7 @@ class x86_asm_arg(asm_arg_base):
 
     @vdb.overrides
     def parse( self, arg ):
-        vdb.util.bark() # print("BARK")
+#        vdb.util.bark() # print("BARK")
 #        print("arg = '%s'" % (arg,) )
         oarg = arg
         if( arg.find(":") != -1 ):
