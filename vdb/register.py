@@ -383,11 +383,38 @@ class Registers():
             else:
                 self.others[reg] = ( v, v.type )
 
-    def set( self, arg0, arg1 ):
-        print("arg0 = '%s'" % (arg0,) )
-        print("arg1 = '%s'" % (arg1,) )
-        pass
+    def set_bit( self, reg, bit, val ):
+        print(f"set_bit({reg},{bit},{val})")
 
+    def set_reg( self, reg, val ):
+        # TODO Add support for non memory mapped registers, also wiht $ and % prefix
+        print(f"set_reg({reg},{val})")
+        mmp = mmapped_positions.get(reg,None)
+        print("len(mmapped_positions) = '%s'" % (len(mmapped_positions),) )
+        if( mmp is None ):
+            print(f"Unable to find memory position for register {reg}")
+            return 
+        raddr,rbit,rtype = mmp
+        print("raddr = '%s'" % (raddr,) )
+        print("rbit = '%s'" % (rbit,) )
+        print("rtype = '%s'" % (rtype,) )
+        data = val.to_bytes(rbit//8,"little")
+        print("data = '%s'" % (data,) )
+
+        vdb.memory.write( raddr, data )
+
+
+    def set( self, arg0, arg1 ):
+        if( arg1 is None ):
+            arg1=""
+        args=arg0+arg1
+        reg,val=args.split("=")
+        val=vdb.util.gint(val)
+        if( reg.find(":") > -1 ):
+            reg,bit = reg.split(":")
+            self.set_bit(reg,bit,val)
+        else:
+            self.set_reg(reg,val)
 
     def _dump( self ):
         print("self.regs:")
@@ -1341,12 +1368,41 @@ We recommend having an alias reg = registers in your .gdbinit
     def complete( self, text, word ):
         if( word is None and len(text) == 0 ):
             return []
-        global registers
-        allregs = []
-        vdb.util.bark() # print("BARK")
-        vdb.util.bark() # print("BARK")
-        print("allregs = '%s'" % (allregs,) )
-        return self.matches(word,allregs)
+
+        try:
+            global registers
+            allregs = []
+            allregs = mmapped_positions.keys()
+#            print()
+#            print("==============================")
+#            vdb.util.bark() # print("BARK")
+#            vdb.util.bark() # print("BARK")
+#            print("len(allregs) = '%s'" % (len(allregs),) )
+#            print("word = '%s'" % (word,) )
+#            print("text = '%s'" % (text,) )
+
+            if( text[-1] == "." ):
+                mword = word
+                if( mword is None ):
+                    mword = ""
+                tx = text.split()
+#                print("tx = '%s'" % (tx,) )
+                if( len(tx) > 1 ):
+                    mword = tx[-1] + mword
+#                print("mword = '%s'" % (mword,) )
+                om=self.matches(mword,allregs)
+                m=[]
+                plen = len(mword)
+                for o in om:
+                    m.append( o[plen:] )
+            else:
+                m=self.matches(word,allregs)
+#            print("m = '%s'" % (m,) )
+            return m
+        except:
+            traceback.print_exc()
+            pass
+        return []
 
     def do_invoke (self, argv, legend = True ):
 #        print("do_invoke()")
