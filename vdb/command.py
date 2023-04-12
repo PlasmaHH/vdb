@@ -128,7 +128,7 @@ class command(gdb.Command,abc.ABC):
         print(text,end="")
 
     def matches( self, word, completion ):
-        if(len(word) == 0 ):
+        if(word is None or len(word) == 0 ):
             return completion
         nc = []
         for c in completion:
