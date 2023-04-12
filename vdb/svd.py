@@ -36,7 +36,7 @@ except:
 #    from xml.etree.ElementTree import parse
 
 
-def svd_load(idname):
+def svd_load(idname,keep):
     d = devices.get(idname,None)
     if( d is None ):
         d = dev_queue.get(idname,None)
@@ -46,8 +46,8 @@ def svd_load(idname):
             return
         svd_load_file(d,None)
         d = devices.get(idname,None)
-        d.load()
-    d.load()
+        d.load(not keep)
+    d.load(not keep)
 
 amap = {
         "read-write" : "RW",
@@ -297,6 +297,9 @@ class svd_device:
             return sname
 
         def get_short_name( self ):
+#            vdb.util.bark() # print("BARK")
+#            print("self.name = '%s'" % (self.name,) )
+#            print("self.display_name = '%s'" % (self.display_name,) )
             if( self.display_name is None ):
                 return self.name
             if( len(self.display_name) < len(self.name) ):
@@ -313,7 +316,6 @@ class svd_device:
         self.registers = []
         self.register_names = set()
         self.cpu = svd_device.cpu_description()
-        self.group_bit_size = None
         self.origin = None # file name, set externally after parsing completed
         self.peripherals = {}
         self.memory_estimation = None
@@ -321,9 +323,11 @@ class svd_device:
 
     def load( self, unload = True ):
         print(f"Loading {len(self.registers)} register descriptions")
+        vdb.register.mmapped_blacklist = set()
         if( unload ):
             vdb.register.mmapped_descriptions = {}
             vdb.register.mmapped_positions = {}
+            print("Removed all previous register descriptions (use svd/k load to keep them)")
         skip=0
         for r in self.registers:
             name=r.get_key_name()
@@ -336,7 +340,7 @@ class svd_device:
 #                rtype=r.type
                 rtype=vdb.arch.uint(r.bit_size)
                 if( bitsize is None ):
-                    print(f"{r.name} has no bit_size")
+                    print(f"{r.display_name} ({r.name} has no bit_size")
                 # TODO configureable? intresting at all?
 #                if( bitsize is None ):
 #                    bitsize = 32
@@ -357,6 +361,7 @@ class svd_device:
             print("node.attrib = '%s'" % (node.attrib,) )
         access = ctx.access
         group = ctx.group
+        bit_size = ctx.bit_size
         deferred_list=[]
         for tag in node:
             match(tag.tag):
@@ -368,7 +373,7 @@ class svd_device:
                     deferred_list.append( (self._parse_peripherals,tag) )
 #                    self._parse_peripherals(tag)
                 case "size":
-                    self.group_bit_size = int(tag.text)
+                    bit_size = vdb.util.rxint(tag.text)
                 case "access":
                     access = access_map(tag.text)
                 case "name":
@@ -382,9 +387,9 @@ class svd_device:
         ctx = ctx.clone()
         ctx.access = access
         ctx.group = group
+        ctx.bit_size = bit_size
         for f,p in deferred_list:
             f(ctx,p)
-#        self.group_bit_size = None
 
     def _parse_groups( self,ctx, node ):
         for tag in node:
@@ -626,11 +631,13 @@ class svd_device:
             altitems = [ None ] * num_items
         if( derived is None ):
             ditems = [ None ] * num_items
+        if(display_name is None ):
+            dpyitems = [ None ] * num_items
 
         if( mmap_address is None ):
             return
 
-        for it,alt,der in zip(items,altitems,ditems):
+        for it,alt,der,dpname in zip(items,altitems,ditems,dpyitems):
             rctx = ctx.clone()
             rctx.base_address = mmap_address
             reg = svd_device.register()
@@ -655,6 +662,8 @@ class svd_device:
             reg.name = prefix + it + suffix
             if( reg.name in self.register_names ):
                 print(f"Duplicate register name {reg.name}")
+            if( dpname is not None ):
+                reg.display_name = prefix + dpname + suffix
 
             reg.bit_size = bit_size
             reg.peripheral_name = peripheral_name
@@ -718,6 +727,7 @@ class svd_device:
         dim_index = None
         group = ctx.group
         reset_value = ctx.reset_value
+        bit_size = ctx.bit_size
 
         for tag in node:
             match(tag.tag):
@@ -729,7 +739,7 @@ class svd_device:
                 case "name":
                     peripheral_name = tag.text
                 case "size":
-                    self.group_bit_size = tag.text
+                    bit_size = vdb.util.rxint(tag.text)
                 case "prependToName":
                     prefix = tag.text
                 case "appendToName":
@@ -754,6 +764,7 @@ class svd_device:
         ctx.prefix = prefix
         ctx.suffix = suffix
         ctx.group = group
+        ctx.bit_size = bit_size
 
 #        print("deferred_list = '%s'" % (deferred_list,) )
         if( dim is not None ):
@@ -953,8 +964,10 @@ def svd_list( flt = None):
         line.append(len(d.registers))
         if( verbose ):
             line.append(d.origin)
-#            line.append(d.memory_estimation)
-            line.append("%.3f %s" % vdb.util.bytestr(d.memory_estimation))
+            if( d.memory_estimation is not None ):
+                line.append("%.3f %s" % vdb.util.bytestr(d.memory_estimation))
+            else:
+                line.append(None)
 
         otbl.append(line)
     vdb.util.print_table(otbl)
@@ -1057,7 +1070,7 @@ svd/v <cmd>   - Add more information to the command
         super (cmd_svd, self).__init__ ("svd", gdb.COMMAND_DATA)
 
     def complete( self, text, word ):
-        if( text.startswith("/v ") ):
+        if( text.startswith("/v ") or text.startswith("/k ")):
             text = text[3:]
 #        print("text = '%s'" % (text,) )
 #        print("word = '%s'" % (word,) )
@@ -1080,8 +1093,12 @@ svd/v <cmd>   - Add more information to the command
         try:
             global verbose
             verbose = False
+            keep = False
             if( argv[0] == "/v" ):
                 verbose = True
+                argv=argv[1:]
+            if( argv[0] == "/k" ):
+                keep = True
                 argv=argv[1:]
 
             subcmd = argv[0]
@@ -1089,7 +1106,7 @@ svd/v <cmd>   - Add more information to the command
                 case "load":
                     if( len(argv) < 2 ):
                         raise RuntimeError("load needs CPU parameter")
-                    svd_load(argv[1])
+                    svd_load(argv[1],keep)
                 case "list":
                     svd_list(get(argv,1,None))
                 case "scan":
@@ -1100,9 +1117,7 @@ svd/v <cmd>   - Add more information to the command
             traceback.print_exc()
 
 cmd_svd()
+# Reset: Halt core after reset via DEMCR.VC_CORERESET.
+# Reset: Reset device via AIRCR.SYSRESETREQ.
 
-
-# TODO:
-# Rewrite hierarchial data to pass along some context object with a dict or members that tells for the lower levels what
-# attributes are to be inherited. It shall not leak into siblings.
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
