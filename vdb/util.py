@@ -786,6 +786,7 @@ class progress_indicator:
         self.start = gdb_numeric(start)
         self.total = gdb_numeric(total)
         self.current_pos = gdb_numeric(start)
+        self.width=width
 
     def set( self, pos, now = None ):
         if( self.eta is not None ):
@@ -820,7 +821,7 @@ class progress_indicator:
         percentage = f"{percentage:4.1f}%"
 
         barchars = "[█ ]"
-        bw = 120
+        bw = self.width
         bfull = bw * ppos / 100
         br = bfull % 1
 #        print("bfull = '%s'" % (bfull,) )
