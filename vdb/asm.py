@@ -3946,6 +3946,8 @@ if __name__ == "__main__":
 # Go through the code, check for push/pop and stackpointer modifications, try to estimate stack usagee
 # Theoretically we should be able to start at the entry point and build a callgraph
 # Special marker chars for breakpoints and similar
+# For jump tables and pc/ip relative data loads we can mark things as "data" and possibly even the access size and then
+# show it accordingly
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
