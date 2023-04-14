@@ -1443,7 +1443,7 @@ We recommend having an alias reg = registers in your .gdbinit
                         registers._dump()
                     else:
                         registers.print(argv[0][1:],filter)
-                elif( argv[0].find("=") != -1 or filter.find("=") != -1 ): # reg pc=55 // set a register
+                elif( argv[0].find("=") != -1 or ( filter is not None and filter.find("=") != -1) ): # reg pc=55 // set a register
                     registers.set(argv[0],filter)
                 else: # a register filter
                     self.do_invoke( [ reg_default.value, argv[0] ], legend = False )
