@@ -108,8 +108,9 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
 
     olen = xlen
 
-    data = vdb.memory.read(addr,xlen)
+    data = vdb.memory.read(addr,xlen,partial=True)
     if( data is None ):
+#        print(f"vdb.memory.read({addr:#0x},xlen,True) => None")
         data = vdb.memory.read(addr+suppress,1)
         if( data is not None ):
             data = None
@@ -155,6 +156,7 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
                     pointer_string += pc_separator.value
 
         for d in dc:
+            d = bytes(d)
             if( suppress ):
                 suppress -= 1
                 l += "   "
