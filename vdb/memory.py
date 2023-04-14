@@ -304,20 +304,17 @@ default_region_prefixes = [
 ]
 
 @vdb.util.memoize( [gdb.events.stop, gdb.events.memory_changed, gdb.events.inferior_call] )
-def read( ptr, count = 1 ):
-    return read_uncached(ptr,count)
+def read( ptr, count = 1, partial = False ):
+    return read_uncached(ptr,count,partial)
 
-def read_uncached( ptr, count = 1 ):
-#    vdb.util.bark(-2) # print("BARK")
-#    vdb.util.bark(-1) # print("BARK")
-#    print("type(ptr) = '%s'" % (type(ptr),) )
-#    print("type(count) = '%s'" % (type(count),) )
-#    print(f"read( 0x{int(ptr):x},{count} )")
+def read_uncached( ptr, count = 1, partial = False ):
+
     result = None
     if( isinstance(ptr,str) ):
         addr=vdb.util.gint(ptr)
     else:
         addr=ptr
+#    print(f"read_uncached( {addr:#0x}, {count}, {partial=}")
     try:
 #        print("addr = '%s'" % (addr,) )
         while( addr < 0 ):
@@ -332,6 +329,26 @@ def read_uncached( ptr, count = 1 ):
 #        print("addr.bit_length() = '%s'" % (addr.bit_length(),) )
         result = gdb.selected_inferior().read_memory(addr, count)
     except gdb.error:
+        if( partial ):
+            if( count == 1 ):
+                return None
+            cnt0 = count // 2
+            cnt1 = count-cnt0
+            r0 = read_uncached( ptr, cnt0, partial=True )
+#            print("r0 = '%s'" % (r0,) )
+            if( r0 is None ): # then not even a single byte could be read
+                return None
+            if( len(r0) >= cnt0 ):
+                r1 = read_uncached( ptr + cnt0, cnt1, partial=True )
+                if( r1 is not None ):
+                    r0b = r0.tobytes()
+                    r1b = r1.tobytes()
+                    allbytes = r0b+r1b
+                    return memoryview(allbytes)
+                else:
+                    return r0
+            else:
+                return r0
         pass
     return result
 
