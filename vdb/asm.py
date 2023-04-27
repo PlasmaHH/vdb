@@ -3244,7 +3244,7 @@ def register_flow( lng, frame : "gdb frame" ):
         # As per convention, rip on x86 as an argument is the next instruction
         if( current_arch == "arm" ):
             if( ins.next is not None ):
-                possible_registers.set( "pc", ins.next.address+2, origin="ins.next" )
+                possible_registers.set( "pc", ins.next.address, origin="ins.next" )
             elif( len(ins.bytes) > 0 ):
                 possible_registers.set( "pc", ins.address + len(ins.bytes),origin="len(ins.bytes)" )
         else:
