@@ -260,21 +260,26 @@ def wait( t ):
 continues = 0
 
 def schedule_continue( ):
+#    vdb.util.bark() # print("BARK")
     global continues
     if( continues == 0 ):
+        vdb.util.bark() # print("BARK")
         continues += 1
         gdb.post_event(do_continue)
 
 def do_continue( ):
+#    vdb.util.bark() # print("BARK")
     wait(5)
     global continues
 #    print("continues = '%s'" % (continues,) )
     continues -= 1
 #    print("GDB EXECUTE CONTINUE")
     try:
+        traceback.print_exc()
         gdb.execute("continue")
     # somehow we schedule two of them, for now just suppress the error
     except gdb.error:
+
         pass
 
 def schedule_finish( ):
@@ -370,8 +375,11 @@ def stop( bpev ):
         print("e = '%s'" % e )
 #        traceback.print_exc()
         pass
-    return False
-#    if( cont ):
+#    vdb.util.bark() # print("BARK")
+#    print("cont = '%s'" % (cont,) )
+
+    if( cont ):
+        schedule_continue()
 #        gdb.post_event(do_continue)
 
 tracking_data = {}
