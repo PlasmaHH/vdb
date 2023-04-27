@@ -383,36 +383,81 @@ class Registers():
             else:
                 self.others[reg] = ( v, v.type )
 
+
+
+    def get_pos( self, reg ):
+        mmp = mmapped_positions.get(reg,None)
+#        print("len(mmapped_positions) = '%s'" % (len(mmapped_positions),) )
+        if( mmp is None ):
+            print(f"Unable to find memory position for register {reg}")
+        return mmp
+
+    def get_reg( self, reg ):
+        mmp = self.get_pos(reg)
+        if( mmp is not None ):
+            raddr,rbit,rtype = mmp
+            mc = vdb.memory.read_uncached( raddr, rbit//8 )
+            val = gdb.Value(mc,rtype)
+            return ( val, mmp )
+        else:
+            return ( None, None )
+
+    def set_reg_at( self, mmp, val ):
+#        print("mmp = '%s'" % (mmp,) )
+        raddr,rbit,rtype = mmp
+        val = int(val)
+#            print("raddr = '%s'" % (raddr,) )
+#            print("rbit = '%s'" % (rbit,) )
+#            print("rtype = '%s'" % (rtype,) )
+        data = val.to_bytes(rbit//8,"little")
+#            print("data = '%s'" % (data,) )
+
+        vdb.memory.write( raddr, data )
+        print(f"set {{{rtype}}}{raddr:#0x}={val}")
+
     def set_bit( self, reg, bit, val ):
         print(f"set_bit({reg},{bit},{val})")
 
     def set_reg( self, reg, val ):
         # TODO Add support for non memory mapped registers, also wiht $ and % prefix
-        print(f"set_reg({reg},{val})")
-        mmp = mmapped_positions.get(reg,None)
-        print("len(mmapped_positions) = '%s'" % (len(mmapped_positions),) )
-        if( mmp is None ):
-            print(f"Unable to find memory position for register {reg}")
-            return 
-        raddr,rbit,rtype = mmp
-        print("raddr = '%s'" % (raddr,) )
-        print("rbit = '%s'" % (rbit,) )
-        print("rtype = '%s'" % (rtype,) )
-        data = val.to_bytes(rbit//8,"little")
-        print("data = '%s'" % (data,) )
+#        print(f"set_reg({reg},{val})")
+        mmp = self.get_pos(reg)
+        if( mmp != None ):
+            self.set_reg_at(mmp,val)
 
-        vdb.memory.write( raddr, data )
+    def or_reg( self, reg, val ):
+#        vdb.util.bark() # print("BARK")
+        oval,mmp = self.get_reg(reg)
+        if( oval is None ):
+            return
+#        print("oval = '%s'" % (oval,) )
+#        print("val = '%s'" % (val,) )
+        self.set_reg_at(mmp,oval|val)
 
+    def and_reg( self, reg, val ):
+        vdb.util.bark() # print("BARK")
+        oval,mmp = self.get_reg(reg)
+        if( oval is None ):
+            return
+#        print("oval = '%s'" % (oval,) )
+#        print("val = '%s'" % (val,) )
+        self.set_reg_at(mmp,oval&val)
 
     def set( self, arg0, arg1 ):
         if( arg1 is None ):
             arg1=""
         args=arg0+arg1
+#        vdb.util.bark() # print("BARK")
+#        print("args = '%s'" % (args,) )
         reg,val=args.split("=")
         val=vdb.util.gint(val)
         if( reg.find(":") > -1 ):
             reg,bit = reg.split(":")
             self.set_bit(reg,bit,val)
+        elif( reg[-1] == "&" ):
+            self.and_reg(reg[:-1],val)
+        elif( reg[-1] == "|" ):
+            self.or_reg(reg[:-1],val)
         else:
             self.set_reg(reg,val)
 
@@ -1425,7 +1470,7 @@ We recommend having an alias reg = registers in your .gdbinit
                 filter = argv[1]
                 argv = argv[:1]
 
-            if( len(argv) == 3 and argv[1] == "=" ):
+            if( len(argv) == 3 and ( argv[1] in [ "=", "&=","|=" ] ) ):
                 filter = "="+argv[2]
                 argv = [ argv[0] ]
 
