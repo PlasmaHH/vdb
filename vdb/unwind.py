@@ -369,9 +369,13 @@ def hint( argv ):
         funcstart = gdb.parse_and_eval(f"$pc-{offset}")
         print(f"Searching for call to {funcstart}")
 #        print("offset = '%s'" % (offset,) )
-
-    callre = re.compile("call (0x[0-9a-f]*)")
-    ccallre = re.compile("call \*%") # computed calls
+    archname = gdb.selected_frame().architecture().name()
+    if( archname.startswith("arm") ):
+        callre = re.compile("bl (0x[0-9a-f]*)")
+        ccallre = re.compile("bl \*%") # computed calls
+    else:
+        callre = re.compile("call (0x[0-9a-f]*)")
+        ccallre = re.compile("call \*%") # computed calls
     # $rsp-16 is kinda the default position
     # for other archs we might search differently?
 #    for i in range(-8,64):
