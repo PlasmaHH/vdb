@@ -263,7 +263,7 @@ def schedule_continue( ):
 #    vdb.util.bark() # print("BARK")
     global continues
     if( continues == 0 ):
-        vdb.util.bark() # print("BARK")
+#        vdb.util.bark() # print("BARK")
         continues += 1
         gdb.post_event(do_continue)
 
@@ -333,6 +333,18 @@ def exec_tracking_number( number, now ):
 
 @vdb.event.stop()
 def stop( bpev ):
+#    vdb.util.bark() # print("BARK")
+#    print("bpev = '%s'" % (bpev,) )
+#    print("bpev.inferior_thread = '%s'" % (bpev.inferior_thread,) )
+
+    # hack to not endlessly loop on arm systems
+    archname = gdb.selected_frame().architecture().name()
+    if( archname.startswith("arm") ):
+        pc = vdb.util.gint("$pc")
+        if( pc >= 0xeffffffe ):
+            print("ARM Lockup state detected, refusing track commands")
+            return False
+
 
     cont = False
     if( len(trackings_by_number) == 0 ):
@@ -357,12 +369,16 @@ def stop( bpev ):
 
     try:
         if( type(bpev) == gdb.StopEvent ):
+            vdb.util.bark() # print("BARK")
+            if( exec_tracking_id("0",now) ):
+                cont = True
+            print("cont = '%s'" % (cont,) )
             # hack for catching possibly inlined return cases..
             for name,tr in trackings_by_number.items():
                 if ( name < 0 ):
                     if( isinstance( tr, finish_breakpoint ) ):
                         tr.stop()
-            return False
+#            return False
         else:
             bps = bpev.breakpoints
 #            print("bps = '%s'" % (bps,) )
@@ -421,6 +437,9 @@ class track_item:
             else:
                 val=gdb.parse_and_eval(self.expression)
             td = tracking_data.setdefault(now,{})
+            val = str(val)
+            if( val[-1] == "\n" ):
+                val = val[:-1]
 #            td[self.expression] = str(val)
             td[self.number] = str(val)
         except Exception as e:
@@ -446,7 +465,7 @@ def track( argv, execute, eval_after, do_eval ):
         ename = argv[0][:-1]
         argv = argv[1:]
 
-    print("ename = '%s'" % (ename,) )
+#    print("ename = '%s'" % (ename,) )
 
 #    print("argv[0] = '%s'" % argv[0] )
     bpnum = None
@@ -467,24 +486,31 @@ def track( argv, execute, eval_after, do_eval ):
         if( bpnum is not None ):
             break
     else:
-        print(f"Attempting to set breakpoint for '{argv[0]}'")
-        gdb.execute(f"break {argv[0]}")
-        n_bp = set()
+        if( argv[0] == "*" ):
+            print("Setting catch-all track item for all stop events")
+            bpnum = 0
+        else:
+            print(f"Attempting to set breakpoint for '{argv[0]}'")
+            gdb.execute(f"break {argv[0]}")
+            n_bp = set()
 
-        bps = gdb.breakpoints()
-        for bp in bps:
-            n_bp.add(bp.number)
-        nbp = n_bp - ex_bp
-        if( len(nbp) == 0 ):
-            print(f"Failed to set breakpoint for {argv[0]}, cannot attach track either")
-            return
-        ex_bp = n_bp
-        bpnum = nbp.pop()
+            bps = gdb.breakpoints()
+            for bp in bps:
+                n_bp.add(str(bp.number))
+            nbp = n_bp - ex_bp
+#            print("ex_bp = '%s'" % (ex_bp,) )
+#            print("n_bp = '%s'" % (n_bp,) )
+#            print("nbp = '%s'" % (nbp,) )
+            if( len(nbp) == 0 ):
+                print(f"Failed to set breakpoint for {argv[0]}, cannot attach track either")
+                return
+            ex_bp = n_bp
+            bpnum = nbp.pop()
 #    print("bpnum = '%s'" % bpnum )
 
     expr = argv[1:]
 
-    if( bpnum not in ex_bp ):
+    if( bpnum != 0 and bpnum not in ex_bp ):
         print(f"Unknown breakpoint {bpnum}, refusing to attach track to nothing")
         return
 
@@ -630,6 +656,8 @@ track/X - execute expression and then run parse_and_eval on the result ($)
 id           is the id of an existing breakpoint
 location    can be any location that gdb understands for breakpoints
 expression  is the expression expected by any of the above formats. Upon hitting the breakpoint, it will be evaluated and then automatically continued. The special expression $ret is used to denote a return value of a finish expression.
+
+The expression can also be prefixed with foo= so that in the generated table the name will be foo instead of the expression so that you can easier identify the meaning of it
 
 If no breakpoint can be found with an existing location, we try to set one at that location, otherwise we try to re-use the same location
 Note: while it works ok for breakpoints and watchpoints, using catchpoints is somewhat difficult and often does not work
