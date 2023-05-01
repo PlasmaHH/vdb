@@ -365,9 +365,20 @@ def write( ptr, buf ):
 def memset( ptr, val, size ):
     if( isinstance(ptr,str) ):
         ptr = vdb.util.gint(ptr)
-    val=chr(val)
+    val=int(val)
+#    print("val = '%s'" % (val,) )
+    b=bytearray()
+    b.append(val)
+#    print("b = '%s'" % (b,) )
+    val=b[::-1]
+#    print("val = '%s'" % (val,) )
+#    return
+#    print("val = '%s'" % (val,) )
     buf=size*val
-    gdb.selected_inferior().write_memory( addr, buf )
+#    print("len(buf) = '%s'" % (len(buf),) )
+#    print("ptr = '%s'" % (ptr,) )
+#    print("buf = '%s'" % (buf,) )
+    gdb.selected_inferior().write_memory( ptr, buf )
 
 
 
@@ -976,6 +987,24 @@ def get_symbols( addr, xlen ):
 #    print("ret = '%s'" % (ret,) )
     return ret
 
+
+class cmd_memset(vdb.command.command):
+    """
+
+"""
+
+    def __init__ (self):
+        super (cmd_memset, self).__init__ ("memset", gdb.COMMAND_DATA)
+
+    def do_invoke (self, argv ):
+        self.dont_repeat()
+
+        try:
+            memset(argv[0],vdb.util.gint(argv[1]),vdb.util.gint(argv[2]))
+        except Exception as e:
+            traceback.print_exc()
+
+cmd_memset()
 
 
 
