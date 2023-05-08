@@ -188,6 +188,8 @@ def load_plugins( plugindir ):
 
         if( not is_in_safe_path(plugindir) ):
             return
+        if( not os.path.isdir(plugindir) ):
+            return
 
         print(f"Loading plugins in {plugindir}…")
 
@@ -213,6 +215,8 @@ def load_themes( vdbdir ):
         return
     tdir = f"{vdbdir}/themes/"
     tfile = f"{tdir}{theme.value}.py"
+    if( not os.path.isdir(tdir) ):
+        return
     if( not is_in_safe_path(tdir) ):
         if( os.path.isfile(tfile) ):
             print(f"{tdir} is not in safe path, not loading {tfile} from there")

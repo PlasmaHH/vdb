@@ -426,6 +426,7 @@ class ftree:
         so = None
 #        nval = self.try_member_cast( val, obj.get_path() )
         nval = self.try_member_cast( val, path + obj.get_path() )
+        print("obj.final = '%s'" % (obj.final,) )
         if( nval is not None ):
             xval = nval
             nlayout = vdb.layout.object_layout( value = nval )
@@ -437,8 +438,9 @@ class ftree:
             rows += r
             ptrlist += p
             so = xobj
+            val=xval
 #            return ( ret, rows, ptrlist )
-        elif( obj.final ):
+        if( obj.final ):
             xval = val
             tr = vdb.dot.tr()
             so = obj
