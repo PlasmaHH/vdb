@@ -201,6 +201,8 @@ def load_plugins( plugindir ):
                         print(f"Loading plugin {plugindir}/{pt}/{fn}")
                         importname = f"{pt}.{fn[:-3]}"
                         importlib.import_module(importname)
+                    except ModuleNotFoundError as e:
+                        print(f"Could not load plugin {plugindir}/{pt}/{fn}. {e}")
                     except:
                         print(f"Error while loading plugin {plugindir}/{pt}/{fn}")
                         traceback.print_exc()
@@ -231,6 +233,8 @@ def load_themes( vdbdir ):
         oldpath += sys.path
         sys.path = [tdir] + sys.path
         importlib.import_module(theme.value)
+    except ModuleNotFoundError as e:
+        print(f"Could not load theme {theme.value}: {e}")
     except:
         traceback.print_exc()
     finally:
@@ -271,6 +275,8 @@ def start( vdbd = None, vdbinit = None ):
                 enabled_modules[mod] = lmod
             else:
                 vdb.util.log(f"Skipping load of module {mod}…")
+        except ModuleNotFoundError as e:
+            print(f"Could not load module {mod}. {e}")
         except:
             print(f"Error loading module {mod}:")
             traceback.print_exc()
