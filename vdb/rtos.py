@@ -18,6 +18,130 @@ color_active_task = vdb.config.parameter("vdb-rtos-colors-active-task",    "#0a4
 
 # We want to support different flavours and auto detect which one is being used
 
+class FrameId(object):
+    def __init__(self, sp, pc):
+        self.sp = sp
+        self.pc = pc
+
+class fake_unwinder(gdb.unwinder.Unwinder):
+    def __init__( self ):
+        self._enabled = False
+        self._name = "rtos_fake_unwinder"
+        self.fake_sp = None
+        self.fake_pc = None
+        self.fake_lr = None
+        self.cached_ui = None
+        self.level = 0
+
+    def __call__(self,pending_frame):
+#        vdb.util.bark() # print("BARK")
+        try:
+            if( self._enabled ):
+                return self.do_call(pending_frame)
+            else:
+                return None
+        except:
+            print("fake_unwind __call__")
+            traceback.print_exc()
+        return None
+
+    def reset( self ):
+        self.level = 0
+        self.fake_sp = None
+        self.fake_pc = None
+        self.fake_lr = None
+        self.cached_ui = None
+
+    def set( self, sp, pc, lr ):
+        self.fake_sp = sp
+        self.fake_pc = pc
+        self.fake_lr = lr
+
+    def take_over( self, pf, ui, lst ):
+        for l in lst:
+            ui.add_saved_register( l, pf.read_register(l) )
+
+    def do_call(self,pending_frame):
+#        print("======================")
+#        vdb.util.bark() # print("BARK")
+#        print("self.level = '%s'" % (self.level,) )
+#        if( self.level == 1):
+#            self.level += 1
+#            return self.cached_ui
+#            return None
+        sp = pending_frame.read_register("sp")
+        pc = pending_frame.read_register("pc")
+        lr = pending_frame.read_register("lr")
+#        print("sp = '%s'" % (sp,) )
+#        print("pc = '%s'" % (pc,) )
+#        print(f"{int(lr)=:#0x}")
+#        gdb.execute(f"p (void*){lr}")
+#        print("self.fake_sp = '%s'" % (self.fake_sp,) )
+#        print("self.fake_pc = '%s'" % (self.fake_pc,) )
+#        print("self.fake_lr = '%s'" % (self.fake_lr,) )
+        if( self.level >= 1 ):
+            return None
+        # the frame id must be the one of the current ones sp/pc
+        ui = pending_frame.create_unwind_info(FrameId(sp+1,pc))
+
+        # Fake a different 0th frame by using for this frame recovered pc and sp that will then in the next call be used
+        # for the FrameId
+        
+        # The registers we set now are those that are "active" in the newly faked frame, so the fake pc and sp. LR is
+        # being ignored here because we are called again and don't really use it
+        if( self.level == 0 ):
+            if( self.fake_pc is not None ):
+                pc = self.fake_pc
+            if( self.fake_sp is not None ):
+                sp = self.fake_sp
+            if( self.fake_lr is not None ):
+                lr = self.fake_lr
+
+        if( self.level == 1 ):
+            return None
+            if( self.fake_lr is not None ):
+                lr = self.fake_lr
+
+        if( self.level >= 2 ):
+           return None
+
+        if( self.level == 1 ):
+            sp += 0
+
+        ui.add_saved_register( "sp", sp )
+        ui.add_saved_register( "msp", sp )
+        ui.add_saved_register( "psp", sp )
+        ui.add_saved_register( "lr",lr)
+
+        if( self.level == 0 ):
+            ui.add_saved_register( "pc", pc )
+        else:
+            ui.add_saved_register( "pc", lr )
+#        ui.add_saved_register( "pc", pc )
+
+        self.take_over( pending_frame, ui, [ "xpsr" ] )
+
+#        regs = pending_frame.architecture().registers()
+#        for r in regs:
+#            print("r = '%s'" % (r,) )
+#            if( str(r) == "sp" or str(r) == "pc" ):
+#                continue
+#            rv = pending_frame.read_register(r)
+#            if( r is not None ):
+#                ui.add_saved_register( r, rv )
+        self.level += 1
+        self.cached_ui = ui
+#        print("ui = '%s'" % (ui,) )
+#        if( self.level == 2 ):
+#            return None
+#        self.enabled = False
+#        vdb.util.bark() # print("BARK")
+#        return None
+        return ui
+
+
+unwinder = None
+
 class task:
     """
     Generic task that has certain things just not set when the OS does not support it
@@ -114,7 +238,8 @@ class os_embos( ):
             t.pc = t.stack["Base"]["OS_REG_PC"]
             t.pc = gdb.parse_and_eval(f"(void*){t.pc}")
 
-            t.lr = t.stack["Base"]["OS_REG_LR"]
+#            t.lr = t.stack["Base"]["OS_REG_LR"]
+            t.lr = t.stack["Base"]["OS_REG_R14"]
             t.lr = gdb.parse_and_eval(f"(void*){t.lr}")
             pTask = pTask["pNext"]
 
@@ -127,16 +252,84 @@ class os_embos( ):
     def name( self ):
         return self.nm.string()
 
-    def print_task_list( self, tlist ):
+    def print_task_list( self, tlist, with_bt = None ):
         tbl = []
         tbl.append( [ "ID","Name","Stack","Prio","Status","pc","lr" ] )
+        global unwinder
+        if( with_bt is not None and unwinder is None ):
+            unwinder = fake_unwinder()
+            gdb.unwinder.register_unwinder(None,unwinder,replace=True)
+
         for t in tlist:
             # XXX status can optionally refer to a wait object
             col=None
             if( t.current ):
                 col = color_active_task.value
             tbl.append( [ vdb.color.colorl(f"{int(t.id):#0x}",col), t.name.string(), f"{int(t.stack):#0x}", t.priority, self._status_string(t.status), t.pc, t.lr ] )
-        vdb.util.print_table(tbl)
+        if( with_bt is not None ):
+#            print("unwinder.enabled = '%s'" % (unwinder.enabled,) )
+            frame = gdb.selected_frame()
+            psp = frame.read_register("psp")
+            msp = frame.read_register("msp")
+            pc = frame.read_register("pc")
+            rt = vdb.util.format_table(tbl).split("\n")
+            char_ptr = gdb.lookup_type("char").pointer()
+            header = True
+            cnt=0
+#            gdb.execute("reg sp")
+            for r in rt:
+#                print("#############################################################")
+                if( header ):
+                    header = False
+                    continue
+                print(r)
+                if( cnt < len(tlist) ):
+                    cur = tlist[cnt].current
+                    if( cur ):
+                        unwinder.enabled = False
+                        gdb.execute(with_bt)
+#                        unwinder.enabled = True
+                    else:
+                        tsp = tlist[cnt].stack.cast(char_ptr)
+#                        print("tsp.type = '%s'" % (tsp.type,) )
+#                        tsp += 1
+                        tsp += 40
+                        tsp += 32
+#                        add=int(time.time()) % 100
+#                        print("add = '%s'" % (add,) )
+#                        tsp += add
+                        tpc = tlist[cnt].pc
+                        tlr = tlist[cnt].lr
+
+#                        print("tsp = '%s'" % (tsp,) )
+#                        print("tpc = '%s'" % (tpc,) )
+#                        print("tlr = '%s'" % (tlr,) )
+#                        print(f"frame view {int(tsp)} {int(tpc)}")
+#                        print(f"frame view {int(tsp):#0x} {int(tpc):#0x}")
+#                        gdb.execute(f"frame view {int(tsp)} {int(tpc)}")
+#                        gdb.execute(f"set $psp={int(tsp)}")
+#                        gdb.execute(f"set $msp={int(tsp)}")
+#                        gdb.execute(f"set $pc={int(tpc)}")
+                        unwinder._enabled = True
+                        unwinder.set( tsp, tpc, tlr )
+#                        gdb.execute("fr 0")
+#                        gdb.execute("fr 1")
+                        gdb.execute("maintenance flush register-cache") # clear cache, cause to call again
+                        btdata=gdb.execute(with_bt,False,True)
+                        btdata=btdata.split("\n")
+                        header=btdata[0]
+                        btdata=btdata[2:]
+                        print("\n".join(btdata))
+                        unwinder.reset()
+                        unwinder._enabled = False
+#                        gdb.execute("reg sp")
+#                        gdb.execute(f"set $msp={int(msp)}")
+#                        gdb.execute(f"set $psp={int(psp)}")
+#                        gdb.execute(f"set $pc={int(pc)}")
+                cnt += 1
+
+        else:
+            vdb.util.print_table(tbl)
 
 embos = None
 
@@ -148,7 +341,11 @@ def embos_rtos( argv ):
     ver = embos.version()
     name = embos.name()
     print(f"{name} ver {ver}")
-    embos.print_task_list(tl)
+    with_bt = None
+    if( len(argv) > 0 ):
+        if( argv[0].startswith("bt") ):
+            with_bt = argv[0]
+    embos.print_task_list(tl,with_bt)
 
 
 
@@ -171,6 +368,10 @@ class cmd_rtos(vdb.command.command):
             rtos(argv)
         except Exception as e:
             traceback.print_exc()
+        finally:
+            global unwinder
+            if( unwinder is not None ):
+                unwinder._enabled = False
 
 cmd_rtos()
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
