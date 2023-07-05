@@ -78,7 +78,7 @@ class unwind_filter(gdb.unwinder.Unwinder):
 
     def __init__( self ):
         super(unwind_filter, self).__init__("vdb unwinder")
-        self.enabled = True
+        self._enabled = True
         self.skip_next = False
         self.cache = {}
         self.replacements = {}
@@ -104,7 +104,7 @@ class unwind_filter(gdb.unwinder.Unwinder):
 
     def __call__(self,pending_frame):
         try:
-            if( self.enabled ):
+            if( self._enabled ):
                 return self.do_call(pending_frame)
             else:
                 return None
@@ -294,7 +294,7 @@ class unwind_dispatch(gdb.unwinder.Unwinder):
 
     def __init__( self ):
         super(unwind_dispatch, self).__init__("vdb unwinder")
-        self.enabled = enable_unwinder.value
+        self._enabled = enable_unwinder.value
         self.unwinders = {}
         self.annotate_frames = True
 
@@ -303,7 +303,7 @@ class unwind_dispatch(gdb.unwinder.Unwinder):
 
     def __call__(self,pending_frame):
         try:
-            if( self.enabled ):
+            if( self._enabled ):
                 return self.do_call(pending_frame)
             else:
                 return None
@@ -331,9 +331,9 @@ class unwind_dispatch(gdb.unwinder.Unwinder):
             u.clear()
 
     def enable( self, en ):
-        self.enabled = en
+        self._enabled = en
         for t,u in self.unwinders.items():
-            u.enabled = en
+            u._enabled = en
 
     def hide( self, frameno ):
         return self.current_unwinder().hide(frameno)
