@@ -224,6 +224,7 @@ class os_embos( ):
 
     def get_task_list( self ):
         ret = []
+        otp=gdb.lookup_type("OS_TASK_STRUCT").pointer()
         current = gdb.parse_and_eval("OS_Global.pCurrentTask")
         pTask = self.OS_Global["pTask"]
         while( pTask != 0 ):
@@ -231,7 +232,11 @@ class os_embos( ):
             ret.append(t)
             if( pTask == current ):
                 t.current = True
-            t.name = pTask["sName"]
+            try:
+                t.name = pTask["sName"]
+            except gdb.error:
+                pTask=pTask.cast(otp)
+                t.name = pTask["sName"]
             t.id = int(pTask)
             t.priority = int(pTask["Priority"])
             t.stack = pTask["pStack"]
@@ -252,7 +257,10 @@ class os_embos( ):
 
 
     def name( self ):
-        return self.nm.string()
+        try:
+            return self.nm.string()
+        except:
+            return None
 
     def print_task_list( self, tlist, with_bt = None, id_filter = None ):
         tbl = []
