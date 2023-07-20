@@ -67,9 +67,23 @@ pre_colors_dot = [
 def invalidate_cache( c ):
     global parse_cache
     parse_cache = {}
+"""
 
-next_marker = vdb.config.parameter("vdb-asm-next-marker", " → " )
-next_marker_dot = vdb.config.parameter("vdb-asm-next-marker-dot", " → " )
+➀ ➁ ➂ ➃ ➄ ➅ ➆ ➇ ➈ ➉
+❶ ❷ ❸ ❹ ❺ ❻ ❼ ❽ ❾ ❿
+➊ ➋ ➌ ➍ ➎ ➏ ➐ ➑ ➒ ➓
+
+"""
+
+bp_marker = vdb.config.parameter("vdb-asm-breakpoint-marker", "⬤" )
+bp_marker_disabled = vdb.config.parameter("vdb-asm-breakpoint-disabled-marker", "◯" )
+bp_number = vdb.config.parameter("vdb-asm-breakpoint-use-numbers", True )
+
+bp_numbers = vdb.config.parameter("vdb-asm-breakpoint-numbers", "❶❷❸❹❺❻❼❽❾❿" )
+bp_numbers_disabled = vdb.config.parameter("vdb-asm-breakpoint-numbers-disabled", "➀➁➂➃➄➅➆➇➈➉" )
+
+next_marker = vdb.config.parameter("vdb-asm-next-marker", "→" )
+next_marker_dot = vdb.config.parameter("vdb-asm-next-marker-dot", "→" )
 
 next_mark_ptr     = vdb.config.parameter("vdb-asm-next-mark-pointer", True )
 shorten_header    = vdb.config.parameter("vdb-asm-shorten-header", False )
@@ -86,6 +100,8 @@ color_ns       = vdb.config.parameter("vdb-asm-colors-namespace",   "#ddf", gdb_
 color_function = vdb.config.parameter("vdb-asm-colors-function",    "#99f", gdb_type = vdb.config.PARAM_COLOUR)
 color_marker   = vdb.config.parameter("vdb-asm-colors-next-marker", "#0f0", gdb_type = vdb.config.PARAM_COLOUR)
 color_xmarker  = vdb.config.parameter("vdb-asm-colors-marker",      "#049", gdb_type = vdb.config.PARAM_COLOUR)
+color_bpmarker = vdb.config.parameter("vdb-asm-colors-breakpoint-marker", "#e45", gdb_type = vdb.config.PARAM_COLOUR)
+color_bpmarker_disabled = vdb.config.parameter("vdb-asm-colors-breakpoint-disabled-marker", "#e45", gdb_type = vdb.config.PARAM_COLOUR)
 color_addr     = vdb.config.parameter("vdb-asm-colors-addr",        None,   gdb_type = vdb.config.PARAM_COLOUR)
 color_offset   = vdb.config.parameter("vdb-asm-colors-offset",      "#444", gdb_type = vdb.config.PARAM_COLOUR)
 color_bytes    = vdb.config.parameter("vdb-asm-colors-bytes",       "#059", gdb_type = vdb.config.PARAM_COLOUR)
@@ -1667,6 +1683,12 @@ ascii mockup:
         cg_columns = 0
         if( "c" in showspec ):
             cg_columns = len(cg_header)
+        from vdb.track import parse_breakpoints
+        raw_breakpoints = parse_breakpoints()
+
+        breakpoints = {}
+        for _,bp in raw_breakpoints.items():
+            breakpoints[bp.address] = bp
 
         for i in self.instructions:
             line_extra = []
@@ -1701,14 +1723,52 @@ ascii mockup:
             postjump = 0
             if( "m" in showspec ):
                 prejump += 1
+                marker_str=" "
+
+                bp = breakpoints.get(i.address, None )
+
+                if( bp is not None ):
+                    if( bp.enabled ):
+                        bpmark=bp_marker.value
+                        bpnum=bp_numbers.value
+                        mcol = color_bpmarker.value
+                    else:
+                        bpmark=bp_marker_disabled.value
+                        bpnum=bp_numbers_disabled.value
+                        mcol = color_bpmarker_disabled.value
+
+                    if( bp_number.value ):
+#                        for ii in range(0,len(bpnum)):
+#                            print(f"{ii:2} : {bpnum[ii-1]}")
+                        num=None
+                        try:
+                            num=int(bp.number)
+                        except ValueError:
+                            try:
+                                num=int(bp.key[0])
+                            except ValueError:
+                                num=None
+                        if( num is not None ):
+                            if( num > len(bpnum) ):
+#                                mval=bpmark
+                                mval=str(num)
+                            else:
+                                mval=bpnum[num-1]
+                        else:
+                            mval=bpmark
+                    else:
+                        mval=bpmark
+                    marker_str += vdb.color.color_str( mval, mcol )
+
                 if( i.marked ):
-                    line.append( ( vdb.color.color(next_marker.value,color_marker.value), len(next_marker.value) ) )
+#                    line.append( ( vdb.color.color(next_marker.value,color_marker.value), len(next_marker.value) ) )
+                    marker_str+=vdb.color.color_str(next_marker.value,color_marker.value)
                     marked_line = cnt
                     context_start, context_end = self.compute_context(context,marked_line)
                 elif( i.xmarked ):
-                    line.append( ( vdb.color.color(next_marker.value,color_xmarker.value), len(next_marker.value) ) )
-                else:
-                    line.append( "" )
+                    marker_str+=vdb.color.color_str(next_marker.value,color_xmarker.value)
+                marker_str+=" "
+                line.append( marker_str )
 
             if( "a" in showspec ):
                 prejump += 1
@@ -2275,6 +2335,8 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
         regindex = 0
         # we have these list all over the place, save them in an architecture dependent object instead
         reglist = [ "rdi", "rsi", "rdx", "rcx", "r8", "r9" ]
+        if( current_arch == "arm" ):
+            reglist = [ "r0","r1","r2","r3","r4","r5","r6","r7","r8" ]
     # TODO support float/double registers and vectors
 
     rbp = base_pointer
@@ -2297,6 +2359,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
         if( debug.value ):
             print("b = '%s'" % (b,) )
             print("b.type = '%s'" % (b.type,) )
+            print("b.type.code = '%s'" % (vdb.util.gdb_type_code(b.type.code),) )
             print("b.name = '%s'" % (b.name,) )
             try:
                 print("b.type.fields() = '%s'" % (b.type.fields(),) )
@@ -2314,10 +2377,28 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                     continue
                 if( b.is_base_class ):
                     continue
-                bval = pval[b.name]
+                pstype = pval.type.strip_typedefs()
+                if( pstype.code == gdb.TYPE_CODE_ENUM ):
+                    bval = pval
+                else:
+                    bval = pval[b.name]
                 baddr= bval.address
+        except gdb.error as e:
+            if( str(e).find("optimized out") == -1 ):
+                traceback.print_exc()
+                print("pval = '%s'" % (pval,) )
+                print("pval.type = '%s'" % (pval.type,) )
+                print("pval.type.code = '%s'" % (vdb.util.gdb_type_code(pval.type.code),) )
+                print("pstype = '%s'" % (pstype,) )
+                print("pstype.type.code = '%s'" % (vdb.util.gdb_type_code(pstype.type.code) ,) )
+                print("b.name = '%s'" % (b.name,) )
+                print("b = '%s'" % (b,) )
+                print("b.type = '%s'" % (b.type,) )
+                print("b.type.code = '%s'" % (vdb.util.gdb_type_code(b.type.code),) )
         except:
             traceback.print_exc()
+            print("b.name = '%s'" % (b.name,) )
+            print("pval = '%s'" % (pval,) )
             pass
 
         try:
@@ -2368,11 +2449,14 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                         print("bval = '%s'" % (bval,) )
                         print("bval.address = '%s'" % (bval.address,) )
                         print("bval.type = '%s'" % (bval.type,) )
+                        print("bval.type.is_scalar = '%s'" % (bval.type.is_scalar,) )
                         print("bval.type.code = '%s'" % (vdb.util.gdb_type_code(bval.type.code),) )
                         print("type(lng.initial_registers) = '%s'" % (type(lng.initial_registers),) )
                         print("lng.initial_registers = '%s'" % (lng.initial_registers,) )
         
                     if( bval.type.code == gdb.TYPE_CODE_REF ):
+                        lng.initial_registers.set( reglist[regindex] , int(bval.address), origin=f"gather_vars(CODE_REF)@{bval.address}")
+                    elif( bval.type.code == gdb.TYPE_CODE_STRUCT and not bval.type.is_scalar ):
                         lng.initial_registers.set( reglist[regindex] , int(bval.address), origin=f"gather_vars(CODE_REF)@{bval.address}")
                     else:
                         lng.initial_registers.set( reglist[regindex] , int(bval), origin=f"gather_vars()@{bval.address}")
