@@ -705,9 +705,6 @@ class memory_map:
     def parse( self ):
         self.regions.clear()
 
-        selected_thread = gdb.selected_thread()
-        if( selected_thread is None ):
-            return
         info_files = gdb.execute("info files",False,True)
         fre = re.compile("(0x[0-9a-fA-F]*) - (0x[0-9a-fA-F]*) is (.*?)(?: in (.*))?$")
         for info in info_files.splitlines():
@@ -809,6 +806,9 @@ class memory_map:
 #        print("sec_regions = '%s'" % sec_regions )
 #        self.regions += sec_regions
 #        self.regions.sort()
+        selected_thread = gdb.selected_thread()
+        if( selected_thread is None ):
+            return
         try:
             # check if any is a stack
             selected_frame = gdb.selected_frame()
