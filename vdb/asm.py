@@ -2237,6 +2237,10 @@ class fake_frame:
         def __init__( self ):
             self.name = "__fake_function__"
 
+    class fake_architecture:
+        def registers( self ):
+            return []
+
     def __init__( self ):
         pass
 
@@ -2248,6 +2252,9 @@ class fake_frame:
 
     def block( self ):
         return []
+
+    def architecture( self ):
+        return self.fake_architecture()
 
 def fix_marker( ls, alt = None, frame = None, do_flow = True ):
 #    print(f"{ls},{alt},frame,{do_flow}")
@@ -2741,16 +2748,36 @@ def flag_extra( name, cmp, exp, value ):
 #    print("ret = '%s'" % (ret,) )
     return ret
 
+def arm_vt_flow_mov( ins, frame, possible_registers, possible_flags ):
+    if( asm_explain.value ):
+        frm = ins.arguments[1]
+        to  = ins.arguments[0]
+        if( frm.immediate is not None ):
+            frmstr=f"{frm}"
+            frmval,_ = frm.value( possible_registers )
+            if( frmval is not None ):
+                frmstr=f"{frmval:#0x}"
+            ins.add_explanation(f"Move immediate value {frmstr} to register {to}")
+        else:
+            ins.add_explanation(f"Move contents from register {frm} to register {to}")
+    return (possible_registers,possible_flags)
+
 def arm_vt_flow_bl( ins, frame, possible_registers, possible_flags ):
     if( not annotate_jumps.value ):
         return (possible_registers,possible_flags)
     ins.add_extra(f"BL TO BE HANDLED")
+    ins.add_explanation("Branch and put return address in lr register (branch and link)")
     return (possible_registers,possible_flags)
 
 def arm_vt_flow_b( ins, frame, possible_registers, possible_flags ):
     if( not annotate_jumps.value ):
         return (possible_registers,possible_flags)
     ins.add_extra(f"JUMP TO BE HANDLED")
+    if( ins.conditional_jump ):
+        ins.add_explanation("Branch conditionally")
+    else:
+        ins.add_explanation("Branch unconditionally")
+        ins.next = None
     return (possible_registers,possible_flags)
 
 def arm_vt_flow_push( ins, frame, possible_registers, possible_flags ):
@@ -2763,6 +2790,7 @@ def arm_vt_flow_push( ins, frame, possible_registers, possible_flags ):
     for a in ins.arguments:
         a.target = False
         a.reset_argspec()
+    ins.add_explanation(f"Push registers {{{', '.join(ins.args)}}} to the stack")
 
     # no flags affected
     return ( possible_registers, possible_flags )
@@ -3566,7 +3594,7 @@ def register_flow( lng, frame : "gdb frame" ):
     if( debug.value ):
         print("unhandled_mnemonics = '%s'" % (unhandled_mnemonics,) )
 
-def parse_from( arg, fakedata = None, context = None ):
+def parse_from( arg, fakedata = None, context = None, arch = None ):
     rng = arg.split(",")
 #    print("rng = '%s'" % (rng,) )
     if( len(rng) == 2 ):
@@ -3589,7 +3617,7 @@ def parse_from( arg, fakedata = None, context = None ):
         if( arg.startswith("000000") ): # really do some regex for a hex value and check that it starts with a digit
             ret = parse_from_gdb("0x" + arg,fakedata)
         else:
-            ret = parse_from_gdb(arg,fakedata)
+            ret = parse_from_gdb(arg,fakedata,arch=arch)
     except gdb.error as e:
         nfbytes = str(nonfunc_bytes.value)
         if( context is not None and context[1] is not None ):
@@ -3879,6 +3907,7 @@ def disassemble( argv ):
     context = None
     fakedata = None
     source = False
+    arch = None
 
     if( len(argv) > 0 ):
         if( argv[0][0] == "/" ):
@@ -3896,6 +3925,8 @@ def disassemble( argv ):
                 elif( argv0[0] == "f" ):
                     with open (argv[0], 'r') as fakefile:
                         fakedata = fakefile.read()
+                    if( len(argv) > 1 ):
+                        arch = argv[1]
                     argv=["fake"]
                     break
                 elif( argv0[0] == "r" ):
@@ -3931,7 +3962,7 @@ def disassemble( argv ):
 #    print("context = '%s'" % (context,) )
 #    print("argv = '%s'" % (argv,) )
 
-    asm_listing = parse_from(" ".join(argv),fakedata,context)
+    asm_listing = parse_from(" ".join(argv),fakedata,context,arch)
     if( asm_sort.value ):
         asm_listing.sort()
     marked = None
