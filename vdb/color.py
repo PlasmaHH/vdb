@@ -62,6 +62,59 @@ def scolor( s, cs ):
     except:
         return colors.color(s,fg="red",style="underline")
 
+def strip( s ):
+    return colors.strip_color(s)
+
+class color_str:
+
+    def __init__( self, s, col = None ):
+        self.s = s
+        if( isinstance( s, str ) ):
+            self.len = len(s)
+        elif( isinstance( s, color_str ) ):
+            if( col is not None ):
+                self.s = strip(s.s)
+                self.len = len(self.s)
+            else:
+                self.len = s.len
+        else:
+            raise RuntimeError(f"Expected str or color_str, got {type(s)}")
+        self.color = col
+#        print("repr(self) = '%s'" % (repr(self),) )
+
+    def __repr__( self ):
+        return f"color_str( s={self.s}, col={self.color}, len={self.len} )"
+
+
+    def __len__( self ):
+        return self.len
+
+    def __str__( self ):
+        if( self.color is not None ):
+            ret = color(self.s,self.color)
+        else:
+            ret = self.s
+        return ret
+
+    def __add__( self, rhs ):
+        if( self.color is not None ):
+            self.s = color(self.s,self.color)
+            self.color = None
+        if( isinstance(rhs,str) ):
+            self.s += rhs
+        else:
+            self.s += str(rhs)
+        self.len += len(rhs)
+#        print("repr(self) = '%s'" % (repr(self),) )
+        return self
+
+    def __radd__( self, lhs ):
+        lhs=color_str(lhs)
+        return lhs+self
+
+
+
+
 
 
 
