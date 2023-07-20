@@ -314,6 +314,10 @@ def extract_gdb_history( ):
 #        print("cmds = '%s'" % (cmds,) )
         for cmd in cmds:
             lc = cmd.split()
+            if( len(lc) < 2 ):
+                print("cmd = '%s'" % (cmd,) )
+                continue
+
             num = lc[0]
             fw = lc[1]
             fwidx = cmd.find(fw)
