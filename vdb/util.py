@@ -375,6 +375,7 @@ def format_table( tbl, padbefore = " ", padafter = " " ):
     maxsz = {}
     normal_table = []
 #    print("len(maxsz) = '%s'" % len(maxsz) )
+    from vdb.color import color_str
     for line in tbl:
 #        print("maxsz = '%s'" % (maxsz,) )
 #        print("line = '%s'" % line )
@@ -388,7 +389,12 @@ def format_table( tbl, padbefore = " ", padafter = " " ):
             if( cell is None ):
                 cell=""
 #            print("column = '%s'" % column )
-            if isinstance(cell,tuple):
+            if isinstance(cell,color_str):
+#                print("cell = '%s'" % (cell,) )
+                ncell = table_cell(cell.s,cell.color,cell.len,None,None)
+                maxsz[column] = max(maxsz.get(column,0),ncell.dpy_len)
+                pass
+            elif isinstance(cell,tuple):
                 match len(cell):
                     case 0: # empty
                         ncell = table_cell("",None,1,None,None)
