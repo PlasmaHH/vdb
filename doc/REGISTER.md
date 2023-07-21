@@ -67,6 +67,16 @@ register resides at too.
 
 Sometimes the memory is not accessible, in that case we will automatically blacklist that register and never try to
 display it again. Set `vdb-register-mmaped-unavailable-zero` to instead use zero as the value for the register.
+
+#### Setting registers
+Memory mapped registers support setting them or manipulating them via bitmasks. Supported operations are
+
+* `&=`, `|=` The expected bitwise operations on the register content.
+* `=` Just assign the value.
+* `:#=` Set a specific bit via its offset, e.g. `reg/m DCB.DEMCR:5=1` sets bit 5
+
+Example: `reg/m DCB.DEMCR|=0b10101`
+
 ## Register filter
 An additional parameter will most of the time be interpreted as a regexp filter.
 
