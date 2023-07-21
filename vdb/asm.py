@@ -90,6 +90,7 @@ shorten_header    = vdb.config.parameter("vdb-asm-shorten-header", False )
 prefer_linear_dot = vdb.config.parameter("vdb-asm-prefer-linear-dot",False)
 debug_registers = vdb.config.parameter("vdb-asm-debug-registers",False, on_set = invalidate_cache )
 debug = vdb.config.parameter("vdb-asm-debug-all",False, on_set = invalidate_cache )
+debug_addr = vdb.config.parameter("vdb-asm-debug-address",0, on_set = invalidate_cache )
 
 offset_fmt = vdb.config.parameter("vdb-asm-offset-format", "<{offset:<+{maxlen}}>:" )
 offset_txt_fmt = vdb.config.parameter("vdb-asm-text-offset-format", "<+{offset:<{maxlen}}>:" )
@@ -162,6 +163,11 @@ valid_archs = [ "x86", "arm" ]
 arch_aliases = { "i386" : "x86", "i386:x86-64" : "x86", "aarch64" : "arm" }
 
 
+def debug_all( ins = None ):
+    if( debug_addr.value is not None and ins is not None ):
+        return ( int(ins.address) == int(debug_addr.value) )
+    return debug.value
+
 def wrap_shorten( fname ):
     return fname
     # we can get multiple things that are not function names, try to shorten only really for things that look like
@@ -218,6 +224,9 @@ class string_ref:
 
     def __str__( self ):
         return self.value
+
+    def __repr__( self ):
+        return f"string_ref({self.value})"
 
     def __len__( self ):
         return len(self.value)
@@ -779,6 +788,7 @@ class instruction_base( abc.ABC ):
             self.add_extra(f"OUTFLG {pfs}")
         if( self.unhandled ):
             self.add_extra("UNHANDLED")
+        self.add_extra(f"REFERENCES = {self.reference}")
 #        self.add_extra(f"NEXT = {self.next}")
 
     def _gen_debug( self ):
@@ -807,7 +817,8 @@ class instruction_base( abc.ABC ):
     def add_extra( self, s, lvl = 2 ):
 #        print(f"add_extra({type(s)}:{s})")
         if( isinstance(s,string_ref) ):
-            s = str(s)
+#            s = str(s)
+            pass
         if( isinstance(s,str) ):
             # Check, remove after it never triggers
             unc = vdb.color.colors.strip_color(s)
@@ -850,7 +861,10 @@ class instruction_base( abc.ABC ):
         a = self.address
         if( a is None ):
             a = 0
-        ret = f"INS @{a:x} => {ta} <={to}"
+        nx=""
+        if( self.next is not None ):
+            nx=f"…{int(self.next.address):#0x}"
+        ret = f"INS @{a:x} => {ta} <={to}{nx}"
         return ret
 
     @abc.abstractmethod
@@ -1108,11 +1122,14 @@ class arm_instruction( instruction_base ):
 
         
         if( self.mnemonic in arm_conditional_jump_mnemonics ):
+#            print("self = '%s'" % (self,) )
+#            print("self.next = '%s'" % (self.next,) )
 #            print("oargs = '%s'" % (oargs,) )
 #            print("self.args = '%s'" % (self.args,) )
             self.targets.add( vdb.util.xint(self.args[-1]) )
             self.conditional_jump = True
         elif( self.mnemonic in arm_unconditional_jump_mnemonics ):
+#            print("self = '%s'" % (self,) )
             self.targets.add( vdb.util.xint(oargs) )
         elif( self.mnemonic in ["tbb","tbh"] ): # arm jump table stuff
 #            print("ARM TBB/TBH DETECTED")
@@ -1135,18 +1152,28 @@ class arm_instruction( instruction_base ):
                         gexp = gdb.parse_and_eval( gexp )
 #                        print("gexp = '%x'" % (gexp,) )
                         self.targets.add( int(gexp) )
+#                        print("self = '%s'" % (self,) )
 
 
             except ValueError:
                 pass
         elif( self.mnemonic.startswith("cmp") ):
             arm_instruction.last_cmp_immediate = self.arguments[1].immediate
-            print("arm_instruction.last_cmp_immediate = '%s'" % (arm_instruction.last_cmp_immediate,) )
+#            print("arm_instruction.last_cmp_immediate = '%s'" % (arm_instruction.last_cmp_immediate,) )
 
+        if( debug_all(self) ):
+            print("###########################################################")
+            print("self.targets = '%s'" % (self.targets,) )
 
         if( oldins is not None ):
+#            print("oldins = '%s'" % (oldins,) )
+#            print("self = '%s'" % (self,) )
+#            print("oldins.mnemonic = '%s'" % (oldins.mnemonic,) )
+#            print("oldins.next = '%s'" % (oldins.next,) )
             if oldins.mnemonic not in arm_unconditional_jump_mnemonics :
                 oldins.next = self
+#            print("oldins.next = '%s'" % (oldins.next,) )
+#            print("2oldins = '%s'" % (oldins,) )
         return self
 
 class listing( ):
@@ -1440,9 +1467,10 @@ ascii mockup:
 
         self.maxarrows = len(current_lines)+1
 
-        if( debug.value ):
+        if( debug_all() ):
             for ins in self.instructions:
-                ins._gen_debug()
+                if( debug_all(ins) ):
+                    ins._gen_debug()
 
     def optimize_arrows( self ):
         start = -1
@@ -1884,6 +1912,8 @@ ascii mockup:
                     rtpl=("",0)
 #                    print("i.reference = '%s'" % (i.reference,) )
                     for rf in i.reference:
+#                        print("rf = '%s'" % (rf,) )
+#                        print("type(rf) = '%s'" % (type(rf),) )
 #                        print("rtpl = '%s'" % (rtpl,) )
 #                        print("rf = '%s'" % (rf,) )
 #                        print("rf = '%s'" % (rf,) )
@@ -1939,12 +1969,16 @@ ascii mockup:
                         if( unc != ex ):
                             raise RuntimeError(f"List contains coloured only entry: {ex}")
 #                    print("ex = '%s'" % (ex,) )
+#                    print("len(ex) = '%s'" % (len(ex),) )
+#                    print("type(ex) = '%s'" % (type(ex),) )
                     if( isinstance(ex,tuple) ):
                         if( len(ex) == 2 ):
                             a,b = ex
-                            ex = (a,b,0)
+                            ex = (a,b,1)
+                    elif( isinstance(ex,string_ref) ):
+                        ex = (str(ex),len(ex),1)
                     else:
-                        ex = (ex,len(ex),0)
+                        ex = (ex,len(ex),1)
 #                    print("ex = '%s'" % (ex,) )
                     pre = ( prejump + cg_columns) * [None]
                     post = (postjump-1) * [None]
@@ -1955,6 +1989,7 @@ ascii mockup:
                     el += lvl*[None]
 #                    el = ["m","a","h","H","o","d","BYTES" + str(len(line)-1)]
                     el.append(ex)
+#                    print("el = '%s'" % (el,) )
                     otbl.append(el)
 
 #            output_extra(["END"],0,otbl)
@@ -2237,6 +2272,10 @@ class fake_frame:
         def __init__( self ):
             self.name = "__fake_function__"
 
+    class fake_architecture:
+        def registers( self ):
+            return []
+
     def __init__( self ):
         pass
 
@@ -2248,6 +2287,9 @@ class fake_frame:
 
     def block( self ):
         return []
+
+    def architecture( self ):
+        return self.fake_architecture()
 
 def fix_marker( ls, alt = None, frame = None, do_flow = True ):
 #    print(f"{ls},{alt},frame,{do_flow}")
@@ -2325,7 +2367,12 @@ class fake_symbol( gdb.Value ):
     def value( self, frame ):
         return frame.read_var( self.name )
 
+#TODO This whole thing is a total mess, we need at least a bit documentation and possibly refactor some stuff to tell what it is that this funciton is really doing
+
 def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, level = 0 ):
+    """
+    @returns a string suitable for display as function parameter list ( together with values )
+    """
     if( level >= gv_limit.value ):
         return ""
     level += 1
@@ -2353,10 +2400,11 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
 
     lng.initial_registers.merge( function_registers.get(fname,register_set() ) )
 
-    if( debug.value ):
+    if( debug_all() ):
         print("symlist = '%s'" % (symlist,) )
     for b in symlist:
-        if( debug.value ):
+        if( debug_all() ):
+            vdb.util.bark() # print("BARK")
             print("b = '%s'" % (b,) )
             print("b.type = '%s'" % (b.type,) )
             print("b.type.code = '%s'" % (vdb.util.gdb_type_code(b.type.code),) )
@@ -2386,6 +2434,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
         except gdb.error as e:
             if( str(e).find("optimized out") == -1 ):
                 traceback.print_exc()
+                vdb.util.bark() # print("BARK")
                 print("pval = '%s'" % (pval,) )
                 print("pval.type = '%s'" % (pval.type,) )
                 print("pval.type.code = '%s'" % (vdb.util.gdb_type_code(pval.type.code),) )
@@ -2401,21 +2450,22 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
             print("pval = '%s'" % (pval,) )
             pass
 
+        xbval=bval
         try:
-            bval = bval.dereference()
+            xbval = bval.dereference()
 #            print("bval.type.fields() = '%s'" % (bval.type.fields(),) )
-            ret += gather_vars( frame, lng, bval.type.fields() , bval, prefix + b.name + "->", [], level )
+            ret += gather_vars( frame, lng, xbval.type.fields() , xbval, prefix + b.name + "->", [], level )
         except:
 #            traceback.print_exc()
             pass
         try:
-            ret += gather_vars( frame, lng, b.type.fields(), bval, prefix + b.name + ".", [], level )
+            ret += gather_vars( frame, lng, b.type.fields(), xbval, prefix + b.name + ".", [], level )
         except:
 #            traceback.print_exc()
             pass
 
         try:
-            ret += gather_vars( frame, lng, b.type.target().unqualified().fields(), bval, prefix + b.name + ".", [], level )
+            ret += gather_vars( frame, lng, b.type.target().unqualified().fields(), xbval, prefix + b.name + ".", [], level )
         except:
 #            traceback.print_exc()
             pass
@@ -2425,7 +2475,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
 #        except:
 #            pass
 
-        if( debug.value ):
+        if( debug_all() ):
             print("prefix = '%s'" % (prefix,) )
             print("b.name = '%s'" % (b.name,) )
             print("baddr = '%s'" % (baddr,) )
@@ -2440,10 +2490,11 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
 #            print("b.name = '%s'" % (b.name,) )
 #            print("b.is_argument = '%s'" % (b.is_argument,) )
             if( b.is_argument ):
-                if( debug.value ):
+                if( debug_all() ):
                     print("b = '%s'" % (b,) )
                 if( regindex >= 0 ):
-                    if( debug.value ):
+                    if( debug_all() ):
+                        vdb.util.bark() # print("BARK")
                         print("regindex = '%s'" % (regindex,) )
                         print("reglist[regindex] = '%s'" % (reglist[regindex],) )
                         print("bval = '%s'" % (bval,) )
@@ -2460,7 +2511,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                         lng.initial_registers.set( reglist[regindex] , int(bval.address), origin=f"gather_vars(CODE_REF)@{bval.address}")
                     else:
                         lng.initial_registers.set( reglist[regindex] , int(bval), origin=f"gather_vars()@{bval.address}")
-                    if( debug.value ):
+                    if( debug_all() ):
                         print("lng.initial_registers = '%s'" % (lng.initial_registers,) )
                     regindex += 1
                 ret += f" {b.name}"
@@ -2483,10 +2534,17 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
             pass
         except:
             traceback.print_exc()
+            print("bval = '%s'" % (bval,) )
+            print("bval.address = '%s'" % (bval.address,) )
+            print("bval.type = '%s'" % (bval.type,) )
+            print("bval.type.is_scalar = '%s'" % (bval.type.is_scalar,) )
+            print("bval.type.code = '%s'" % (vdb.util.gdb_type_code(bval.type.code),) )
             pass
-    if( debug.value ):
+    if( debug_all() ):
         print("ret = '%s'" % (ret,) )
         print("lng.var_addresses = '%s'" % (lng.var_addresses,) )
+        for k,v in lng.var_addresses.items():
+            print(f"{k:#0x} : {v}")
     return ret
 
 def update_vars( ls, frame ):
@@ -2549,6 +2607,9 @@ def update_vars( ls, frame ):
             gv += gather_vars( frame, ls, block.superblock )
     else:
         gv = gather_vars( frame, ls, [] )
+    if( debug_all() ):
+        vdb.util.bark() # print("BARK")
+        print("gv = '%s'" % (gv,) )
 
     if( len(gv) > 0 ):
         funhead += "(" + gv + ")"
@@ -2741,16 +2802,36 @@ def flag_extra( name, cmp, exp, value ):
 #    print("ret = '%s'" % (ret,) )
     return ret
 
+def arm_vt_flow_mov( ins, frame, possible_registers, possible_flags ):
+    if( asm_explain.value ):
+        frm = ins.arguments[1]
+        to  = ins.arguments[0]
+        if( frm.immediate is not None ):
+            frmstr=f"{frm}"
+            frmval,_ = frm.value( possible_registers )
+            if( frmval is not None ):
+                frmstr=f"{frmval:#0x}"
+            ins.add_explanation(f"Move immediate value {frmstr} to register {to}")
+        else:
+            ins.add_explanation(f"Move contents from register {frm} to register {to}")
+    return (possible_registers,possible_flags)
+
 def arm_vt_flow_bl( ins, frame, possible_registers, possible_flags ):
     if( not annotate_jumps.value ):
         return (possible_registers,possible_flags)
     ins.add_extra(f"BL TO BE HANDLED")
+    ins.add_explanation(f"Branch to {ins.targets} and put return address {ins.next.address} in lr register (branch and link)")
     return (possible_registers,possible_flags)
 
 def arm_vt_flow_b( ins, frame, possible_registers, possible_flags ):
     if( not annotate_jumps.value ):
         return (possible_registers,possible_flags)
     ins.add_extra(f"JUMP TO BE HANDLED")
+    if( ins.conditional_jump ):
+        ins.add_explanation("Branch conditionally")
+    else:
+        ins.add_explanation("Branch unconditionally")
+        ins.next = None
     return (possible_registers,possible_flags)
 
 def arm_vt_flow_push( ins, frame, possible_registers, possible_flags ):
@@ -2763,6 +2844,7 @@ def arm_vt_flow_push( ins, frame, possible_registers, possible_flags ):
     for a in ins.arguments:
         a.target = False
         a.reset_argspec()
+    ins.add_explanation(f"Push registers {{{', '.join(ins.args)}}} to the stack")
 
     # no flags affected
     return ( possible_registers, possible_flags )
@@ -2854,12 +2936,12 @@ def x86_vt_flow_pop( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 def x86_vt_flow_mov( ins, frame, possible_registers, possible_flags ):
-    if( debug.value ):
+    if( debug_all(ins) ):
         print()
         vdb.util.bark() # print("BARK")
 
 
-    if( debug.value ):
+    if( debug_all(ins) ):
         print("ins = '%s'" % (ins,) )
         print("ins.mnemonic = '%s'" % (ins.mnemonic,) )
         print("ins.args_string = '%s'" % (ins.args_string,) )
@@ -2891,7 +2973,7 @@ def x86_vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     to.specfilter("=")
     to.specfilter("%")
 
-    if( debug.value ):
+    if( debug_all(ins) ):
         print("possible_registers = '%s'" % (possible_registers,) )
         print("ins.possible_in_register_sets = '%s'" % (ins.possible_in_register_sets,) )
         print("ins.possible_out_register_sets = '%s'" % (ins.possible_out_register_sets,) )
@@ -3201,7 +3283,7 @@ def gen_vtable( ):
 
 def short_color( symbol ):
     symbol = symbol.split("@")
-    symbol[0] = vdb.shorten.symbol(symbol[0],not debug.value )
+    symbol[0] = vdb.shorten.symbol(symbol[0],not debug_all() )
     symbol = vdb.color.concat( [ vdb.color.colorl( symbol[0],color_var.value) , "@" , "@".join(symbol[1:]) ] )
     return symbol
 
@@ -3309,7 +3391,9 @@ def register_flow( lng, frame : "gdb frame" ):
     unhandled_mnemonics = set()
 
     
+    vdb.util.bark() # print("BARK")
     while ins is not None:
+#        print("ins = '%s'" % (ins,) )
         # Simple protection against any kinds of endless loops
         # XXX Better would be to check (additionally?) if the register and flag sets are the same as in previous runs
         ins.passes += 1
@@ -3407,6 +3491,9 @@ def register_flow( lng, frame : "gdb frame" ):
 
         extra = None
 #        vdb.util.bark() # print("BARK")
+#        print("ins = '%s'" % (ins,) )
+#        print("ins.arguments = '%s'" % (ins.arguments,) )
+#        print("ins.args = '%s'" % (ins.args,) )
         # Check if we can output a bit more info about the register values used in this
         if( len(ins.arguments) > 0 ):
             cnt = 0
@@ -3425,6 +3512,9 @@ def register_flow( lng, frame : "gdb frame" ):
                 # register values)
                 av = lng.var_expressions.get(a,None)
                 extra.value += f", av = {av}"
+#                print("av = '%s'" % (av,) )
+#                print("a = '%s'" % (a,) )
+#                print("lng.var_expressions = '%s'" % (lng.var_expressions,) )
                 if( av is not None ):
 #                    ins_references.append(  vdb.color.color(av,color_var.value) + "@" + vdb.color.color(a,color_location.value) )
                     ins_references.append( vdb.color.concat( [  vdb.color.colorl(av,color_var.value) ,"@", vdb.color.colorl(a,color_location.value) ] ) )
@@ -3454,12 +3544,22 @@ def register_flow( lng, frame : "gdb frame" ):
                         extra.value += f", argval = {argval}, addr = {addr}"
                     extra.value += f", argspec = {arg.argspec}"
 
+#                    vdb.util.bark() # print("BARK")
+#                    print("ins = '%s'" % (ins,) )
+#                    print("addr = '%s'" % (addr,) )
+#                    print("printed_addrs = '%s'" % (printed_addrs,) )
                     # We have a an address, which means the value from the argument was located at some memory
                     if( addr is not None and addr not in printed_addrs ):
                         printed_addrs.add(addr)
 
                         # Check if the memory address is known to host some (local) variable
                         av = lng.var_addresses.get(addr,None)
+                        if( debug_all(ins) ):
+                            print("###################")
+                            print(f"{ins.address=:#0x}")
+                            print(f"{addr=:#0x}")
+                            print("type(addr) = '%s'" % (type(addr),) )
+                            print("av = '%s'" % (av,) )
                         extra.value += f", ava = {av}"
 
                         if( addr is not None ):
@@ -3519,7 +3619,7 @@ def register_flow( lng, frame : "gdb frame" ):
                     extra.value += "EXCEPTION"
                     traceback.print_exc()
 
-                    if( debug.value ):
+                    if( debug_all(ins) ):
                         traceback.print_exc()
                     pass
 #            for irx in range(0,len(ins_references)-1):
@@ -3531,25 +3631,28 @@ def register_flow( lng, frame : "gdb frame" ):
                     ins.reference.append(("ALT:",4))
             ins.reference += ins_references
 
-        for pr in ins.parsed_reference:
+        for opr in ins.parsed_reference:
             try:
                 # some are in brackets
                 br=""
-                pr = pr.strip()
+                pr = opr[0].strip()
                 if( pr[0] == "(" ):
                     br="("
                     pr = pr[1:]
                 prv = pr.split()
                 xr = vdb.util.xint(prv[0])
                 if xr not in printed_addrs:
+#                    print("extra = '%s'" % (extra,) )
                     sym,ei = extra_info(None, "~", xr, extra )
                     if( sym is None or len(sym) == 0 ):
-                        ei += br
-                        ei += "".join(prv[1:])
+#                        print("type(ei) = '%s'" % (type(ei),) )
+#                        print("len(ei) = '%s'" % (len(ei),) )
+                        ei = vdb.color.concat(ei,br)
+                        ei = vdb.color.concat(ei,"".join(prv[1:]))
                     ins.reference.append(ei)
             except:
-                ins.reference.append(pr)
-                if( debug.value ):
+                ins.reference.append(opr)
+                if( debug_all(ins) ):
                     traceback.print_exc()
 
 
@@ -3563,10 +3666,10 @@ def register_flow( lng, frame : "gdb frame" ):
             ins,possible_registers,possible_flags = flowstack.pop()
 
     # while(ins) done
-    if( debug.value ):
+    if( debug_all() ):
         print("unhandled_mnemonics = '%s'" % (unhandled_mnemonics,) )
 
-def parse_from( arg, fakedata = None, context = None ):
+def parse_from( arg, fakedata = None, context = None, arch = None ):
     rng = arg.split(",")
 #    print("rng = '%s'" % (rng,) )
     if( len(rng) == 2 ):
@@ -3589,7 +3692,7 @@ def parse_from( arg, fakedata = None, context = None ):
         if( arg.startswith("000000") ): # really do some regex for a hex value and check that it starts with a digit
             ret = parse_from_gdb("0x" + arg,fakedata)
         else:
-            ret = parse_from_gdb(arg,fakedata)
+            ret = parse_from_gdb(arg,fakedata,arch=arch)
     except gdb.error as e:
         nfbytes = str(nonfunc_bytes.value)
         if( context is not None and context[1] is not None ):
@@ -3879,6 +3982,7 @@ def disassemble( argv ):
     context = None
     fakedata = None
     source = False
+    arch = None
 
     if( len(argv) > 0 ):
         if( argv[0][0] == "/" ):
@@ -3896,6 +4000,8 @@ def disassemble( argv ):
                 elif( argv0[0] == "f" ):
                     with open (argv[0], 'r') as fakefile:
                         fakedata = fakefile.read()
+                    if( len(argv) > 1 ):
+                        arch = argv[1]
                     argv=["fake"]
                     break
                 elif( argv0[0] == "r" ):
@@ -3931,7 +4037,7 @@ def disassemble( argv ):
 #    print("context = '%s'" % (context,) )
 #    print("argv = '%s'" % (argv,) )
 
-    asm_listing = parse_from(" ".join(argv),fakedata,context)
+    asm_listing = parse_from(" ".join(argv),fakedata,context,arch)
     if( asm_sort.value ):
         asm_listing.sort()
     marked = None
@@ -4032,6 +4138,9 @@ if __name__ == "__main__":
 # Special marker chars for breakpoints and similar
 # For jump tables and pc/ip relative data loads we can mark things as "data" and possibly even the access size and then
 # show it accordingly
+# For the gather_vars and display stuff, consider the case where a variable doesn't live at an address but is a
+# parameter passed in a register. Figure out a way that this is displayed and distinguishable from a variable that lives
+# e.g. on the stack ( maybe again @ vs. = ? )
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

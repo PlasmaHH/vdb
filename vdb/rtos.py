@@ -277,7 +277,8 @@ class os_embos( ):
                 col = color_active_task.value
             if( id_filter == t.id ):
                 col = color_marked_task.value
-            tbl.append( [ vdb.color.colorl(f"{int(t.id):#0x}",col), t.name.string(), f"{int(t.stack):#0x}", t.priority, self._status_string(t.status), t.pc, t.lr ] )
+
+            tbl.append( [ vdb.color.colorl(f"{int(t.id):#0x}",col), t.name.string("iso-8859-15"), f"{int(t.stack):#0x}", t.priority, self._status_string(t.status), t.pc, t.lr ] )
         if( with_bt is not None ):
 #            print("unwinder.enabled = '%s'" % (unwinder.enabled,) )
             frame = gdb.selected_frame()
