@@ -68,6 +68,11 @@ PARAM_BOOLEAN = 0
 COMMAND_SUPPORT = 0
 PARAM_STRING = 0
 PARAM_INTEGER = 0
+BP_BREAKPOINT = 0
+BP_HARDWARE_WATCHPOINT = 0
+BP_READ_WATCHPOINT = 0
+BP_ACCESS_WATCHPOINT = 0
+BP_WATCHPOINT = 0
 
 class mock_event:
     def connect( a ):
@@ -78,6 +83,8 @@ class events:
     new_thread = mock_event
     stop = mock_event
     before_prompt = mock_event
+    memory_changed = mock_event
+    inferior_call = mock_event
 
 class mock_type:
 
@@ -121,4 +128,11 @@ def parse_and_eval( s ):
 def string_to_argv( arg ):
     argv=shlex.split(arg)
     return argv
+
+class FinishBreakpoint:
+    pass
+
+class Breakpoint:
+    pass
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
