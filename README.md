@@ -39,6 +39,7 @@ under x86_64 Linux with gcc > 10.
     * [unwind](#unwind)
     * [history](#history)
     * [profile](#profile)
+    * [rtos](#rtos)
     * [va](#va)
     * [llist linked list tools](#llist-linked-list-tools)
     * [svd file support](#svd-file-support)
@@ -240,6 +241,14 @@ awkward way due to gdb limitations.
 Allows to profile python calls
 ![](doc/img/profile.0.png)
 [You can find detailed information about this module here](doc/PROFILE.md)
+## rtos
+Unified support for (bare metal) realtime operating systems. 
+
+Currently supported:
+
+* SEGGER embOS
+
+[You can find detailed information about this module here](doc/RTOS.md)
 
 ## va
 Allows you to inspect variable argument functions
@@ -314,6 +323,8 @@ tailspec (means to stop pointer chaining here )
 ## memory layout
 Provides information about the memory layout gathered from various sources. Primary source of information for the vmmap
 command as well as the pointer colouring.
+
+Also provides the `memset` command ( works the same as the memset function )
 
 ## type layout
 This is the submodule that is responsible for parsing gdb type information and reconstructing an in-memory layout. This
@@ -429,3 +440,7 @@ There are a lot of ideas and enhancements that are possible or need to be done. 
 * check if we can put probes to good use. They may be useful to integrate into the track mechanism
 * asm, shorten, pahole and hex annotate use all a bit of the object layout for nested structures. We need to unify this
   properly to have repeatable names all around... 
+
+
+
+

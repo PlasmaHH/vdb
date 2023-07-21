@@ -67,13 +67,6 @@ pre_colors_dot = [
 def invalidate_cache( c ):
     global parse_cache
     parse_cache = {}
-"""
-
-➀ ➁ ➂ ➃ ➄ ➅ ➆ ➇ ➈ ➉
-❶ ❷ ❸ ❹ ❺ ❻ ❼ ❽ ❾ ❿
-➊ ➋ ➌ ➍ ➎ ➏ ➐ ➑ ➒ ➓
-
-"""
 
 bp_marker = vdb.config.parameter("vdb-asm-breakpoint-marker", "⬤" )
 bp_marker_disabled = vdb.config.parameter("vdb-asm-breakpoint-disabled-marker", "◯" )
@@ -83,7 +76,7 @@ bp_numbers = vdb.config.parameter("vdb-asm-breakpoint-numbers", "❶❷❸❹❺
 bp_numbers_disabled = vdb.config.parameter("vdb-asm-breakpoint-numbers-disabled", "➀➁➂➃➄➅➆➇➈➉" )
 
 next_marker = vdb.config.parameter("vdb-asm-next-marker", "→" )
-next_marker_dot = vdb.config.parameter("vdb-asm-next-marker-dot", "→" )
+next_marker_dot = vdb.config.parameter("vdb-asm-next-marker-dot", " → " )
 
 next_mark_ptr     = vdb.config.parameter("vdb-asm-next-mark-pointer", True )
 shorten_header    = vdb.config.parameter("vdb-asm-shorten-header", False )

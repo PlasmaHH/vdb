@@ -40,12 +40,17 @@ vdb-asm-colors-namespace
 vdb-asm-colors-function
 vdb-asm-colors-bytes
 vdb-asm-colors-next-marker
+vdb-asm-colors-marker
+vdb-asm-colors-breakpoint-marker
 vdb-asm-colors-addr
 vdb-asm-colors-offset
 vdb-asm-colors-bytes
 vdb-asm-colors-prefix
 vdb-asm-colors-mnemonic
 vdb-asm-colors-args
+vdb-asm-colors-variable
+vdb-asm-colors-location
+vdb-asm-colors-explanation
 ```
 
 Additionally `vdb-asm-colors-jumps` is a semicolon separated list of colours to use for the jump tree view.
@@ -123,6 +128,16 @@ We have a variety of configurations that control how we output things
 * `vdb-asm-debug-all` shows all sorts of debug information (may break formatting)
 * `vdb-asm-variable-expansion-limit` Limits the depth of subobject expansions for local variables.
 
+### breakpoints
+
+In most contexts the existing breakpoints will be displayed as a dot in the marker column. You can configure the colour,
+as well as the character used for it ( `vdb-asm-breakpoint-marker` and `vdb-asm-breakpoint-disabled-marker` for disabled
+ones). For the first 10 breakpoints the settings `vdb-asm-breakpoint-numbers` ( and
+`vdb-asm-breakpoint-numbers-disabled` ) controls alternative characters to be used. Their usage is controlled by the
+`vdb-asm-breakpoint-use-numbers` setting. When enabled, breakpoints that go beyond the numbers characters will simply be
+represented by numbers. You can also leave the numbers setting empty, in which case numbers will be used for all
+breakpoints.
+
 ## Information enhancement functionality
 
 ### syscall
@@ -150,6 +165,16 @@ of calling. There are certain cases to distinguish:
 
 ### function calls
 We plan to do the same we do with the syscalls with function calls, but its not yet usable.
+
+### Mnemonics
+Sometimes its hard to exactly recall what a mnemonic does or what the exact direction of the arguments are. For
+selected/supported mnemonics ( and architectures ) setting `vdb-asm-explain` will enable a short sentence of explanation
+for each supported assembler instruction.
+
+
+### Jump annotations
+When `vdb-asm-annotate-jumps`  is active, then all (detected and supported) conditional jump instructions will output
+when they detected via register flow analysis whether the jump is being taken.
 
 ### constants
 Whenever we load some constants into registers or similar, we annotate them as good as we can. Mostly this will be a
