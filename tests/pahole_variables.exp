@@ -1,14 +1,14 @@
 [  0-  7] int (**)(void) morev._vptr.morev
-[  8- 15]       uint32_t morev.y
-[ 16- 17]       uint16_t morev.p
+[  8- 15]  unsigned long morev.y
+[ 16- 17] unsigned short morev.p
 [ 18- 18]           char morev.u
 [ 19- 19]                <unused> 1
 [ 20- 20]           char morev.small::c
 [ 21- 21]                <unused> 1
-[ 22- 23]       uint16_t morev.small::x
+[ 22- 23] unsigned short morev.small::x
 [ 24- 24]           char morev.small::h
 [ 25- 31]                <unused> 7
-[ 32- 39]       uint32_t morev.big::n
+[ 32- 39]  unsigned long morev.big::n
 [ 40- 43]            int morev.innerst::i
 [ 44- 47]                <unused> 4
 [ 48- 55]         double morev.innerst::po
@@ -40,14 +40,14 @@
 [ 16- 19]            int oax.g0::x0
 [ 20- 20]           char oax.g0::c0
 [ 21- 23]                <unused> 3
-[ 24- 31]       uint32_t oax.g0::g0
+[ 24- 31]  unsigned long oax.g0::g0
 [ 32- 35]            int oax.b00::x00
 [ 36- 36]           char oax.b00::c00
 [ 37- 39]                <unused> 3
 [ 40- 43]            int oax.g00::x00
 [ 44- 44]           char oax.g00::c00
 [ 45- 47]                <unused> 3
-[ 48- 55]       uint32_t oax.g00::g00
+[ 48- 55]  unsigned long oax.g00::g00
 [  0-  7] int (**)(void) xv._vptr.xv
 [  8- 11]            int xv.b00::x00
 [ 12- 12]           char xv.b00::c00
@@ -58,5 +58,8 @@
 [ 24- 27]            int xv.g0::x0
 [ 28- 28]           char xv.g0::c0
 [ 29- 31]                <unused> 3
-[ 32- 39]       uint32_t xv.g0::g0
+[ 32- 39]  unsigned long xv.g0::g0
+Lazy typedef loading is disabled. To manually load typedefs for shortening, do vdb load shorten
+
+
 Exiting vdb...
