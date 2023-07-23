@@ -297,10 +297,12 @@ def register_size( name ):
 
 
 def read( reg, frame = None ):
-    if( frame is None ):
-        frame = gdb.selected_frame()
     try:
+        if( frame is None ):
+            frame = gdb.selected_frame()
         return frame.read_register(reg)
+    except gdb.error:
+        return None
     except ValueError:
         return None
 

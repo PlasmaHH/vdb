@@ -164,9 +164,14 @@ def get_vtt_name( atype, name = None ):
     return VTT
 
 def get_vtable_entry( name, offset ):
-    cmd="((ptrdiff_t*)&'vtable for %s')[%s]" % (name,offset)
+    try:
+        cmd="((ptrdiff_t*)&'vtable for %s')[%s]" % (name,offset)
 #    print("cmd = '%s'" % (cmd,) )
-    ofresult = gdb.parse_and_eval(cmd)
+        ofresult = gdb.parse_and_eval(cmd)
+    except gdb.error:
+        cmd="((unsigned long*)&'vtable for %s')[%s]" % (name,offset)
+#    print("cmd = '%s'" % (cmd,) )
+        ofresult = gdb.parse_and_eval(cmd)
 #    print("ofresult = '%s'" % (ofresult,) )
     return ofresult
 
@@ -349,13 +354,13 @@ class object_layout:
             parent.subobjects.append(so)
 #            print(" . . . . . . . . . . . . . ")
 #            print("f.is_base_class = '%s'" % (f.is_base_class,) )
-            print("so.name = '%s'" % so.name )
-            print("so.type = '%s'" % so.type )
+#            print("so.name = '%s'" % so.name )
+#            print("so.type = '%s'" % so.type )
 #            print("so.type.strip_typedefs() = '%s'" % so.type.strip_typedefs() )
-            print("so.bit_offset = '%s'" % so.bit_offset )
-            print("so.byte_offset = '%s'" % so.byte_offset )
-            print("so.size = '%s'" % so.size )
-            print("offset = '%s'" % offset )
+#            print("so.bit_offset = '%s'" % so.bit_offset )
+#            print("so.byte_offset = '%s'" % so.byte_offset )
+#            print("so.size = '%s'" % so.size )
+#            print("offset = '%s'" % offset )
 #            print("")
             bd = byte_descriptor(None,None,None)
             bd.object = so
@@ -364,11 +369,11 @@ class object_layout:
 #                print("so = '%s'" % so )
 #                print("offset = '%s'" % offset )
                 if( not f.is_base_class ):
-                    print("len(self.bytes) = '%s'" % (len(self.bytes),) )
-                    print("so.byte_offset = '%s'" % (so.byte_offset,) )
-                    print("so.size = '%s'" % (so.size,) )
+#                    print("len(self.bytes) = '%s'" % (len(self.bytes),) )
+#                    print("so.byte_offset = '%s'" % (so.byte_offset,) )
+#                    print("so.size = '%s'" % (so.size,) )
                     for i in range( so.byte_offset, so.byte_offset + so.size ):
-                        print("self.bytes[%s] = '%s' => '%s'" % (i,self.bytes[i].name(),bd.name()) )
+#                        print("self.bytes[%s] = '%s' => '%s'" % (i,self.bytes[i].name(),bd.name()) )
                         self.bytes[i] = bd
                 self.descriptors.append(bd)
             else:
@@ -400,5 +405,6 @@ class object_layout:
 #                print("LAYOUT ELSE so = '%s'" % so )
 #            print("so = '%s'" % so )
 
+#TODO is it maybe a good idea to map all integer types to standard integer [u]int32_t etc. ones?
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
