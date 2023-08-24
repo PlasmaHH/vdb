@@ -379,6 +379,8 @@ def stop( bpev ):
                     if( isinstance( tr, finish_breakpoint ) ):
                         tr.stop()
 #            return False
+        elif( type(bpev) == gdb.SignalEvent ):
+            pass
         else:
             bps = bpev.breakpoints
 #            print("bps = '%s'" % (bps,) )
@@ -447,6 +449,16 @@ class track_item:
 #            traceback.print_exc()
             pass
 
+def extract_ename( argv ):
+    ename = None
+    if( len(argv) > 1 and argv[1] == "=" ):
+        ename = argv[0]
+        argv = argv[2:]
+    elif( argv[0][-1] == "=" ):
+        ename = argv[0][:-1]
+        argv = argv[1:]
+    return (ename,argv)
+
 def track( argv, execute, eval_after, do_eval ):
     ex_bp = set()
 
@@ -456,14 +468,7 @@ def track( argv, execute, eval_after, do_eval ):
         ex_bp.add(bp.number)
         for _,sbp in bp.subpoints.items():
             ex_bp.add(sbp.number)
-
-    ename = None
-    if( len(argv) > 1 and argv[1] == "=" ):
-        ename = argv[0]
-        argv = argv[2:]
-    elif( argv[0][-1] == "=" ):
-        ename = argv[0][:-1]
-        argv = argv[1:]
+    ename,argv = extract_ename(argv)
 
 #    print("ename = '%s'" % (ename,) )
 
@@ -628,7 +633,6 @@ def data( ):
             showts = dt.strftime("%Y.%m.%d %H:%M:%S.%f")
         line = [ showts ]
         tdata = tracking_data[ts]
-#        print("tdata = '%s'" % (tdata,) )
         for dk in trackings_by_number.keys():
 #            print("dk = '%s'" % (dk,) )
             td = tdata.get(dk,None)
@@ -694,6 +698,8 @@ You should have a look at the data and graph modules, which can take the data fr
 
             if( len(argv) == 0 ):
                 show()
+            elif( argv[0] == "interval" ):
+                interval( argv[1:], execute,eval_after_execute,python_eval )
             elif( argv[0] == "show" ):
                 show()
             elif( argv[0] == "data" ):
@@ -1251,4 +1257,92 @@ def del_set( argv ):
     del set_data[setname]
 
     print("Disabled set '%s'" % setname)
+
+next_t = None
+
+def prompt():
+    vdb.prompt.display()
+
+def event( ):
+    now = time.time()
+    if( now >= next_t ):
+        gdb.execute("interrupt")
+#        vdb.util.bark() # print("BARK")
+    else:
+        print(f"\rNow: {time.time()}",end="",flush=True)
+        gdb.post_event(event)
+
+#    gdb.execute("\n")
+
+
+def interval( argv, execute, eval_after, do_eval ):
+    iv = float(argv[0])
+    argv = argv[1:]
+    global next_t
+    next_t = time.time() + iv
+    ename,argv = extract_ename(argv)
+    expr = argv
+    nti = track_item( expr, execute, eval_after, do_eval , ename)
+    global trackings_by_number
+    trackings_by_number[nti.number] = nti
+    while True:
+#        print("next_t = '%s'" % (next_t,) )
+        gdb.post_event(event)
+        gdb.execute("continue")
+        si=gdb.parse_and_eval("$_siginfo")
+#        print("si = '%s'" % (si,) )
+        if( si["si_signo"] == 2 and si["_sifields"]["_kill"]["si_pid"] == 0 ):
+            print("Detected possible SIGINT, stopping interval track")
+            break
+        nti.execute(time.time())
+        while( time.time() > next_t ):
+            next_t += iv
+    prompt()
+
+# Some thoughts...
+#
+# We should somehow unify all kinds of track commands to specify independently:
+# - What event to track 
+#   - breakpoint (mostly python support in gdb)
+#   - watchpoint (no real possibility to figure out that we have been hit)
+#   - periodic triggers ( needs to be implemented with the post event and time check trick )
+# - what data to track
+#   - gdb expression/value
+#   - python code
+#   - some raw data interpreted as our special named unpack tuple ( e.g. "ID:H,Time:I" yields a named tuple of ID and Time
+#
+# The track sets currently are working completely independently. Maybe it makes sense to make them feature rich enough
+# to have the currently simple tasks be internalls converted/implemented as track sets. There should however be no
+# significant performance impact.
+#
+# A unified data format for track data and possibly other data that then other modules can process.
+# Are simply lists of named tuples or even dicts fast and flexible enough? Currently the track data has kind of as its
+# "key" the timestamp, and all the expressions with their values ( if any ) are pairs of datapoints, but not for every
+# timestamp such a datapoint is available.
+# For the new "raw data" module we would have to first read the key/value pairs ( named tuples ) and then stuff them
+# into either a list, or in case its ID based, use one of the fields as a key for a dict.
+#
+# ID based data is read and then unified based on the ID since we might read stuff multiple times.
+# Can we assign timestamps? Maybe interpolate since the last read dataset?
+#
+# Data transformation functionality. Not sure what exactly is needed here but somtimes the above modules won't quite
+# produce what is needed for the next ones. Maybe math operations on multiple ones? Or FFT? Interpolation? (box car)
+# averaging? 
+# Somehow we want to integrate user code into here too. Some python lookup magic?
+#
+# graphing/statistics
+# ( All should probably support linear, log2, log10 (or log arbitrary?)
+# - linear plot. One X value identified by e.g. timestamp ( most useful for track data ).
+# - histogram. Mostly useful for non timestamped data?
+# - point cloud maybe? 2D/3D?
+# - polar coordinates?
+# Everything with lines should have the ability to plot points and control interpolation
+#
+# This all is a lot of configuration and we probably don't want to put everything into one command so maybe we can do
+# some setup commands and enable commands? That way we can somewhat work around the one window limitation of mathplotlib
+# and put up multiple plots in one window.
+#
+
+
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
