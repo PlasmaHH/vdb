@@ -189,6 +189,10 @@ def refresh_prompt( ):
     output_messages()
     return prompt
 
+
+def display():
+    print(refresh_prompt(),end="",flush=True)
+
 def check_format( fmt ):
     global has_key
     re_fmt = "{[^}]*[:]*" + fmt + "[:]*.*}"
