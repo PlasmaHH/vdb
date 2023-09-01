@@ -97,7 +97,6 @@ suffixes_iso = [ "", "k","M","G","T","P","E","Z","Y" ]
 suffixes_bin = [ "", "ki","Mi","Gi","Ti","Pi","Ei","Zi","Yi" ]
 
 def bark( offset = 0 ):
-    import traceback
     st = traceback.extract_stack()
     st = st[-2+offset]
     print(f"{st.name}:{st.filename}:{st.lineno}")
@@ -157,7 +156,6 @@ def init_logger( ):
 def maybe_logprint( level, msg, queue = False ):
     if( logger is None ):
         init_logger()
-    import traceback
     st = traceback.extract_stack()
     st = st[-3]
     fn = os.path.split(st.filename)
@@ -929,6 +927,12 @@ def parse_and_eval_cached( ex, override = False ):
     return res
 
 
+def is_started( ):
+    try:
+        gdb.selected_frame()
+        return True
+    except:
+        return False
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
