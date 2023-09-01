@@ -136,11 +136,11 @@ class hist_process:
 #        print("P self.queue.qsize() = '%s'" % (self.queue.qsize(),) )
 
     def set( self, data ):
-        vdb.util.bark() # print("BARK")
+#        vdb.util.bark() # print("BARK")
         data = numpy.array(data)
-        print("data = '%s'" % (data,) )
+#        print("data = '%s'" % (data,) )
         self.queue.put( ("set",data) )
-        print("self.queue.qsize() = '%s'" % (self.queue.qsize(),) )
+#        print("self.queue.qsize() = '%s'" % (self.queue.qsize(),) )
 
     def do_add( self, ndata ):
         self.data = numpy.concatenate( (self.data,ndata ) )
@@ -178,6 +178,8 @@ class hist_process:
 #        _,_,self.bar = self.axis.hist(self.data,self.bins,lw=1,ec="yellow",fc="green",alpha=0.5)
 
         try:
+            if( len(self.data) == 0 ):
+                return
             n,n2 = numpy.histogram(self.data,self.bins)
             maxy = 0
             minx = self.data.min()
@@ -539,12 +541,12 @@ def refresh_track( ):
     global ht
     if( ht.process is None ):
         return
-    vdb.util.bark() # print("BARK")
+#    vdb.util.bark() # print("BARK")
     alldata = extract_track( current_track_var,False)
     ht.set(alldata)
     ht.process.join(timeout=0)
 #    ht.process.join()
-    vdb.util.bark() # print("BARK")
+#    vdb.util.bark() # print("BARK")
 #    print("ht.process.is_alive() = '%s'" % (ht.process.is_alive(),) )
 #    print("ht.process.exitcode = '%s'" % (ht.process.exitcode,) )
 #    print("multiprocessing.active_children() = '%s'" % (multiprocessing.active_children(),) )

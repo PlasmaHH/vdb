@@ -456,10 +456,10 @@ class track_item:
                 self.array_pre = m.group(1)
                 self.array_size = int(m.group(2))
                 self.array_post = m.group(3)
-                print("m = '%s'" % (m,) )
-                print("m.group(1) = '%s'" % (m.group(1),) )
-                print("m.group(2) = '%s'" % (m.group(2),) )
-                print("m.group(3) = '%s'" % (m.group(3),) )
+#                print("m = '%s'" % (m,) )
+#                print("m.group(1) = '%s'" % (m.group(1),) )
+#                print("m.group(2) = '%s'" % (m.group(2),) )
+#                print("m.group(3) = '%s'" % (m.group(3),) )
                 self.has_array = True
 
                 if( len(self.array_post) > 0 ):
@@ -489,8 +489,8 @@ class track_item:
             val=gdb.parse_and_eval(self.expression)
 #        print("val = '%s'" % (val,) )
         names,fullspec = unpack_prepare(self.pack_expression)
-        print("names = '%s'" % (names,) )
-        print("fullspec = '%s'" % (fullspec,) )
+#        print("names = '%s'" % (names,) )
+#        print("fullspec = '%s'" % (fullspec,) )
 #        print("val.address = '%s'" % (val.address,) )
         itemsize = struct.calcsize(fullspec)
 #        print("itemsize = '%s'" % (itemsize,) )
@@ -545,13 +545,13 @@ class track_item:
 
     def execute( self, now ):
         try:
-            vdb.util.bark() # print("BARK")
-            print("self.python_eval = '%s'" % self.python_eval )
-            print("self.use_execute = '%s'" % self.use_execute )
-            print("self.eval_after = '%s'" % self.eval_after )
-            print("self.expression = '%s'" % self.expression )
-            print("self.pack_expression = '%s'" % (self.pack_expression,) )
-            print("self.has_array = '%s'" % (self.has_array,) )
+#            vdb.util.bark() # print("BARK")
+#            print("self.python_eval = '%s'" % self.python_eval )
+#            print("self.use_execute = '%s'" % self.use_execute )
+#            print("self.eval_after = '%s'" % self.eval_after )
+#            print("self.expression = '%s'" % self.expression )
+#            print("self.pack_expression = '%s'" % (self.pack_expression,) )
+#            print("self.has_array = '%s'" % (self.has_array,) )
 
             if( self.pack_expression is not None ):
                 return self.execute_pack(now)
@@ -1424,7 +1424,7 @@ def unpack( fmt, data ):
     names,fullspec = unpack_prepare(fmt)
     fields = struct.unpack(fullspec,data)
     ret = dict(zip(names,fields))
-    print("ret = '%s'" % (ret,) )
+#    print("ret = '%s'" % (ret,) )
     return ret
 
 
