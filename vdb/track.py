@@ -14,12 +14,14 @@ import re
 import traceback
 import time
 import datetime
+import struct
 
 
 
 
 rel_time = vdb.config.parameter("vdb-track-time-relative",True)
 clear_at_start = vdb.config.parameter("vdb-track-clear-at-start",True)
+sleep_time = vdb.config.parameter("vdb-track-interval-sleep",0.01)
 
 
 bptypes = { 
@@ -402,7 +404,12 @@ def stop( bpev ):
 
 tracking_data = {}
 
+class pseudo_item:
 
+    def __init__( self, name, expression, number ):
+        self.name = name
+        self.expression = expression
+        self.number = number
 
 class track_item:
 
@@ -413,40 +420,158 @@ class track_item:
         track_item.next_number += 1
         return ret
 
-    def __init__( self, expr, ue, ea, pe, name = None ):
+    def __init__( self, expr, ue, ea, pe, name = None, pack_expression = None, unify = False ):
         self.expression = " ".join(expr)
         self.number = track_item.get_next_number()
         self.name = name
         self.use_execute = ue
         self.eval_after = ea
         self.python_eval = pe
+        self.unify = unify
+        self.has_array = False
+        self.array_pre = None
+        self.array_size = None
+        self.array_post = None
+        self.pack_expression = pack_expression
+        self.pack_ids = {}
+        self.seen_ids = set()
+        if( self.unify ):
+            # so far we only support struct packs for this
+            names,_ = unpack_prepare(self.pack_expression)
+            if( not "ID" in names ):
+                raise RuntimeError(f"To unify pack expressions, we need a field called ID, fields specified: {names}")
+        if( self.pack_expression is not None ):
+            names,fullspec = unpack_prepare(self.pack_expression)
+            global trackings_by_number
+            for n in names:
+                nn = track_item.get_next_number()
+                self.pack_ids[n] = nn
+                trackings_by_number[nn] = pseudo_item(n,self.expression,nn)
+
+        if( self.python_eval ):
+            self.expression = self.expression.replace( "$(", "gdb.parse_and_eval(" )
+        elif( not self.use_execute ):
+            m = re.match("(.*)\[@([0-9]*)\](.*)",self.expression)
+            if( m is not None ):
+                self.array_pre = m.group(1)
+                self.array_size = int(m.group(2))
+                self.array_post = m.group(3)
+                print("m = '%s'" % (m,) )
+                print("m.group(1) = '%s'" % (m.group(1),) )
+                print("m.group(2) = '%s'" % (m.group(2),) )
+                print("m.group(3) = '%s'" % (m.group(3),) )
+                self.has_array = True
+
+                if( len(self.array_post) > 0 ):
+                    if( self.array_post[0] == "." ):
+                        self.array_post = self.array_post[1:]
+                    elif( self.array_post.startswith("->") ):
+                        self.array_post = self.array_post[2:]
+#                self.execute_array(5)
+
+    def execute_array( self, now ):
+        ar = gdb.parse_and_eval(self.array_pre)
+#        print("ar = '%s'" % (ar,) )
+        data = []
+        for ix in range(0,self.array_size):
+            arf = ar[ix]
+#            print("arf = '%s'" % (arf,) )
+            further = arf[self.array_post]
+            data.append(str(further))
+        self.save_data( now, data )
+#        import sys
+#        sys.exit(-1)
+
+    def execute_pack( self, now ):
+        if( self.has_array ):
+            val=gdb.parse_and_eval(self.array_pre)
+        else:
+            val=gdb.parse_and_eval(self.expression)
+#        print("val = '%s'" % (val,) )
+        names,fullspec = unpack_prepare(self.pack_expression)
+        print("names = '%s'" % (names,) )
+        print("fullspec = '%s'" % (fullspec,) )
+#        print("val.address = '%s'" % (val.address,) )
+        itemsize = struct.calcsize(fullspec)
+#        print("itemsize = '%s'" % (itemsize,) )
+
+        number = 1
+        if( self.has_array ):
+            number = self.array_size
+
+        retd = {}
+        current_address = int(val.address)
+#        gdb.execute(f"hd {current_address:#0x} {itemsize*number}")
+        for i in range(0,number):
+#            print("i = '%s'" % (i,) )
+#            print("itemsize = '%s'" % (itemsize,) )
+#            print(f"Reading @{current_address:#0x}")
+            rawdata = vdb.memory.read(current_address,itemsize)
+            fields = struct.unpack(fullspec,rawdata)
+#            print("names = '%s'" % (names,) )
+#            print("fields = '%s'" % (fields,) )
+            ret = zip(names,fields)
+            current_address += itemsize
+            if( self.unify ):
+                dret = dict(ret)
+                ret = zip(names,fields) # dict(ret) "uses" it up, need to regenerate
+                xid = dret["ID"]
+                if( xid in self.seen_ids ):
+#                    print(f"Skipping {xid} with {dret}")
+                    continue
+                self.seen_ids.add(xid)
+
+            for n,v in ret:
+#                print("n = '%s'" % (n,) )
+#                print("v = '%s'" % (v,) )
+#            v = f"V[{n}] = '{v}'"
+                if( not self.has_array ):
+                    id = self.pack_ids[n]
+                    self.save_data(now,v,id)
+                else:
+                    retd.setdefault(n,[]).append(v)
+#        print("retd = '%s'" % (retd,) )
+
+        if( self.has_array ):
+            for n,vt in retd.items():
+                id = self.pack_ids[n]
+                self.save_data(now,vt,id)
+
+    def save_data( self, now, data, number = None ):
+        if( number is None ):
+            number = self.number
+        td = tracking_data.setdefault(now,{})
+        td[number] = data
 
     def execute( self, now ):
         try:
-#            print("self.python_eval = '%s'" % self.python_eval )
-#            print("self.use_execute = '%s'" % self.use_execute )
-#            print("self.eval_after = '%s'" % self.eval_after )
-#            print("self.expression = '%s'" % self.expression )
+            vdb.util.bark() # print("BARK")
+            print("self.python_eval = '%s'" % self.python_eval )
+            print("self.use_execute = '%s'" % self.use_execute )
+            print("self.eval_after = '%s'" % self.eval_after )
+            print("self.expression = '%s'" % self.expression )
+            print("self.pack_expression = '%s'" % (self.pack_expression,) )
+            print("self.has_array = '%s'" % (self.has_array,) )
+
+            if( self.pack_expression is not None ):
+                return self.execute_pack(now)
+            if( self.has_array ):
+                return self.execute_array(now)
             if( self.python_eval ):
-                ex = self.expression
-                if( ex.find("$(") != -1 ):
-                    ex = ex.replace( "$(", "gdb.parse_and_eval(" )
-                val=eval(ex,globals())
+                val=eval(self.expression,globals())
             elif( self.use_execute ):
                 val=gdb.execute(self.expression,False,True)
                 if( self.eval_after ):
                     val = gdb.parse_and_eval("$")
             else:
                 val=gdb.parse_and_eval(self.expression)
-            td = tracking_data.setdefault(now,{})
             val = str(val)
             if( val[-1] == "\n" ):
                 val = val[:-1]
-#            td[self.expression] = str(val)
-            td[self.number] = str(val)
+            self.save_data(now,str(val))
         except Exception as e:
             print("e = '%s'" % e )
-#            traceback.print_exc()
+            traceback.print_exc()
             pass
 
 def extract_ename( argv ):
@@ -457,6 +582,7 @@ def extract_ename( argv ):
     elif( argv[0][-1] == "=" ):
         ename = argv[0][:-1]
         argv = argv[1:]
+    # TODO parse ename when there is no space like "alldata=alldata[@35].second"
     return (ename,argv)
 
 def track( argv, execute, eval_after, do_eval ):
@@ -595,6 +721,7 @@ def show( ):
 def clear( ):
     global tracking_data
     tracking_data = {}
+    # TODO Also clear the unification cache
     print("Cleared all tracking data")
 
 @vdb.event.run()
@@ -633,9 +760,10 @@ def data( ):
             showts = dt.strftime("%Y.%m.%d %H:%M:%S.%f")
         line = [ showts ]
         tdata = tracking_data[ts]
-        for dk in trackings_by_number.keys():
+        for dk in sorted(trackings_by_number.keys()):
 #            print("dk = '%s'" % (dk,) )
             td = tdata.get(dk,None)
+#            print("td = '%s'" % (td,) )
             if( td is None ):
                 line.append(None)
             else:
@@ -646,6 +774,21 @@ def data( ):
 
     dt = vdb.util.format_table(datatable)
     print(dt)
+
+def get_track_item( argv, execute, eval_after, do_eval, as_struct, un ):
+    vdb.util.bark() # print("BARK")
+    print("argv = '%s'" % (argv,) )
+    ename,argv = extract_ename(argv)
+    print("argv = '%s'" % (argv,) )
+    print("ename = '%s'" % (ename,) )
+    expr = argv
+    print("expr = '%s'" % (expr,) )
+    pack = None
+    if( as_struct ):
+        pack = argv[-1]
+        expr = argv[:-1]
+    nti = track_item( expr, execute, eval_after, do_eval , ename, pack_expression = pack, unify = un )
+    return nti
 
 class cmd_track (vdb.command.command):
     """Track one or more expressions per breakpoint
@@ -684,22 +827,27 @@ You should have a look at the data and graph modules, which can take the data fr
             execute = False
             eval_after_execute = False
             python_eval = False
-            if( len(argv) > 0 and argv[0][0] == "/" ):
-                argv0 = argv[0][1:]
-                argv = argv[1:]
+            as_struct = False
+            argv,flags = self.flags(argv)
+            unify = False
 
-                if( argv0 == "E" ):
-                    python_eval = True
-                elif( argv0 == "x" ):
-                    execute = True
-                elif( argv0 == "X" ):
-                    execute = True
-                    eval_after_execute = True
+            if( "u" in flags ):
+                unify = True
+            if( "E" in flags ):
+                python_eval = True
+            elif( "x" in flags ):
+                execute = True
+            elif( "X" in flags ):
+                execute = True
+                eval_after_execute = True
+            if( "s" in flags ):
+                as_struct = True
 
             if( len(argv) == 0 ):
                 show()
-            elif( argv[0] == "interval" ):
-                interval( argv[1:], execute,eval_after_execute,python_eval )
+            elif( "i" in flags ):
+#                interval( argv[1:], execute,eval_after_execute,python_eval )
+                interval( argv[0], get_track_item( argv[1:], execute,eval_after_execute,python_eval,as_struct,unify ) )
             elif( argv[0] == "show" ):
                 show()
             elif( argv[0] == "data" ):
@@ -1258,6 +1406,30 @@ def del_set( argv ):
 
     print("Disabled set '%s'" % setname)
 
+
+def unpack_prepare( fmt ):
+    fullspec = "="
+    names = []
+    fields = fmt.split(",")
+    for f in fields:
+        name,spec = f.split(":")
+        fullspec += spec
+        if( len(name) > 0 ):
+            names.append(name)
+    return (names,fullspec)
+
+
+
+def unpack( fmt, data ):
+    names,fullspec = unpack_prepare(fmt)
+    fields = struct.unpack(fullspec,data)
+    ret = dict(zip(names,fields))
+    print("ret = '%s'" % (ret,) )
+    return ret
+
+
+unpack("ID:H,Time:I",b"ABCDEF")
+
 next_t = None
 
 def prompt():
@@ -1270,22 +1442,44 @@ def event( ):
 #        vdb.util.bark() # print("BARK")
     else:
         print(f"\rNow: {time.time()}",end="",flush=True)
+        time.sleep( sleep_time.get() )
         gdb.post_event(event)
 
 #    gdb.execute("\n")
 
 
-def interval( argv, execute, eval_after, do_eval ):
-    iv = float(argv[0])
-    argv = argv[1:]
+next_interrupt = False
+# Called from other plugins to schedule an interrupt
+def interrupt( ):
+    global next_interrupt
+    next_interrupt = True
+
+#def interval( argv, execute, eval_after, do_eval ):
+def interval( iv, nti ):
+    if( not vdb.util.is_started()):
+        print("Program has not started yet, cannot continue")
+        return
+    max_cnt = 0
+    cnt = 0
+
+    if( iv.find(",") != -1 ):
+        ivv = iv.split(",")
+        iv = float(ivv[0])
+        max_cnt = int(ivv[1])
+    else:
+        iv = float(iv)
+
     global next_t
     next_t = time.time() + iv
-    ename,argv = extract_ename(argv)
-    expr = argv
-    nti = track_item( expr, execute, eval_after, do_eval , ename)
     global trackings_by_number
     trackings_by_number[nti.number] = nti
+    global next_interrupt
+    next_interrupt = False
     while True:
+        if( next_interrupt ):
+            break
+        if( max_cnt and cnt >= max_cnt ):
+            break
 #        print("next_t = '%s'" % (next_t,) )
         gdb.post_event(event)
         gdb.execute("continue")
@@ -1297,6 +1491,8 @@ def interval( argv, execute, eval_after, do_eval ):
         nti.execute(time.time())
         while( time.time() > next_t ):
             next_t += iv
+        cnt += 1
+    print("Terminating interval tracking...")
     prompt()
 
 # Some thoughts...
