@@ -81,6 +81,13 @@ class command(gdb.Command,abc.ABC):
     def do_invoke( self, argv ):
         pass
 
+    def flags( self, argv ):
+        flags = ""
+        if( len(argv) > 0 and len(argv[0]) > 0 and argv[0][0] == "/" ):
+            flags = argv[0][1:]
+            argv = argv[1:]
+        return ( argv, flags )
+
     def invoke_or_pipe( self, arg,argv ):
         if( sys.modules.get("vdb.pipe",None) is not None ):
             self.pipe(arg,argv)
