@@ -21,7 +21,8 @@ import struct
 
 rel_time = vdb.config.parameter("vdb-track-time-relative",True)
 clear_at_start = vdb.config.parameter("vdb-track-clear-at-start",True)
-sleep_time = vdb.config.parameter("vdb-track-interval-sleep",0.01)
+sleep_time = vdb.config.parameter("vdb-track-interval-sleep",0.0)
+sync_second = vdb.config.parameter("vdb-track-interval-sync-to-second",True)
 
 
 bptypes = { 
@@ -520,6 +521,8 @@ class track_item:
 #                    print(f"Skipping {xid} with {dret}")
                     continue
                 self.seen_ids.add(xid)
+                if( xid == 0 ):
+                    continue
 
             for n,v in ret:
 #                print("n = '%s'" % (n,) )
@@ -1438,11 +1441,19 @@ def prompt():
 def event( ):
     now = time.time()
     if( now >= next_t ):
+#        print()
+#        print("now = '%s'" % (now,) )
+#        print("next_t = '%s'" % (next_t,) )
         gdb.execute("interrupt")
 #        vdb.util.bark() # print("BARK")
     else:
         print(f"\rNow: {time.time()}",end="",flush=True)
-        time.sleep( sleep_time.get() )
+        if( sleep_time.get() == 0 ):
+            rest = next_t - now
+#            print("\nrest = '%s'\n" % (rest,),flush=True )
+            time.sleep( rest )
+        else:
+            time.sleep( sleep_time.get() )
         gdb.post_event(event)
 
 #    gdb.execute("\n")
@@ -1470,7 +1481,12 @@ def interval( iv, nti ):
         iv = float(iv)
 
     global next_t
-    next_t = time.time() + iv
+    if( sync_second.value ):
+        next_t = int(time.time()) + iv
+        while( time.time() > next_t ):
+            next_t += iv
+    else:
+        next_t = time.time() + iv
     global trackings_by_number
     trackings_by_number[nti.number] = nti
     global next_interrupt
