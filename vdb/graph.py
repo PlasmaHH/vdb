@@ -19,6 +19,7 @@ import multiprocessing
 import shutil
 import time
 import queue
+import abc
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -29,6 +30,7 @@ gnuplot_bin = vdb.config.parameter("vdb-graph-gnuplot-binary", "" )
 
 #plot_style = vdb.config.parameter("vdb-graph-plot-style","_mpl-gallery")
 plot_style = vdb.config.parameter("vdb-graph-plot-style","dark_background")
+default_window = vdb.config.parameter("vdb-graph-default-window",60.0)
 
 
 
@@ -47,68 +49,10 @@ def update_data( frame, lines ):
     lines.set_data(xd,yd)
 
 
-def test_line():
-    plt.style.use( plot_style.value )
-    fig, ax = plt.subplots(layout="tight")
-
-#    plt.tight_layout() # call after every resize 
-#    fig.text (0.2, 0.88, f"CurrentViewer version", color="yellow",  verticalalignment='bottom', horizontalalignment='center', fontsize=9, alpha=0.7)
-    ax.set_title("FULL TITLE") # No effect?
-
-    ax.set_xlabel("XLABEL")
-    ax.set_xlim(0,10)
-
-    ax.set_ylabel("YLABEL")
-    ax.set_ylim(0,10)
-
-    lines = ax.plot([], [], label="Current")[0]
-    lines.set_data(xd,yd)
-    anim = animation.FuncAnimation(fig, update_data, fargs=(lines,), interval=1000, save_count=3)
-    plt.show() # Blocks as long as the window is shown, so put it into some thread?
-
-
 data = None
 bar = None
 bins = numpy.linspace(-4,4,100) # ???
 ax = None
-
-def update_hist(frame):
-#    print("update_hist")
-    global data
-    global bar
-    global ax
-    data = numpy.concatenate( (data,numpy.random.randn(1000)) )
-#    print("type(data) = '%s'" % (type(data),) )
-#    print("len(data) = '%s'" % (len(data),) )
-    n,_ = numpy.histogram(data,bins)
-
-    mx = 0
-    for count,rect in zip(n,bar.patches):
-        rect.set_height(count)
-        mx=max(mx,count)
-    mx //= 10
-    mx += 1
-    mx *= 10
-    ax.set_ylim(top=mx)
-    return bar.patches
-
-def test_hist():
-    global data
-    global bar
-    global ax
-
-    numpy.random.seed(1234)
-    data = numpy.random.randn(1000)
-    n,_ = numpy.histogram(data,bins)
-
-    plt.style.use( plot_style.value )
-    fig, ax = plt.subplots(layout="tight")
-
-    _,_,bar = ax.hist(data,bins,lw=1,ec="yellow",fc="green",alpha=0.5)
-    ax.set_ylim(top=55)
-    ani = animation.FuncAnimation( fig, update_hist, 50, interval=500, repeat=False,blit=False)
-    plt.show()
-
 
 def round(x):
     if( x > 0 ):
@@ -116,19 +60,11 @@ def round(x):
     else:
         return math.floor(x)
 
-class hist_process:
+class graph_process:
 
     def __init__( self ):
-        self.data = numpy.array([])
-        self.num_bins = 100
-        # TODO update bins dynamically, introduce limiting parameters
-        self.bins = numpy.linspace(0,0,self.num_bins) # ???
-        self.bar = None
-        self.axis = None
-        self.range = 0
         self.process = None
         self.queue = None
-        self.running = False
 
     def add( self, data ):
 #        print(f"add({data})")
@@ -142,11 +78,13 @@ class hist_process:
         self.queue.put( ("set",data) )
 #        print("self.queue.qsize() = '%s'" % (self.queue.qsize(),) )
 
+    @abc.abstractmethod
     def do_add( self, ndata ):
-        self.data = numpy.concatenate( (self.data,ndata ) )
+        pass
 
+    @abc.abstractmethod
     def do_set( self, ndata ):
-        self.data = ndata
+        pass
 
     def handle_queue( self ):
 #        print("update()")
@@ -165,6 +103,31 @@ class hist_process:
             pass
         return cnt
 
+    def start( self ):
+        if( self.process is not None ):
+            return
+        self.queue = multiprocessing.Queue()
+        self.process = multiprocessing.Process(target = self.run, daemon = True )
+        self.process.start()
+
+class hist_process(graph_process):
+
+    def __init__( self ):
+        super().__init__()
+        self.data = numpy.array([])
+        self.num_bins = 500
+        # TODO update bins dynamically, introduce limiting parameters
+        self.bins = numpy.linspace(0,0,self.num_bins) # ???
+        self.bar = None
+        self.axis = None
+        self.range = 0
+        self.running = False
+
+    def do_add( self, ndata ):
+        self.data = numpy.concatenate( (self.data,ndata ) )
+
+    def do_set( self, ndata ):
+        self.data = ndata
 
     def update( self, frame ):
         cnt = self.handle_queue()
@@ -213,7 +176,7 @@ class hist_process:
         return self.bar.patches
 
     def run( self ):
-        n,_ = numpy.histogram(self.data,self.bins)
+#        n,_ = numpy.histogram(self.data,self.bins)
 
         plt.style.use( plot_style.value )
         fig, self.axis = plt.subplots(layout="tight")
@@ -225,127 +188,143 @@ class hist_process:
         plt.show()
         sys.exit(0)
 
-    def start( self ):
-        if( self.process is not None ):
+ht = hist_process()
+
+class plot_process(graph_process):
+
+    def __init__( self ):
+        super().__init__()
+        self.data = numpy.array([])
+        self.timestamps = numpy.array([])
+        self.num_bins = 500
+        # TODO update bins dynamically, introduce limiting parameters
+        self.bins = numpy.linspace(0,0,self.num_bins) # ???
+        self.bar = None
+        self.axis = None
+        self.range = 0
+        self.running = False
+        self.lines = None
+
+    def do_add( self, ndata ):
+        self.data = numpy.concatenate( (self.data,ndata ) )
+
+    def do_set( self, ndata ):
+        self.data = numpy.array(ndata[0])
+        self.timestamps = numpy.array(ndata[1])
+
+    def update( self, frame ):
+#        vdb.util.bark() # print("BARK")
+        cnt = self.handle_queue()
+#        vdb.util.bark() # print("BARK")
+#        print("cnt = '%s'" % (cnt,) )
+        if( cnt == 0 ):
             return
-        self.queue = multiprocessing.Queue()
-        self.process = multiprocessing.Process(target = self.run, daemon = True )
-        self.process.start()
-#        self.thread = threading.Thread( target = self.run )
-#        self.thread.start()
+#        vdb.util.bark() # print("BARK")
+#        print(f"update {cnt}")
+
+        # Use something like this for when the bins need to be updated. How do we track it?
+#        self.bins = numpy.linspace(-8,8,self.num_bins) # ???
+#        _,_,self.bar = self.axis.plot(self.data,self.bins,lw=1,ec="yellow",fc="green",alpha=0.5)
+
+        try:
+            if( len(self.data) == 0 ):
+                return
+            
+#            print("self.data = '%s'" % (self.data,) )
+
+#            self.lines.set_data(self.data)
+            miny = self.data.min()
+            maxy = self.data.max()
+
+            minx = self.timestamps.min()
+            maxx = self.timestamps.max()
+            if( minx+default_window.get() < maxx ):
+                minx = maxx - default_window.get()
+
+            self.axis.set_xlim(minx,maxx)
+            self.axis.set_ylim(miny,maxy)
+
+#            print("self.timestamps = '%s'" % (self.timestamps,) )
+            self.lines.set_data(self.timestamps,self.data)
+
+#            n,n2 = numpy.plotogram(self.data,self.bins)
+#            maxy = 0
+#            minx = self.data.min()
+#            maxx = self.data.max()
+
+#            minx = round(self.num_bins*minx)/self.num_bins
+#            maxx = round(self.num_bins*maxx)/self.num_bins
+
+#            range = maxx - minx
+#            if( self.range != range ):
+#                self.axis.cla()
+#                print("minx = '%s'" % (minx,) )
+#                print("maxx = '%s'" % (maxx,) )
+#                self.bins = numpy.linspace(minx,maxx,self.num_bins) # ???
+
+#                _,_,self.bar = self.axis.plot(self.data,self.bins,lw=1,ec="yellow",fc="green",alpha=0.5)
+#                self.range = range
+
+#            for idx,(count,rect) in enumerate(zip(n,self.bar.patches)):
+#                if( count > 0 and minx == 0 ):
+#                    minx = idx
+#                rect.set_height(count)
+#                maxy=max(maxy,count)
+#            maxy //= 10
+#            maxy += 1
+#            maxy *= 10
+#            self.axis.set_ylim(top=maxy)
+        except:
+            traceback.print_exc()
+        return self.lines
+#        return self.bar.patches
+
+
+#def test_line():
+#    plt.style.use( plot_style.value )
+#    fig, ax = plt.subplots(layout="tight")
+
+#    plt.tight_layout() # call after every resize 
+#    fig.text (0.2, 0.88, f"CurrentViewer version", color="yellow",  verticalalignment='bottom', horizontalalignment='center', fontsize=9, alpha=0.7)
+#    ax.set_title("FULL TITLE") # No effect?
+
+#    ax.set_xlabel("XLABEL")
+#    ax.set_xlim(0,10)
+
+#    ax.set_ylabel("YLABEL")
+#    ax.set_ylim(0,10)
+
+#    lines = ax.plot([], [], label="Current")[0]
+#    lines.set_data(xd,yd)
+#    anim = animation.FuncAnimation(fig, update_data, fargs=(lines,), interval=1000, save_count=3)
+#    plt.show() # Blocks as long as the window is shown, so put it into some thread?
 
 
 
+    def run( self ):
+        plt.style.use( plot_style.value )
+        fig, self.axis = plt.subplots(layout="tight")
 
-def unpack_prepare( fmt ):
-    fullspec = "="
-    names = []
-    fields = fmt.split(",")
-    for f in fields:
-        name,spec = f.split(":")
-        fullspec += spec
-        names.append(name)
-    return (names,fullspec)
-
-import struct
-
-def unpack( fmt, data ):
-    names,fullspec = unpack_prepare(fmt)
-    fields = struct.unpack(fullspec,data)
-    ret = dict(zip(names,fields))
-    print("ret = '%s'" % (ret,) )
-    return ret
+#        _,_,self.bar = self.axis.plot(self.data,self.bins,lw=1,ec="yellow",fc="green",alpha=0.5)
+#        self.axis.set_ylim(top=55)
+        self.axis.set_xlim(1.69386530e+09,1.69386530e+09 + 3600)
+        self.axis.set_ylim(0,100)
+        self.lines = self.axis.plot([], [], label="Current")[0]
+        anim = animation.FuncAnimation(fig, self.update, interval=100, save_count=3)
+#        ani = animation.FuncAnimation( fig, self.update, interval=100, repeat=False,blit=False,save_count=False)
+#        print("plt.show()")
+        plt.show()
+        sys.exit(0)
 
 
-unpack("ID:H,Time:I",b"ABCDEF")
+
+pp = plot_process()
+
 
 # data must be a dict of ID: data ( where data can be anything a lower layer understands ). ndata should be an iteraable
 # thing that returns ID,data tuples
 # two modes: put IDs in the order they came in, or sort them by ID ( in which case a binary tree like container is more
 # useful than a has dict() )
-def unify( data, ndata ):
-    # Any python builtin that does this automatically?
-    for id,dat in ndata.items():
-        if( id not in data ):
-            data[id] = dat
-    print("data = '%s'" % (data,) )
-    return data
-
-#test_line()
-#test_hist()
-
-
-olddata = { 0: 123, 1:110, 2:154, 3:445 }
-newdata = { 1:110, 2:154, 3:445, 4:332, 5:343 }
-
-unify(olddata,newdata)
-
-ht = hist_process()
-
-import cProfile
-import pstats
-import os
-
-def runtest( ):
-    if( False ):
-        filename="__vdb_profile.tmp"
-        cProfile.runctx("ht.start()",globals(),locals(),filename=filename,sort="tottime")
-        os.system(f"gprof2dot -f pstats {filename} -o __vdb_profile.dot")
-        os.system("nohup dot -Txlib __vdb_profile.dot &")
-        p = pstats.Stats(filename)
-        p.sort_stats("tottime").print_stats()
-    else:
-        ht.start()
-        while(True):
-            time.sleep(1)
-            ndata = numpy.random.randn(100)
-            ht.add(ndata)
-            ht.process.join(0)
-            if( not ht.process.is_alive() ):
-                break
-#        print("ht.process.is_alive() = '%s'" % (ht.process.is_alive(),) )
-# vim: tabstop=4 shiftwidth=4 expandtab ft=python
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 """
@@ -530,47 +509,64 @@ def extract_graph( argv ):
 # notified when something new is added. For now just hook into the stop event to refresh the complete set of track data
 
 current_track_var = None
+gt = None
 
 @vdb.event.gdb_exiting()
 def exit_gdb( ):
-    if( ht.process is not None ):
-        ht.process.join()
+    if( gt.process is not None ):
+        gt.process.join()
 
 @vdb.event.stop()
 def refresh_track( ):
-    global ht
-    if( ht.process is None ):
+    global gt
+    if( gt.process is None ):
         return
 #    vdb.util.bark() # print("BARK")
-    alldata = extract_track( current_track_var,False)
-    ht.set(alldata)
-    ht.process.join(timeout=0)
-#    ht.process.join()
+    if( gt == pp ):
+        alldata,tsdata = extract_track( current_track_var,False,timeseries = True)
+        gt.set( (alldata,tsdata) )
+    else:
+        alldata,_ = extract_track( current_track_var,False,timeseries = False)
+        gt.set(alldata)
+#    print("alldata = '%s'" % (alldata,) )
+    gt.process.join(timeout=0)
+#    gt.process.join()
 #    vdb.util.bark() # print("BARK")
-#    print("ht.process.is_alive() = '%s'" % (ht.process.is_alive(),) )
-#    print("ht.process.exitcode = '%s'" % (ht.process.exitcode,) )
+#    print("gt.process.is_alive() = '%s'" % (gt.process.is_alive(),) )
+#    print("gt.process.exitcode = '%s'" % (gt.process.exitcode,) )
 #    print("multiprocessing.active_children() = '%s'" % (multiprocessing.active_children(),) )
     try:
-        xwait = os.waitpid(ht.process.pid,os.WNOHANG)
+        xwait = os.waitpid(gt.process.pid,os.WNOHANG)
     except:
 #    print("xwait = '%s'" % (xwait,) )
-#    if( not ht.process.is_alive() ):
-        ht.process.join()
-        ht.queue.close()
-        ht.queue.cancel_join_thread()
-        ht.process = None
-        ht.queue = None
+#    if( not gt.process.is_alive() ):
+        gt.process.join()
+        gt.queue.close()
+        gt.queue.cancel_join_thread()
+        gt.process = None
+        gt.queue = None
         print("Matplotlib process is not alive anymore, interrupting track if possible")
         vdb.track.interrupt()
+#    vdb.util.bark() # print("BARK")
 
-def follow_track( tvar, relative_ts ):
-    vdb.util.bark() # print("BARK")
+def follow_track_histogram( tvar, relative_ts ):
+    global gt
     global current_track_var
     current_track_var = tvar
+    gt = ht
     ht.start()
     refresh_track()
 
-def extract_track( tvar, relative_ts ):
+def follow_track_lines( tvar, relative_ts ):
+    global gt
+    global current_track_var
+    current_track_var = tvar
+    gt = pp
+    pp.start()
+    refresh_track()
+
+
+def extract_track( tvar, relative_ts, timeseries = False ):
     if( len(tvar) == 0 ):
         print("Well, you should tell which track data variables to plot. Do `track show` or  `track data` to check what is available")
         return
@@ -621,19 +617,27 @@ def extract_track( tvar, relative_ts ):
 #    print("tvar = '%s'" % (tvar,) )
 #    print("ids = '%s'" % (ids,) )
     ret = []
-    for ts in td.values():
+    retts = []
+    for stamp,ts in td.items():
 #        print("ts = '%s'" % (ts,) )
         for id in ids:
             point = ts.get(id,None)
 #            print("point = '%s'" % (point,) )
             if( point is not None ):
                 if isinstance(point,list):
-                    for p in point:
-                        ret.append(float(p))
+                    if( not timeseries ):
+                        # Here we could like, try to fake timestamps by smoothly interpolating? At least make it an
+                        # option then
+                        for p in point:
+                            ret.append(float(p))
                 else:
+                    if( timeseries ):
+                        retts.append(float(stamp))
                     ret.append(float(point))
 
-    return ret
+    return (ret,retts)
+
+
     for ts in sorted(td.keys()):
         kts = ts
         ts = ts - ts_offset
@@ -722,17 +726,23 @@ graph/rt <id>  - use relative timestamps with the id
                 self.check_for_gnuplot()
             if( "r" in flags ):
                 relative_ts = True
-            if( "t" in flags ):
+            if( "l" in flags ):
                 if( gnuplot ):
                     extract_track(argv,relative_ts)
                 else:
-                    follow_track(argv,relative_ts)
+                    follow_track_lines(argv,relative_ts)
+            elif( "h" in flags ):
+                if( gnuplot ):
+                    extract_track(argv,relative_ts)
+                else:
+                    follow_track_histogram(argv,relative_ts)
             else:
                 extract_graph(argv)
 
         except Exception as e:
             traceback.print_exc()
         self.dont_repeat()
+        vdb.util.bark() # print("BARK")
 
 cmd_graph()
 
