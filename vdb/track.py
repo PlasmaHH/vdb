@@ -23,6 +23,7 @@ rel_time = vdb.config.parameter("vdb-track-time-relative",True)
 clear_at_start = vdb.config.parameter("vdb-track-clear-at-start",True)
 sleep_time = vdb.config.parameter("vdb-track-interval-sleep",0.0)
 sync_second = vdb.config.parameter("vdb-track-interval-sync-to-second",True)
+skip_long = vdb.config.parameter("vdb-track-skip-long-intervals",False)
 
 
 bptypes = { 
@@ -501,18 +502,27 @@ class track_item:
             number = self.array_size
 
         retd = {}
-        current_address = int(val.address)
+        if( val.address is None ):
+            current_address = int(val)
+        else:
+            current_address = int(val.address)
 #        gdb.execute(f"hd {current_address:#0x} {itemsize*number}")
+        allrawdata = vdb.memory.read_uncached(current_address,itemsize*number)
+#        print("len(allrawdata) = '%s'" % (len(allrawdata),) )
         for i in range(0,number):
 #            print("i = '%s'" % (i,) )
 #            print("itemsize = '%s'" % (itemsize,) )
 #            print(f"Reading @{current_address:#0x}")
-            rawdata = vdb.memory.read(current_address,itemsize)
+#            rawdata = vdb.memory.read(current_address,itemsize)
+            rawdata = allrawdata[i*itemsize:i*itemsize+itemsize]
+#            print("len(rawdata) = '%s'" % (len(rawdata),) )
+#            print("type(rawdata) = '%s'" % (type(rawdata),) )
+#            print("rawdata = '%s'" % (rawdata,) )
             fields = struct.unpack(fullspec,rawdata)
 #            print("names = '%s'" % (names,) )
 #            print("fields = '%s'" % (fields,) )
             ret = zip(names,fields)
-            current_address += itemsize
+#            current_address += itemsize
             if( self.unify ):
                 dret = dict(ret)
                 ret = zip(names,fields) # dict(ret) "uses" it up, need to regenerate
@@ -1444,7 +1454,7 @@ def event( ):
 #        print()
 #        print("now = '%s'" % (now,) )
 #        print("next_t = '%s'" % (next_t,) )
-        gdb.execute("interrupt")
+        gdb.execute("interrupt",False,True)
 #        vdb.util.bark() # print("BARK")
     else:
         print(f"\rNow: {time.time()}",end="",flush=True)
@@ -1491,6 +1501,8 @@ def interval( iv, nti ):
     trackings_by_number[nti.number] = nti
     global next_interrupt
     next_interrupt = False
+    t0 = 0
+    t1 = 0
     while True:
         if( next_interrupt ):
             break
@@ -1498,18 +1510,38 @@ def interval( iv, nti ):
             break
 #        print("next_t = '%s'" % (next_t,) )
         gdb.post_event(event)
+        t1 = time.time()
+        dt = t1 - t0
+        print(f"Spent {dt}s processing track data")
         gdb.execute("continue")
+        t0 = time.time()
         si=gdb.parse_and_eval("$_siginfo")
 #        print("si = '%s'" % (si,) )
-        if( si["si_signo"] == 2 and si["_sifields"]["_kill"]["si_pid"] == 0 ):
-            print("Detected possible SIGINT, stopping interval track")
-            break
+        try:
+            if( si["si_signo"] == 2 and si["_sifields"]["_kill"]["si_pid"] == 0 ):
+                print("Detected possible SIGINT, stopping interval track")
+                break
+        except:
+            pass
         nti.execute(time.time())
-        while( time.time() > next_t ):
+        if( skip_long.value ):
+            while( time.time() > next_t ):
+                next_t += iv
+        else:
             next_t += iv
         cnt += 1
     print("Terminating interval tracking...")
     prompt()
+
+
+# FIXME
+# interval tracking someimes stops the process a significant amount of time. We might want to experiment with gathering
+# the data, continuing and then processing it in a different thread. If we are not set finished due to whatever, then we
+# can stall a configurable amount of times
+#
+# For the "old" tracks, we can only read one variable per track item, but at least for the timing ones we want more,
+# probably for the breakpoint ones too. Will this again blur the lines to the sets? Will it finally make sense to just
+# have sets, and implement the simpler commands through sets internally? Would the overhead be negligable?
 
 # Some thoughts...
 #
