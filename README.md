@@ -38,6 +38,7 @@ under x86_64 Linux with gcc > 10.
     * [types](#types)
     * [unwind](#unwind)
     * [history](#history)
+    * [graph](#graph)
     * [profile](#profile)
     * [rtos](#rtos)
     * [va](#va)
@@ -236,7 +237,12 @@ The `history` module deals with the gdb command history. It can emulate an fzf l
 awkward way due to gdb limitations.
 [You can find detailed information about this module here](doc/HISTORY.md)
 
-![](doc/img/history.0.png)
+## graph
+Can be used to plot various data in line plots and histograms. Most useful together with the track module to provide
+live updates.
+[You can find detailed information about this module here](doc/GRAPH.md)
+![](doc/img/graph.0.png)
+
 ## profile
 Allows to profile python calls
 ![](doc/img/profile.0.png)
