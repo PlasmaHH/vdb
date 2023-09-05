@@ -144,3 +144,53 @@ The meaning of the letters is as follows:
 * `p` Call `gdb.parse_and_eval()` and use the result (usually  gdb.Value).
 
 Depending on the context where these values are being used, they can be subject to conversion to other types.
+
+## Other flags / special functionality.
+
+### Interval support
+Using the `/i <interval>[,<count>]` flag you can enable an interval mode (instead of breakpoint mode). In this mode the
+program will be interrupted every `<interval>` seconds and the expression is executed as usual. This means you would
+most likely want to use global variables for this. An optional `<count>` parameter can be added, stopping data
+acquisition after that many counts.
+
+
+Using `vdb-track-interval-sleep` you can specify a default value to sleep before recalculating if the program should be
+interrupted. Using 0 here causes the module to calculate a time on its own, depending on the interval.
+
+With `vdb-track-interval-sync-to-second` you can tell that the first interval should start approximately at a whole
+second, this way you might be better able to synchronized with existing program timings.
+
+You can use `vdb-track-skip-long-intervals` to skip an interrupt, if during data gathering and processing the next
+should have been there. Normally it would be executed right after the previous one in that case, but sometimes being
+synced is more important than getting data on every step.
+
+Currently the breaking and data acquisition takes at least approximately 10-15ms, depending on the amount of data being
+read and the speed of the interface being used. You should not chose a significantly smaller interval, otherwise this
+interferes too much with your programs timing.
+
+### Array support
+At various places you can notify the track module that the data is an array instead of a single variable by using the
+syntax `[@###]` ( where `###` is the number of array elements ). This can be combined efficiently with the struct mode
+to directly get multiple values at once.
+
+### python structure support
+Using `/s` we can instead of an expression to execute use a special enhanced version of python structure specifiers. It
+is a comma seperated list of `<name>:<spec>` where `<spec>` is a specifier of the python struct module. The name is
+optional, if left out, the data will not be acquired by the track module.
+
+### Data unification
+Using `/u` we can gather data in a special mode for arrays. For that one of the fields needs to be named `ID`. In this
+mode the whole array is being read, but only entries for which an `ID`  has not yet been seen will be used. The result
+will be an array instead of a single value per track data entry. Modules that work on the data need explicit support for
+them.
+
+### Examples
+TODO: all combinations of useful flags
+
+```
+track/sui 1,5000 0xfb44530[@256] ID:H,:6x,VALUE:Q
+```
+Tracks every 1 second ( for 5000 seconds ), taking the address 0xfb44530 and interpreting it as an array of 256 elements
+of an 16bit integer (named ID), followed by 6 bytes padding data, followed by an 64bit integer ( named VALUE ). The
+values will be unified by `ID`. In this case this also means that after 64k you will get no more updates. This is
+probably the most efficient way to produce data for the histogram module.
