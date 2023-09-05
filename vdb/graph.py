@@ -31,6 +31,9 @@ gnuplot_bin = vdb.config.parameter("vdb-graph-gnuplot-binary", "" )
 #plot_style = vdb.config.parameter("vdb-graph-plot-style","_mpl-gallery")
 plot_style = vdb.config.parameter("vdb-graph-plot-style","dark_background")
 default_window = vdb.config.parameter("vdb-graph-default-window",60.0)
+default_bins = vdb.config.paramter("vdb-graph-default-bins",200)
+default_hist_update = vdb.config.paramter("vdb-graph-default-histogram-updates",0.25)
+default_line_update = vdb.config.paramter("vdb-graph-default-line-updates",0.2)
 
 
 
@@ -115,7 +118,7 @@ class hist_process(graph_process):
     def __init__( self ):
         super().__init__()
         self.data = numpy.array([])
-        self.num_bins = 500
+        self.num_bins = default_bins.get()
         # TODO update bins dynamically, introduce limiting parameters
         self.bins = numpy.linspace(0,0,self.num_bins) # ???
         self.bar = None
@@ -183,7 +186,7 @@ class hist_process(graph_process):
 
         _,_,self.bar = self.axis.hist(self.data,self.bins,lw=1,ec="yellow",fc="green",alpha=0.5)
         self.axis.set_ylim(top=55)
-        ani = animation.FuncAnimation( fig, self.update, interval=100, repeat=False,blit=False,save_count=False)
+        ani = animation.FuncAnimation( fig, self.update, interval=default_hist_update.get()*1000, repeat=False,blit=False,save_count=False)
         print("plt.show()")
         plt.show()
         sys.exit(0)
@@ -196,10 +199,6 @@ class plot_process(graph_process):
         super().__init__()
         self.data = numpy.array([])
         self.timestamps = numpy.array([])
-        self.num_bins = 500
-        # TODO update bins dynamically, introduce limiting parameters
-        self.bins = numpy.linspace(0,0,self.num_bins) # ???
-        self.bar = None
         self.axis = None
         self.range = 0
         self.running = False
@@ -310,7 +309,7 @@ class plot_process(graph_process):
         self.axis.set_xlim(1.69386530e+09,1.69386530e+09 + 3600)
         self.axis.set_ylim(0,100)
         self.lines = self.axis.plot([], [], label="Current")[0]
-        anim = animation.FuncAnimation(fig, self.update, interval=100, save_count=3)
+        anim = animation.FuncAnimation(fig, self.update, interval=default_line_update.get()*1000, save_count=3)
 #        ani = animation.FuncAnimation( fig, self.update, interval=100, repeat=False,blit=False,save_count=False)
 #        print("plt.show()")
         plt.show()
@@ -420,27 +419,6 @@ def update_data( frame, lines ):
     yd.append(cnt)
     lines.set_data(xd,yd)
 
-def test( argv ):
-    plt.style.use( plot_style.value )
-    fig, ax = plt.subplots(layout="tight")
-
-#    plt.tight_layout() # call after every resize 
-#    fig.text (0.2, 0.88, f"CurrentViewer version", color="yellow",  verticalalignment='bottom', horizontalalignment='center', fontsize=9, alpha=0.7)
-    ax.set_title("FULL TITLE") # No effect?
-
-    ax.set_xlabel("XLABEL")
-    ax.set_xlim(0,10)
-
-    ax.set_ylabel("YLABEL")
-    ax.set_ylim(0,10)
-
-    lines = ax.plot([], [], label="Current")[0]
-    lines.set_data(xd,yd)
-    anim = animation.FuncAnimation(fig, update_data, fargs=(lines,), interval=1000)
-    plt.show() # Blocks as long as the window is shown, so put it into some thread?
-    vdb.util.bark() # print("BARK")
-
-
 start_t = None
 
 def prompt():
@@ -469,7 +447,6 @@ def test2( argv ):
 
 
 def extract_graph( argv ):
-#    return test(argv)
     return test2(argv)
     name = argv[0]
     gvar = gdb.parse_and_eval(argv[0])
@@ -711,7 +688,6 @@ graph/rt <id>  - use relative timestamps with the id
         self.result = ""
 
     def do_invoke (self, argv ):
-        print("argv = '%s'" % argv )
 
         try:
             argv,flags = self.flags(argv)
@@ -745,10 +721,5 @@ graph/rt <id>  - use relative timestamps with the id
         vdb.util.bark() # print("BARK")
 
 cmd_graph()
-
-
-
-if __name__ == "__main__":
-    test(sys.argv)
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
