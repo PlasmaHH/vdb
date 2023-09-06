@@ -9,10 +9,7 @@ import vdb.hexdump
 
 import gdb
 
-import re
-import traceback
-import time
-import datetime
+import traceback # pylint: disable=unused-import
 import os
 import pstats
 
@@ -21,9 +18,13 @@ class cmd_profile (vdb.command.command):
 """
 
     def __init__ (self):
-        super (cmd_profile, self).__init__ ("profile", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        super ().__init__ ("profile", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
 
-    def invoke (self, arg, from_tty):
+    @vdb.overrides
+    def do_invoke( self, argv: list[str] ):
+        pass
+
+    def invoke (self, arg: str, from_tty: bool):
         try:
             if( len(arg) == 0 ):
                 self.usage()
@@ -38,7 +39,7 @@ class cmd_profile (vdb.command.command):
                     self.usage()
                     return
 
-            import cProfile
+            import cProfile # pylint: disable=import-outside-toplevel
             cProfile.runctx("gdb.execute(arg,from_tty)",globals(),locals(),filename=filename,sort="tottime")
             if( filename is not None ):
                 os.system(f"gprof2dot -f pstats {filename} -o __vdb_profile.dot")
@@ -46,10 +47,10 @@ class cmd_profile (vdb.command.command):
                 p = pstats.Stats(filename)
                 p.sort_stats("tottime").print_stats()
 
-        except:
-            traceback.print_exc()
+        except: # pylint: disable=try-except-raise
+#            traceback.print_exc()
             raise
-            pass
+
         self.dont_repeat()
 
 cmd_profile()
