@@ -11,7 +11,7 @@ import gdb.types
 
 import traceback # pylint: disable=unused-import
 
-def entry(_):
+def entry(_:list[str]):
     info_file = gdb.execute("info file",False,True)
     ep: str = None
     for line in info_file.splitlines():
@@ -34,7 +34,7 @@ class cmd_entry(vdb.command.command):
     def __init__ (self):
         super ().__init__ ("entry", gdb.COMMAND_DATA)
 
-    def do_invoke (self, argv ):
+    def do_invoke (self, argv:list[str] ):
         self.dont_repeat()
 
         try:
