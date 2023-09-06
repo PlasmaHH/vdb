@@ -8,8 +8,7 @@ import vdb.command
 
 import gdb
 
-import re
-import traceback
+import traceback # pylint: disable=unused-import
 
 class cmd_toggle(vdb.command.command):
     """Toggles a setting that must be a bool"""
@@ -17,7 +16,7 @@ class cmd_toggle(vdb.command.command):
     def __init__ (self):
         super ().__init__ ("toggle", gdb.COMMAND_SUPPORT, gdb.COMPLETE_NONE)
 
-    def do_invoke (self, argv ):
+    def do_invoke (self, argv:list[str] ):
         try:
             if( len(argv) > 0 ):
                 for cfg in argv:
@@ -32,10 +31,10 @@ class cmd_toggle(vdb.command.command):
                         traceback.print_exc()
                         print(f"gdb does not know parameter '{cfg}'")
             else:
-                raise Exception("toggle got %s arguments, expecting 1 or more" % len(argv) )
+                raise RuntimeError(f"toggle got {len(argv)} arguments, expecting 1 or more")
 
-        except:
-            traceback.print_exc()
+        except: # pylint: disable=try-except-raise
+#            traceback.print_exc()
             raise
 
         self.dont_repeat()
