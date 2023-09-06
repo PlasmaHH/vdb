@@ -31,9 +31,9 @@ gnuplot_bin = vdb.config.parameter("vdb-graph-gnuplot-binary", "" )
 #plot_style = vdb.config.parameter("vdb-graph-plot-style","_mpl-gallery")
 plot_style = vdb.config.parameter("vdb-graph-plot-style","dark_background")
 default_window = vdb.config.parameter("vdb-graph-default-window",60.0)
-default_bins = vdb.config.paramter("vdb-graph-default-bins",200)
-default_hist_update = vdb.config.paramter("vdb-graph-default-histogram-updates",0.25)
-default_line_update = vdb.config.paramter("vdb-graph-default-line-updates",0.2)
+default_bins = vdb.config.parameter("vdb-graph-default-bins",200)
+default_hist_update = vdb.config.parameter("vdb-graph-default-histogram-updates",0.25)
+default_line_update = vdb.config.parameter("vdb-graph-default-line-updates",0.2)
 
 
 
