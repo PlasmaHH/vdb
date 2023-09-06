@@ -9,23 +9,17 @@ import vdb.util
 import gdb
 import gdb.types
 
-import os
-import traceback
-import time
-import re
+import traceback # pylint: disable=unused-import
 
-def entry(argv):
+def entry(_):
     info_file = gdb.execute("info file",False,True)
-    ep = None
+    ep: str = None
     for line in info_file.splitlines():
         if( line.find("Entry point:") > -1 ):
-#            print("line = '%s'" % (line,) )
-            ep = line.split(":")
-#            print("ep = '%s'" % (ep,) )
-            ep = ep[1]
-#            print("ep = '%s'" % (ep,) )
+            epv = line.split(":")
+            ep = epv[1]
             ep = vdb.util.rxint(ep)
-#            print("ep = '%s'" % (ep,) )
+
     if( ep is None ):
         print("Unable to determine entry point")
     else:
@@ -34,19 +28,20 @@ def entry(argv):
 
 class cmd_entry(vdb.command.command):
     """
-
-"""
+    The entry command will try to extract gdbs information about the programs entry point and sets $pc to it
+    """
 
     def __init__ (self):
-        super (cmd_entry, self).__init__ ("entry", gdb.COMMAND_DATA)
+        super ().__init__ ("entry", gdb.COMMAND_DATA)
 
     def do_invoke (self, argv ):
         self.dont_repeat()
 
         try:
             entry(argv)
-        except Exception as e:
-            traceback.print_exc()
+        except Exception: # pylint: disable=try-except-raise
+#            traceback.print_exc()
+            raise
 
 cmd_entry()
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
