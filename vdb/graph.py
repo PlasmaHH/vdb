@@ -490,7 +490,7 @@ gt = None
 
 @vdb.event.gdb_exiting()
 def exit_gdb( ):
-    if( gt.process is not None ):
+    if( gt is not None and gt.process is not None ):
         gt.process.join()
 
 @vdb.event.stop()
