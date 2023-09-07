@@ -7,16 +7,15 @@ import vdb.util
 import gdb
 import sys
 
-import time
+from typing import Dict
 
 mod=sys.modules[__name__]
 vdb.enabled_modules["cache"] = mod
 
-cumulative_time = { }
+cumulative_time: Dict[float,float] = { }
 
 
-def add_time( t, n ):
-    global cumulative_time
+def add_time( t: float, n: float ):
     ct = cumulative_time.get(n,0.0)
     ct += t
     cumulative_time[n] = ct
@@ -52,7 +51,7 @@ class execute_cache:
                 r = execute_cache.result()
                 self.cache.cache[(cmd,t0,t1)] = r
                 r.result = gdb.execute(cmd,t0,t1)
-        except Exception as e:
+        except Exception as e: # pylint: disable=broad-exception-caught
             r.exception = e
         if( r.exception is not None ):
             raise r.exception
@@ -64,7 +63,6 @@ type_cache = cache_entry()
 def lookup_type( name ):
 #    sw = vdb.util.stopwatch()
 #    sw.start()
-    global type_cache
     t = type_cache.cache.get(name)
     if( t is None ):
         t = gdb.lookup_type(name)
@@ -86,7 +84,6 @@ class re:
             self.m = None
 
     def findall( rex, s ):
-        global re_cache
         r = re_cache.cache.get( (rex,s), None )
         if( r is None ):
             re_cache.misses += 1
