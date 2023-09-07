@@ -4,6 +4,7 @@
 import vdb.event
 
 import gdb
+from typing import Dict
 
 pointer_size = 0
 gdb_uintptr_t = None
@@ -18,16 +19,16 @@ def reset_info():
     need_update = True
     need_uint_update = True
 
-uint_cache = {}
-def uint( sz ):
-    global uint_cache
+#uint_cache : Dict[int,gdb.type] = {}
+uint_cache: Dict[int,gdb.Type] = {}
+def uint( sz: int ) -> gdb.Type:
     global need_uint_update
     if( need_uint_update or len(uint_cache) == 0 ):
         for t in [ "uint8_t", "uint16_t", "uint32_t", "uint64_t", "uint128_t", "unsigned char", "unsigned short", "unsigned", "unsigned long", "unsigned long long" ]:
             try:
                 ty=gdb.lookup_type(t)
                 uint_cache[int(ty.sizeof)*8] = ty
-            except gdb.error as e:
+            except gdb.error:
                 pass
         need_uint_update = False
     return uint_cache.get(sz,None)
