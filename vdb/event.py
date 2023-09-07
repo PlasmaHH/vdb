@@ -4,6 +4,7 @@
 import gdb
 
 from enum import Enum,auto
+from typing import Dict,List,Callable
 
 class events(Enum):
     start = auto()
@@ -19,7 +20,7 @@ def on_event( gdbreg, darg ):
 #            print("darg = '%s'" % (darg,) )
             try:
                 func(*(arg+darg) )
-            except Exception as a:
+            except TypeError:
 #                print("a = '%s'" % a )
                 func(*darg)
 
@@ -27,17 +28,16 @@ def on_event( gdbreg, darg ):
         return func
     return decorator
 
-def on_noop( darg ):
+def on_noop( _darg ):
     def decorator( func ):
-        def wrapper(*arg):
+        def wrapper(*_arg):
             pass
         return func
     return decorator
 
-hooks = {}
+hooks : Dict[ events, List ] = {}
 
-def register_hook( ev, f ):
-    global hooks
+def register_hook( ev: events, f: Callable ):
     hl = hooks.setdefault(ev,[])
     hl.append(f)
 
@@ -51,7 +51,7 @@ def on_hook( ev, darg ):
 #            print("darg = '%s'" % (darg,) )
             try:
                 func(*(arg+darg) )
-            except Exception as a:
+            except TypeError:
 #                print("a = '%s'" % a )
                 func(*darg)
 
