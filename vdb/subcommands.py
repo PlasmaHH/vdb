@@ -24,9 +24,9 @@ class subcommands:
         rest=args[1:]
         sc = self.subcommands.get(s,None)
         if( sc is None ):
-            print("Unknown vdb subcommand '%s'" % s )
+            print(f"Unknown vdb subcommand '{s}'")
             print("Known commands:")
-            globals.show()
+            global_commands.show()
         else:
             if( isinstance(sc,subcommands) ):
                 if( len(rest) == 0 ):
@@ -60,16 +60,16 @@ class subcommands:
             else:
                 print(f"{prefix} {k}")
 
-globals = subcommands()
+global_commands = subcommands()
 
 def run_subcommand( args ):
-    globals.run_subcommand(args)
+    global_commands.run_subcommand(args)
 
 def add_subcommand( s, f ):
-    globals.add_subcommand(s,f)
+    global_commands.add_subcommand(s,f)
 
-def show( argv ):
-    globals.show()
+def show( _ ):
+    global_commands.show()
 
 add_subcommand( [ "show", "subcommands" ], show )
 

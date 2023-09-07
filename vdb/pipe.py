@@ -118,7 +118,7 @@ class cmd_wrap(vdb.command.command):
                 cmd = argv[0][:slpos]
                 par = argv[0][slpos:]
                 argv = [ cmd, par ] + argv[1:]
-            sc = vdb.subcommands.globals.get( [ self.cmdname ] + argv )
+            sc = vdb.subcommands.global_commands.get( [ self.cmdname ] + argv )
 #            print("sc = '%s'" % (sc,) )
             if( sc is None ):
                 gdb.execute(f"{self.cmdname} {arg}",from_tty)
