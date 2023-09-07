@@ -17,6 +17,9 @@ import atexit
 import inspect
 import re
 
+from typing import Dict
+from types import ModuleType
+
 
 
 # First setup the most important settings that configure which parts we want to have active
@@ -52,7 +55,8 @@ enable_svd       = vdb.config.parameter( "vdb-enable-svd",True)
 enable_entry     = vdb.config.parameter( "vdb-enable-entry",True)
 enable_rtos      = vdb.config.parameter( "vdb-enable-rtos",True)
 
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,pahole,ftree,dashboard,hashtable,ssh,track,graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos" )
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,pahole,ftree,dashboard,hashtable,ssh,track"
+                                                                    ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos" )
 
 home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)
 search_down     = vdb.config.parameter( "vdb-plugin-search-down",True)
@@ -62,7 +66,7 @@ inithome_first  = vdb.config.parameter( "vdb-init-home-first",True)
 initsearch_down = vdb.config.parameter( "vdb-init-search-down",True)
 
 
-enabled_modules = {}
+enabled_modules: Dict[str,ModuleType] = {}
 vdb_dir = None
 vdb_init = None
 texe = None
@@ -152,11 +156,11 @@ def is_in_safe_path( pdir ):
         return True
 
     pdir = os.path.normpath(pdir) + "/"
-    sp = gdb.parameter("auto-load safe-path")
+    sp: str = str(gdb.parameter("auto-load safe-path"))
 
-    debugdir = gdb.parameter("debug-file-directory")
+    debugdir = str(gdb.parameter("debug-file-directory"))
 
-    datadir = gdb.execute("show data-directory",False,True)
+    datadir = str(gdb.execute("show data-directory",False,True))
     datadir = datadir.split('"')[1]
 
     vdir = os.path.normpath(vdb_dir)
@@ -164,10 +168,10 @@ def is_in_safe_path( pdir ):
     sp=sp.replace("$datadir",datadir)
     sp=sp.replace("$debugdir",debugdir)
 
-    sp = sp.split(":")
-    sp.append(vdir)
+    vsp = sp.split(":")
+    vsp.append(vdir)
 
-    for p in sp:
+    for p in vsp:
         p = os.path.normpath(p) + "/"
         if( pdir.startswith(p) ):
             return True
@@ -212,7 +216,7 @@ def load_plugins( plugindir ):
         sys.path = oldpath
 
 def load_themes( vdbdir ):
-    if( len(theme.value) == 0 ):
+    if( len(theme.get()) == 0 ):
         print("Not loading any theme")
         return
     tdir = f"{vdbdir}/themes/"
@@ -232,7 +236,7 @@ def load_themes( vdbdir ):
         oldpath = []
         oldpath += sys.path
         sys.path = [tdir] + sys.path
-        importlib.import_module(theme.value)
+        importlib.import_module(theme.get())
     except ModuleNotFoundError as e:
         print(f"Could not load theme {theme.value}: {e}")
     except:
@@ -243,11 +247,11 @@ def load_themes( vdbdir ):
 def start( vdbd = None, vdbinit = None ):
     if( enable.value is False ):
         print("Not starting vdb, disabled by vdb-enable")
-        return None
+        return
     print("Starting vdb modules…")
 
     global texe
-    texe = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads.value,thread_name_prefix="vdb")
+    texe = concurrent.futures.ThreadPoolExecutor(max_workers=max_threads.get(),thread_name_prefix="vdb")
 
     global vdb_dir
     global vdb_init
@@ -265,7 +269,7 @@ def start( vdbd = None, vdbinit = None ):
     vdb_init = os.path.realpath(vdb_init)
 
 
-    available_modules = configured_modules.value.split(",")
+    available_modules = configured_modules.get().split(",")
     for mod in available_modules:
         try:
             bval = gdb.parameter( f"vdb-enable-{mod}")
