@@ -21,9 +21,9 @@ class command(gdb.Command,abc.ABC):
     def __init__ (self,n,t,c=None, replace = False, prefix = True):
         if( replace is not True ): # check if the command already exists
             try:
-                help = gdb.execute(f"help {n}",False,True)
+                _ = gdb.execute(f"help {n}",False,True)
                 if( prefix is not True ):
-                    raise Exception("Cannot register command")
+                    raise RuntimeError("Cannot register command")
                 print(f"Command already exists: {n}, replacing it with vdb.{n}")
                 n = "vdb." + n
             except gdb.error:
@@ -31,11 +31,10 @@ class command(gdb.Command,abc.ABC):
 #                print(f"No such command: {n}")
 
         if( c is None ):
-            super (command, self).__init__ (n,t)
+            super ().__init__ (n,t)
         else:
-            super (command, self).__init__ (n,t,c)
+            super ().__init__ (n,t,c)
         self.name = n
-        global command_registry
         command_registry[self.name] = self
         self.last_commands = None
         self.repeat = True
@@ -49,10 +48,10 @@ class command(gdb.Command,abc.ABC):
         super().dont_repeat()
 
     def pipe( self, arg, argv ):
-        import vdb.pipe
+        import vdb.pipe # pylint: disable=redefined-outer-name,import-outside-toplevel
         try:
             i = argv.index("|") # throws if not found
-            a0 = argv[:i]
+#            a0 = argv[:i]
             a1 = argv[i+1:]
             pcmd = a1[0]
             a1 = a1[1:]
@@ -114,17 +113,15 @@ class command(gdb.Command,abc.ABC):
                 self.usage()
                 return
 
-            global profile_next
             if( profile_next.value and from_tty ):
                 profile_next.value = False
-                import cProfile
+                import cProfile # pylint: disable=import-outside-toplevel
                 cProfile.runctx("self.invoke_or_pipe(arg,argv)",globals(),locals(),sort="tottime")
             else:
                 self.invoke_or_pipe(arg,argv)
         except:
             traceback.print_exc()
             raise
-            pass
 
     def message( self, msg, text ):
         prompt = vdb.prompt.refresh_prompt()
@@ -147,8 +144,5 @@ class command(gdb.Command,abc.ABC):
         if( len(word) == 0 ):
             return len(argv)+1
         return len(argv)
-
-    def usage( self ):
-        print(self.__doc__)
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
