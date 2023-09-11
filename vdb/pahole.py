@@ -111,7 +111,7 @@ pahole/e - expanded output, showing each byte on one line (the default)
 """
 
     def __init__ (self):
-        super (cmd_pahole, self).__init__ ("pahole", gdb.COMMAND_DATA, gdb.COMPLETE_SYMBOL)
+        super ().__init__ ("pahole", gdb.COMMAND_DATA, gdb.COMPLETE_SYMBOL)
 
     def do_invoke (self, argv ):
 #        print("argv = '%s'" % argv )
@@ -142,7 +142,7 @@ pahole/e - expanded output, showing each byte on one line (the default)
                 ptype = stype.strip_typedefs()
 #            traceback.print_exc()
 
-        if ptype.code != gdb.TYPE_CODE_STRUCT and ptype.code != gdb.TYPE_CODE_UNION:
+        if ptype.code not in { gdb.TYPE_CODE_STRUCT, gdb.TYPE_CODE_UNION }:
             raise gdb.GdbError('%s is not a struct/union type: %s' % (" ".join(argv), vdb.util.gdb_type_code(ptype.code)))
         try:
             xl = vdb.layout.object_layout(stype,sobj)
