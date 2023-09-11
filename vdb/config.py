@@ -63,6 +63,7 @@ class parameter(gdb.Parameter):
         self.is_float = False
         self.gdb_type = gdb_type
         self.original_type = gdb_type
+        self.elements = None
         if( gdb_type == PARAM_COLOR ):
             if( name.find("-colors-") == -1 ):
                 raise Exception("Colour names must have -colors- in their name, '%s' does not" % name )
