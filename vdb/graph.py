@@ -496,7 +496,7 @@ def exit_gdb( ):
 @vdb.event.stop()
 def refresh_track( ):
     global gt
-    if( gt.process is None ):
+    if( gt is None or gt.process is None ):
         return
 #    vdb.util.bark() # print("BARK")
     if( gt == pp ):
