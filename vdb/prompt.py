@@ -11,19 +11,19 @@ import re
 
 import gdb
 
-def defer_set_prompt( v ):
+def defer_set_prompt( _ ):
     reset_prompt()
 
 
 prompt_color = 10*[None]
-prompt_text = 10*[None]
+prompt_text  = 10*[None]
 
 
 prompt_base = vdb.config.parameter( "vdb-prompt-base","{start}{0}{1}{2}{3}{4}{time}{git}{5}{6}{7}{8}{9}{[:host:]}{progress}{ T:thread}{#:frame}{end}", on_set = defer_set_prompt )
 
 for i in range(0,10):
-    prompt_color[i] = vdb.config.parameter( "vdb-prompt-colors-%s" % i, "#ffff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
-    prompt_text[i]  = vdb.config.parameter( "vdb-prompt-text-%s" % i,   "",        on_set = defer_set_prompt )
+    prompt_color[i] = vdb.config.parameter( f"vdb-prompt-colors-{i}", "#ffff99", gdb_type = vdb.config.PARAM_COLOUR, on_set = defer_set_prompt )
+    prompt_text[i]  = vdb.config.parameter( f"vdb-prompt-text-{i}"  , "",        on_set = defer_set_prompt )
 
 prompt_text_start = vdb.config.parameter( "vdb-prompt-text-start", "vdb", on_set = defer_set_prompt )
 prompt_text_end = vdb.config.parameter( "vdb-prompt-text-end",     "> ",  on_set = defer_set_prompt )
@@ -51,13 +51,12 @@ prompt_text_time = vdb.config.parameter( "vdb-prompt-text-time",     " %H:%M:%S"
 # selected frame
 # selected thread
 
-git_cache_time = 0
+git_cache_time = 0.0
 git_cache_prompt = ""
 
 current_progress = []
 
 def add_progress( pfunc ):
-    global current_progress
     current_progress.append(pfunc)
 
 def get_progress_prompt():
@@ -81,7 +80,7 @@ def get_git_prompt( ):
                 gitresult=subprocess.check_output( "git rev-parse --abbrev-ref HEAD".split(), stderr = subprocess.STDOUT ).decode("utf-8")
                 gitresult=gitresult.split()[0]
                 if( len(gitresult) > 0 ):
-                    git_cache_prompt = " [%s]" % gitresult
+                    git_cache_prompt = f" [{gitresult}]"
                 else:
                     git_cache_prompt = ""
         except:
@@ -92,7 +91,7 @@ def get_git_prompt( ):
     return git_cache_prompt
 
 def set_prompt( txt ):
-    gdb.execute('set prompt %s' % txt )
+    gdb.execute(f'set prompt {txt}')
 
 cached_prompt_base = ""
 def get_prompt_base( ):
@@ -101,14 +100,14 @@ def get_prompt_base( ):
         ptxt = prompt_text[i].value
         if( len(ptxt) > 0 ):
             ptxt = vdb.color.color_rl( ptxt, prompt_color[i].value )
-        prompt = prompt.replace("{%s}" % i, ptxt )
+        prompt = prompt.replace(f"{{{i}}}", ptxt )
 
     prompt = prompt.replace( "{start}", vdb.color.color_rl( prompt_text_start.value , prompt_color_start.value ))
     prompt = prompt.replace( "{end}", vdb.color.color_rl( prompt_text_end.value, prompt_color_end.value ))
 
     return prompt
 
-has_key = {}
+has_key: dict[str,bool] = {}
 
 def get_thread( ):
     try:
@@ -120,8 +119,8 @@ def get_thread( ):
 def get_frame( ):
     try:
         fr=gdb.execute("fr",False,True)
-        fr=fr.split()
-        fr=fr[0]
+        vfr=fr.split()
+        fr=vfr[0]
         fr=fr[1:]
         return fr
     except:
@@ -144,7 +143,6 @@ def prompt_replace( prompt, fmt, txt, col ):
 message_queue = []
 
 def queue_msg( msg ):
-    global message_queue
     message_queue.append( msg )
 
 def output_messages( ):
@@ -167,7 +165,6 @@ def get_host( ):
 
 @vdb.event.before_prompt()
 def refresh_prompt( ):
-    global cached_prompt_base
     # first do all the fixed values
     prompt = cached_prompt_base
 #    print("has_key = '%s'" % has_key )
@@ -194,7 +191,6 @@ def display():
     print(refresh_prompt(),end="",flush=True)
 
 def check_format( fmt ):
-    global has_key
     re_fmt = "{[^}]*[:]*" + fmt + "[:]*.*}"
 
     if( re.search(re_fmt,cached_prompt_base ) ):
