@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import traceback
 import io
 
 def dot_escape( txt ):
@@ -60,8 +59,8 @@ class tr:
         f.write("<tr ")
         write_attributes(f,self.attributes)
         f.write(">")
-        for td in self.tds:
-            td.write(f)
+        for itd in self.tds:
+            itd.write(f)
         f.write("</tr>\n")
 
     def __str__( self ):
@@ -87,12 +86,12 @@ class table:
         f.write("<table ")
         write_attributes(f,self.attributes)
         f.write(">")
-        for tr in self.trs:
-            tr.write(f)
+        for itr in self.trs:
+            itr.write(f)
         f.write("</table>")
 
-    def add( self, tr ):
-        self.trs.append(tr)
+    def add( self, atr ):
+        self.trs.append(atr)
 
     def tr( self ):
         t = tr()
@@ -192,7 +191,7 @@ class graph:
             filename += ".dot"
 #        print("filename = '%s'" % filename )
         with open(filename,"w+") as f:
-            f.write("digraph %s {\n" % self.name )
+            f.write(f"digraph {self.name} {{\n")
             f.write("node [ ")
             for nn,nv in self.node_attributes.items():
                 f.write(f'{nn}="{nv}"')
