@@ -147,7 +147,7 @@ def eval_hashtable( val ):
 #            print("sbucket = '%s'" % sbucket )
         chainlens.append(clen)
 #    print("chainlens = '%s'" % chainlens )
-    slotcounts = {}
+    slotcounts: dict[int,int] = {}
     elements = 0
     maxchain = 0
     for ch in chainlens:
@@ -218,7 +218,7 @@ Additionally a table tells you details about the amount of chain lengths and how
     """
 
     def __init__ (self):
-        super (cmd_hashtable, self).__init__ ("hashtable", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        super ().__init__ ("hashtable", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.result = ""
 
     def do_invoke (self, argv ):
@@ -229,7 +229,7 @@ Additionally a table tells you details about the amount of chain lengths and how
 
         try:
             eval_hashtable(a0)
-        except Exception as e:
+        except gdb.error:
             traceback.print_exc()
         self.dont_repeat()
 
