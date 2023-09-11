@@ -63,10 +63,10 @@ class parameter(gdb.Parameter):
         self.is_float = False
         self.gdb_type = gdb_type
         self.original_type = gdb_type
-        self.elements = None
+        self.elements = []
         if( gdb_type == PARAM_COLOR ):
             if( name.find("-colors-") == -1 ):
-                raise Exception("Colour names must have -colors- in their name, '%s' does not" % name )
+                raise RuntimeError(f"Colour names must have -colors- in their name, '{name}' does not" % name )
             self.is_colour = True
             gdb_type = gdb.PARAM_STRING
             self.theme_default = default
@@ -87,7 +87,7 @@ class parameter(gdb.Parameter):
             self.fvalue = float(default)
             default = str(float(default))
             gdb_type = gdb.PARAM_STRING
-        super(parameter, self).__init__(name, gdb.COMMAND_SUPPORT, gdb_type )
+        super().__init__(name, gdb.COMMAND_SUPPORT, gdb_type )
         self.value = default
         self.previous_value = self.value
         self.on_set = on_set
@@ -96,12 +96,12 @@ class parameter(gdb.Parameter):
                 self.on_set(self)
         except:
             pass
-        global registry
+
         registry[self.name] = self
 
     # This isn't quite right, we ideally would like to pass None while value is something else and have it check if None
     # is the default
-    def is_default( self, val = registry ):
+    def is_default( self, val = registry ): # pylint: disable=dangerous-default-value
         if( val is registry ):
             val = self.value
         if( val == self.default ):
@@ -117,17 +117,17 @@ class parameter(gdb.Parameter):
             if( self.original_type == gdb.PARAM_STRING ):
                 self.value += val
             elif( self.original_type == PARAM_COLOUR_LIST ):
-                print("len(self.elements) = '%s'" % (len(self.elements),) )
+#                print("len(self.elements) = '%s'" % (len(self.elements),) )
                 self.value += ";"
                 self.value += val
                 self.on_set(self)
-                print("len(self.elements) = '%s'" % (len(self.elements),) )
+#                print("len(self.elements) = '%s'" % (len(self.elements),) )
             elif( self.original_type == PARAM_ARRAY ):
                 self.value += ","
                 self.value += val
                 self.on_set(self)
             else:
-                print("Sorry, we do not support appending for %s" % vdb.util.gdb_type_code( self.original_type ) )
+                print(f"Sorry, we do not support appending for {vdb.util.gdb_type_code( self.original_type )}" )
         except:
             traceback.print_exc()
             self.value = self.previous_value
@@ -142,7 +142,7 @@ class parameter(gdb.Parameter):
         return self.value
 
     def check_colour( self ):
-        x = vdb.color.color("",self.value)
+        _ = vdb.color.color("",self.value)
 
     def record_origin( self ):
         st = traceback.extract_stack()
@@ -156,12 +156,12 @@ class parameter(gdb.Parameter):
             self.origin = "command-line"
             return
 
-        for i in range(0,len(st)):
-            if( st[i].name == "load_themes" ):
+        for s in st:
+            if( s.name == "load_themes" ):
                 wait_for_themes = True
                 continue
-            if( wait_for_themes and st[i].filename.find("importlib") == -1 ):
-                self.origin = st[i].filename
+            if( wait_for_themes and s.filename.find("importlib") == -1 ):
+                self.origin = s.filename
                 break
 #            print("st[%s] = '%s'" % (i,st[i],) )
 
@@ -199,12 +199,12 @@ class parameter(gdb.Parameter):
         if( verbosity.value is None or verbosity.value < 2 ):
             return ""
         if( self.is_colour ):
-            return 'Set %s to %s' % (self.showstring, vdb.color.color(pval,self.value))
+            return f'Set {self.showstring} to {vdb.color.color(pval,self.value)}'
         else:
-            return 'Set %s to %r' % (self.showstring, pval )
+            return f'Set {self.showstring} to {repr(pval)}'
 
-    def get_show_string(self, svalue):
-        return '%s (currently: %r)' % (self.showstring, self.value)
+    def get_show_string(self, _ ):
+        return f'{self.showstring} (currently: {repr(self.value)})'
 
     def get_vdb_show_string(self ):
         xval = []
@@ -213,7 +213,7 @@ class parameter(gdb.Parameter):
             xval.append(val)
         elif( self.gdb_type == PARAM_COLOUR_LIST ):
             cval = ("",0)
-            for i,e in enumerate(self.elements):
+            for _,e in enumerate(self.elements):
                 cv = vdb.color.colorl(e,e)
                 vdb.color.concat( cval, cv )
             xval.append(cval)
@@ -405,7 +405,7 @@ def show_config( argv ):
     print( vdb.util.format_table(otbl) )
 
 def append( argv ):
-    vdb.util.bark() # print("BARK")
+#    vdb.util.bark() # print("BARK")
     if( len(argv) == 0 ):
         print("Set/a <vdb-config-parameter> [<value>]")
         return
