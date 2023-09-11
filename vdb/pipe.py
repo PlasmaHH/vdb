@@ -110,6 +110,8 @@ class cmd_wrap(vdb.command.command):
         self.saved_from_tty = None
 
     def do_invoke (self, argv):
+#        vdb.util.bark() # print("BARK")
+#        print("argv = '%s'" % (argv,) )
         arg = self.saved_arg
         from_tty = self.saved_from_tty
         try:
@@ -117,7 +119,12 @@ class cmd_wrap(vdb.command.command):
             if( slpos != -1 ):
                 cmd = argv[0][:slpos]
                 par = argv[0][slpos:]
-                argv = [ cmd, par ] + argv[1:]
+                if( len(cmd) > 0 ):
+                    argv = [ cmd, par ] + argv[1:]
+                else:
+                    argv = [ par ] + argv[1:]
+#            print("self.cmdname = '%s'" % (self.cmdname,) )
+#            print("argv = '%s'" % (argv,) )
             sc = vdb.subcommands.global_commands.get( [ self.cmdname ] + argv )
 #            print("sc = '%s'" % (sc,) )
             if( sc is None ):
