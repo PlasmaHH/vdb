@@ -22,7 +22,7 @@ def call( cmd, data, argv ):
     if( ncall is not None ):
         ncall(data, argv)
     else:
-        raise Exception(f"Unknonwn pipe command {cmd}")
+        raise RuntimeError(f"Unknonwn pipe command {cmd}")
 
 
 class cmd_external(vdb.command.command):
@@ -157,4 +157,5 @@ def external(cmd):
 
 for icmd in externals.elements:
     external(icmd)
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
