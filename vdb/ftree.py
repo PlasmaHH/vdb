@@ -24,7 +24,7 @@ import datetime
 
 
 
-verbosity      = vdb.config.parameter("vdb-ftree-verbosity",3 )
+verbosity      = vdb.config.parameter("vdb-ftree-verbosity",4 )
 dot_filebase   = vdb.config.parameter("vdb-ftree-filebase","ftree")
 dot_command    = vdb.config.parameter("vdb-ftree-dot-command", "nohup dot -Txlib {filename} &>/dev/null &" )
 
@@ -44,16 +44,20 @@ shorten_head   = vdb.config.parameter("vdb-ftree-shorten-head",15 )
 shorten_tail   = vdb.config.parameter("vdb-ftree-shorten-tail",15 )
 color_arrows   = vdb.config.parameter("vdb-ftree-color-arrows",True )
 
+#resolve_typedefs = vdb.config.parameter("vdb-ftree-resolve-typedefs",True)
+reparse_cast = vdb.config.parameter("vdb-ftree-reparse-cast",True)
+vptr_cast = vdb.config.parameter("vdb-ftree-vptr-cast",True)
+
 #vdb.config.set_array_elements(array_elements)
 
 color_list = vdb.config.parameter("vdb-ftree-colors-arrows", "#ff0000;#00ff00;#0000ff;#ff8000;#ff00ff;#00ffff" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
-def indent( i, fmt, *more ):
-    try:
-        print(("  " * i + fmt).format(*more) )
-    except:
-        print(fmt)
+def indent( i, fmt, **more ):
+    vdb.util.indent(i,fmt,**more)
 
+def vindent( v, i, fmt, **more ):
+    if( verbosity.get() >= v ):
+        indent(i,fmt,**more)
 
 def get( val, key, alternative ):
     ret = alternative
@@ -63,7 +67,11 @@ def get( val, key, alternative ):
         pass
     return ret
 
-
+def verbose( lvl ):
+    if( verbosity.get() >= lvl ):
+        return True
+    else:
+        return False
 
 def std_vector_size( m,ptr,value_cache):
 #    print("m = '%s'" % m )
@@ -321,7 +329,7 @@ def pretty_print( val ):
 
 class ftree:
     def __init__( self ):
-        self.visited = set()
+        self.visited = {}
         self.written_tables = set()
         self.current_port = 0
         self.color_index = 0
@@ -426,7 +434,7 @@ class ftree:
         so = None
 #        nval = self.try_member_cast( val, obj.get_path() )
         nval = self.try_member_cast( val, path + obj.get_path() )
-        print("obj.final = '%s'" % (obj.final,) )
+#        print("obj.final = '%s'" % (obj.final,) )
         if( nval is not None ):
             xval = nval
             nlayout = vdb.layout.object_layout( value = nval )
@@ -904,18 +912,20 @@ class ftree:
         vdb.cache.add_time(sw.get(),"try_member_cast")
         return None
 
-    def try_node_downcast( self, val, path ):
+    # Check if we have a downcast action available, matching one of the configured regexes. These will then downcast to
+    # the "real" type of the object ( handy for std:: container nodes )
+    def try_node_downcast( self, val, path, level ):
+        if( verbose(4) ):
+            indent(level,f"try_node_downcast({int(val):#0x}({val.type=}), path, {level=})")
+
         xtype = val.type.target().strip_typedefs()
+
         if( xtype.code == gdb.TYPE_CODE_PTR ):
             xtype = xtype.target().strip_typedefs()
-        if( verbosity.value > 3 ):
-            print("val.type = '%s'" % val.type )
-            print("val.type.target() = '%s'" % val.type.target() )
-            print(f"try_node_downcast({int(val):#0x}, {xtype})")
-#        print("path = '%s'" % path )
-#        print("val = '%s'" % val )
+        if( verbose(4) ):
+            indent(level,f"{val.type=} => {xtype=}")
+
         for df,action in self.node_downcast_filter:
-#            print("df = '%s'" % df )
             m = df.findall( str(xtype) )
             ret = self.apply_cast_action(val,m,path,action)
             if( ret is not None ):
@@ -969,46 +979,77 @@ class ftree:
 
     # expects a pointer to the object in val. Add code to support non-pointers too for cases where we pass a stack local
     def ftree (self, val, level, limit, graph, path = "", elements = None ):
-#        print(f"ftree(val,{level},{limit},graph,path,{elements}")
-
         # When someone passes a non-pointer try to make it one
         if( level == 0 and val.type.code != gdb.TYPE_CODE_PTR ):
             return self.ftree( val.address, level, limit, graph, path, elements )
 
+        if( verbose(3) ):
+            indent(level,"= "*15)
+            indent(level,f"ftree({val.type=},{level=},{limit=},graph,path,{elements=})")
+
+        # Depth limit reached
         if( level > limit ):
+            vindent(4,level,f"Reached depth limit of {limit}")
             return
 
+        # Address has already been visited
         if( int(val) in self.visited ):
+            ast = self.visited[int(val)]
+            vindent(4,level,f"Address {int(val):#0x} already visited as {ast}")
             return ([],0,[])
-        self.visited.add(int(val))
-
-
-
-#        print("########### ftree %s" % val )
+        self.visited[(int(val))] = repr(val.type)
 
         oval = val
-        val = self.try_node_downcast(val,path)
+
+        val = self.try_node_downcast(val,path,level)
+        if( verbose(4) ):
+            indent(level,f"After node downcast: {val.type=}")
         dcval = val
 
         ptrval = int(val)
         xs = self.nodes[ptrval]
         if( len(xs) > 0 ):
+            vindent(4,level,f"{len(xs)} entries overlapping with current object found")
             for x in xs:
                 self.edge_redirects[ptrval] = x[2].name
-#                print("x[2].name = '%s'" % x[2].name )
             return None
 
-#        print("val = '%s'" % val )
-#        print("val.type = '%s'" % val.type )
-#        print("val.type.code = '%s'" % vdb.util.gdb_type_code(val.type.code) )
-#        print("val.type.target() = '%s'" % val.type.target() )
-#        print("val.type.target().code = '%s'" % vdb.util.gdb_type_code(val.type.target().code) )
-#        print("val.type.target().strip_typedefs() = '%s'" % val.type.target().strip_typedefs() )
+        try:
+            vindent(4,level,f"VPTR Test")
+            vindent(4,level,f"{val.type=}")
+            vindent(4,level,f"{val=}")
+            vindent(4,level,f"{str(val)=}")
+            vindent(4,level,f"{val.address=}")
+            vptr = val["__vptr"] # XXX Check how different compilers do it
+            vindent(4,level,"vptr = '%s'" % (vptr,) )
+        except:
+            traceback.print_exc()
+            pass
 
-#        print("",flush=True)
         dval = val.dereference()
-#        print("dval = '%s'" % dval )
+        vindent(4,level,f"{dval.type=}")
+
         xl = vdb.layout.object_layout( value = dval )
+        if( verbose(4) ):
+            indent(level,f"Object has {len(xl.descriptors)} descriptors")
+            for d in xl.descriptors:
+                indent(level,str(d))
+            print("dval.type.fields() = '%s'" % (dval.type.fields(),) )
+        # If it has no subobjects, we try and resolve the typedef. There seems to be a problem with IAR generated
+        # binaries that it won't show it for these typedefs
+        if( len(xl.descriptors) == 0 and dval.type.code == gdb.TYPE_CODE_TYPEDEF ):
+            if( reparse_cast.value ):
+                tr_dval = gdb.parse_and_eval(f"*({dval.type.strip_typedefs()}*){int(dval.address)}")
+            else:
+                tr_dval = dval.cast( dval.type.strip_typedefs() )
+            vindent(4,level,f"Resolved {tr_dval.type=}")
+            tr_xl = vdb.layout.object_layout( value = tr_dval )
+            vindent(4,level,f"After resolving typedef, object has {len(tr_xl.descriptors)} descriptors")
+            print("tr_dval.type.fields() = '%s'" % (tr_dval.type.fields(),) )
+
+            if( len(tr_xl.descriptors) > 0 ):
+                xl = tr_xl
+                dval = tr_dval
 
 #        print("val = '%s'" % val )
 #        print("val.type = '%s'" % val.type )
@@ -1037,11 +1078,19 @@ class ftree:
         n.table = vdb.dot.table()
 
         if( elements is None ):
-#            print("val.type = '%s'" % val.type )
-#            print("val.type.target() = '%s'" % val.type.target() )
-#            print("val.type.target().sizeof = '%s'" % val.type.target().sizeof )
-#            print("ENode 0x%x from 0x%x to 0x%x" % (n.name,ptrval,ptrval+int(val.type.target().sizeof)) )
-            self.nodes[ptrval:ptrval+int(val.type.target().sizeof)] = n
+            print("val.type = '%s'" % val.type )
+            print("val.type.target() = '%s'" % val.type.target() )
+            print("vdb.util.gdb_type_code(val.type.target().code) = '%s'" % (vdb.util.gdb_type_code(val.type.target().code),) )
+            print("val.type.target().sizeof = '%s'" % val.type.target().sizeof )
+            print("ENode 0x%x from 0x%x to 0x%x" % (n.name,ptrval,ptrval+int(val.type.target().sizeof)) )
+            target_type = val.type.target().strip_typedefs()
+            print("target_type = '%s'" % (target_type,) )
+            print("target_type.sizeof = '%s'" % (target_type.sizeof,) )
+            tsizeof = target_type.sizeof
+            if( tsizeof == 0 ): # XXX Workaround for a bug??
+                tsizeof = gdb.parse_and_eval(f"sizeof({target_type})")
+                print("tsizeof = '%s'" % (tsizeof,) )
+            self.nodes[ptrval:ptrval+int(tsizeof)] = n
         # prepare header tr
         htr = vdb.dot.tr()
         htd = htr.td("{:#0x}".format(int(val)))
