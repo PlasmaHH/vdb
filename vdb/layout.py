@@ -21,10 +21,11 @@ class byte_descriptor:
     def __init__(self,prefix,fname,ftype):
         self.prefix = prefix
         self.type = ftype
-#        self.member_name = fname
         self.code = None
-        self.endcode = None
         self.object = None
+
+    def __str__( self ):
+        return f"<byte_descriptor prefix={self.prefix} type={self.type} code={vdb.util.gdb_type_code(self.code)} object={self.object} >"
 
     def name( self ):
 #        print("self.prefix = '%s'" % self.prefix )
@@ -195,18 +196,26 @@ def get_vtt_entry( vtt, offset ):
 object_cache = { }
 
 class object_layout:
+    # Can be called with just a type, or just a value. If both are passed, the values type overrides the passed type.
+    # The value is only ever useful for when we deal with virtual pointers and could infer from it a different type
     def __init__( self, otype = None, value = None ):
-#        print("otype = '%s'" % (otype,) )
+#        print(f"object_layout({otype=},{value=})")
+
         if( otype is None ):
-#            print("value.type = '%s'" % (value.type,) )
             otype = value.type
-#        print("otype = '%s'" % (otype,) )
-#        print("otype.sizeof = '%s'" % (otype.sizeof,) )
+
+        if( value is not None and value.type is not None and otype is not None ):
+            if( value.type != otype ):
+                print(f"Warning: {otype=} and {value.type=} are different in object_layout")
+
         self.type = otype
         self.value = value
-#        print("self.type = '%s'" % self.type )
         self.vtt = get_vtt_name(self.type)
+#        print("self.vtt = '%s'" % (self.vtt,) )
 #        print("type(self.vtt) = '%s'" % type(self.vtt) )
+
+        # Unless its a vtt name we strip typedefs ( with vtt we have possibly multiple inheritance and need to  do
+        # tricks to get sizes and offsets correct )
         if( self.vtt is None ):
             xtype = self.type.strip_typedefs()
 #            print("xtype = '%s'" % xtype )
@@ -223,10 +232,21 @@ class object_layout:
 #        print("self.type = '%s'" % self.type )
 #        print("self.value.dynamic_type = '%s'" % self.value.dynamic_type )
         if( self.value is not None ):
-            self.type = self.value.dynamic_type # XXX why do I do this, the if later makes no sense with it
             self.vtype = vdb.util.guess_vptr_type( self.value.address ).type.target()
+#            print("self.type = '%s'" % (self.type,) )
+#            print("self.type.sizeof = '%s'" % (self.type.sizeof,) )
+#            print("self.vtype = '%s'" % (self.vtype,) )
+#            print("self.vtype.sizeof = '%s'" % (self.vtype.sizeof,) )
+            # Here it can happen that when the derived classes have no virtual functions, the vptr is "stuck" at a base
+            # class type ( there really is no point in duplicating a virtual table that isn't different at all).
+            # Unfortunately for us, this is the same when an object is already destroyed
+            # XXX It would be nice if we could detect the difference and issue a warning for already destroyed objects
 
-            if( self.type == self.value.dynamic_type and self.type != self.vtype ):
+            # Lets chose the one with the biggest size, after all we are interested in the layout of the members and
+            # don't care if the virtual table is really correct here.
+            if( self.value.dynamic_type is not None and self.value.dynamic_type.sizeof > self.type.sizeof ):
+                self.type = self.value.dynamic_type
+            if( self.vtype is not None and self.vtype.sizeof > self.type.sizeof ):
                 self.type = self.vtype
 #        print("self.type.sizeof = '%s'" % (self.type.sizeof,) )
         self.type = self.type.strip_typedefs()
