@@ -7,7 +7,7 @@ import subprocess
 import gdb
 import traceback
 
-commands  = vdb.config.parameter("vdb-pipe-commands","grep,egrep,tee,head,tail,uniq,sort,less,cat,wc", gdb_type = vdb.config.PARAM_ARRAY )
+commands  = vdb.config.parameter("vdb-pipe-commands","hl:grep --color=always -C50000,grep,egrep,tee,head,tail,uniq,sort,less,cat,wc", gdb_type = vdb.config.PARAM_ARRAY )
 up_wraps  = vdb.config.parameter("vdb-pipe-wrap","show,info,help,x,print,list,set,maint,monitor", gdb_type = vdb.config.PARAM_ARRAY )
 externals = vdb.config.parameter("vdb-pipe-externals","binwalk,objdump,tmux:,addr2line:-e {file} -a", gdb_type = vdb.config.PARAM_ARRAY )
 
@@ -148,9 +148,18 @@ class cmd_wrap(vdb.command.command):
 def do_cmd( cmd, data, argv ):
     subprocess.run([ cmd ] + argv , input = data, encoding = "utf-8", check = False )
 
+def do_cmd_alias( cmd, args, data, argv ):
+    subprocess.run([ cmd ] + args + argv , input = data, encoding = "utf-8", check = False )
+
 for icmd in commands.elements:
-#    cmd_external(cmd)
-    add(icmd,functools.partial(do_cmd,icmd))
+    if( isinstance(icmd,list) ):
+        cmd = icmd[0]
+        acmd = icmd[1].split()
+
+        add(icmd[0],functools.partial(do_cmd_alias,acmd[0],acmd[1:]))
+    else:
+        add(icmd,functools.partial(do_cmd,icmd))
+
 
 def wrap(cmd):
     cmd_wrap(cmd)
