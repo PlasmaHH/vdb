@@ -21,6 +21,11 @@ color_empty = vdb.config.parameter("vdb-pahole-color-empty", "#444" , gdb_type =
 color_type = vdb.config.parameter("vdb-pahole-color-type", "#cc4400" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
 
+def resolve_typedefs( gdb_type ):
+#    print(f"resolve_typedefs({gdb_type=})")
+    if( gdb_type.code == gdb.TYPE_CODE_PTR ):
+        return resolve_typedefs( gdb_type.target() ).pointer()
+    return gdb_type.strip_typedefs()
 
 def print_pahole( layout, condense ):
 #        print("PRINT RESULT")
@@ -36,6 +41,8 @@ def print_pahole( layout, condense ):
     for bd in layout.bytes:
         if( bd.object is not None ):
             bx = bd.object.type.strip_typedefs()
+            bx = resolve_typedefs(bx)
+#            print(f"{bx=}")
             enttypename = bx.name
             if( enttypename is None ):
                 enttypename = str(bx)
