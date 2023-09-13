@@ -335,10 +335,14 @@ def parse_fragment( frag, obj, level = 0 ):
                 i += 1
                 consumed = parse_fragment( frag[i:], ct, level+1 ) 
                 i += consumed
-#                print("ct.subobject = '%s'" % (ct.subobject,) )
-#				indent(level,"param {}",ct)
-#                print("frag[i:] = '%s'" % frag[i:] )
-#				print("frag[i+1:] = '%s'" % frag[i+1:] )
+                if( ct.name is None ):
+                    print("ct.subobject = '%s'" % (ct.subobject,) )
+#                indent(level,"param {}",ct)
+                    print("frag = '%s'" % (frag,) )
+                    print("len(frag) = '%s'" % (len(frag),) )
+                    print("i'%s'" % (i,) )
+                    print("frag[i:] = '%s'" % frag[i:] )
+                    print("frag[i+1:] = '%s'" % frag[i+1:] )
                 if( len( ct.name) > 0 ):
 #                    vdb.util.bark() # print("BARK")
 #                    print("ct.name = '%s'" % (ct.name,) )
@@ -488,7 +492,11 @@ def parse_function( fun, silent = False ):
     rest = fun
     sub = func
     func.set_type("type_or_function")
+
+    rest = rest.replace("operator()","operator__CALL__")
     i = parse_fragment( rest , sub )
+    sub.name = sub.name.replace("operator__CALL__","operator()")
+
 
 
 
@@ -595,9 +603,20 @@ cre_shortens = [ ]
 for rre,sub in re_shortens:
     cre_shortens.append( (re.compile(rre), sub ) )
 
-def add_shorten( f, t ):
-    global shortens
-    shortens[f] = t
+def add_shorten( st ):
+    lst=[]
+    if( isinstance(st,tuple) ):
+        f,t = st
+        shortens[f] = t
+    elif( isinstance(st,str) ):
+        # Format is A => B
+        vst = st.splitlines()
+        for l in vst:
+            shrt = l.split("=>")
+            lst.append( (shrt[0],shrt[1]) )
+    else:
+        lst=st
+        
 
 def add_shorten_v( argv ):
     if( len(argv) != 2 ):
@@ -605,7 +624,7 @@ def add_shorten_v( argv ):
     else:
         f=argv[0]
         t=argv[1]
-        add_shorten(f,t)
+        add_shorten( (f,t) )
         print(f'Added shorten from "{f}" to "{t}"')
     global symbol_cache
     symbol_cache = {}
