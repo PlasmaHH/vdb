@@ -581,7 +581,20 @@ shortens = {
         "(anonymous namespace)": "(anon)",
         "<unnamed enum>": "<enum>",
         "std::__detail::": "std::_d::",
+        "unsigned char": "uint8_t",
+        "signed char": "int8_t"
         }
+
+cstdint_shortens = {}
+cstdint_candidates = [
+        "int", "long", "long long", "short", ""
+        ]
+
+cstdint_prefixes = [ 
+        ( "unsigned", "u" ),
+        ( "signed", "" ),
+        ( "", "" )
+        ]
 
 re_shortens = [
         (r"std::_Vector_base<(.*), std::allocator<\1 *> >",
@@ -603,6 +616,27 @@ cre_shortens = [ ]
 for rre,sub in re_shortens:
     cre_shortens.append( (re.compile(rre), sub ) )
 
+
+@vdb.event.new_objfile()
+def redo_cstdint( ):
+#    print("Reparsing cstdint shortens")
+    global cstdint_shortens
+    cstdint_shortens = {}
+    for pref,uint in cstdint_prefixes:
+        for cand in cstdint_candidates:
+            tcand = f"{pref} {cand}".strip()
+            try:
+                gdbt = gdb.lookup_type(tcand)
+            except gdb.error:
+                continue
+            sz = gdbt.sizeof * 8
+            sname = f"{uint}int{sz}_t"
+#            cre_shortens.append( (re.compile(f"\<{tcand}\>"), sname) )
+            cre_shortens.append( (re.compile(r"\b%s\b" % tcand), sname) )
+#            print(f"'{tcand}' => {sname}")
+
+
+
 def add_shorten( st ):
     lst=[]
     if( isinstance(st,tuple) ):
@@ -613,9 +647,15 @@ def add_shorten( st ):
         vst = st.splitlines()
         for l in vst:
             shrt = l.split("=>")
-            lst.append( (shrt[0],shrt[1]) )
+            if( len(shrt) != 2 ):
+#                print(f"Ignoring line '{l}'")
+                continue
+            lst.append( (shrt[0].strip(),shrt[1].strip()) )
     else:
         lst=st
+    
+    for lt in lst:
+        shortens[lt[0]] = lt[1]
         
 
 def add_shorten_v( argv ):
@@ -849,7 +889,9 @@ def symbol(fname,silent = False):
         for old,new in shortens.items():
             fname = fname.replace(old,new)
         for cre,sub in cre_shortens:
-#            print(f"{fname} => ",end="")
+#            print(f"{fname} => ('{cre}') => ",end="")
+#            m = cre.match(fname)
+#            print(f"{m=}... ",end="")
             fname = cre.sub( sub, fname )
 #            print(f"{fname}")
         if( ofname == fname ):
