@@ -114,7 +114,7 @@ class null(target):
 
 
 
-tty_cache = { }
+tty_cache: dict[str,str] = { }
 
 class tty(target):
 
@@ -159,12 +159,12 @@ class tmux(tty):
         tty = None
         self.pane = pane_name
         for line in output:
-            line = line.split("{|}")
+            vline = line.split("{|}")
 #            print("line = '%s'" % line )
             # or regex?
 #            if( line[0] == pane_name ):
-            if( re.match( pane_name, line[0] ) ):
-                tty = line[1]
+            if( re.match( pane_name, vline[0] ) ):
+                tty = vline[1]
                 break
         if( tty is None ):
             raise gdb.error("Could not find tmux pane named %s" % pane_name )
@@ -246,7 +246,7 @@ class dashboard:
         if( self.output is not None ):
             if( self.output.enabled ):
                 self.do_output()
-dash_events = { }
+dash_events: dict[str,list[dashboard]] = { }
 
 def show_dashboard( ):
     tbl = []
@@ -359,7 +359,7 @@ def del_board( id ):
                 return
 
 def call_dashboard( argv ):
-    # type: tmux,port,tty
+    # ?type: tmux,port,tty
     # subcommands: list,enable,disable,erase
     if( len(argv) == 0 ):
         raise gdb.error(cmd_dashboard.__doc__)
