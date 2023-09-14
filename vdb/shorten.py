@@ -5,6 +5,7 @@ import vdb
 import vdb.color
 import vdb.config
 import vdb.subcommands
+import vdb.util
 
 
 import re
@@ -853,8 +854,8 @@ def symbol(fname,silent = False):
 
     fun = parse_function(fname,silent)
     if( debug.value ):
-        import vdb.dot
-        g = vdb.dot.graph("function")
+        import vdb.dot as vdot
+        g = vdot.graph("function")
         fun.to_dot(g)
         g.write("shorten.dot")
 
