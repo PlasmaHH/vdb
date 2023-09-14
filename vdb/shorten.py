@@ -9,7 +9,6 @@ import vdb.subcommands
 
 import re
 import gdb
-import os
 import traceback
 import time
 import sys
@@ -158,13 +157,13 @@ class type_or_function:
         indent(level,"tail : '" + str(self.tail) + "'" )
 #        print("self.__dict__ = '%s'" % (self.__dict__,) )
         if( self.template_parameters is not None ):
-            indent(level,"template parameters[{}]".format(len(self.template_parameters)))
+            indent(level,f"template parameters[{len(self.template_parameters)}]")
             for t in self.template_parameters:
                 t.dump(level+1)
         else:
             indent(level,"template parameters = None")
         if( self.parameters ):
-            indent(level,"parameters[{}]".format(len(self.parameters)))
+            indent(level,f"parameters[{len(self.parameters)}]")
             cnt = 0
             for p in self.parameters:
                 indent(level,f"param[{cnt}]")
@@ -214,7 +213,7 @@ class type_or_function:
     def __str__(self):
         return self.to_string()
 
-    def to_string( self, indent = 0 ):
+    def to_string( self, _ = 0 ):
         if( self.cached_string is not None ):
             return self.cached_string
 
@@ -297,7 +296,7 @@ def parse_fragment( frag, obj, level = 0 ):
     une = "<unnamed enum>"
 
     tmpl_tailset = [ ":", "*", "&", " const" ]
-    func_tailset = [ "()" ]
+#    func_tailset = [ "()" ]
 
     swallow_next = False
 
@@ -313,7 +312,7 @@ def parse_fragment( frag, obj, level = 0 ):
 #                    print(f"'{sofar}' => '{sofar+s}'")
                     sofar += s
 #                sofar += str(level)
-            swallo_next = False
+            swallow_next = False
             continue
         if( s == "(" ):
             if( frag[i:].startswith(ans) ):
@@ -333,16 +332,15 @@ def parse_fragment( frag, obj, level = 0 ):
                 ct = type_or_function()
                 ct.set_type("function parameter")
                 i += 1
-                consumed = parse_fragment( frag[i:], ct, level+1 ) 
+                consumed = parse_fragment( frag[i:], ct, level+1 )
                 i += consumed
                 if( ct.name is None ):
-                    print("ct.subobject = '%s'" % (ct.subobject,) )
-#                indent(level,"param {}",ct)
-                    print("frag = '%s'" % (frag,) )
-                    print("len(frag) = '%s'" % (len(frag),) )
-                    print("i'%s'" % (i,) )
-                    print("frag[i:] = '%s'" % frag[i:] )
-                    print("frag[i+1:] = '%s'" % frag[i+1:] )
+                    print(f"{ct.subobject=}")
+                    print(f"{frag=}")
+                    print(f"{len(frag)=}")
+                    print(f"{i=}")
+                    print(f"{frag[i:]=}")
+                    print(f"{frag[i+1:]=}")
                 if( len( ct.name) > 0 ):
 #                    vdb.util.bark() # print("BARK")
 #                    print("ct.name = '%s'" % (ct.name,) )
@@ -461,7 +459,6 @@ def parse_fragment( frag, obj, level = 0 ):
 #                print("Going subobject")
                 obj.subobject = type_or_function()
                 obj.subobject.name = use_sofar(sofar)
-                pass
             elif( obj.name is not None and len(sofar) == 0 ):
 #                print("Leaving name")
                 pass # leave the old name
@@ -518,10 +515,10 @@ def parse_function( fun, silent = False ):
 
     if( debug.value and s0s != s1s ):
         #		func.dump()
-        print("Recreating the function signature leads a difference (%s,%s)" % (len(s0),len(s1)))
-        print("fun = '%s'" % fun )
-        print("sf  = '%s'" % sf )
-        cnt = 0
+        print(f"Recreating the function signature leads a difference ({len(s0)},{len(s1)})")
+        print(f"{fun=}")
+        print(f"{sf=}")
+#        cnt = 0
         d0 = ""
         d1 = ""
         for i in range(0,len(s0)):
@@ -552,7 +549,7 @@ def template_fold(fname,template):
     if( start == -1 ):
         return fname
     start += len(template)
-    prefix=fname[0:start]
+    t_prefix=fname[0:start]
 #	print("start = '%s'" % start )
 #	print("fname = '%s'" % fname )
 #	print("prefix = '%s'" % prefix )
@@ -565,7 +562,7 @@ def template_fold(fname,template):
         if( level == 0 ):
             suffix=fname[i+1:]
             suffix=template_fold(suffix,template)
-            fname = prefix + vdb.color.color("<…>",color_shorten.value) + suffix
+            fname = t_prefix + vdb.color.color("<…>",color_shorten.value) + suffix
             break
     return fname
 
@@ -585,12 +582,11 @@ shortens = {
         "signed char": "int8_t"
         }
 
-cstdint_shortens = {}
 cstdint_candidates = [
         "int", "long", "long long", "short", ""
         ]
 
-cstdint_prefixes = [ 
+cstdint_prefixes = [
         ( "unsigned", "u" ),
         ( "signed", "" ),
         ( "", "" )
@@ -613,15 +609,13 @@ re_shortens = [
 
 cre_shortens = [ ]
 
-for rre,sub in re_shortens:
-    cre_shortens.append( (re.compile(rre), sub ) )
+for rre,subs in re_shortens:
+    cre_shortens.append( (re.compile(rre), subs ) )
 
 
 @vdb.event.new_objfile()
 def redo_cstdint( ):
 #    print("Reparsing cstdint shortens")
-    global cstdint_shortens
-    cstdint_shortens = {}
     for pref,uint in cstdint_prefixes:
         for cand in cstdint_candidates:
             tcand = f"{pref} {cand}".strip()
@@ -632,7 +626,7 @@ def redo_cstdint( ):
             sz = gdbt.sizeof * 8
             sname = f"{uint}int{sz}_t"
 #            cre_shortens.append( (re.compile(f"\<{tcand}\>"), sname) )
-            cre_shortens.append( (re.compile(r"\b%s\b" % tcand), sname) )
+            cre_shortens.append( (re.compile(rf"\b{tcand}\b" ), sname) )
 #            print(f"'{tcand}' => {sname}")
 
 
@@ -653,14 +647,14 @@ def add_shorten( st ):
             lst.append( (shrt[0].strip(),shrt[1].strip()) )
     else:
         lst=st
-    
+
     for lt in lst:
         shortens[lt[0]] = lt[1]
-        
+
 
 def add_shorten_v( argv ):
     if( len(argv) != 2 ):
-        print("add_shorten expects exactly 2 arguments, %s given" % len(argv) )
+        print(f"add_shorten expects exactly 2 arguments, {len(argv)} given")
     else:
         f=argv[0]
         t=argv[1]
@@ -669,7 +663,7 @@ def add_shorten_v( argv ):
     global symbol_cache
     symbol_cache = {}
 
-def show_shorten( args ):
+def show_shorten( _ ):
     print("Configured shortens are:")
     mlen=0
     for s,t in shortens.items():
@@ -688,7 +682,7 @@ vdb.subcommands.add_subcommand( [ "show", "shorten" ], show_shorten )
 
 
 foldables = [ ]
-conditional_foldables = {
+conditional_foldables: dict[str,list] = {
         ".*" : []
         }
 
@@ -696,7 +690,6 @@ def add_foldable( fld ):
     if( isinstance(fld,str) ):
         add_foldable(fld.splitlines())
     else:
-        global foldables
         for f in fld:
             f = f.strip()
             if( len(f) > 0 ):
@@ -706,16 +699,15 @@ def add_conditional( cond, fld = None ):
     if( isinstance(fld,str) ):
         add_conditional( cond, fld.splitlines() )
     else:
-        global conditional_foldables
-        foldables = conditional_foldables.get(cond,[])
+        cfoldables = conditional_foldables.get(cond,[])
         for f in fld:
             f = f.strip()
             if( len(f) > 0 ):
-                foldables.append( f )
+                cfoldables.append( f )
 
 def add_foldable_v( argv ):
     if( len(argv) not in [1,2] ):
-        print("add_foldable expects 1 or 2 arguments, %s given" % len(argv) )
+        print(f"add_foldable expects 1 or 2 arguments, {len(argv)} given" % len(argv) )
     elif( len(argv) == 1 ):
         add_foldable( argv[0] )
     elif( len(argv) == 2 ):
@@ -723,7 +715,7 @@ def add_foldable_v( argv ):
     global symbol_cache
     symbol_cache = {}
 
-def show_foldable( args ):
+def show_foldable( _ ):
     print("Foldables are:")
     for f in foldables:
         print(f"'{f}'")
@@ -740,8 +732,7 @@ vdb.subcommands.add_subcommand( [ "show","foldable"] , show_foldable )
 lazy_task = None
 
 loaded_typedefs = False
-def lazy_load_typedefs( x = None):
-    global loaded_typedefs
+def lazy_load_typedefs( _ = None):
     if( loaded_typedefs ):
         return
 
@@ -771,16 +762,17 @@ def async_load_typedefs( at ):
 
 def load_typedefs( at ):
     t0 = time.time()
+    global loaded_typedefs
     loaded_typedefs = True
     typelist = gdb.execute("info types",False,True)
 
-    candidates = {}
+    candidates: dict[str,str] = {}
     targets = set()
     multitarget = set()
     cnt = 0
 
     typelines = typelist.splitlines()
-    print("len(typelines) = '%s'" % (len(typelines),) )
+    print(f"{len(typelines)=}")
     for line in typelines:
         cnt += 1
         # Want only typedefs of templates
@@ -793,7 +785,7 @@ def load_typedefs( at ):
             if( sl[0] == "File" ):
                 continue
             if( sl[1] != "typedef" ):
-                print("Not sure what this is: %s" % line)
+                print(f"Not sure what this is: {line}")
                 continue
             sl = sl[2:]
             to = sl[-1]
@@ -816,14 +808,14 @@ def load_typedefs( at ):
             at.set_progress( f"[ types {cnt}/{len(typelines)}({len(candidates)}) ]" )
 
 
-    print("len(candidates) = '%s'" % (len(candidates),) )
+    print(f"{len(candidates)=}")
 #    print("multitarget = '%s'" % (multitarget,) )
     for fr,to in candidates.items():
         if( to in multitarget ):
             continue
         if( verbosity.value > 2 ):
             print(f"Shortening '{fr}'[{len(fr)}]' => '{to}'[{len(to)}]" )
-        add_shorten(fr,to)
+        add_shorten((fr,to))
         # XXX Try to fully replicate the gdb provided type string, including all spaces
 #        pfr = parse_function(fr)
 #        add_shorten(str(pfr),to)
@@ -832,7 +824,7 @@ def load_typedefs( at ):
     print(f"Loaded {cnt} type items in {td}s, found {len(candidates)} for automatic typedef shortening")
 
 
-symbol_cache = {}
+symbol_cache: dict[str,str] = {}
 
 lazy_hint = True
 
@@ -861,6 +853,7 @@ def symbol(fname,silent = False):
 
     fun = parse_function(fname,silent)
     if( debug.value ):
+        import vdb.dot
         g = vdb.dot.graph("function")
         fun.to_dot(g)
         g.write("shorten.dot")
@@ -911,7 +904,7 @@ vdb.subcommands.add_subcommand( [ "shorten"] , symbol_cmd )
 vdb.subcommands.add_subcommand( [ "load", "shorten"] , lazy_load_typedefs )
 
 # This does some of the work of load_typedefs, maybe share it
-def test_all(args):
+def test_all(_):
     typelist = gdb.execute("info types",False,True)
 
     prere = re.compile("^[0-9]*:(.*)")
