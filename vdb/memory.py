@@ -912,7 +912,7 @@ def is_sym_at( addr, symbol ):
 
 def get_gdb_sym( addr ):
 #    vdb.util.bark() # print("BARK")
-#    print("addr = '%s'" % (addr,) )
+#    print(f"{addr=}")
 
     addr = int(addr)
     global sym_cache
@@ -969,11 +969,14 @@ def get_gdb_sym( addr ):
     return (None,None,None)
 
 def get_symbols( addr, xlen ):
+#    vdb.util.bark() # print("BARK")
+#    print(f"{addr=}")
+#    print(f"{xlen=}")
     ret = intervaltree.IntervalTree()
     xaddr = addr+xlen
 
     recnt = 0
-    while xaddr > addr:
+    while xaddr >= addr:
         start,size,name = get_gdb_sym(xaddr)
 #        print("start = '%s'" % (start,) )
 #        print("size = '%s'" % (size,) )

@@ -60,6 +60,9 @@ annotation_tree = intervaltree.IntervalTree()
 default_sizes = { }
 
 def get_annotation( xaddr, symtree ):
+#    vdb.util.bark() # print("BARK")
+#    print(f"{symtree=}")
+#    print(f"{xaddr=}")
     xs = annotation_tree[xaddr]
     if( len(xs) == 0 ):
         xs = symtree[xaddr]
@@ -165,7 +168,11 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
                 t,l = tile_format(cnt,t,l)
                 continue
 #            xs = symtree[xaddr+cnt]
+#            print("")
+#            print(f"xaddr = {int(xaddr):#0x}" if xaddr is not None else "xaddr = None")
+#            print(f"{cnt=}")
             xs = get_annotation( xaddr + cnt, symtree )
+#            print(f"{xs=}")
             nsym = None
             for x in xs:
 #                print("x[0] = '%s'" % x[0] )
@@ -433,5 +440,7 @@ We recommend having an alias hd = hexdump in your .gdbinit
 
 cmd_hexdump()
 
+# TODO/BUG/XXX/ETC
+# When first byte of a hd is a variable that is 1 byte in size, it will not be coloured
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
