@@ -242,8 +242,8 @@ def fixup_intparam( ip ):
 fxre = re.compile("([0-9]+)ul")
 
 def fixup_type( t ):
-    t = t.replace("> >",">>")
-    t = t.replace("> >",">>")
+    t = t.replace(">>","> >")
+    t = t.replace(">>","> >")
     return fxre.sub(fixup_intparam,t)
 
 
