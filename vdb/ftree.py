@@ -492,7 +492,12 @@ class ftree:
                 # field to access it
                 if( so.parent is not None and so.parent.type != val.type ):
                     # To just access the field we can even use a pointer
-                    bval = val.address.cast( so.parent.type.pointer() )
+#                    print(f"{val.type=}")
+#                    print(f"{so.parent.type=}")
+                    try: # Quick hack to make diamond inheritance problems working
+                        bval = val.address.cast( so.parent.type.pointer() )
+                    except gdb.error:
+                        continue
 #                    print("bval = '%s'" % bval )
 #                    print("bval.type = '%s'" % bval.type )
                     soval = bval[so.field]
@@ -1034,7 +1039,7 @@ class ftree:
             indent(level,f"Object has {len(xl.descriptors)} descriptors")
             for d in xl.descriptors:
                 indent(level,str(d))
-            print("dval.type.fields() = '%s'" % (dval.type.fields(),) )
+#            print("dval.type.fields() = '%s'" % (dval.type.fields(),) )
         # If it has no subobjects, we try and resolve the typedef. There seems to be a problem with IAR generated
         # binaries that it won't show it for these typedefs
         if( len(xl.descriptors) == 0 and dval.type.code == gdb.TYPE_CODE_TYPEDEF ):
@@ -1088,8 +1093,12 @@ class ftree:
             print("target_type.sizeof = '%s'" % (target_type.sizeof,) )
             tsizeof = target_type.sizeof
             if( tsizeof == 0 ): # XXX Workaround for a bug??
-                tsizeof = gdb.parse_and_eval(f"sizeof({target_type})")
+                ttstr = vdb.util.fixup_type(str(target_type))
+                tsizeof = gdb.parse_and_eval(f"sizeof({ttstr})")
                 print("tsizeof = '%s'" % (tsizeof,) )
+            # sometimes with IAR the size is just not there
+            if( tsizeof == 0 ):
+                tsizeof = 1
             self.nodes[ptrval:ptrval+int(tsizeof)] = n
         # prepare header tr
         htr = vdb.dot.tr()
