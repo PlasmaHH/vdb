@@ -624,11 +624,13 @@ def redo_cstdint( ):
                 gdbt = gdb.lookup_type(tcand)
             except gdb.error:
                 continue
+            if( gdbt.sizeof == 0 ):
+                continue
             sz = gdbt.sizeof * 8
             sname = f"{uint}int{sz}_t"
 #            cre_shortens.append( (re.compile(f"\<{tcand}\>"), sname) )
             cre_shortens.append( (re.compile(rf"\b{tcand}\b" ), sname) )
-#            print(f"'{tcand}' => {sname}")
+#            print(f"'{tcand}' => '{sname}'")
 
 
 
