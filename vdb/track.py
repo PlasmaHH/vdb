@@ -21,7 +21,7 @@ import struct
 
 rel_time = vdb.config.parameter("vdb-track-time-relative",True)
 clear_at_start = vdb.config.parameter("vdb-track-clear-at-start",True)
-sleep_time = vdb.config.parameter("vdb-track-interval-sleep",0.0)
+sleep_time = vdb.config.parameter("vdb-track-interval-sleep",0.00)
 sync_second = vdb.config.parameter("vdb-track-interval-sync-to-second",True)
 skip_long = vdb.config.parameter("vdb-track-skip-long-intervals",False)
 
@@ -423,7 +423,8 @@ class track_item:
         return ret
 
     def __init__( self, expr, ue, ea, pe, name = None, pack_expression = None, unify = False ):
-        self.expression = " ".join(expr)
+#        self.expression = " ".join(expr)
+        self.expression = expr
         self.number = track_item.get_next_number()
         self.name = name
         self.use_execute = ue
@@ -599,6 +600,8 @@ def extract_ename( argv ):
     return (ename,argv)
 
 def track( argv, execute, eval_after, do_eval ):
+    vdb.util.bark() # print("BARK")
+    print(f"track({argv=},{execute=},{eval_after=},{do_eval=}")
     ex_bp = set()
 
 #    bps = gdb.breakpoints()
@@ -661,10 +664,11 @@ def track( argv, execute, eval_after, do_eval ):
     global trackings_by_bpid
     global trackings_by_number
 
-    nti = track_item( expr, execute, eval_after, do_eval , ename)
+    for e in expr:
+        nti = track_item( e, execute, eval_after, do_eval , ename)
 #    trackings.setdefault(str(bpnum),[]).append(track_item( expr, execute, eval_after, do_eval ))
-    trackings_by_bpid.setdefault(str(bpnum),[]).append( nti )
-    trackings_by_number[nti.number] = nti
+        trackings_by_bpid.setdefault(str(bpnum),[]).append( nti )
+        trackings_by_number[nti.number] = nti
     cleanup_trackings()
 
 def cleanup_trackings( ):
@@ -788,7 +792,7 @@ def data( ):
     dt = vdb.util.format_table(datatable)
     print(dt)
 
-def get_track_item( argv, execute, eval_after, do_eval, as_struct, un ):
+def get_track_items( argv, execute, eval_after, do_eval, as_struct, un ):
     vdb.util.bark() # print("BARK")
     print("argv = '%s'" % (argv,) )
     ename,argv = extract_ename(argv)
@@ -800,8 +804,11 @@ def get_track_item( argv, execute, eval_after, do_eval, as_struct, un ):
     if( as_struct ):
         pack = argv[-1]
         expr = argv[:-1]
-    nti = track_item( expr, execute, eval_after, do_eval , ename, pack_expression = pack, unify = un )
-    return nti
+    ret = []
+    for e in expr:
+        nti = track_item( e, execute, eval_after, do_eval , ename, pack_expression = pack, unify = un )
+        ret.append(nti)
+    return ret
 
 class cmd_track (vdb.command.command):
     """Track one or more expressions per breakpoint
@@ -860,7 +867,7 @@ You should have a look at the data and graph modules, which can take the data fr
                 show()
             elif( "i" in flags ):
 #                interval( argv[1:], execute,eval_after_execute,python_eval )
-                interval( argv[0], get_track_item( argv[1:], execute,eval_after_execute,python_eval,as_struct,unify ) )
+                interval( argv[0], get_track_items( argv[1:], execute,eval_after_execute,python_eval,as_struct,unify ) )
             elif( argv[0] == "show" ):
                 show()
             elif( argv[0] == "data" ):
@@ -1498,7 +1505,8 @@ def interval( iv, nti ):
     else:
         next_t = time.time() + iv
     global trackings_by_number
-    trackings_by_number[nti.number] = nti
+    for n in nti:
+        trackings_by_number[n.number] = n
     global next_interrupt
     next_interrupt = False
     t0 = 0
@@ -1523,7 +1531,8 @@ def interval( iv, nti ):
                 break
         except:
             pass
-        nti.execute(time.time())
+        for n in nti:
+            n.execute(time.time())
         if( skip_long.value ):
             while( time.time() > next_t ):
                 next_t += iv
