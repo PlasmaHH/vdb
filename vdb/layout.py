@@ -375,7 +375,8 @@ class object_layout:
 #            print(" . . . . . . . . . . . . . ")
 #            print("f.is_base_class = '%s'" % (f.is_base_class,) )
 #            print("so.name = '%s'" % so.name )
-#            print("so.type = '%s'" % so.type )
+#            print(f"{so.type=}")
+
 #            print("so.type.strip_typedefs() = '%s'" % so.type.strip_typedefs() )
 #            print("so.bit_offset = '%s'" % so.bit_offset )
 #            print("so.byte_offset = '%s'" % so.byte_offset )
@@ -393,6 +394,8 @@ class object_layout:
 #                    print("so.byte_offset = '%s'" % (so.byte_offset,) )
 #                    print("so.size = '%s'" % (so.size,) )
                     for i in range( so.byte_offset, so.byte_offset + so.size ):
+                        if( i >= len(self.bytes) ): # Temporary workaround for not being able to support bitfields
+                            break
 #                        print("self.bytes[%s] = '%s' => '%s'" % (i,self.bytes[i].name(),bd.name()) )
                         self.bytes[i] = bd
                 self.descriptors.append(bd)
