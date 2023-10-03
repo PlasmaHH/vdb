@@ -35,6 +35,7 @@ class pahole:
         self.current_line : list[str] = []
         self.table.append(self.current_line)
         self.flat_objects = []
+        self.condensed = False
 
     def next_color( self ):
         self.current_color_index += 1
@@ -61,21 +62,30 @@ class pahole:
         self.table.append(self.current_line)
 
     def print_range( self, frm, to, color,etype,ename ):
+#        print(f"print_range({frm=},{to=},{etype=},{ename=})")
         frmbyte, frmbit = self.split_range(frm)
         tobyte, tobit = self.split_range(to)
+        force_bitend = False
 
         self.append(( "[ ", color ))
         self.append((vdb.util.Align.RIGHT,str(frmbyte),color))
-        if( frmbit != 0 ):
+        if( frmbit != 0  or (to-frm) % 8  != 7 ):
             self.append((":"+str(frmbit),color))
+            force_bitend = True
         else:
             self.append(None)
-        self.append(("- ",color))
-        self.append((vdb.util.Align.RIGHT,str(tobyte),color))
-        if( tobit != 7 ):
-            self.append((":"+str(tobit),color))
+
+        if( self.condensed or frm % 8 != 0 or to-frm != 7 ):
+            self.append(("- ",color))
+            self.append((vdb.util.Align.RIGHT,str(tobyte),color))
+            if( force_bitend or tobit != 7 ):
+                self.append((":"+str(tobit),color))
+            else:
+                self.append(None)
         else:
-            self.append(None)
+            self.append("")
+            self.append("")
+            self.append("")
         self.append(( "]",color) )
         self.append(" ")
         self.last_used_bit = to
@@ -85,7 +95,18 @@ class pahole:
         self.new_line()
 
     def print_range_extended( self, frm, to, color,etype,ename ):
-        self.print_range( frm, to, color,etype,ename )
+#        print(f"print_range_extended({frm=},{to=},{etype},{ename})")
+        align = frm % 8
+        if( align != 0 ): # Some bits until the next full byte
+            align = 8 - align
+            mto = min( to, frm+align-1 )
+            self.print_range( frm, mto, color,etype,ename )
+            frm += align
+
+        while to >= frm:
+            mto = min(to,frm+7)
+            self.print_range( frm, mto, color,etype,ename )
+            frm += 8
 
     def get_type( self, typ ):
         bx = typ.strip_typedefs()
@@ -101,8 +122,8 @@ class pahole:
 #        self.append(( vdb.util.Align.RIGHT,enttypename, color_type.get() ))
 #        self.append(" ")
 
-    def print_gap( self, next_bit, condense ):
-        if( condense ):
+    def print_gap( self, next_bit ):
+        if( self.condensed ):
             self.print_range( self.last_used_bit+1, next_bit, color_empty.get(), "", "<unused>" )
         else:
             self.print_range_extended( self.last_used_bit+1, next_bit, color_empty.get(), "", "<unused>" )
@@ -119,8 +140,8 @@ class pahole:
             self.flat_objects.append( ( o.bit_offset, prefix + "::" + o.name, o ) )
 
 
-    def print_object( self, obj, condense ):
-#        print(f"print_object({obj},{condense}")
+    def print_object( self, obj ):
+#        print(f"print_object({obj}")
         self.flatten(obj,obj.name)
 
         for _,subname,o in sorted(self.flat_objects):
@@ -132,19 +153,20 @@ class pahole:
                 bsize = o.size * 8
 
             if( o.bit_offset - self.last_used_bit > 1 ):
-                self.print_gap( o.bit_offset-1, condense )
+                self.print_gap( o.bit_offset-1 )
 
-            if( condense ):
-                self.print_range_extended( o.bit_offset, o.bit_offset + bsize - 1, col, self.get_type(o.type),subname )
-            else:
+            if( self.condensed ):
                 self.print_range( o.bit_offset, o.bit_offset + bsize - 1, col, self.get_type(o.type),subname )
+            else:
+                self.print_range_extended( o.bit_offset, o.bit_offset + bsize - 1, col, self.get_type(o.type),subname )
 
 
         self.print()
 
 def print_pahole( layout, condense ):
     pa = pahole()
-    pa.print_object( layout.object, condense )
+    pa.condensed = condense
+    pa.print_object( layout.object )
 
 class cmd_pahole(vdb.command.command):
     """Show the holes in a structure.
