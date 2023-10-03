@@ -1035,24 +1035,24 @@ class ftree:
         vindent(4,level,f"{dval.type=}")
 
         xl = vdb.layout.object_layout( value = dval )
-        if( verbose(4) ):
-            indent(level,f"Object has {len(xl.descriptors)} descriptors")
-            for d in xl.descriptors:
-                indent(level,str(d))
+#        if( verbose(4) ):
+#            indent(level,f"Object has {len(xl.descriptors)} descriptors")
+#            for d in xl.descriptors:
+#                indent(level,str(d))
 #            print("dval.type.fields() = '%s'" % (dval.type.fields(),) )
         # If it has no subobjects, we try and resolve the typedef. There seems to be a problem with IAR generated
         # binaries that it won't show it for these typedefs
-        if( len(xl.descriptors) == 0 and dval.type.code == gdb.TYPE_CODE_TYPEDEF ):
+        if( len(xl.object.subobjects) == 0 and dval.type.code == gdb.TYPE_CODE_TYPEDEF ):
             if( reparse_cast.value ):
                 tr_dval = gdb.parse_and_eval(f"*({dval.type.strip_typedefs()}*){int(dval.address)}")
             else:
                 tr_dval = dval.cast( dval.type.strip_typedefs() )
             vindent(4,level,f"Resolved {tr_dval.type=}")
             tr_xl = vdb.layout.object_layout( value = tr_dval )
-            vindent(4,level,f"After resolving typedef, object has {len(tr_xl.descriptors)} descriptors")
+            vindent(4,level,f"After resolving typedef, object has {len(tr_xl.object.subobjects)} subobjects")
             print("tr_dval.type.fields() = '%s'" % (tr_dval.type.fields(),) )
 
-            if( len(tr_xl.descriptors) > 0 ):
+            if( len(tr_xl.object.subobjects) > 0 ):
                 xl = tr_xl
                 dval = tr_dval
 
