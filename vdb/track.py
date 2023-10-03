@@ -327,6 +327,10 @@ def exec_tracking( tr , now ):
     return cont        
 
 def exec_tracking_id( bpid , now ):
+    print("#############################")
+    print(f"exec_tracking_id({bpid=},{now=})")
+    print("If you see this, something is still using the old event based mechanism. Make it use the breakpoint condition feature (bp_called) instead")
+    traceback.print_stack()
     tr = by_id(bpid)
     return exec_tracking( tr, now)
 
@@ -339,7 +343,12 @@ def bp_called( bpnum ):
 #    print(f"bp_called({bpnum=})")
     # True -> stop() on bp, False -> don't stop
 #    return False
-    return not exec_tracking_id(bpnum,time.time())
+    
+    # Normally we would do the below, but since we want to catch the remaining cases this is done, we do what the
+    # funciton does directly
+#    return not exec_tracking_id(bpnum,time.time())
+    tr = by_id(bpnum)
+    return not exec_tracking( tr, time.time() )
 
 @vdb.event.stop()
 def stop( bpev ):
