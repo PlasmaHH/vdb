@@ -32,7 +32,7 @@ class pahole:
         self.last_used_bit = 0
         self.current_color_index = -1
         self.table = []
-        self.current_line = []
+        self.current_line : list[str] = []
         self.table.append(self.current_line)
         self.flat_objects = []
 
