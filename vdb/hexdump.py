@@ -248,59 +248,14 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
         print(f"Could only access {xlen} of {olen} requested bytes")
 
 def annotate_var( addr,gval, gtype, name ):
-#    print("annotate_var( %s, %20s, %s, %s )" % (addr,gval,gtype,name) )
-#    print("gtype = '%s'" % gtype )
+
     gtype = gtype.strip_typedefs()
-#    gval = gval.cast(gtype)
-#    print("gtype = '%s'" % gtype )
-#        print("gval = '%s'" % gval )
+
     ol = vdb.layout.object_layout( gtype, gval )
-#    print("ol.type = '%s'" % (ol.type,) )
-#    print("ol = '%s'" % ol )
-#    print("ol.object = '%s'" % ol.object )
 
-#    print("annotate_var .....")
-    for bd in ol.descriptors:
-#        print("name = '%s'" % (name,) )
-#        print("bd.name() = '%s'" % (bd.name(),) )
-#        print("bd.object = '%s'" % bd.object )
-#        print("bd.object.final = '%s'" % (bd.object.final,) )
-#        print("bd.object.byte_offset = '%s'" % (bd.object.byte_offset,) )
-#        print("bd.object.size = '%s'" % (bd.object.size,) )
-#        print("bd.prefix = '%s'" % (bd.prefix,) )
-#        print("bd.object.field = '%s'" % (bd.object.field,) )
-#        if( bd.object.field is not None ):
-#            print("bd.object.field.is_base_class = '%s'" % (bd.object.field.is_base_class,) )
-#        print("bd.object.type = '%s'" % (bd.object.type,) )
-#        print("bd.object.type.code = '%s'" % vdb.util.gdb_type_code(bd.object.type.code) )
-        if( bd.object.final and bd.object.byte_offset >= 0 and bd.object.size > 0 ):
-            if( bd.object.field is not None and bd.object.field.is_base_class ):
-                continue
-            if( bd.prefix is None ):
-                ent = name
-                addr = int(addr)
-#                print("bd.prefix = '%s'" % (bd.prefix,) )
-            else:
-                ent = bd.name()
-                if( len(ent) > 2 and ent.startswith("::") ):
-                    ent = ent[2:]
-                print(f"{ent} => ")
-                ent = vdb.shorten.symbol(ent)
-                print(f"{ent}")
-                dotpos = ent.find(".")
-                if( dotpos != -1 and name is not None ):
-                    ent = name + ent[dotpos:]
-                ent = vdb.shorten.symbol(ent)
-
-                addr = int(addr)
-#                print("name = '%s'" % (name,) )
-#                print("addr = '%s'" % (addr,) )
-#                print("ent = '%s'" % (ent,) )
-#            print("bd.object.size = '%s'" % bd.object.size )
-#            print("(addr+bd.object.byte_offset) = '%s'" % (addr+bd.object.byte_offset) )
-#            print("(addr+bd.object.byte_offset+bd.object.size) = '%s'" % (addr+bd.object.byte_offset+bd.object.size) )
-            annotation_tree[addr+bd.object.byte_offset:addr+bd.object.byte_offset+bd.object.size] = ent
-#        print("annotation_tree = '%s'" % annotation_tree )
+    for _,oname,obj in ol.flatten():
+        print(f"{obj=}")
+        annotation_tree[addr+obj.byte_offset:addr+obj.byte_offset+obj.size] = oname
 
 def annotate_block( block ):
     if( block.is_static or block.is_global ):

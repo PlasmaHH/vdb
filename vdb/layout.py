@@ -352,6 +352,22 @@ class object_layout:
 
         return ret
 
+    def flatten( self, obj = None, prefix = ""):
+        if( obj is None ):
+            obj = self.object
+            prefix = obj.name + "::"
+        ret = []
+        for o in obj.subobjects:
+            if( not o.final ):
+                ret += self.flatten( o,prefix + o.name + "::" )
+                continue
+            # If it is final and a base class its an empty base, leave it out
+            if( o.is_base_class ):
+                continue
+
+            ret.append( ( o.bit_offset, prefix  + o.name, o ) )
+        return ret
+
     def parse( self, atype, parent, offset = 0 ):
 #        print("atype = '%s'" % atype )
         

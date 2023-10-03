@@ -34,7 +34,6 @@ class pahole:
         self.table = []
         self.current_line : list[str] = []
         self.table.append(self.current_line)
-        self.flat_objects = []
         self.condensed = False
 
     def next_color( self ):
@@ -128,23 +127,10 @@ class pahole:
         else:
             self.print_range_extended( self.last_used_bit+1, next_bit, color_empty.get(), "", "<unused>" )
 
-    def flatten( self, obj, prefix ):
-        for o in obj.subobjects:
-            if( not o.final ):
-                self.flatten( o,prefix + "::" + o.name)
-                continue
-            # If it is final and a base class its an empty base, leave it out
-            if( o.is_base_class ):
-                continue
+    def print_layout( self, layout ):
+        flat = layout.flatten()
 
-            self.flat_objects.append( ( o.bit_offset, prefix + "::" + o.name, o ) )
-
-
-    def print_object( self, obj ):
-#        print(f"print_object({obj}")
-        self.flatten(obj,obj.name)
-
-        for _,subname,o in sorted(self.flat_objects):
+        for _,subname,o in sorted(flat):
             col = self.next_color()
 
             if( o.bit_size is not None ):
@@ -166,7 +152,7 @@ class pahole:
 def print_pahole( layout, condense ):
     pa = pahole()
     pa.condensed = condense
-    pa.print_object( layout.object )
+    pa.print_layout( layout )
 
 class cmd_pahole(vdb.command.command):
     """Show the holes in a structure.
