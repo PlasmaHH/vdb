@@ -628,9 +628,8 @@ def redo_cstdint( ):
                 continue
             sz = gdbt.sizeof * 8
             sname = f"{uint}int{sz}_t"
-#            cre_shortens.append( (re.compile(f"\<{tcand}\>"), sname) )
-            cre_shortens.append( (re.compile(rf"\b{tcand}\b" ), sname) )
-#            print(f"'{tcand}' => '{sname}'")
+            if( len(sname) <= len(tcand) ):
+                cre_shortens.append( (re.compile(rf"\b{tcand}\b" ), sname) )
 
 
 
