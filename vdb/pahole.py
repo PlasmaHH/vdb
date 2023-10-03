@@ -116,21 +116,13 @@ class pahole:
 #        print(f"print_object({obj},{condense}")
         self.flatten(obj,obj.name)
 
-        for boffset,subname,o in sorted(self.flat_objects):
-#            print()
-#            print(f"{boffset=}")
-#            print(f"{subname=}")
-#            print(f"{o=}")
+        for _,subname,o in sorted(self.flat_objects):
             col = self.next_color()
 
             if( o.bit_size is not None ):
                 bsize = o.bit_size
             else:
                 bsize = o.size * 8
-
-#            print(f"{self.last_used_bit=}")
-#            print(f"{o.bit_offset=}")
-#            print(f"{bsize=}")
 
             if( o.bit_offset - self.last_used_bit > 1 ):
                 self.print_gap( o.bit_offset-1 )
@@ -141,25 +133,9 @@ class pahole:
 
             self.new_line()
 
-#            print(f"{self.last_used_bit=}")
         self.print()
 
-
-#        xcos = vdb.color.color(f"[{start:3d}-{end:3d}]",pcolor)
-
 def print_pahole( layout, condense ):
-#    print("###############################################")
-#    vdb.util.bark() # print("BARK")
-#        print("PRINT RESULT")
-    cidx = -1
-    if( condense ):
-        cidx = -1
-    cnt = 0
-    current_entity = None
-    max_type_len = 0
-    previous_text = None
-    start = 0
-    end = 0
     pa = pahole()
     pa.print_object( layout.object, condense )
 
@@ -194,7 +170,7 @@ pahole/e - expanded output, showing each byte on one line (the default)
         try:
             stype = gdb.lookup_type (argv[0])
             ptype = stype.strip_typedefs()
-        except gdb.error as e:
+        except gdb.error:
             sobj = gdb.parse_and_eval(argv[0])
             stype = sobj.type
             ptype = stype.strip_typedefs()
@@ -209,7 +185,7 @@ pahole/e - expanded output, showing each byte on one line (the default)
         try:
             xl = vdb.layout.object_layout(stype,sobj)
             print_pahole(xl,condensed)
-        except Exception as e:
+        except:
             traceback.print_exc()
 
 cmd_pahole()
