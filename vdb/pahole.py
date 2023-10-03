@@ -181,16 +181,15 @@ pahole/e - expanded output, showing each byte on one line (the default)
         super ().__init__ ("pahole", gdb.COMMAND_DATA, gdb.COMPLETE_SYMBOL)
 
     def do_invoke (self, argv ):
-#        print("argv = '%s'" % argv )
+
         if len(argv) == 0 :
             raise gdb.GdbError('pahole takes 1 arguments.')
         condensed = default_condensed.value
-        if( argv[0] == "/c" ):
+        argv,flags = self.flags(argv)
+        if( "c" in flags ):
             condensed = True
-            argv=argv[1:]
-        if( argv[0] == "/e" ):
+        elif( "e" in flags ):
             condensed = False
-            argv=argv[1:]
 
         if len(argv) != 1:
             raise gdb.GdbError('pahole takes 1 arguments.')
