@@ -60,7 +60,7 @@ class pahole:
         self.current_line = []
         self.table.append(self.current_line)
 
-    def print_range( self, frm, to, color ):
+    def print_range( self, frm, to, color,etype,ename ):
         frmbyte, frmbit = self.split_range(frm)
         tobyte, tobit = self.split_range(to)
 
@@ -79,8 +79,15 @@ class pahole:
         self.append(( "]",color) )
         self.append(" ")
         self.last_used_bit = to
+        self.append( ( vdb.util.Align.RIGHT, etype, color_type.get() ) )
+        self.append(" ")
+        self.append( ename )
+        self.new_line()
 
-    def print_type( self, typ ):
+    def print_range_extended( self, frm, to, color,etype,ename ):
+        self.print_range( frm, to, color,etype,ename )
+
+    def get_type( self, typ ):
         bx = typ.strip_typedefs()
         bx = resolve_typedefs(bx)
         if( bx.name is None ):
@@ -89,16 +96,16 @@ class pahole:
             enttypename = bx.name
         enttypename = vdb.shorten.symbol(enttypename)
         enttypename = vdb.color.colors.strip_color(enttypename)
+        return enttypename
 
-        self.append(( vdb.util.Align.RIGHT,enttypename, color_type.get() ))
-        self.append(" ")
+#        self.append(( vdb.util.Align.RIGHT,enttypename, color_type.get() ))
+#        self.append(" ")
 
-    def print_gap( self, next_bit ):
-        self.print_range( self.last_used_bit+1, next_bit, color_empty.get() )
-        self.append("")
-        self.append("")
-        self.append("<unused>")
-        self.new_line()
+    def print_gap( self, next_bit, condense ):
+        if( condense ):
+            self.print_range( self.last_used_bit+1, next_bit, color_empty.get(), "", "<unused>" )
+        else:
+            self.print_range_extended( self.last_used_bit+1, next_bit, color_empty.get(), "", "<unused>" )
 
     def flatten( self, obj, prefix ):
         for o in obj.subobjects:
@@ -125,13 +132,13 @@ class pahole:
                 bsize = o.size * 8
 
             if( o.bit_offset - self.last_used_bit > 1 ):
-                self.print_gap( o.bit_offset-1 )
+                self.print_gap( o.bit_offset-1, condense )
 
-            self.print_range( o.bit_offset, o.bit_offset + bsize - 1, col )
-            self.print_type(o.type)
-            self.append(subname)
+            if( condense ):
+                self.print_range_extended( o.bit_offset, o.bit_offset + bsize - 1, col, self.get_type(o.type),subname )
+            else:
+                self.print_range( o.bit_offset, o.bit_offset + bsize - 1, col, self.get_type(o.type),subname )
 
-            self.new_line()
 
         self.print()
 
