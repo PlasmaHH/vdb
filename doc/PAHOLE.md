@@ -1,7 +1,8 @@
 # pahole
 This is an enhanced and redone version of the pahole python command that once came with gdb. It has support for virtual
-inheritance and a possibly more useful layout display. Bitfield support is missing for now as well as proper support for
-unions. Type names are shortened via the standard mechanism where possible.
+inheritance and a possibly more useful layout display. While it now supports bitfields, it still has trouble with
+unions ( and will mostly arbitrarily chose one of the possible values ).
+Type names are shortened via the standard mechanism where possible.
 
 ## Commands
 
@@ -78,4 +79,13 @@ This shows the layout in an extended format, one line per byte.
 ![](img/pahole.m.e.png)
 
 
+
+## Configuration
+
+You have the following settings to influence the output
+
+* `vdb-pahole-default-condensed` sets if `/c` or `/e` are default when not given
+* `vdb-pahole-colors-members` A list of colors for the different members
+* `vdb-pahole-color-empty` The color to use for empty space
+* `vdb-pahole-color-type` The color to use for the type name
 
