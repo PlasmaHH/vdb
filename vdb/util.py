@@ -302,6 +302,7 @@ def next_id( name ):
     id_store[name] = nid+1
     return nid
 
+Align = Enum("Align", [ "LEFT", "RIGHT" ] )
 class table_cell:
 
     def __init__( self, s, color, dpy_len, max_size, truncate ):
@@ -315,6 +316,7 @@ class table_cell:
             truncate = True
         self.truncate = truncate
         self.rendered = False
+        self.align = Align.LEFT
 #        print(f"cell: .s={self.s}[{len(self.s)}], .color={self.color}, .dpy_len={self.dpy_len}, .max_size={self.max_size}, .truncate={self.truncate}")
 
 
@@ -339,7 +341,10 @@ class table_cell:
         if( skip_padding or xpad < 0 ):
             xpad = 0
 #        print(f"render(width={width}, skip_padding={skip_padding} cell: .s={self.s}[{len(self.s)}], .color={self.color}, .dpy_len={self.dpy_len}, .max_size={self.max_size}, .truncate={self.truncate} => xpad={xpad}")
-        ret = f"{self.s}{' ' * xpad}"
+        if( self.align == Align.LEFT ):
+            ret = f"{self.s}{' ' * xpad}"
+        else:
+            ret = f"{' ' * xpad}{self.s}"
         return ret
 
 
@@ -388,6 +393,7 @@ def format_table( tbl, padbefore = " ", padafter = " " ):
             cell = line[column]
             if( cell is None ):
                 cell=""
+            align = Align.LEFT
 #            print("column = '%s'" % column )
             if isinstance(cell,color_str):
 #                print("cell = '%s'" % (cell,) )
@@ -395,6 +401,9 @@ def format_table( tbl, padbefore = " ", padafter = " " ):
                 maxsz[column] = max(maxsz.get(column,0),ncell.dpy_len)
                 pass
             elif isinstance(cell,tuple):
+                if( len(cell) > 0 and isinstance(cell[0],Align) ):
+                    align = cell[0]
+                    cell = cell[1:]
                 match len(cell):
                     case 0: # empty
                         ncell = table_cell("",None,1,None,None)
@@ -442,6 +451,7 @@ def format_table( tbl, padbefore = " ", padafter = " " ):
             else: # just some printable thing
                 ncell = table_cell(str(cell),None,None,None,None)
                 maxsz[column] = max(maxsz.get(column,0),ncell.dpy_len)
+            ncell.align = align
             nline.append(ncell)
         normal_table.append(nline)
 #    print("maxsz = '%s'" % (maxsz,) )
