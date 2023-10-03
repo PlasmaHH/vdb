@@ -11,7 +11,7 @@ import gdb.types
 
 import traceback
 
-default_condensed = vdb.config.parameter("vdb-pahole-default-condensed",False)
+default_condensed = vdb.config.parameter("vdb-pahole-default-condensed",True)
 
 
 
