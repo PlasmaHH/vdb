@@ -17,17 +17,25 @@ import sys
 mod=sys.modules[__name__]
 vdb.enabled_modules["layout"] = mod
 
-class byte_descriptor:
+class D_byte_descriptor:
+    """
+    Majority of cases we care about what the single bytes belong to, and that is what this object is about
+"""
     def __init__(self,prefix,fname,ftype):
         self.prefix = prefix
         self.type = ftype
         self.code = None
         self.object = None
+        # They be None if the full byte is used by this object
+        self.bit_start = None
+        self.bit_end = None
 
     def __str__( self ):
-        return f"<byte_descriptor prefix={self.prefix} type={self.type} code={vdb.util.gdb_type_code(self.code)} object={self.object} >"
+        return f"<byte_descriptor prefix={self.prefix} type={self.type} code={vdb.util.gdb_type_code(self.code)} object={self.object} bit_start={self.bit_start} bit_end={self.bit_end}>"
 
     def name( self ):
+        vdb.util.bark() # print("BARK")
+        print(f"name({str(self)})")
 #        print("self.prefix = '%s'" % self.prefix )
 #        print("self.object.name = '%s'" % self.object.name )
         if( self.prefix is not None and len(self.prefix) > 0 ):
@@ -91,11 +99,16 @@ class object:
             self.bit_offset = field.bitpos
             self.byte_offset = self.bit_offset // 8
             self.is_base_class = field.is_base_class
+            if( field.bitsize > 0 ):
+                self.bit_size = field.bitsize
+            else:
+                self.bit_size = None
         else:
             self.name = "<anonymous>"
             self.bit_offset = -1
             self.byte_offset = -1
             self.is_base_class = False
+            self.bit_size = None
         self.final = False
         self.parent = None
         # Don't clone that one
@@ -139,8 +152,11 @@ class object:
         return path
 
     def __str__(self):
-        s = f"{self.type}[{self.size}] : {self.name}, @{len(self.subobjects)},b{self.is_base_class} [{self.index}]{{{self.byte_offset}}}"
+        s = f"{self.type}[{self.size}] : {self.name}, @{len(self.subobjects)},b{self.is_base_class} [{self.index}]{{{self.byte_offset}}} {self.bit_offset=} {self.bit_size=} {self.final=}"
         return s
+
+    def __repr__(self):
+        return str(self)
 
 cgdb = vdb.cache.execute_cache()
 
@@ -251,8 +267,8 @@ class object_layout:
 #        print("self.type.sizeof = '%s'" % (self.type.sizeof,) )
         self.type = self.type.strip_typedefs()
 #        print("self.type.sizeof = '%s'" % (self.type.sizeof,) )
-        self.bytes = list(itertools.repeat(byte_descriptor(None,None,None),self.type.sizeof))
-        self.descriptors = []
+#        self.bytes = list(itertools.repeat(byte_descriptor(None,None,None),self.type.sizeof))
+#        self.descriptors = []
 #        print("self.vtype = '%s'" % self.vtype )
 
 #        print("self.type == type = '%s'" % (self.type == type ))
@@ -285,28 +301,28 @@ class object_layout:
 #        print("self.type = '%s'" % self.type )
 #        print("self.object = '%s'" % self.object )
         self.parse(self.type,self.object)
-        for i in range(0,len(self.bytes)):
-            b = self.bytes[i]
-            o = self.bytes[i].object
-#            print("%s " % i, end="")
-            if( o is None or not o.final ):
-                b.prefix = None
-#                print("<unused>")
-#                print("o = '%s'" % o )
-            else:
-                xo = o.parent
-                fullname = ""
-                while( xo is not None ):
-                    if( xo.is_base_class ):
-                        fullname = xo.name + "::" + fullname
-                    else:
-                        if( xo.name is None ):
-                            fullname = "{union}" + "." + fullname
-                        else:
-                            fullname = xo.name + "." + fullname
-                    xo = xo.parent
-                b.prefix = fullname
-#                print(f"{o.type.strip_typedefs()} {fullname}")
+#        for i in range(0,len(self.bytes)):
+#            b = self.bytes[i]
+#            o = self.bytes[i].object
+##            print("%s " % i, end="")
+#            if( o is None or not o.final ):
+#                b.prefix = None
+##                print("<unused>")
+##                print("o = '%s'" % o )
+#            else:
+#                xo = o.parent
+#                fullname = ""
+#                while( xo is not None ):
+#                    if( xo.is_base_class ):
+#                        fullname = xo.name + "::" + fullname
+#                    else:
+#                        if( xo.name is None ):
+#                            fullname = "{union}" + "." + fullname
+#                        else:
+#                            fullname = xo.name + "." + fullname
+#                    xo = xo.parent
+#                b.prefix = fullname
+##                print(f"{o.type.strip_typedefs()} {fullname}")
 
     def extract_fields( self, atype ):
         ret = []
@@ -325,11 +341,11 @@ class object_layout:
             self.object = object(self.type)
 #            print("self.object.name = '%s'" % (self.object.name,) )
             self.object.byte_offset = 0
-            bd = byte_descriptor(None,None,None)
-            bd.object = self.object
-            bd.object.final = True
+#            bd = byte_descriptor(None,None,None)
+#            bd.object = self.object
+#            bd.object.final = True
 #            bd.prefix = ""
-            self.descriptors.append(bd)
+#            self.descriptors.append(bd)
             self.final = True
 #            print("self = '%s'" % self )
             pass
@@ -383,22 +399,24 @@ class object_layout:
 #            print("so.size = '%s'" % so.size )
 #            print("offset = '%s'" % offset )
 #            print("")
-            bd = byte_descriptor(None,None,None)
-            bd.object = so
+#            bd = byte_descriptor(None,None,None)
+#            bd.object = so
+#            print(f"{so=}")
             if( so.bit_offset >= 0 ):
                 so.byte_offset += offset
 #                print("so = '%s'" % so )
 #                print("offset = '%s'" % offset )
                 if( not f.is_base_class ):
+                    pass
 #                    print("len(self.bytes) = '%s'" % (len(self.bytes),) )
 #                    print("so.byte_offset = '%s'" % (so.byte_offset,) )
 #                    print("so.size = '%s'" % (so.size,) )
-                    for i in range( so.byte_offset, so.byte_offset + so.size ):
-                        if( i >= len(self.bytes) ): # Temporary workaround for not being able to support bitfields
-                            break
+#                    for i in range( so.byte_offset, so.byte_offset + so.size ):
+#                        if( i >= len(self.bytes) ): # Temporary workaround for not being able to support bitfields
+#                            break
 #                        print("self.bytes[%s] = '%s' => '%s'" % (i,self.bytes[i].name(),bd.name()) )
-                        self.bytes[i] = bd
-                self.descriptors.append(bd)
+#                        self.bytes[i] = bd
+#                self.descriptors.append(bd)
             else:
 #                print("so = '%s'" % so )
                 voffset = get_vtt_entry( self.vtt, so.byte_offset )
@@ -407,6 +425,7 @@ class object_layout:
 #                print("VIRTUAL")
                 # Virtual, get the real position
                 pass
+            so.bit_offset += offset * 8
             code = so.type.strip_typedefs().code
 #            if( f.is_base_class ):
 #                self.parse( so.type, so, offset )

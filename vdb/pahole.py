@@ -27,7 +27,129 @@ def resolve_typedefs( gdb_type ):
         return resolve_typedefs( gdb_type.target() ).pointer()
     return gdb_type.strip_typedefs()
 
+class pahole:
+    def __init__( self ):
+        self.last_used_bit = 0
+        self.current_color_index = -1
+        self.table = []
+        self.current_line = []
+        self.table.append(self.current_line)
+        self.flat_objects = []
+
+    def next_color( self ):
+        self.current_color_index += 1
+        self.current_color_index %= len(color_list.elements)
+        return self.color()
+
+    def color( self ):
+        col = color_list.elements[self.current_color_index]
+        return col
+
+    def print( self ):
+        vdb.util.print_table( self.table, "", "" )
+
+    def append( self, cell ):
+        self.current_line.append(cell)
+
+    def split_range( self, rng ):
+        rbyte = rng // 8
+        rbit = rng % 8
+        return ( rbyte, rbit )
+
+    def new_line( self ):
+        self.current_line = []
+        self.table.append(self.current_line)
+
+    def print_range( self, frm, to, color ):
+        frmbyte, frmbit = self.split_range(frm)
+        tobyte, tobit = self.split_range(to)
+
+        self.append(( "[ ", color ))
+        self.append((vdb.util.Align.RIGHT,str(frmbyte),color))
+        if( frmbit != 0 ):
+            self.append((":"+str(frmbit),color))
+        else:
+            self.append(None)
+        self.append(("- ",color))
+        self.append((vdb.util.Align.RIGHT,str(tobyte),color))
+        if( tobit != 7 ):
+            self.append((":"+str(tobit),color))
+        else:
+            self.append(None)
+        self.append(( "]",color) )
+        self.append(" ")
+        self.last_used_bit = to
+
+    def print_type( self, typ ):
+        bx = typ.strip_typedefs()
+        bx = resolve_typedefs(bx)
+        if( bx.name is None ):
+            enttypename = str(bx)
+        else:
+            enttypename = bx.name
+        enttypename = vdb.shorten.symbol(enttypename)
+        enttypename = vdb.color.colors.strip_color(enttypename)
+
+        self.append(( vdb.util.Align.RIGHT,enttypename, color_type.get() ))
+        self.append(" ")
+
+    def print_gap( self, next_bit ):
+        self.print_range( self.last_used_bit+1, next_bit, color_empty.get() )
+        self.append("")
+        self.append("")
+        self.append("<unused>")
+        self.new_line()
+
+    def flatten( self, obj, prefix ):
+        for o in obj.subobjects:
+            if( not o.final ):
+                self.flatten( o,prefix + "::" + o.name)
+                continue
+            # If it is final and a base class its an empty base, leave it out
+            if( o.is_base_class ):
+                continue
+
+            self.flat_objects.append( ( o.bit_offset, prefix + "::" + o.name, o ) )
+
+
+    def print_object( self, obj, condense ):
+#        print(f"print_object({obj},{condense}")
+        self.flatten(obj,obj.name)
+
+        for boffset,subname,o in sorted(self.flat_objects):
+#            print()
+#            print(f"{boffset=}")
+#            print(f"{subname=}")
+#            print(f"{o=}")
+            col = self.next_color()
+
+            if( o.bit_size is not None ):
+                bsize = o.bit_size
+            else:
+                bsize = o.size * 8
+
+#            print(f"{self.last_used_bit=}")
+#            print(f"{o.bit_offset=}")
+#            print(f"{bsize=}")
+
+            if( o.bit_offset - self.last_used_bit > 1 ):
+                self.print_gap( o.bit_offset-1 )
+
+            self.print_range( o.bit_offset, o.bit_offset + bsize - 1, col )
+            self.print_type(o.type)
+            self.append(subname)
+
+            self.new_line()
+
+#            print(f"{self.last_used_bit=}")
+        self.print()
+
+
+#        xcos = vdb.color.color(f"[{start:3d}-{end:3d}]",pcolor)
+
 def print_pahole( layout, condense ):
+#    print("###############################################")
+#    vdb.util.bark() # print("BARK")
 #        print("PRINT RESULT")
     cidx = -1
     if( condense ):
@@ -38,75 +160,8 @@ def print_pahole( layout, condense ):
     previous_text = None
     start = 0
     end = 0
-    for bd in layout.bytes:
-        if( bd.object is not None ):
-            bx = bd.object.type.strip_typedefs()
-            bx = resolve_typedefs(bx)
-#            print(f"{bx=}")
-            enttypename = bx.name
-            if( enttypename is None ):
-                enttypename = str(bx)
-            enttypename = vdb.shorten.symbol(enttypename)
-#            max_type_len = max(max_type_len,len(enttypename))
-            max_type_len = max(max_type_len,len(vdb.color.colors.strip_color(enttypename)))
-            bd.pahole_enttypename = enttypename
-    txtunused = "<unused>"
-    ccolor = color_empty.get()
-    ccolor = color_list.elements[cidx]
-    pcolor=ccolor
-    for bd in layout.bytes:
-        if( bd.prefix is None ):
-            ent = None
-        else:
-            ent = bd.name()
-#        print("ent = '%s'" % ent )
-
-        if( ent is not None ):
-            if( len(ent) > 2 and ent.startswith("::") ):
-                ent = ent[2:]
-            ent = vdb.shorten.symbol(ent)
-        else:
-            ent = txtunused
-
-        if( ent != current_entity ):
-            current_entity = ent
-            if( ent != txtunused ):
-                cidx += 1
-                cidx %= len(color_list.elements)
-        if( ent != txtunused ):
-            ccolor = color_list.elements[cidx]
-        else:
-            ccolor = color_empty.get()
-        cos = vdb.color.color(f"[{cnt:3d}]",ccolor)
-        if( bd.prefix is not None ):
-#            print("bd.type = '%s'" % bd.type )
-#            print("type(bd.type) = '%s'" % type(bd.type) )
-#            print("bx = '%s'" % bx )
-            enttypename = bd.pahole_enttypename
-            ename = vdb.color.color(f"{enttypename:>{max_type_len}}",color_type.get())
-        else:
-            ename = " " * max_type_len
-            ent = txtunused
-        if( condense ):
-            txt = f"{ename} {ent}"
-            if( txt != previous_text ):
-                if( previous_text is not None ):
-                    xcos = vdb.color.color(f"[{start:3d}-{end:3d}]",pcolor)
-                    if( previous_text.endswith(txtunused) ):
-                        print(f"{xcos} {previous_text} {1+end-start}")
-                    else:
-                        print(f"{xcos} {previous_text}")
-                start = cnt
-                previous_text = txt
-                pcolor = ccolor
-        else:
-            print(f"{cos} {ename} {ent}")
-        end = cnt
-        cnt += 1
-
-    if( condense ):
-        xcos = vdb.color.color(f"[{start:3d}-{end:3d}]",pcolor)
-        print(f"{xcos} {previous_text}")
+    pa = pahole()
+    pa.print_object( layout.object, condense )
 
 class cmd_pahole(vdb.command.command):
     """Show the holes in a structure.
