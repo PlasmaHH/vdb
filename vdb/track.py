@@ -280,7 +280,7 @@ def do_continue( ):
 #    print("GDB EXECUTE CONTINUE")
     try:
         traceback.print_exc()
-        gdb.execute("continue")
+        gdb.execute("continue",True)
     # somehow we schedule two of them, for now just suppress the error
     except gdb.error:
 
@@ -317,6 +317,7 @@ def by_number( num ):
         return [t]
 
 def exec_tracking( tr , now ):
+#    print(f"exec_tracking({tr=},{now=})")
     cont = False
 
     if( tr is not None ):
@@ -334,6 +335,11 @@ def exec_tracking_number( number, now ):
     return exec_tracking( tr, now)
 
 
+def bp_called( bpnum ):
+#    print(f"bp_called({bpnum=})")
+    # True -> stop() on bp, False -> don't stop
+#    return False
+    return not exec_tracking_id(bpnum,time.time())
 
 @vdb.event.stop()
 def stop( bpev ):
@@ -403,6 +409,7 @@ def stop( bpev ):
     if( cont ):
         schedule_continue()
 #        gdb.post_event(do_continue)
+    return False
 
 tracking_data = {}
 
@@ -653,6 +660,13 @@ def track( argv, execute, eval_after, do_eval ):
                 return
             ex_bp = n_bp
             bpnum = nbp.pop()
+            for bp in bps:
+                if( str(bp.number) == bpnum ):
+#                    print(f"{type(bp)=}")
+                    if( bp.condition is None ):
+                        bp.condition = f"$_vdb_bp_conditional({bpnum})"
+                    elif( bp.condition.find("_vdb_bp_conditional") == -1 ):
+                        bp.condition = bp.condition + f"&& $_vdb_bp_conditional({bpnum})"
 #    print("bpnum = '%s'" % bpnum )
 
     expr = argv[1:]
@@ -660,6 +674,8 @@ def track( argv, execute, eval_after, do_eval ):
     if( bpnum != 0 and bpnum not in ex_bp ):
         print(f"Unknown breakpoint {bpnum}, refusing to attach track to nothing")
         return
+
+
 
     global trackings_by_bpid
     global trackings_by_number
@@ -670,6 +686,18 @@ def track( argv, execute, eval_after, do_eval ):
         trackings_by_bpid.setdefault(str(bpnum),[]).append( nti )
         trackings_by_number[nti.number] = nti
     cleanup_trackings()
+
+class BPCalledFunction(gdb.Function):
+    def __init__( self ):
+        super().__init__("_vdb_bp_conditional")
+
+    def invoke( self, bpnum ):
+#        bpnum=str(bpnum)
+#        vdb.util.bark() # print("BARK")
+#        print(f"{bpnum=}")
+        return bp_called(str(bpnum))
+
+_=BPCalledFunction()
 
 def cleanup_trackings( ):
     global trackings_by_bpid
