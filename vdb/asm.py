@@ -1711,7 +1711,9 @@ ascii mockup:
         for _,bp in raw_breakpoints.items():
             breakpoints[bp.address] = bp
 
+        vdb.util.bark() # print("BARK")
         for i in self.instructions:
+            print(f"{len(otbl)=}\r",end="",flush=True,file=sys.stderr)
             line_extra = []
             if( header_repeat.value is not None and not suppress_header ):
                 if( header_repeat.value > 0 ):
@@ -2366,6 +2368,13 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
     """
     @returns a string suitable for display as function parameter list ( together with values )
     """
+#    print(".",end="",flush=True)
+#    if( pval is not None ):
+#        try:
+#            print(f"{int(pval.address)=:#0x}")
+#            print(f"gather_vars({frame=},{lng=},symlist,{str(pval)=},{prefix=},{reglist=},{level=}")
+#        except:
+#            traceback.print_exc()
     if( level >= gv_limit.value ):
         return ""
     level += 1
@@ -2437,28 +2446,42 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                 print("b = '%s'" % (b,) )
                 print("b.type = '%s'" % (b.type,) )
                 print("b.type.code = '%s'" % (vdb.util.gdb_type_code(b.type.code),) )
+        except KeyboardInterrupt:
+            raise
         except:
             traceback.print_exc()
             print("b.name = '%s'" % (b.name,) )
             print("pval = '%s'" % (pval,) )
             pass
 
+        if( baddr is not None and int(baddr) in lng.var_addresses ):
+#            print("-",end="",flush=True)
+            return ret
+
         xbval=bval
+        # XXX FIXME This can get quickly slow as it exponentially blows up the read variables. Figure out a good way to
+        # prevent duplications. Maybe a set of already read addresses? Maybe only ever try . when -> fails?
         try:
-            xbval = bval.dereference()
+            uxbval = bval.dereference()
 #            print("bval.type.fields() = '%s'" % (bval.type.fields(),) )
-            ret += gather_vars( frame, lng, xbval.type.fields() , xbval, prefix + b.name + "->", [], level )
+            ret += gather_vars( frame, lng, uxbval.type.fields() , uxbval, prefix + b.name + "->", [], level )
+        except KeyboardInterrupt:
+            raise
         except:
 #            traceback.print_exc()
             pass
         try:
             ret += gather_vars( frame, lng, b.type.fields(), xbval, prefix + b.name + ".", [], level )
+        except KeyboardInterrupt:
+            raise
         except:
 #            traceback.print_exc()
             pass
 
         try:
             ret += gather_vars( frame, lng, b.type.target().unqualified().fields(), xbval, prefix + b.name + ".", [], level )
+        except KeyboardInterrupt:
+            raise
         except:
 #            traceback.print_exc()
             pass
@@ -2584,6 +2607,8 @@ def update_vars( ls, frame ):
 #            gather_vars( frame, ls, vv.type.fields(), vv, n + "." )
             gather_vars( frame, ls, [ fake_symbol(vv,n) ], None, n + "." )
 
+        except KeyboardInterrupt:
+            raise
         except TypeError:
             pass
         except ValueError:
@@ -2608,8 +2633,9 @@ def update_vars( ls, frame ):
         funhead += "(" + gv + ")"
 
     ls.function_header = funhead
+
 #    print("var_addresses = '%s'" % (ls.var_addresses,) )
-#    print("var_expressions = '%s'" % (ret.var_expressions,) )
+#    print("var_expressions = '%s'" % (ls.var_expressions,) )
 
 
 
