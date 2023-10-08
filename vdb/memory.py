@@ -823,8 +823,8 @@ class memory_map:
                     if( mm ):
                         mm.mtype = memory_type.FOREIGN_STACK
                         mm.thread = thread
-        except:
-            traceback.print_exc()
+        except gdb.error:
+#            traceback.print_exc()
             pass
         finally:
             try:
@@ -925,9 +925,9 @@ def get_gdb_sym( addr ):
     else:
         xaddr = addr
         nm = gdb.parse_and_eval(f"(void*)({xaddr})")
-#        print("nm = '%s'" % (nm,) )
+#        print(f"{str(nm)=}")
         m=symre.match(str(nm))
-#        print("m = '%s'" % (m,) )
+#        print(f"{m=}")
         if( m ):
 #            print("m.group(0) = '%s'" % (m.group(0),) )
 #            print("m.group(1) = '%s'" % (m.group(1),) )
@@ -969,9 +969,10 @@ def get_gdb_sym( addr ):
     return (None,None,None)
 
 def get_symbols( addr, xlen ):
+#    gdb.execute("reg")
 #    vdb.util.bark() # print("BARK")
-#    print(f"{addr=}")
-#    print(f"{xlen=}")
+#    print(f"{str(addr)=}")
+#    print(f"{str(xlen)=}")
     ret = intervaltree.IntervalTree()
     xaddr = addr+xlen
 
