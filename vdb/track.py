@@ -280,7 +280,7 @@ def wait( t ):
 continues = 0
 
 def schedule_continue( ):
-    vdb.util.bark() # print("BARK")
+#    vdb.util.bark() # print("BARK")
     global continues
     if( continues == 0 ):
 #        vdb.util.bark() # print("BARK")
@@ -343,14 +343,17 @@ def exec_tracking( tr , now ):
     return cont        
 
 def exec_tracking_id( bpid , now ):
-    print("#############################")
-    print(f"exec_tracking_id({bpid=},{now=})")
-    print("If you see this, something is still using the old event based mechanism. Make it use the breakpoint condition feature (bp_called) instead")
-    traceback.print_stack()
+#    print("#############################")
+#    vdb.util.bark() # print("BARK")
+#    traceback.print_stack()
+#    print(f"exec_tracking_id({bpid=},{now=})")
+    # XXX the track set mechanism still uses this, make it not and then re-enable this message
+#    print("If you see this, something is still using the old event based mechanism. Make it use the breakpoint condition feature (bp_called) instead")
+#    traceback.print_stack()
     tr = by_id(bpid)
-    print(f"{tr=}")
+#    print(f"{tr=}")
     ret=exec_tracking( tr, now)
-    print(f"{ret=}")
+#    print(f"{ret=}")
     return ret
 
 def exec_tracking_number( number, now ):
@@ -371,9 +374,11 @@ def bp_called( bpnum ):
 
 @vdb.event.stop()
 def stop( bpev ):
+#    print("---------------------------------------")
 #    vdb.util.bark() # print("BARK")
-#    print("bpev = '%s'" % (bpev,) )
-#    print("bpev.inferior_thread = '%s'" % (bpev.inferior_thread,) )
+#    traceback.print_stack()
+#    print(f"{bpev=}")
+#    print(f"{type(bpev)=}")
 
     # hack to not endlessly loop on arm systems
     archname = gdb.selected_frame().architecture().name()
@@ -410,7 +415,7 @@ def stop( bpev ):
             vdb.util.bark() # print("BARK")
             if( exec_tracking_id("0",now) ):
                 cont = True
-            print("cont = '%s'" % (cont,) )
+#            print("cont = '%s'" % (cont,) )
             # hack for catching possibly inlined return cases..
             for name,tr in trackings_by_number.items():
                 if ( name < 0 ):
@@ -422,12 +427,13 @@ def stop( bpev ):
         else:
             bps = bpev.breakpoints
 #            print("bps = '%s'" % (bps,) )
-            gdb.execute("bt")
+#            gdb.execute("bt")
 #            gdb.execute("profile/d dis | wc")
 #            gdb.execute("dis/5")
-            gdb.execute("maint info breakpoints")
+#            gdb.execute("maint info breakpoints")
             for bp in bps:
-                print(f"bp.type={bp_type(bp.type)}")
+#                print(f"bp.type={bp_type(bp.type)}")
+#                print(f"{bp.number=}")
 #                print("bp = '%s'" % bp )
 #                print("bp.number = '%s'" % bp.number )
                 if( exec_tracking_id(str(bp.number),now) ):
@@ -640,8 +646,8 @@ def extract_ename( argv ):
     return (ename,argv)
 
 def track( argv, execute, eval_after, do_eval ):
-    vdb.util.bark() # print("BARK")
-    print(f"track({argv=},{execute=},{eval_after=},{do_eval=}")
+#    vdb.util.bark() # print("BARK")
+#    print(f"track({argv=},{execute=},{eval_after=},{do_eval=}")
     ex_bp = set()
 
 #    bps = gdb.breakpoints()
@@ -854,13 +860,13 @@ def data( ):
     print(dt)
 
 def get_track_items( argv, execute, eval_after, do_eval, as_struct, un ):
-    vdb.util.bark() # print("BARK")
-    print("argv = '%s'" % (argv,) )
+#    vdb.util.bark() # print("BARK")
+#    print("argv = '%s'" % (argv,) )
     ename,argv = extract_ename(argv)
-    print("argv = '%s'" % (argv,) )
-    print("ename = '%s'" % (ename,) )
+#    print("argv = '%s'" % (argv,) )
+#    print("ename = '%s'" % (ename,) )
     expr = argv
-    print("expr = '%s'" % (expr,) )
+#    print("expr = '%s'" % (expr,) )
     pack = None
     if( as_struct ):
         pack = argv[-1]
@@ -1071,7 +1077,7 @@ class track_action:
             return self.get(expression,way)
         except:
             traceback.print_exc()
-            print(f"{gdb.selected_thread().ptid=}")
+#            print(f"{gdb.selected_thread().ptid=}")
             return None
 
 
@@ -1118,7 +1124,7 @@ class filter_track_action(track_action):
             lval,rval = self.refine( lval,rval )
             ret = ( lval == rval )
 
-        print(f"filter::compare_to_value[{self.key}]({lval=},{rval=}) => {ret}")
+#        print(f"filter::compare_to_value[{self.key}]({lval=},{rval=}) => {ret}")
         return ret
 
     def compare_to_map( self, rval ):
@@ -1131,9 +1137,9 @@ class filter_track_action(track_action):
         storage = track_storage.get( self.prefix, None )
 #        print("storage = '%s'" % (storage,) )
         if( storage is not None ):
-            print(f"{self.value_map=}")
+#            print(f"{self.value_map=}")
             setstorage = storage.get( self.value_map, None )
-            print(f"{setstorage=}")
+#            print(f"{setstorage=}")
             for lval in setstorage:
 #                print("lval = '%s'" % (lval,) )
                 el,er = self.refine( lval, rval )
@@ -1182,7 +1188,7 @@ class display_track_item:
 class data_track_action( track_action ):
 
     def __init__( self, data_list, location, prefix ):
-        print("data_list = '%s'" % (data_list,) )
+#        print("data_list = '%s'" % (data_list,) )
         self.data_list = []
         global trackings_by_number
         for dl in data_list:
@@ -1192,9 +1198,9 @@ class data_track_action( track_action ):
             trackings_by_number[tn] = dti
 
     def store_data( self, ex, val, number, now ):
-        vdb.util.bark() # print("BARK")
+#        vdb.util.bark() # print("BARK")
         if( val is not None ):
-            print(f"{ex} = {val}")
+#            print(f"{ex} = {val}")
             td = tracking_data.setdefault(now,{})
             td[number] = str(val)
 
@@ -1287,7 +1293,7 @@ class hexdump_track_action( track_action ):
         ps,pu = vdb.pointer.chain( self.buffer, vdb.arch.pointer_size, 3, test_for_ascii = True )
 #        print("ps = '%s'" % (ps,) )
 #        print("pu = '%s'" % (pu,) )
-        print(f"{self.location} : {self.buffer_expression} = {ps}, {self.size_expression} = {self.size}")
+#        print(f"{self.location} : {self.buffer_expression} = {ps}, {self.size_expression} = {self.size}")
         vdb.hexdump.hexdump( self.buffer, self.size )
     # called on breakpoint hit
     # 
@@ -1336,8 +1342,11 @@ class track_breakpoint( gdb.Breakpoint ):
 #        print("location = '%s'" % (location,) )
 
     def stop( self ):
+#        print("#####################################")
 #        vdb.util.bark() # print("BARK")
+#        traceback.print_stack()
 #        print(f"track_breakpoint.stop() [{self.expression}|{self.location}]")
+#        print(f"{self.number=}")
         ret = self.track_item.stop()
 #        print("ret = '%s'" % (ret,) )
         if( ret is None ):
@@ -1380,7 +1389,7 @@ class extended_track_item:
         self.bp = None
 
     def stop( self ):
-        print(f"extended_track_item::stop() {self.location=}")
+#        print(f"extended_track_item::stop() {self.location=}")
         now = time.time()
         oret = True
 #        print("eti.stop()")
