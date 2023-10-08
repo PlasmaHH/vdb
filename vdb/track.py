@@ -24,6 +24,20 @@ clear_at_start = vdb.config.parameter("vdb-track-clear-at-start",True)
 sleep_time = vdb.config.parameter("vdb-track-interval-sleep",0.00)
 sync_second = vdb.config.parameter("vdb-track-interval-sync-to-second",True)
 skip_long = vdb.config.parameter("vdb-track-skip-long-intervals",False)
+verbosity = vdb.config.parameter("vdb-track-verbosity",2)
+
+
+# XXX All over the place we have similar things, unify it into one "big" vdb.log facility that does:
+# - have loglevels for the log and console separetly
+# - automagically have vdb-<module>-loglevel or similar on module creation/registration
+# - has a global level that when bigger overrides local levels ( so you can enable everything at once )
+# - has a "if level" function that one can use when the info to log is expensive to generate
+# - has an independent "indent" parameter or facility that allows to easier display recursion levels
+# - has the "queue" functionality that prints stuff only right before the prompt ( to make sure people see it better )
+
+def log( lvl, **more ):
+    if( verbosity.get() >= lvl ):
+        print(**more)
 
 
 bptypes = { 
@@ -211,10 +225,12 @@ Num     Type                  Disp Enb Address            What
 
 #    print("ret = '%s'" % ret )
     bps = gdb.breakpoints()
+#    print(f"{ret=}")
     for bp in bps:
-#        print("type(bp.number) = '%s'" % type(bp.number) )
         sp = ret.get(str(bp.number))
-#        print("bp.number = '%s'" % bp.number )
+        if( sp is None ):
+            continue
+#        print(f"{bp.number=}")
 #        print("sp = '%s'" % sp )
 #        print("bp = '%s'" % bp )
         sp.type = bp.type
@@ -264,7 +280,7 @@ def wait( t ):
 continues = 0
 
 def schedule_continue( ):
-#    vdb.util.bark() # print("BARK")
+    vdb.util.bark() # print("BARK")
     global continues
     if( continues == 0 ):
 #        vdb.util.bark() # print("BARK")
@@ -332,7 +348,10 @@ def exec_tracking_id( bpid , now ):
     print("If you see this, something is still using the old event based mechanism. Make it use the breakpoint condition feature (bp_called) instead")
     traceback.print_stack()
     tr = by_id(bpid)
-    return exec_tracking( tr, now)
+    print(f"{tr=}")
+    ret=exec_tracking( tr, now)
+    print(f"{ret=}")
+    return ret
 
 def exec_tracking_number( number, now ):
     tr = by_number( number )
@@ -403,7 +422,12 @@ def stop( bpev ):
         else:
             bps = bpev.breakpoints
 #            print("bps = '%s'" % (bps,) )
+            gdb.execute("bt")
+#            gdb.execute("profile/d dis | wc")
+#            gdb.execute("dis/5")
+            gdb.execute("maint info breakpoints")
             for bp in bps:
+                print(f"bp.type={bp_type(bp.type)}")
 #                print("bp = '%s'" % bp )
 #                print("bp.number = '%s'" % bp.number )
                 if( exec_tracking_id(str(bp.number),now) ):
@@ -1021,18 +1045,33 @@ class track_action:
             # frame.value() => gdb.value
             frame = gdb.newest_frame() # maybe get the frame from the breakpoint object?
 #            print("frame = '%s'" % (frame,) )
-            ret = frame.read_var(expression)
+            if( expression[0] == "$" ):
+                ret = frame.read_register(expression[1:])
+            else:
+                ret = frame.read_var(expression)
         elif( way == "p" ):
             # gdb.parse-and_eval() => gdb.value
+#            vdb.util.bark() # print("BARK")
+#            fr = gdb.newest_frame() # XXX02 TEST
+#            vdb.util.bark() # print("BARK")
+#            print(f"{gdb.selected_thread().ptid=}")
+#            time.sleep(1)
+#            gdb.execute("registers")
             ret = gdb.parse_and_eval(expression)
+#            vdb.util.bark() # print("BARK")
+#            fr = gdb.newest_frame() # XXX03 TEST
+#            vdb.util.bark() # print("BARK")
         else:
             raise Exception("Unknown type to get result: %s" % way )
+#        print(f"{str(ret)=}")
         return ret
 
     def getn( self, expression, way = None ):
         try:
             return self.get(expression,way)
         except:
+            traceback.print_exc()
+            print(f"{gdb.selected_thread().ptid=}")
             return None
 
 
@@ -1044,6 +1083,7 @@ class filter_track_action(track_action):
         self.prefix = prefix
         if( ftype == "cmp" ):
             val = filter_list[1]
+            self.key = val
             ex = filter_list[2]
             if( val[0] == "{" and val[-1] == "}" ):
                 pkey = val[1:-1]
@@ -1069,16 +1109,17 @@ class filter_track_action(track_action):
         lval = self.value
         # value is not available. Since we maybe want two filters accessing the same value in different ways, we ignore
         # that case here. One day we may want to add a facility for the user to specify
-        if( lval is None or rval is None ):
-            return True
+        ret = False
+        if( lval == "*" ):
+            ret = True
+        elif( lval is None or rval is None ):
+            ret = True
+        else:
+            lval,rval = self.refine( lval,rval )
+            ret = ( lval == rval )
 
-        lval,rval = self.refine( lval,rval )
-#        print("lval = '%s'" % (lval,) )
-#        print("rval = '%s'" % (rval,) )
-
-#        print("type(lval) = '%s'" % (type(lval),) )
-#        print("type(rval) = '%s'" % (type(rval),) )
-        return ( lval == rval )
+        print(f"filter::compare_to_value[{self.key}]({lval=},{rval=}) => {ret}")
+        return ret
 
     def compare_to_map( self, rval ):
 #        print("track_storage = '%s'" % (track_storage,) )
@@ -1090,7 +1131,9 @@ class filter_track_action(track_action):
         storage = track_storage.get( self.prefix, None )
 #        print("storage = '%s'" % (storage,) )
         if( storage is not None ):
+            print(f"{self.value_map=}")
             setstorage = storage.get( self.value_map, None )
+            print(f"{setstorage=}")
             for lval in setstorage:
 #                print("lval = '%s'" % (lval,) )
                 el,er = self.refine( lval, rval )
@@ -1104,18 +1147,23 @@ class filter_track_action(track_action):
         # XXX in case we have two python result objects that convert to strings but we want to leave them as-is, what do
         # we do? The conversion is mainly for gdb results as string or gdb.Value and other incompatibilities
         try:
-            d_l = float(lval)
-            d_r = float(rval)
-            return ( d_l, d_r )
+            i_l = int(lval)
+            i_r = int(rval)
+            return ( i_l, i_r )
         except:
             try:
-                # nah, didn't work, lets try strings, that usually works
-                s_l = str(lval)
-                s_r = str(rval)
-                return ( s_l, s_r )
+                d_l = float(lval)
+                d_r = float(rval)
+                return ( d_l, d_r )
             except:
-                # ok, didn't work either, leave as is
-                return ( lval, rval )
+                try:
+                    # nah, didn't work, lets try strings, that usually works
+                    s_l = str(lval)
+                    s_r = str(rval)
+                    return ( s_l, s_r )
+                except:
+                    # ok, didn't work either, leave as is
+                    return ( lval, rval )
 
 
     def action( self, now ):
@@ -1144,6 +1192,7 @@ class data_track_action( track_action ):
             trackings_by_number[tn] = dti
 
     def store_data( self, ex, val, number, now ):
+        vdb.util.bark() # print("BARK")
         if( val is not None ):
             print(f"{ex} = {val}")
             td = tracking_data.setdefault(now,{})
@@ -1259,7 +1308,7 @@ class hexdump_track_action( track_action ):
                 traceback.print_exc()
                 # ok, something went wrong, silently ignore it and try the next tuple
                 pass
-            break
+#            break
         if( self.buffer_expression == "$ret" or self.size_expression == "$ret" ):
             # neeed a "fin action"
             return None
@@ -1306,6 +1355,7 @@ class extended_track_item:
 #        print(f"Location: {location}")
 #        print(f"{len(action_list)} action items...")
         self.actions = []
+        self.location = location
         for action,param in action_list:
 #            print(f"Action '{action}' with {len(param)} parameters")
             ai = None
@@ -1330,23 +1380,29 @@ class extended_track_item:
         self.bp = None
 
     def stop( self ):
+        print(f"extended_track_item::stop() {self.location=}")
         now = time.time()
         oret = True
 #        print("eti.stop()")
 #        gdb.execute("bt")
         for ai in self.actions:
-            # @returns true if all went fine, false if it went wrong, and None if we need to call fin_action
-            # For filter actions this basically means true when the filter could match, False if it didn't. 
-            # So in case of a false, we break, either because of a non matching filter, or because something went too
-            # wrong to continue
-            ret = ai.action(now)
+            try:
+#            print(f"{ai=}")
+                # @returns true if all went fine, false if it went wrong, and None if we need to call fin_action
+                # For filter actions this basically means true when the filter could match, False if it didn't. 
+                # So in case of a false, we break, either because of a non matching filter, or because something went too
+                # wrong to continue
+                ret = ai.action(now)
 #            print("ret = '%s'" % (ret,) )
-            if( ret is False ):
-                break
-            if( ret is None ):
-                frame = gdb.newest_frame()
-                ai.fin_bp = finish_breakpoint( frame, ai )
-                oret = None
+                if( ret is False ):
+                    break
+                if( ret is None ):
+                    frame = gdb.newest_frame()
+                    ai.fin_bp = finish_breakpoint( frame, ai )
+                    oret = None
+            except:
+                traceback.print_exc()
+                pass
         return oret
 
 #
@@ -1377,19 +1433,23 @@ class extended_track_item:
 ssl_set = {
             "SSL_read" : # A function/location to set the breakpoint
                 [   # a list of "actions" with their parameters, a non matching "filter" will stop evaluation
-                    ( "filter", [ "map", "ssl_fd_filter", "s->rbio->num" ] ),
+                    ( "filter", [ "map", "ssl_fd_filter", "s->rbio->num/p" ] ),
                     ( "hex", [
                             ( "buf", "$ret" ), # hex expects address and length
-                            ( "$rdi", "$ret" ) # only if the above doesn't work, try to fall back to these
+                            ( "$rsi", "$ret" ) # only if the above doesn't work, try to fall back to these
                             ]
                             ),
-                    ( "data", [ "buf", "$rdi", "$ret" ] ),
+                    ( "data", [ "buf", "$rsi", "$ret" ] ),
                 ],
-            "SSL_write" : [ ( "hex", [ ( "buf", "num" ), ( "$rdi", "$rsi" ) ] ) ],
+            "SSL_write" : [
+                            ( "filter", [ "map", "ssl_fd_filter", "s->rbio->num/p" ] ),
+                            ( "hex", [ ( "buf", "num" ), ( "$rsi", "$rdx" ) ] )
+                           ],
             "connect" : [
 #                    ( "filter", [ "cmp", "{port}", "ntohs( ((sockaddr_in*)addr)->sin_port )" ] ),
-                    ( "filter", [ "cmp", "{port}", "ntohs( ((uint16_t*)addr)[1] )/p" ] ),
-                    ( "filter", [ "cmp", "{ip}", "( ((sockaddr_in*)addr)->sin_addr)" ] ),
+#                    ( "filter", [ "cmp", "{port}", "ntohs( ((uint16_t*)addr)[1] )/p" ] ),
+                    ( "filter", [ "cmp", "{port}", "((uint8_t*)addr)[3] + ((uint8_t*)addr)[2]*256/p" ] ),
+                    ( "filter", [ "cmp", "{ip}", "( ((struct sockaddr_in*)addr)->sin_addr)/p" ] ),
                     ( "store", [ "fd", "ssl_fd_filter" ] )
                 ],
             "close" : [
