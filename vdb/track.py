@@ -309,15 +309,20 @@ def schedule_finish( ):
         gdb.post_event(do_finish)
 
 def do_finish( ):
+    vdb.util.bark() # print("BARK")
     wait(5)
     global continues
 #    print("continues = '%s'" % (continues,) )
     continues -= 1
 #    print("GDB EXECUTE finish")
     try:
-        gdb.execute("finish")
+        frame = gdb.newest_frame()
+        fin_bp = finish_breakpoint( frame, None )
+#        gdb.execute("finish")
     # somehow we schedule two of them, for now just suppress the error
     except gdb.error:
+        traceback.print_exc()
+        traceback.print_stack()
         pass
 
 
@@ -333,7 +338,7 @@ def by_number( num ):
         return [t]
 
 def exec_tracking( tr , now ):
-#    print(f"exec_tracking({tr=},{now=})")
+    print(f"exec_tracking({tr=},{now=})")
     cont = False
 
     if( tr is not None ):
@@ -348,8 +353,8 @@ def exec_tracking_id( bpid , now ):
 #    traceback.print_stack()
 #    print(f"exec_tracking_id({bpid=},{now=})")
     # XXX the track set mechanism still uses this, make it not and then re-enable this message
-#    print("If you see this, something is still using the old event based mechanism. Make it use the breakpoint condition feature (bp_called) instead")
-#    traceback.print_stack()
+    print("If you see this, something is still using the old event based mechanism. Make it use the breakpoint condition feature (bp_called) instead")
+    traceback.print_stack()
     tr = by_id(bpid)
 #    print(f"{tr=}")
     ret=exec_tracking( tr, now)
@@ -360,17 +365,42 @@ def exec_tracking_number( number, now ):
     tr = by_number( number )
     return exec_tracking( tr, now)
 
+def exec_bp_called( bpnum, now ):
+#    print(f"exec_bp_called({bpnum=})")
+    tr = by_id(bpnum)
+    ret = False
+    if( tr is not None ):
+        for ti in tr:
+            ret = ti.conditional( now )
+            # if one of them for whatever reason says to execute the breakpoint, do so
+            if( ret ):
+                break
+    else:
+        print(f"warning: bp_called({bpnum}) found no tracking item")
+
+    return ret
+
 
 def bp_called( bpnum ):
 #    print(f"bp_called({bpnum=})")
-    # True -> stop() on bp, False -> don't stop
-#    return False
-    
-    # Normally we would do the below, but since we want to catch the remaining cases this is done, we do what the
-    # funciton does directly
-#    return not exec_tracking_id(bpnum,time.time())
-    tr = by_id(bpnum)
-    return not exec_tracking( tr, time.time() )
+    now = time.time()
+
+    if( exec_bp_called( bpnum, now ) ):
+        return True
+
+    frame = gdb.newest_frame()
+    pc = frame.read_register("pc")
+    pc = int(pc)
+
+    bps=gdb.breakpoints()
+    for bp in bps:
+        if( str(bp.number) == bpnum ):
+            for i,bl in enumerate(bp.locations):
+                if( int(bl.address) == pc ):
+                    if( exec_bp_called(f"{bp.number}.{i+1}", now) ):
+                        return True
+    return False
+
 
 @vdb.event.stop()
 def stop( bpev ):
@@ -459,7 +489,33 @@ class pseudo_item:
         self.expression = expression
         self.number = number
 
-class track_item:
+
+# Basic track item that will manage all the breakpoint related stuff. Derived types willt hen do all the necessary
+# actions ( after that works we maybe want to put the "legacy" track item as a special action item so we further unify
+# handling of stuff )
+
+# In case of adding an item on top of an existing breakpoint, we use the condition trick...
+# In case of track sets we set the breakpoints on our own, but use the condition trick too to not create stop events
+# When we create the breakpoint ourselves, we use the breakpoint management too
+# When we use $ret we need a finish breakpoint... Can we just set it and never call "finish"?
+# Note: When we chose a breakpoint where we already have a track item for, we attach to it
+class track_item_base:
+
+    def __init__( self ):
+        pass
+
+    # Called by gdb in case of a stop when this bp is hit
+    def stop( self ):
+        return self.invoke()
+
+    def conditional( self, now ):
+        return self.invoke(now)
+
+    # This does the logic. It is either called by a stop() or by a conditional() ...
+    def invoke( self, now ):
+        return False
+
+class track_item(track_item_base):
 
     next_number = 1
 
@@ -469,6 +525,7 @@ class track_item:
         return ret
 
     def __init__( self, expr, ue, ea, pe, name = None, pack_expression = None, unify = False ):
+        super().__init__()
 #        self.expression = " ".join(expr)
         self.expression = expr
         self.number = track_item.get_next_number()
@@ -634,96 +691,126 @@ class track_item:
             traceback.print_exc()
             pass
 
+    def invoke( self, now ):
+        self.execute(now)
+        return False
+
+# For a=b like expressions we split stuff up and remove it from argv. The part before the = is the name of the variable
+# as show in the result table, but everything after it is the epxression used to gather that data
 def extract_ename( argv ):
     ename = None
+    # x = x
     if( len(argv) > 1 and argv[1] == "=" ):
         ename = argv[0]
         argv = argv[2:]
+    # x= x
     elif( argv[0][-1] == "=" ):
         ename = argv[0][:-1]
         argv = argv[1:]
-    # TODO parse ename when there is no space like "alldata=alldata[@35].second"
+    # x =x
+    elif( len(argv) > 1 and argv[1][0] == "=" ):
+        ename = argv[0]
+        argv = argv[1:]
+        argv[0] = argv[0][1:]
+    elif( argv[0].find("=") != -1 ):
+        ename,argv[0] = argv[0].split("=",2)
+
     return (ename,argv)
 
 def track( argv, execute, eval_after, do_eval ):
-#    vdb.util.bark() # print("BARK")
 #    print(f"track({argv=},{execute=},{eval_after=},{do_eval=}")
-    ex_bp = set()
+#    ex_bp = set()
 
-#    bps = gdb.breakpoints()
-    bps = parse_breakpoints()
-    for _,bp in bps.items():
-        ex_bp.add(bp.number)
-        for _,sbp in bp.subpoints.items():
-            ex_bp.add(sbp.number)
-    ename,argv = extract_ename(argv)
+#     gdb.breakpoints() doesn't give us all we want to know
+#    bps = parse_breakpoints()
+#    for _,bp in bps.items():
+#        ex_bp.add(bp.number)
+#        for _,sbp in bp.subpoints.items():
+#            ex_bp.add(sbp.number)
 
-#    print("ename = '%s'" % (ename,) )
+#    print(f"{ex_bp=}")
 
-#    print("argv[0] = '%s'" % argv[0] )
+    bplocation = argv[0]
+    argv.pop(0)
+
+    exlist = []
+    while( len(argv) > 0 ):
+        ename,argv = extract_ename(argv)
+        exlist.append( (ename,argv[0]) )
+        argv.pop(0)
+
+#    print(f"{exlist=}")
+
     bpnum = None
-    for _,bp in bps.items():
-#        print("bp.number = '%s'" % bp.number )
-        if( bp.number == argv[0] ):
-            bpnum = bp.number
+    bp_match = None
+    bps = gdb.breakpoints()
+    for bp in bps:
+#        print(f"{type(bp)=}")
+#        print(f"{bp=}")
+#        print(f"{bp.locations=}")
+#        print(f"{bp.number=}")
+        # Check if the user asked for a breakpoint number
+        if( str(bp.number) == bplocation ):
+            bpnum = str(bp.number)
+            bp_match = bp
             break
-        if( bp.location == argv[0] ):
+        # Check if they used the same location expression as for some other breakpoint
+        if( bp.location == bplocation ):
             print("Already have breakpoint with that expression, reusing it")
-            bpnum = bp.number
+            bpnum = str(bp.number)
+            bp_match = bp
             break
-        for _,sbp in bp.subpoints.items():
-#            print("sbp.number = '%s'" % sbp.number )
-            if( sbp.number == argv[0] ):
-                bpnum = sbp.number
+        # Not? Ok, was it maybe something like 1.1 ?
+        for i,bpl in enumerate(bp.locations):
+            lpnum = f"{bp.number}.{i+1}"
+            if( bplocation == lpnum ):
+#                bpnum = str(bp.number)
+                bpnum = lpnum
+                bp_match = bp
                 break
         if( bpnum is not None ):
             break
+    # went through all of bps, didn't find any. Expression requests a new breakpoint
     else:
-        if( argv[0] == "*" ):
+        if( bplocation == "*" ):
             print("Setting catch-all track item for all stop events")
             bpnum = 0
         else:
-            print(f"Attempting to set breakpoint for '{argv[0]}'")
-            gdb.execute(f"break {argv[0]}")
-            n_bp = set()
-
-            bps = gdb.breakpoints()
-            for bp in bps:
-                n_bp.add(str(bp.number))
-            nbp = n_bp - ex_bp
-#            print("ex_bp = '%s'" % (ex_bp,) )
-#            print("n_bp = '%s'" % (n_bp,) )
-#            print("nbp = '%s'" % (nbp,) )
-            if( len(nbp) == 0 ):
-                print(f"Failed to set breakpoint for {argv[0]}, cannot attach track either")
+            # Prevent a new breakpoint for numbers
+            try:
+                float(bplocation)
+                print(f"Cannot set breakpoint for location '{bplocation}'")
                 return
-            ex_bp = n_bp
-            bpnum = nbp.pop()
-            for bp in bps:
-                if( str(bp.number) == bpnum ):
-#                    print(f"{type(bp)=}")
-                    if( bp.condition is None ):
-                        bp.condition = f"$_vdb_bp_conditional({bpnum})"
-                    elif( bp.condition.find("_vdb_bp_conditional") == -1 ):
-                        bp.condition = bp.condition + f"&& $_vdb_bp_conditional({bpnum})"
-#    print("bpnum = '%s'" % bpnum )
+            except:
+                print(f"Attempting to set breakpoint for '{bplocation}'")
+                ti = None
+                bp_match = track_breakpoint( bplocation )
+                bpnum = bp_match.number
 
-    expr = argv[1:]
-
-    if( bpnum != 0 and bpnum not in ex_bp ):
-        print(f"Unknown breakpoint {bpnum}, refusing to attach track to nothing")
+    if( bp_match is None and bpnum is None ):
+        print("Failed to set/find breakpoint for track item, can't attach")
         return
 
+#    print(f"{bp_match=}")
+    # Attach all expressions as track items to that breakpoint
+    for ename,expr in exlist:
+        nti = track_item( expr, execute, eval_after, do_eval , ename)
+        if( bp_match is not None ):
+            if( isinstance(bp_match,track_breakpoint) ):
+                bp_match.add_item(nti)
 
-
-    global trackings_by_bpid
-    global trackings_by_number
-
-    for e in expr:
-        nti = track_item( e, execute, eval_after, do_eval , ename)
-#    trackings.setdefault(str(bpnum),[]).append(track_item( expr, execute, eval_after, do_eval ))
+            if( bp_match.condition is None ):
+                bp_match.condition = f"$_vdb_bp_conditional({bpnum})"
+            elif( bp_match.condition.find("_vdb_bp_conditional") == -1 ):
+                bp_match.condition = bp_match.condition + f"&& $_vdb_bp_conditional({bpnum})"
+#            trackings_by_bpid.setdefault(str(bp_match.number),[]).append( nti )
+#        elif bpnum is not None:
         trackings_by_bpid.setdefault(str(bpnum),[]).append( nti )
         trackings_by_number[nti.number] = nti
+#    gdb.execute("info break")
+
+#    trackings.setdefault(str(bpnum),[]).append(track_item( expr, execute, eval_after, do_eval ))
+    # XXX Do we still need that cleanup?
     cleanup_trackings()
 
 class BPCalledFunction(gdb.Function):
@@ -731,10 +818,11 @@ class BPCalledFunction(gdb.Function):
         super().__init__("_vdb_bp_conditional")
 
     def invoke( self, bpnum ):
-#        bpnum=str(bpnum)
+        bpnum=str(bpnum)
 #        vdb.util.bark() # print("BARK")
-#        print(f"{bpnum=}")
-        return bp_called(str(bpnum))
+        ret = bp_called(str(bpnum))
+#        print(f"_vdb_bp_conditional({bpnum}) => {ret}")
+        return ret
 
 _=BPCalledFunction()
 
@@ -1124,10 +1212,11 @@ class filter_track_action(track_action):
             lval,rval = self.refine( lval,rval )
             ret = ( lval == rval )
 
-#        print(f"filter::compare_to_value[{self.key}]({lval=},{rval=}) => {ret}")
+        print(f"filter::compare_to_value[{self.key}]({lval=},{rval=}) => {ret}")
         return ret
 
     def compare_to_map( self, rval ):
+        print(f"filter::compare_to_map({self.prefix=},{rval=})")
 #        print("track_storage = '%s'" % (track_storage,) )
 #        print("self.prefix = '%s'" % (self.prefix,) )
 #        print("rval = '%s'" % (rval,) )
@@ -1143,6 +1232,8 @@ class filter_track_action(track_action):
             for lval in setstorage:
 #                print("lval = '%s'" % (lval,) )
                 el,er = self.refine( lval, rval )
+                print(f"{el=}")
+                print(f"{er=}")
                 if( el == er ):
                     return True
         return False
@@ -1177,6 +1268,7 @@ class filter_track_action(track_action):
 #        print("track_storage = '%s'" % (track_storage,) )
         rval = self.getn( self.expression )
         ret = self.compto(rval)
+#        print(f"{ret=}")
         return ret
 
 class display_track_item:
@@ -1227,7 +1319,7 @@ class store_track_action(track_action):
         self.map_key = prefix
 
     def action( self,now ):
-        vdb.util.bark() # print("BARK")
+#        vdb.util.bark() # print("BARK")
 #        print("self.expression = '%s'" % (self.expression,) )
         if( self.expression == "$ret" ):
             return None
@@ -1260,10 +1352,10 @@ class delete_track_action:
 #        print("delete action()")
         global track_storage
         store = track_storage.setdefault( self.map_key, {} )
+        print(f"{track_storage=}")
 #        print("self.map_key = '%s'" % (self.map_key,) )
 #        print("store = '%s'" % (store,) )
         if( store is not None ):
-#            print("self.storage_map = '%s'" % (self.storage_map,) )
             storeset = store.get(self.storage_map,None)
 #            print("storeset = '%s'" % (storeset,) )
             if( storeset is not None ):
@@ -1273,6 +1365,16 @@ class delete_track_action:
                 storeset.discard( val )
 #                print("storeset = '%s'" % (storeset,) )
         return True
+
+class msg_track_action( track_action ):
+    def __init__( self, param, parameters ):
+        self.msg = param.format(parameters)
+
+    def action( self,now ):
+        print(self.msg)
+
+    def fin_action( self, retval, now ):
+        pass
 
 class hexdump_track_action( track_action ):
 
@@ -1335,22 +1437,42 @@ class hexdump_track_action( track_action ):
 
 class track_breakpoint( gdb.Breakpoint ):
 
-    def __init__( self, location, track_item ):
-        super( track_breakpoint, self ).__init__(location)
-        self.track_item = track_item
+    def __init__( self, location, track_item = None ):
+        super().__init__(location)
+        self.track_items = []
+        if( track_item is not None ):
+            self.track_items.append(track_item)
+
+        self.condition = f"$_vdb_bp_conditional({self.number})"
+#        trackings_by_bpid[str(self.number)] = [ self ]
 #        print("track_item = '%s'" % (track_item,) )
 #        print("location = '%s'" % (location,) )
 
+    def add_item( self, ti ):
+        self.track_items.append(ti)
+
+    def execute( self, now ):
+        return self.stop()
+
+    def conditional( self, now ):
+        ret = self.track_item.conditional(now)
+        return ret
+
     def stop( self ):
-#        print("#####################################")
-#        vdb.util.bark() # print("BARK")
-#        traceback.print_stack()
+        print("#####################################")
+        print(f"{self.condition=}")
+        print(f"{self.location=}")
+        vdb.util.bark() # print("BARK")
+        traceback.print_stack()
+        return True
+#        gdb.execute("bt")
 #        print(f"track_breakpoint.stop() [{self.expression}|{self.location}]")
 #        print(f"{self.number=}")
         ret = self.track_item.stop()
+        return True
 #        print("ret = '%s'" % (ret,) )
         if( ret is None ):
-            schedule_finish()
+#            schedule_finish()
 #            gdb.post_event(do_finish)
 #            print("track_breakpoint.stop() RETURNS True")
             return True
@@ -1368,18 +1490,21 @@ class extended_track_item:
         for action,param in action_list:
 #            print(f"Action '{action}' with {len(param)} parameters")
             ai = None
-            if( action == "hex" ):
-                ai = hexdump_track_action( location, param )
-            elif( action == "filter" ):
-                ai = filter_track_action( param, location, prefix, parameters )
-            elif( action == "store" ):
-                ai = store_track_action( param, location, prefix )
-            elif( action == "delete" ):
-                ai = delete_track_action( param, location, prefix )
-            elif( action == "data" ):
-                ai = data_track_action( param, location, prefix )
-            else:
-                print(f"Unknown action item {action}")
+            match action:
+                case "hex":
+                    ai = hexdump_track_action( location, param )
+                case  "msg":
+                    ai = msg_track_action( param, parameters )
+                case  "filter":
+                    ai = filter_track_action( param, location, prefix, parameters )
+                case  "store":
+                    ai = store_track_action( param, location, prefix )
+                case  "delete":
+                    ai = delete_track_action( param, location, prefix )
+                case  "data":
+                    ai = data_track_action( param, location, prefix )
+                case _:
+                    print(f"Unknown action item {action}")
             if( ai is not None ):
                 self.actions.append(ai)
         self.bp = track_breakpoint( location, self )
@@ -1388,10 +1513,10 @@ class extended_track_item:
         self.bp.delete()
         self.bp = None
 
-    def stop( self ):
-#        print(f"extended_track_item::stop() {self.location=}")
+    def conditional( self, now ):
+        print(f"extended_track_item::conditional() {self.location=}")
         now = time.time()
-        oret = True
+        oret = False
 #        print("eti.stop()")
 #        gdb.execute("bt")
         for ai in self.actions:
@@ -1408,10 +1533,11 @@ class extended_track_item:
                 if( ret is None ):
                     frame = gdb.newest_frame()
                     ai.fin_bp = finish_breakpoint( frame, ai )
-                    oret = None
+#                    oret = None
             except:
                 traceback.print_exc()
                 pass
+#        print(f"{oret=}")
         return oret
 
 #
@@ -1443,6 +1569,7 @@ ssl_set = {
             "SSL_read" : # A function/location to set the breakpoint
                 [   # a list of "actions" with their parameters, a non matching "filter" will stop evaluation
                     ( "filter", [ "map", "ssl_fd_filter", "s->rbio->num/p" ] ),
+                    ( "msg", "SSL_read buffer contents:" ),
                     ( "hex", [
                             ( "buf", "$ret" ), # hex expects address and length
                             ( "$rsi", "$ret" ) # only if the above doesn't work, try to fall back to these
@@ -1452,6 +1579,7 @@ ssl_set = {
                 ],
             "SSL_write" : [
                             ( "filter", [ "map", "ssl_fd_filter", "s->rbio->num/p" ] ),
+                            ( "msg", "SSL_write buffer contents:" ),
                             ( "hex", [ ( "buf", "num" ), ( "$rsi", "$rdx" ) ] )
                            ],
             "connect" : [
