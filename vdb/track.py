@@ -395,10 +395,12 @@ def bp_called( bpnum ):
     bps=gdb.breakpoints()
     for bp in bps:
         if( str(bp.number) == bpnum ):
-            for i,bl in enumerate(bp.locations):
-                if( int(bl.address) == pc ):
-                    if( exec_bp_called(f"{bp.number}.{i+1}", now) ):
-                        return True
+            if( len(bp.locations) > 1 ):
+                # If there is only one location there won't be an e.g. 1.1 for 1
+                for i,bl in enumerate(bp.locations):
+                    if( int(bl.address) == pc ):
+                        if( exec_bp_called(f"{bp.number}.{i+1}", now) ):
+                            return True
     return False
 
 
@@ -504,10 +506,11 @@ class track_item_base:
     def __init__( self ):
         pass
 
-    # Called by gdb in case of a stop when this bp is hit
-    def stop( self ):
-        return self.invoke()
+    # Called by gdb in case of a stop when this bp is hit ( through a track_breakpoint )
+    def stop( self, now ):
+        return self.invoke(now)
 
+    # Yes, both call invoke, but we want to distinguish the way we get invoked by gdb
     def conditional( self, now ):
         return self.invoke(now)
 
@@ -585,6 +588,7 @@ class track_item(track_item_base):
             further = arf[self.array_post]
             data.append(str(further))
         self.save_data( now, data )
+        return False
 #        import sys
 #        sys.exit(-1)
 
@@ -647,6 +651,7 @@ class track_item(track_item_base):
                     self.save_data(now,v,id)
                 else:
                     retd.setdefault(n,[]).append(v)
+        return False
 #        print("retd = '%s'" % (retd,) )
 
         if( self.has_array ):
@@ -660,7 +665,8 @@ class track_item(track_item_base):
         td = tracking_data.setdefault(now,{})
         td[number] = data
 
-    def execute( self, now ):
+    # return If we should stop at this breakpoint and drop to the prompt
+    def invoke( self, now ):
         try:
 #            vdb.util.bark() # print("BARK")
 #            print("self.python_eval = '%s'" % self.python_eval )
@@ -690,9 +696,6 @@ class track_item(track_item_base):
             print("e = '%s'" % e )
             traceback.print_exc()
             pass
-
-    def invoke( self, now ):
-        self.execute(now)
         return False
 
 # For a=b like expressions we split stuff up and remove it from argv. The part before the = is the name of the variable
@@ -798,11 +801,12 @@ def track( argv, execute, eval_after, do_eval ):
         if( bp_match is not None ):
             if( isinstance(bp_match,track_breakpoint) ):
                 bp_match.add_item(nti)
-
-            if( bp_match.condition is None ):
-                bp_match.condition = f"$_vdb_bp_conditional({bpnum})"
-            elif( bp_match.condition.find("_vdb_bp_conditional") == -1 ):
-                bp_match.condition = bp_match.condition + f"&& $_vdb_bp_conditional({bpnum})"
+            # Only when its a gdb only breakpoint we need the conditional hack
+            else: 
+                if( bp_match.condition is None ):
+                    bp_match.condition = f"$_vdb_bp_conditional({bpnum})"
+                elif( bp_match.condition.find("_vdb_bp_conditional") == -1 ):
+                    bp_match.condition = bp_match.condition + f"&& $_vdb_bp_conditional({bpnum})"
 #            trackings_by_bpid.setdefault(str(bp_match.number),[]).append( nti )
 #        elif bpnum is not None:
         trackings_by_bpid.setdefault(str(bpnum),[]).append( nti )
@@ -1435,6 +1439,7 @@ class hexdump_track_action( track_action ):
 #        self.finbp.delete()
         self.dump()
 
+
 class track_breakpoint( gdb.Breakpoint ):
 
     def __init__( self, location, track_item = None ):
@@ -1443,7 +1448,7 @@ class track_breakpoint( gdb.Breakpoint ):
         if( track_item is not None ):
             self.track_items.append(track_item)
 
-        self.condition = f"$_vdb_bp_conditional({self.number})"
+#        self.condition = f"$_vdb_bp_conditional({self.number})"
 #        trackings_by_bpid[str(self.number)] = [ self ]
 #        print("track_item = '%s'" % (track_item,) )
 #        print("location = '%s'" % (location,) )
@@ -1451,20 +1456,25 @@ class track_breakpoint( gdb.Breakpoint ):
     def add_item( self, ti ):
         self.track_items.append(ti)
 
-    def execute( self, now ):
-        return self.stop()
+#    def execute( self, now ):
+#        pass
 
-    def conditional( self, now ):
-        ret = self.track_item.conditional(now)
-        return ret
+#    def conditional( self, now ):
+#        print(f"track_breakpoint.conditional({self},{now})")
+#        ret = self.track_item.conditional(now)
+#        return ret
 
     def stop( self ):
-        print("#####################################")
-        print(f"{self.condition=}")
-        print(f"{self.location=}")
-        vdb.util.bark() # print("BARK")
-        traceback.print_stack()
-        return True
+#        print("#####################################")
+#        print(f"{self.condition=}")
+#        print(f"{self.location=}")
+#        vdb.util.bark() # print("BARK")
+#        traceback.print_stack()
+        now = time.time()
+        for tr in self.track_items:
+            if( tr.stop(now) ):
+                return True
+        return False
 #        gdb.execute("bt")
 #        print(f"track_breakpoint.stop() [{self.expression}|{self.location}]")
 #        print(f"{self.number=}")
