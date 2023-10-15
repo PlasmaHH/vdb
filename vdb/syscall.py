@@ -534,7 +534,7 @@ class syscall_parameter:
         self.register = None
 
 def reg( r, rd, qm = "?", frame = None ):
-    ret,r = rd.get(r,None)
+    ret,r,_ = rd.get(r,None)
     q = ""
     if( ret is None ):
         try:
