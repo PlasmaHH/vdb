@@ -1076,16 +1076,13 @@ class finish_breakpoint( gdb.FinishBreakpoint ):
     def __init__( self, frame, action ):
         super( finish_breakpoint, self).__init__(frame,True)
         self.action = action
-#        vdb.util.bark() # print("BARK")
-        global trackings_by_number
+
         trackings_by_number[self.number] = self
         self.saved_number = self.number
 
     # This is a bit ugly with the lifetime and such but no idea currently at what place to better do it
     def __del__(self ):
-        global trackings_by_number
         trackings_by_number.pop(self.saved_number,None)
-#        vdb.util.bark() # print("BARK")
 
     def out_of_scope( self ):
         vdb.util.bark() # print("BARK")
@@ -1099,10 +1096,8 @@ class finish_breakpoint( gdb.FinishBreakpoint ):
         now = time.time()
         self.action.fin_action( self.return_value, now )
         self.action.fin_bp = None
-#        vdb.util.bark() # print("BARK")
         schedule_continue()
 #        gdb.post_event(do_continue)
-        global trackings_by_number
         del trackings_by_number[self.number]
 #        print("STOP RETURNS False")
         return False
@@ -1216,7 +1211,7 @@ class filter_track_action(track_action):
             lval,rval = self.refine( lval,rval )
             ret = ( lval == rval )
 
-        print(f"filter::compare_to_value[{self.key}]({lval=},{rval=}) => {ret}")
+#        print(f"filter::compare_to_value[{self.key}]({lval=},{rval=}) => {ret}")
         return ret
 
     def compare_to_map( self, rval ):
@@ -1429,7 +1424,7 @@ class hexdump_track_action( track_action ):
         else:
             self.dump()
             return True
-    
+
     # called (optionally) on finish
     def fin_action( self, retval, now ):
 #        print("fin_action")
