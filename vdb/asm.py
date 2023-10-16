@@ -2191,6 +2191,15 @@ for uj in arm_unconditional_jump_mnemonics:
         for enc in arm_encoding_suffixes:
             arm_conditional_jump_mnemonics.add(fmn + "." + enc )
 
+narm = set()
+for unc in arm_unconditional_jump_mnemonics:
+    narm.add(unc)
+    for enc in arm_encoding_suffixes:
+        narm.add(f"{unc}.{enc}")
+
+arm_unconditional_jump_mnemonics = narm
+
+
 #print("arm_conditional_jump_mnemonics = '%s'" % (arm_conditional_jump_mnemonics,) )
 
 arm_return_mnemonics = set ([])
