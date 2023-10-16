@@ -2849,7 +2849,8 @@ def arm_vt_flow_bl( ins, frame, possible_registers, possible_flags ):
         return (possible_registers,possible_flags)
     ins.add_extra(f"BL TO BE HANDLED")
 
-    ins.add_explanation(f"Branch to {ins.targets} and put return address {ins.next.address} in lr register (branch and link)")
+    if( ins.next is not None ):
+        ins.add_explanation(f"Branch to {ins.targets} and put return address {ins.next.address} in lr register (branch and link)")
     return (possible_registers,possible_flags)
 
 def arm_vt_flow_b( ins, frame, possible_registers, possible_flags ):
