@@ -404,7 +404,7 @@ def bp_called( bpnum ):
     return False
 
 
-@vdb.event.stop()
+#@vdb.event.stop()
 def stop( bpev ):
 #    print("---------------------------------------")
 #    vdb.util.bark() # print("BARK")
@@ -1220,7 +1220,7 @@ class filter_track_action(track_action):
         return ret
 
     def compare_to_map( self, rval ):
-        print(f"filter::compare_to_map({self.prefix=},{rval=})")
+#        print(f"filter::compare_to_map({self.prefix=},{rval=})")
 #        print("track_storage = '%s'" % (track_storage,) )
 #        print("self.prefix = '%s'" % (self.prefix,) )
 #        print("rval = '%s'" % (rval,) )
@@ -1236,8 +1236,8 @@ class filter_track_action(track_action):
             for lval in setstorage:
 #                print("lval = '%s'" % (lval,) )
                 el,er = self.refine( lval, rval )
-                print(f"{el=}")
-                print(f"{er=}")
+#                print(f"{el=}")
+#                print(f"{er=}")
                 if( el == er ):
                     return True
         return False
@@ -1345,7 +1345,7 @@ class store_track_action(track_action):
 #        print("retval = '%s'" % (retval,) )
         self.store_data(retval)
 
-class delete_track_action:
+class delete_track_action(track_action):
 
     def __init__( self, del_list, location, prefix ):
         self.expression = del_list[0]
@@ -1356,14 +1356,16 @@ class delete_track_action:
 #        print("delete action()")
         global track_storage
         store = track_storage.setdefault( self.map_key, {} )
-        print(f"{track_storage=}")
+#        print(f"{track_storage=}")
 #        print("self.map_key = '%s'" % (self.map_key,) )
 #        print("store = '%s'" % (store,) )
         if( store is not None ):
+#            print(f"{self.storage_map=}")
             storeset = store.get(self.storage_map,None)
 #            print("storeset = '%s'" % (storeset,) )
             if( storeset is not None ):
-                val = storeset.get( self.expression )
+#                print(f"{self.expression=}")
+                val = self.get( self.expression )
 #                print("val = '%s'" % (val,) )
 #                print("storeset = '%s'" % (storeset,) )
                 storeset.discard( val )
@@ -1523,8 +1525,8 @@ class extended_track_item:
         self.bp.delete()
         self.bp = None
 
-    def conditional( self, now ):
-        print(f"extended_track_item::conditional() {self.location=}")
+    def stop( self, now ):
+#        print(f"extended_track_item::stop() {self.location=}")
         now = time.time()
         oret = False
 #        print("eti.stop()")
