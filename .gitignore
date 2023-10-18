@@ -14,3 +14,4 @@ Session.vim
 build/
 dist/
 *.egg-info/
+vdb.log*

@@ -113,8 +113,6 @@ def overrides(method):
 
 def xoverrides(interface_class):
     def overrider(method):
-#        print("method.__name__ = '%s'" % (method.__name__,) )
-#        print("dir(interface_class) = '%s'" % (dir(interface_class),) )
         assert(method.__name__ in dir(interface_class))
         return method
     return overrider
@@ -195,20 +193,20 @@ def load_plugins( plugindir ):
         if( not os.path.isdir(plugindir) ):
             return
 
-        print(f"Loading plugins in {plugindir}…")
+        vdb.util.log(f"Loading plugins in {plugindir}…", level=vdb.util.Loglevel.info)
 
         for pt in list(enabled_modules.keys()) + [ "plugins" ]:
             pdir = f"{plugindir}/{pt}/"
             if( os.path.isdir(pdir) ):
                 for fn in filter( lambda x : x.endswith(".py"), os.listdir(pdir) ):
                     try:
-                        print(f"Loading plugin {plugindir}/{pt}/{fn}")
+                        vdb.util.log(f"Loading plugin {plugindir}/{pt}/{fn}", level=vdb.util.Loglevel.info)
                         importname = f"{pt}.{fn[:-3]}"
                         importlib.import_module(importname)
                     except ModuleNotFoundError as e:
-                        print(f"Could not load plugin {plugindir}/{pt}/{fn}. {e}")
+                        vdb.util.log(f"Could not load plugin {plugindir}/{pt}/{fn}. {e}", level=vdb.util.Loglevel.warn)
                     except:
-                        print(f"Error while loading plugin {plugindir}/{pt}/{fn}")
+                        vdb.util.log(f"Error while loading plugin {plugindir}/{pt}/{fn}", level=vdb.util.Loglevel.error)
                         traceback.print_exc()
     except:
         traceback.print_exc()
@@ -216,8 +214,9 @@ def load_plugins( plugindir ):
         sys.path = oldpath
 
 def load_themes( vdbdir ):
+    vdb.util.log(f"load_themes({vdbdir})", level=vdb.util.Loglevel.trace)
     if( len(theme.get()) == 0 ):
-        print("Not loading any theme")
+        vdb.util.log(f"Not loading any theme", level=vdb.util.Loglevel.info)
         return
     tdir = f"{vdbdir}/themes/"
     tfile = f"{tdir}{theme.value}.py"
@@ -225,20 +224,20 @@ def load_themes( vdbdir ):
         return
     if( not is_in_safe_path(tdir) ):
         if( os.path.isfile(tfile) ):
-            print(f"{tdir} is not in safe path, not loading {tfile} from there")
+            vdb.util.log(f"{tdir} is not in safe path, not loading {tfile} from there", level=vdb.util.Loglevel.warn)
         return
     if( not os.path.isfile(tfile) ):
-        print(f"Theme file {tfile} not found, not loading any theme")
+        vdb.util.log(f"Theme file {tfile} not found, not loading any theme", level=vdb.util.Loglevel.warn)
         return
 
-    print("Trying to load theme from " + tfile)
+    vdb.util.log(f"Trying to load theme from {tfile}", level=vdb.util.Loglevel.info)
     try:
         oldpath = []
         oldpath += sys.path
         sys.path = [tdir] + sys.path
         importlib.import_module(theme.get())
     except ModuleNotFoundError as e:
-        print(f"Could not load theme {theme.value}: {e}")
+        vdb.util.log(f"Could not load theme {theme.value}: {e}", level=vdb.util.Loglevel.error)
     except:
         traceback.print_exc()
     finally:
@@ -274,16 +273,15 @@ def start( vdbd = None, vdbinit = None ):
         try:
             bval = gdb.parameter( f"vdb-enable-{mod}")
             if( bval ):
-                vdb.util.log(f"Loading module {mod}…")
+                vdb.util.log(f"Loading module {mod}…",level=vdb.util.Loglevel.info)
                 lmod=importlib.import_module(f"vdb.{mod}")
                 enabled_modules[mod] = lmod
             else:
-                vdb.util.log(f"Skipping load of module {mod}…")
+                vdb.util.log(f"Skipping load of module {mod}…",level=vdb.util.Loglevel.warn)
         except ModuleNotFoundError as e:
-            print(f"Could not load module {mod}. {e}")
+            vdb.util.log(f"Could not load module {mod}. {e}", level=vdb.util.Loglevel.warn)
         except:
-            print(f"Error loading module {mod}:")
-            traceback.print_exc()
+            vdb.util.log(f"Error loading module {mod}:", level=vdb.util.Loglevel.error)
 
     plug_dirs = []
     init_files = []

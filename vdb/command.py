@@ -67,8 +67,8 @@ class command(gdb.Command,abc.ABC):
 
             gout=gdb.execute(self.name + " " + ocmd,False,True)
             pa = gdb.string_to_argv(pcmd)
-            
-#            print(f"vdb.pipe.call({pa[0]=},gout,{pa[1:]=})")
+#            gout = gdb.execute("{} {}".format(self.name," ".join('"{}"'.format(a) for a in a0)),False,True)
+
             vdb.pipe.call(pa[0],gout,pa[1:])
             return
         except:

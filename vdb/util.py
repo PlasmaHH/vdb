@@ -123,8 +123,8 @@ logger = None
 logprint = print
 console_logprint = print
 
-loglevel = 3
-console_loglevel = 1
+loglevel = 4
+console_loglevel = 3
 
 def logger_logprint( msg, level ):
     ll = 60 - level * 10
@@ -152,6 +152,17 @@ def init_logger( ):
     rfh.setFormatter(formatter)
     logprint = logger_logprint
 
+Loglevel = Enum("Level", [ "error", "warn", "info", "notice", "debug", "trace" ] )
+
+levelprefixes = {
+        0 : "[FAT] ", # Should probably only use when we have to exit gdb (i.e. hopefully never)
+        1 : "[ERR] ", # when something doesn't work
+        2 : "[WRN] ", # when something doesn't fully work but can continue
+        3 : "[INF] ", # Inform the user about something hapenning, default max level should be here
+        4 : "[NOT] ", # Some extra information, not always necessary, per default don't print
+        5 : "[DBG] ", # Only when debugging stuff ( some modules might have their own )
+        6 : "[TRC] "  # really details trace of all kinds of things that are going on
+        }
 
 def maybe_logprint( level, msg, queue = False ):
     if( logger is None ):
@@ -162,17 +173,17 @@ def maybe_logprint( level, msg, queue = False ):
     fn = fn[-1]
     fn = fn.removesuffix(".py")
     loc = f"{fn}.{st.name} "
-#    print("loc = '%s'" % (loc,) )
+
+    logprefix = levelprefixes.get(level,f"[{level}] ")
+
     global loglevel
-#    print("logprint = '%s'" % (logprint,) )
-#    print("console_logprint = '%s'" % (console_logprint,) )
     # never print anything to console but not to logfile
     if( loglevel < console_loglevel ):
         loglevel = console_loglevel
     if( level <= loglevel ):
 #        print(f"logprint({msg=})")
         if( logprint is not None ):
-            logprint(loc+msg,level)
+            logprint(logprefix+loc+msg,level)
     if( level <= console_loglevel ):
         if( console_logprint != logprint ):
 #            print(f"console_logprint({msg=})")
@@ -183,24 +194,24 @@ def maybe_logprint( level, msg, queue = False ):
                 else:
                     console_logprint(msg)
 
-def qlog(fmt, **more ):
-    level = more.get("level",1)
-    try:
-        maybe_logprint(level,fmt.format(**more),queue=True)
-    except IndexError:
-        maybe_logprint(level,fmt,queue=True)
+def qlog( fmt, *posargs, **kwargs):
+    level = kwargs.get("level",1)
+    if( isinstance(level,Loglevel) ):
+        level = level.value
+    xpfmt=fmt.format(*posargs,**kwargs)
+    maybe_logprint(level,xpfmt,queue=True)
 
-def log(fmt, **more ):
-    level = more.get("level",1)
-    try:
-        maybe_logprint(level,fmt.format(**more))
-    except IndexError:
-        maybe_logprint(level,fmt)
+# Use via from vdb.util import log as vlog
+# to save in typing
+def log( fmt, *posargs, **kwargs):
+    level = kwargs.get("level",1)
+    if( isinstance(level,Loglevel) ):
+        level = level.value
+    xpfmt=fmt.format(*posargs,**kwargs)
+    maybe_logprint(level,xpfmt)
 
-def indent( i, fmt, **more ):
-    log("  " * i + fmt, **more )
-
-
+def indent( i, fmt, *posargs, **more ):
+    log("  " * i + fmt, *posargs, **more )
 
 code_dict = {
 gdb.TYPE_CODE_PTR : ".TYPE_CODE_PTR",

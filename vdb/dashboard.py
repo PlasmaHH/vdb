@@ -443,7 +443,8 @@ Remember that you can use dash as short as long as no other command collides wit
             call_dashboard(argv)
         except gdb.error as ge:
 #            traceback.print_exc()
-            print("dashboard: %s" % ge)
+            vdb.util.log(f"dashboard: {ge}", level=vdb.util.Loglevel.warn)
+
         except:
             traceback.print_exc()
             raise

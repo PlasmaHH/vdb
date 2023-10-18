@@ -184,7 +184,7 @@ def compile( fn ):
 
 def run_binary( binary, cmds ):
     cmdsx = [ "set confirm off", "dash null log", None ] + cmds + [ "q" ]
-    gdb="/home/plasmahh/opt/gdb/bin/gdb"
+    gdb="/home/plasmahh/opt/bin/gdb"
     if( binary is not None ):
         cmdlist = [ gdb, binary ]
     else:
