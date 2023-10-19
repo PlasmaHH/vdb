@@ -56,7 +56,7 @@ class instruction_state:
         print(f"{int(self.pc[0]):#0x}  {self.asm_string}   {self.changed_registers}")
 
 def xi( num ):
-    gdb.execute("registers")
+    regs = gdb.execute("registers",False,True)
 
     alli = []
     oldr = vdb.register.Registers()
@@ -80,8 +80,20 @@ def xi( num ):
         ist.asm_string = vdb.asm.get_single( pc[0] )
         oldr = r
 
+    print(regs)
+    otbl = []
+    otbl.append(["Addr","asm","regs"])
     for i in alli:
-        i._dump()
+        line = []
+        otbl.append(line)
+        pv,_,_,_,pl = vdb.pointer.color(i.pc[0],vdb.arch.pointer_size)
+        line.append( (pv,pl) )
+        alen = len( vdb.color.colors.strip_color(i.asm_string ) )
+        line.append( ( i.asm_string,alen) )
+        for cr,cv in i.changed_registers.items():
+            line.append(f"{cr}={cv:#0x}")
+#        i._dump()
+    vdb.util.print_table(otbl)
 
 class cmd_xi (vdb.command.command):
     """
