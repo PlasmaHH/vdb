@@ -54,7 +54,7 @@ enable_misc      = vdb.config.parameter( "vdb-enable-misc",True)
 enable_svd       = vdb.config.parameter( "vdb-enable-svd",True)
 enable_entry     = vdb.config.parameter( "vdb-enable-entry",True)
 enable_rtos      = vdb.config.parameter( "vdb-enable-rtos",True)
-enable_rtos      = vdb.config.parameter( "vdb-enable-xi",True)
+enable_xi        = vdb.config.parameter( "vdb-enable-xi",True)
 
 configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,pahole,ftree,dashboard,hashtable,ssh,track"
                                                                     ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos,xi" )
