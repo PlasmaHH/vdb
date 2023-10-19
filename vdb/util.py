@@ -201,13 +201,22 @@ def qlog( fmt, *posargs, **kwargs):
     xpfmt=fmt.format(*posargs,**kwargs)
     maybe_logprint(level,xpfmt,queue=True)
 
+
+class kw_dict(dict):
+
+    def __missing__(self,key):
+        return f"{{{key}}}"
+
 # Use via from vdb.util import log as vlog
 # to save in typing
 def log( fmt, *posargs, **kwargs):
     level = kwargs.get("level",1)
     if( isinstance(level,Loglevel) ):
         level = level.value
-    xpfmt=fmt.format(*posargs,**kwargs)
+    try:
+        xpfmt=fmt.format(*posargs,**kwargs)
+    except:
+        xpfmt=fmt.format_map(kw_dict(**kwargs))
     maybe_logprint(level,xpfmt)
 
 def indent( i, fmt, *posargs, **more ):

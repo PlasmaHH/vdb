@@ -1711,7 +1711,7 @@ ascii mockup:
         for _,bp in raw_breakpoints.items():
             breakpoints[bp.address] = bp
 
-        vdb.util.bark() # print("BARK")
+#        vdb.util.bark() # print("BARK")
         for i in self.instructions:
             print(f"{len(otbl)=}\r",end="",flush=True,file=sys.stderr)
             line_extra = []
@@ -4094,14 +4094,17 @@ def disassemble( argv ):
     return None
 
 
-def get_single( bpos ):
+def get_single( bpos, showspec_filter = "abomjhHcdtT" ):
     ret="<??>"
     try:
         da=gdb.selected_frame().architecture().disassemble(int(bpos),count=1)
         da=da[0]
         fake = f"{da['addr']:#0x} <+0>: {da['asm']}"
         li = parse_from_gdb("",fake,do_flow=False)
-        ret = li.to_str(asm_showspec.value.replace("a","").replace("o",""),suppress_header = True)
+        sspec = asm_showspec.value
+        for x in showspec_filter:
+            sspec = sspec.replace(x,"")
+        ret = li.to_str(sspec,suppress_header = True)
         ret = ret.splitlines()
         ret = ret[1]
     except:

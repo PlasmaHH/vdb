@@ -325,6 +325,7 @@ class Registers():
         self.groups = {}
         self.thread = 0
         self.all = {}
+        self.all_values = {}
         self.others = {}
         self.type_indices = {}
         self.next_type_index = 1
@@ -339,10 +340,18 @@ class Registers():
 
         self.collect_registers()
 
-        
     def get( self, name ):
         """Gets gdb register descriptor"""
         return self.all.get(name,None)
+
+    def get_value( self, name ):
+#        print(f"get_value({name})")
+        desc = self.all.get(str(name),None)
+#        print(f"{str(desc)=}")
+        if( desc is None ):
+            return None
+        val = self.all_values.get(desc)
+        return val
 
     def in_group( self, name, group ):
         groups = self.groups.get(name,None)
@@ -361,6 +370,7 @@ class Registers():
         for reg in frame.architecture().registers():
             self.all[reg.name] = reg
             v = frame.read_register(reg)
+            self.all_values[reg] = ( v, v.type )
             # try to figure out which register type this is by first sorting according to its type
             if( reg.name in possible_flags ):
                 self.rflags[reg] = ( v, v.type )

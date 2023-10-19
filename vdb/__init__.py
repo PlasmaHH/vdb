@@ -54,9 +54,10 @@ enable_misc      = vdb.config.parameter( "vdb-enable-misc",True)
 enable_svd       = vdb.config.parameter( "vdb-enable-svd",True)
 enable_entry     = vdb.config.parameter( "vdb-enable-entry",True)
 enable_rtos      = vdb.config.parameter( "vdb-enable-rtos",True)
+enable_rtos      = vdb.config.parameter( "vdb-enable-xi",True)
 
 configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,pahole,ftree,dashboard,hashtable,ssh,track"
-                                                                    ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos" )
+                                                                    ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos,xi" )
 
 home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)
 search_down     = vdb.config.parameter( "vdb-plugin-search-down",True)
@@ -281,7 +282,8 @@ def start( vdbd = None, vdbinit = None ):
         except ModuleNotFoundError as e:
             vdb.util.log(f"Could not load module {mod}. {e}", level=vdb.util.Loglevel.warn)
         except:
-            vdb.util.log(f"Error loading module {mod}:", level=vdb.util.Loglevel.error)
+            ex = traceback.format_exc()
+            vdb.util.log(f"Error loading module {str(mod)}:\n{ex}", level=vdb.util.Loglevel.error)
 
     plug_dirs = []
     init_files = []
