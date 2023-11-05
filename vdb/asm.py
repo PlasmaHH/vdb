@@ -478,12 +478,18 @@ class asm_arg_base( ):
 #        print("self.jmp_target = '%s'" % (self.jmp_target,) )
 
         if( self.register is not None ):
+#            print(f"{registers=}")
+#            print(f"{type(registers)=}")
+#            print(f"{self.register=}")
             val,_,_ = registers.get( self.register )
+#            print(f"{val=}")
 #            print("self.prefix = '%s'" % (self.prefix,) )
 #            print("self.register = '%s'" % (self.register,) )
 #            print("val = '%s'" % (val,) )
 #            print("self.offset = '%s'" % (self.offset,) )
             if( val is not None  ):
+#                print(f"{val=}")
+#                print(f"{prefixval=}")
                 val += prefixval
                 if( self.offset is not None ):
                     val += self.offset
@@ -1713,7 +1719,7 @@ ascii mockup:
 
 #        vdb.util.bark() # print("BARK")
         for i in self.instructions:
-            print(f"{len(otbl)=}\r",end="",flush=True,file=sys.stderr)
+#            print(f"{len(otbl)=}\r",end="",flush=True,file=sys.stderr)
             line_extra = []
             if( header_repeat.value is not None and not suppress_header ):
                 if( header_repeat.value > 0 ):
@@ -1904,14 +1910,15 @@ ascii mockup:
                 if(len(i.reference) == 0 ):
                     line.append("")
                 else:
+                    # Refrence line data plus its display length
                     rtpl=("",0)
 #                    print("i.reference = '%s'" % (i.reference,) )
                     for rf in i.reference:
 #                        print("rf = '%s'" % (rf,) )
 #                        print("type(rf) = '%s'" % (type(rf),) )
 #                        print("rtpl = '%s'" % (rtpl,) )
-#                        print("rf = '%s'" % (rf,) )
-#                        print("rf = '%s'" % (rf,) )
+                        if( isinstance(rf,str) ):
+                            rf = (rf,len(rf))
                         if( rtpl[1] > 0 and ( rtpl[1] + rf[1] + 1) > ref_width.value ): # would be too big, start a new one
                             reference_lines.append(rtpl)
                             rtpl=("",0)
@@ -1922,6 +1929,7 @@ ascii mockup:
 #                    print("rtpl = '%s'" % (rtpl,) )
                     if( rtpl[1] > 0 ):
                         reference_lines.append(rtpl)
+                    # only append one, the others will be put onto seperate "empty" lines later
                     if( len(reference_lines) > 0 ):
                         line.append(reference_lines[0])
                         reference_lines = reference_lines[1:]
@@ -2661,7 +2669,7 @@ def info_line( addr ):
 
 def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached = True, do_flow = True ):
 
-#    print(f"parse_from_gdb(arg={arg},fakedata={len(fakedata)}, arch={arch}, fakeframe={fakeframe}, cached={cached}")
+#    print(f"parse_from_gdb(arg={arg},fakedata={len(fakedata)}, {arch=}, {fakeframe=}, {cached=}, {do_flow=}")
     global parse_cache
 
     key = arg
@@ -3421,7 +3429,7 @@ def register_flow( lng, frame : "gdb frame" ):
     unhandled_mnemonics = set()
 
     
-    vdb.util.bark() # print("BARK")
+#    vdb.util.bark() # print("BARK")
     while ins is not None:
 #        print("ins = '%s'" % (ins,) )
         # Simple protection against any kinds of endless loops
@@ -3433,6 +3441,8 @@ def register_flow( lng, frame : "gdb frame" ):
             next = ins.next
 
         # Assumes the last one is the target, might be different for different archs
+#        print(f"{ins.args=}")
+        # XXX x86 relies on this while arm parses them for the instruction already. Unify that.
         if( ins.args is not None and len(ins.arguments) == 0 ):
             target = False
             for a in ins.args:
@@ -4094,23 +4104,30 @@ def disassemble( argv ):
     return None
 
 
-def get_single( bpos, showspec_filter = "abomjhHcdtT" ):
-    ret="<??>"
+def get_single( bpos, showspec_filter = "abomjhHcdtT", extra_filter = "", do_flow = False ):
+    ret,_ = get_single_tuple( bpos,showspec_filter,extra_filter,do_flow )
+    return ret
+
+def get_single_tuple( bpos, showspec_filter = "abomjhHcdtT", extra_filter = "", do_flow = False ):
+    rets="<??>"
+    reti=None
     try:
         da=gdb.selected_frame().architecture().disassemble(int(bpos),count=1)
         da=da[0]
         fake = f"{da['addr']:#0x} <+0>: {da['asm']}"
-        li = parse_from_gdb("",fake,do_flow=False)
+        li = parse_from_gdb("",fake,do_flow=do_flow)
         sspec = asm_showspec.value
+        showspec_filter += extra_filter
         for x in showspec_filter:
             sspec = sspec.replace(x,"")
         ret = li.to_str(sspec,suppress_header = True)
         ret = ret.splitlines()
-        ret = ret[1]
+        rets = ret[1]
+        reti = li.instructions[0]
     except:
         traceback.print_exc()
         pass
-    return ret
+    return (rets,reti)
 
 class Dis (vdb.command.command):
     """Disassemble with bells and whistels

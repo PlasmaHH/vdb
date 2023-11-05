@@ -35,7 +35,7 @@ def diff_regs( r0, r1 ):
             # XXX Make this arch independent
             if( str(rname) != "rip" ):
                 ret[str(rname)] = rval1
-                print(f"{rname} => {rval1}")
+#                print(f"{rname} => {rval1}")
     return ret
 
 class instruction_state:
@@ -44,10 +44,12 @@ class instruction_state:
         self.pc = None
         self.asm_string = None
         self.changed_registers = None
-        self.changed_memory = None
+        self.current_flags = None
+        self.changed_memory = []
         # Get from the asm module the instruction object with its arguments and targets that will sort this out for the
         # active architecture
         self.accessible_memory = None
+        self.instruciton = None
 
     def _dump( self ):
 #        print(f"{self.pc=}")
@@ -61,7 +63,7 @@ def xi( num ):
     alli = []
     oldr = vdb.register.Registers()
     for i in range(0,num):
-        print("===========")
+#        print("===========")
         ist = instruction_state()
         alli.append(ist)
         gdb.execute("si",False,True)
@@ -76,8 +78,26 @@ def xi( num ):
 #        print(f"{r.regs=}")
         dr = diff_regs(oldr,r)
         ist.changed_registers = dr
+        ist.current_flags=r._flags("eflags",r.rflags,vdb.register.flag_info,False,False,True,None)
         ist.pc = pc
-        ist.asm_string = vdb.asm.get_single( pc[0] )
+        ist.asm_string,ist.instruction = vdb.asm.get_single_tuple( pc[0], extra_filter="r",do_flow=True )
+#        print(f"{ist.instruction.arguments=}")
+#        print(f"{ist.instruction.args=}")
+
+        for arg in ist.instruction.arguments:
+            if( arg.dereference ):
+                nr = {}
+                # XXX python should probably have some lambda magic for that
+                for k,v in r.regs.items():
+                    nr[str(k)] = (int(v[0]),None,None)
+#                print(f"{nr=}")
+#                print(f"{nr.get('rip')=}")
+                val = arg.value( nr )
+                if( val is not None ):
+                    ist.changed_memory.append(val)
+#                print(f"{val=}")
+#            arg._dump()
+#            print(f"{arg=}")
         oldr = r
 
     print(regs)
@@ -91,7 +111,16 @@ def xi( num ):
         alen = len( vdb.color.colors.strip_color(i.asm_string ) )
         line.append( ( i.asm_string,alen) )
         for cr,cv in i.changed_registers.items():
-            line.append(f"{cr}={cv:#0x}")
+            if( cr == "eflags" ):
+                ff=i.current_flags
+                ff=ff[0][2]
+#                ff= self._flags( filter, self.rflags, flag_info, extended, short, mini, None )
+                line.append(f"eflags={ff}")
+            else:
+                line.append(f"{cr}={cv:#0x}")
+        for val,addr in i.changed_memory:
+            line.append(f"{addr:#0x}={val:#0x}")
+#            line.append(str(addr))
 #        i._dump()
     vdb.util.print_table(otbl)
 
