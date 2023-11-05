@@ -87,13 +87,18 @@ def xi( num ):
         for arg in ist.instruction.arguments:
             if( arg.dereference ):
                 nr = {}
+                nr = vdb.asm.register_set()
                 # XXX python should probably have some lambda magic for that
+                # Also, here we have an incompatibility between asm and register that seem to do very similar
+                # bookkeeping and surely can benefit from shared code
+
                 for k,v in r.regs.items():
-                    nr[str(k)] = (int(v[0]),None,None)
+                    nr.values[str(k)] = (int(v[0]),None)
 #                print(f"{nr=}")
 #                print(f"{nr.get('rip')=}")
                 val = arg.value( nr )
                 if( val is not None ):
+#                    print(f" MEM {arg} => {val}")
                     ist.changed_memory.append(val)
 #                print(f"{val=}")
 #            arg._dump()
@@ -119,7 +124,18 @@ def xi( num ):
             else:
                 line.append(f"{cr}={cv:#0x}")
         for val,addr in i.changed_memory:
-            line.append(f"{addr:#0x}={val:#0x}")
+#            print(f"XMEM {addr} => {val}")
+#            print(f"{val=}")
+#            print(f"{addr=}")
+            if( addr is not None ):
+                addr = f"{addr:#0x}"
+            else:
+                addr = "<unknown>"
+            if( val is not None ):
+                val = f"{val:#0x}"
+            else:
+                val = "<inaccessible>"
+            line.append(f"{addr}={val}")
 #            line.append(str(addr))
 #        i._dump()
     vdb.util.print_table(otbl)

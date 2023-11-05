@@ -478,6 +478,8 @@ class asm_arg_base( ):
 #        print("self.jmp_target = '%s'" % (self.jmp_target,) )
 
         if( self.register is not None ):
+#            vdb.util.bark() # print("BARK")
+#            vdb.util.bark(-1) # print("BARK")
 #            print(f"{registers=}")
 #            print(f"{type(registers)=}")
 #            print(f"{self.register=}")
