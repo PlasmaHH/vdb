@@ -35,6 +35,7 @@ under x86_64 Linux with gcc > 10.
     * [hashtable](#hashtable)
     * [ssh](#ssh)
     * [track](#track)
+    * [xi](#xi)
     * [types](#types)
     * [unwind](#unwind)
     * [history](#history)
@@ -219,6 +220,14 @@ task.
 ![](doc/img/track.1.png)
 
 [You can find detailed information about this module here](doc/TRACK.md)
+## xi
+
+The `xi` command works similar to gdbs own `si` but on its way tries to collect every instruction, changed register and
+memory in one neat table. It is not perfect but already pretty helpful.
+
+![](doc/img/xi.0.png)
+[You can find detailed information about this module here](doc/XI.md)
+
 ## types
 The `types` module allows to load/create type information on the fly while debugging. Good for when you don't have debug
 information.
