@@ -16,7 +16,7 @@ import re
 import math
 import struct
 import sys
-from enum import Enum,auto
+
 
 mod=sys.modules[__name__]
 vdb.enabled_modules["pointer"] = mod
@@ -78,7 +78,7 @@ def as_c_str( ptr, maxlen = 64 ):
 
 def annotate( ptr ):
     try:
-        mv=gdb.parse_and_eval("(void*)(%s)" % int(ptr) )
+        mv=gdb.parse_and_eval(f"(void*)({int(ptr)})")
         mv = str(mv)
         pbs = mv.find("<")
         if( pbs != -1 ):
@@ -93,7 +93,7 @@ def dereference( ptr ):
 #        print("gptr = '%s'" % gptr )
 #        print("gptr.type = '%s'" % gptr.type )
 #        xptr = gptr.cast(gdb_void_ptr)
-    xptr = gptr.cast(gdb.lookup_type("void").pointer())
+#    xptr = gptr.cast(gdb.lookup_type("void").pointer())
 #        print("xptr = '%s'" % xptr )
 #        print("xptr.type = '%s'" % xptr.type )
     xptr = gptr.cast(gdb_void_ptr)
@@ -158,7 +158,7 @@ def as_tailspec( ptr, minasc, spec ):
                 if( dvalue == 0 ): # all 0 bytes result in this, most likely a false positive
                     continue
 #                print("dvalue = '%s'" % (dvalue,) )
-                m,e = math.frexp( dvalue )
+                _,e = math.frexp( dvalue )
 #                print("m = '%s'" % (m,) )
 #                print("e = '%s'" % (e,) )
                 if( e >= max_exponents.elements[0] and e <= max_exponents.elements[1] ):
@@ -169,7 +169,7 @@ def as_tailspec( ptr, minasc, spec ):
             try:
                 ba = struct.pack("q",int(ptr))
                 dv = struct.unpack("d",ba)
-                m,e = math.frexp( dv )
+                _,e = math.frexp( dv )
                 if( e >= max_exponents.elements[0] and e <= max_exponents.elements[1] ):
                     return f"(double){dv}"
             except:
@@ -194,7 +194,7 @@ def color( ptr, archsize = None ):
     plen = archsize // 4
 #    t,additional = get_type(ptr,archsize)
 
-    s,mm,col,additional = vdb.memory.mmap.color(ptr,colorspec="Asma")
+    _,mm,col,additional = vdb.memory.mmap.color(ptr,colorspec="Asma")
 #    scolor = colormap.get(t,color_unknown)
 
     if( mm.mtype == vdb.memory.memory_type.NULL ):
@@ -279,8 +279,8 @@ def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = N
     except gdb.MemoryError as e:
 #        print("e = '%s'" % e )
         pass
-    except:
-        raise
+#    except:
+#        raise
     return (ret,pure)
 
 
