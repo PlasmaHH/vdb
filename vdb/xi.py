@@ -15,6 +15,8 @@ import gdb
 
 import traceback
 
+from typing import List
+
 # Also try to figure out memory that changed
 # Use the same mechanism for disassembler to also display the variable names if we know about them?
 
@@ -58,7 +60,7 @@ def xi( num ):
 
     alli = []
     oldr = vdb.register.Registers()
-    for i in range(0,num):
+    for ui in range(0,num):
 #        print("===========")
         ist = instruction_state()
         alli.append(ist)
@@ -82,7 +84,6 @@ def xi( num ):
 
         for arg in ist.instruction.arguments:
             if( arg.dereference ):
-                nr = {}
                 nr = vdb.asm.register_set()
                 # XXX python should probably have some lambda magic for that
                 # Also, here we have an incompatibility between asm and register that seem to do very similar
@@ -105,7 +106,7 @@ def xi( num ):
     otbl = []
     otbl.append(["Addr","asm","regs"])
     for i in alli:
-        line = []
+        line : List = []
         otbl.append(line)
         pv,_,_,_,pl = vdb.pointer.color(i.pc[0],vdb.arch.pointer_size)
         line.append( (pv,pl) )
