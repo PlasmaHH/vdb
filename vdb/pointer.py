@@ -78,8 +78,8 @@ def as_c_str( ptr, maxlen = 64 ):
 
 def annotate( ptr ):
     try:
-        mv=gdb.parse_and_eval(f"(void*)({int(ptr)})")
-        mv = str(mv)
+        gmv=gdb.parse_and_eval(f"(void*)({int(ptr)})")
+        mv = str(gmv)
         pbs = mv.find("<")
         if( pbs != -1 ):
             mv = mv[pbs:]
@@ -168,7 +168,7 @@ def as_tailspec( ptr, minasc, spec ):
         elif( sp == "D"): # Is itself possible a double value
             try:
                 ba = struct.pack("q",int(ptr))
-                dv = struct.unpack("d",ba)
+                dv = struct.unpack("d",ba)[0]
                 _,e = math.frexp( dv )
                 if( e >= max_exponents.elements[0] and e <= max_exponents.elements[1] ):
                     return f"(double){dv}"
