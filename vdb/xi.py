@@ -13,11 +13,7 @@ from itertools import chain
 
 import gdb
 
-import re
 import traceback
-import time
-import datetime
-import struct
 
 # Also try to figure out memory that changed
 # Use the same mechanism for disassembler to also display the variable names if we know about them?
@@ -49,7 +45,7 @@ class instruction_state:
         # Get from the asm module the instruction object with its arguments and targets that will sort this out for the
         # active architecture
         self.accessible_memory = None
-        self.instruciton = None
+        self.instruction = None
 
     def _dump( self ):
 #        print(f"{self.pc=}")
@@ -150,7 +146,7 @@ eXecute Instructions ( and save data along the way )
 
     def do_invoke (self, argv ):
         try:
-            argv,flags = self.flags(argv)
+            argv,_ = self.flags(argv)
             num = 1
             if( len(argv) > 0 ):
                 num = int(argv[0])
