@@ -13,7 +13,7 @@ import intervaltree
 import traceback
 import colors
 import re
-import bisect
+
 from enum import Enum,auto
 import time
 import sys
@@ -251,7 +251,7 @@ def check_colorspec( colorspec ):
     if( colorspec is not None ):
         for c in colorspec:
             if( c not in valid_colorspec ):
-                raise Exception("'%s' is not allowed in colorspecs" % c )
+                raise RuntimeError("'%s' is not allowed in colorspecs" % c )
 
 
 def print_legend( colorspec = "Aasm" ):
@@ -322,7 +322,7 @@ def read_uncached( ptr, count = 1, partial = False ):
         addr=int(addr)
 #        if( addr.bit_length() > vdb.arch.pointer_size ):
         addr &= ( 2 ** vdb.arch.pointer_size - 1 )
-            
+
 #        addr = vdb.util.gint("&main")
 #        print("addr = '%s'" % (addr,) )
 #        print("count = '%s'" % (count,) )
@@ -349,7 +349,7 @@ def read_uncached( ptr, count = 1, partial = False ):
                     return r0
             else:
                 return r0
-        pass
+#        pass
     return result
 
 def write( ptr, buf ):
@@ -534,7 +534,7 @@ class memory_map:
 #        mmi = bisect.bisect_right( self.regions, memory_key(addr) )
 
         mms = self.regions[addr]
-        
+
         candidates = []
         for mm in mms:
             mm = mm[2]
@@ -730,7 +730,7 @@ class memory_map:
             info_proc_mapping = gdb.execute("info proc mapping",False,True)
             mre = re.compile("(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(.*)")
 
-            
+
             for mapping in info_proc_mapping.splitlines():
                 mapping=mapping.strip()
                 m = mre.match(mapping)
@@ -809,6 +809,7 @@ class memory_map:
         selected_thread = gdb.selected_thread()
         if( selected_thread is None ):
             return
+        selected_frame = None
         try:
             # check if any is a stack
             selected_frame = gdb.selected_frame()
@@ -883,7 +884,7 @@ def run_start():
 
 # might be a bottleneck for some situations
 @vdb.event.stop()
-def maybe_refresh( x ):
+def maybe_refresh( _ ):
     global mmap
     global last_refresh_at
     if( last_refresh_at == last_run_start ):
@@ -994,11 +995,11 @@ def get_symbols( addr, xlen ):
 
 class cmd_memset(vdb.command.command):
     """
-
+Sets some memory to some value
 """
 
     def __init__ (self):
-        super (cmd_memset, self).__init__ ("memset", gdb.COMMAND_DATA)
+        super().__init__ ("memset", gdb.COMMAND_DATA)
 
     def do_invoke (self, argv ):
         self.dont_repeat()
