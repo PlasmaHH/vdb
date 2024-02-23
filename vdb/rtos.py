@@ -7,6 +7,7 @@ import vdb.config
 import vdb.util
 
 import gdb
+import gdb.unwinder
 import gdb.types
 
 import os

@@ -68,7 +68,7 @@ def xi( num ):
         r = vdb.register.Registers()
 
         # Depending on the arch chose the right register
-        pc = oldr.get_value("rip")
+        pc = oldr.get_value("pc")
 #        fr_pc = gdb.selected_frame().pc()
 #        print(f"{str(pc[0])=}")
 #        print(f"{fr_pc=}")

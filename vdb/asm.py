@@ -2423,6 +2423,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
 
     if( debug_all() ):
         print("symlist = '%s'" % (symlist,) )
+
     for b in symlist:
         if( debug_all() ):
             vdb.util.bark() # print("BARK")
@@ -2439,7 +2440,10 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
         try:
             if( pval is None ):
                 bval = b.value(frame)
-                baddr= bval.address
+                xbaddr= bval.address
+                if( xbaddr is not None ):
+                    int(xbaddr)
+                    baddr = xbaddr
 #                print("bval = '%s'" % (bval,) )
             else:
                 if( b.name is None ): # ignore anonymous structs/unions etc. for now
@@ -2451,7 +2455,10 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                     bval = pval
                 else:
                     bval = pval[b.name]
-                baddr= bval.address
+                xbaddr= bval.address
+                if( xbaddr is not None ):
+                    int(xbaddr)
+                    baddr = xbaddr
         except gdb.error as e:
             if( str(e).find("optimized out") == -1 ):
                 traceback.print_exc()
@@ -2465,6 +2472,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                 print("b = '%s'" % (b,) )
                 print("b.type = '%s'" % (b.type,) )
                 print("b.type.code = '%s'" % (vdb.util.gdb_type_code(b.type.code),) )
+
         except KeyboardInterrupt:
             raise
         except:

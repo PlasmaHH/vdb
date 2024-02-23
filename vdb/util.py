@@ -378,7 +378,7 @@ def format_line( line, maxsz, padbefore, padafter ):
         column += 1
     return ret
 
-def format_table( tbl, padbefore = " ", padafter = " " ):
+def format_table( tbl, padbefore = " ", padafter = " ", as_list = False ):
     """
     Formats a table made out of a list of lines. Each line is a list too. Each cell in that line is either
     - None, denotes an empty string
@@ -393,9 +393,13 @@ def format_table( tbl, padbefore = " ", padafter = " " ):
 
     The table will be layed out so that the width is the width of the biggest element
     """
-    ret = ""
+
     if( len(tbl) == 0 ):
-        return ret
+        if( as_list ):
+            return []
+        else:
+            return ""
+
 #    maxsz = list(itertools.repeat(0,len(tbl[0])))
     maxsz = {}
     normal_table = []
@@ -476,10 +480,17 @@ def format_table( tbl, padbefore = " ", padafter = " " ):
         normal_table.append(nline)
 #    print("maxsz = '%s'" % (maxsz,) )
 
-    for line in normal_table:
-        ret += format_line(line,maxsz,padbefore,padafter)
-        ret += "\n"
-    return ret
+    if( as_list ):
+        ret = []
+        for line in normal_table:
+            ret.append(format_line(line,maxsz,padbefore,padafter))
+        return ret
+    else:
+        ret = ""
+        for line in normal_table:
+            ret += format_line(line,maxsz,padbefore,padafter)
+            ret += "\n"
+        return ret
 
 def print_table ( tbl, padbefore = " ", padafter = " " ):
     ret = format_table( tbl, padbefore, padafter )
