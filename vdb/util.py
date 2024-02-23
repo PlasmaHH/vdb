@@ -367,15 +367,23 @@ class table_cell:
             ret = f"{' ' * xpad}{self.s}"
         return ret
 
+def format_hbar(maxsz, padbefore, padafter ):
+    ret=""
+    for c,m in maxsz.items():
+        l = m + len(padbefore) + len(padafter) - 1
+        ret += "+"
+        ret += "-" * l
+    return ret
+
 
 def format_line( line, maxsz, padbefore, padafter ):
+    if( line is None ):
+        return format_hbar(maxsz,padbefore,padafter)
     ret = ""
-    column = 0
-    for cell in line:
+    for column,cell in enumerate(line):
         ret += padbefore
         ret += cell.render(maxsz[column], column+1 >= len(line) )
         ret += padafter
-        column += 1
     return ret
 
 def format_table( tbl, padbefore = " ", padafter = " ", as_list = False ):
@@ -411,7 +419,8 @@ def format_table( tbl, padbefore = " ", padafter = " ", as_list = False ):
         column = 0
         nline = []
         if( line is None ):
-            line = []
+            normal_table.append(line)
+            continue
 #        for cell in line:
         for column in range(0,len(line)):
             cell = line[column]
