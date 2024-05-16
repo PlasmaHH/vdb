@@ -171,5 +171,6 @@ eXecute Instructions ( and save data along the way )
         self.dont_repeat()
 
 cmd_xi()
-
+# TODO
+# optional output of the function/context/symbol in one column
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

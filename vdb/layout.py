@@ -359,7 +359,10 @@ class object_layout:
         ret = []
         for o in obj.subobjects:
             if( not o.final ):
-                ret += self.flatten( o,prefix + o.name + "::" )
+                name = o.name
+                if( name is None ):
+                    name = "???"
+                ret += self.flatten( o,prefix + name + "::" )
                 continue
             # If it is final and a base class its an empty base, leave it out
             if( o.is_base_class ):
