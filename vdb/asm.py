@@ -2103,7 +2103,11 @@ ascii mockup:
         if( "r" in showspec ):
             f = ""
             for r in i.reference:
-                r = colors.strip_color(r)
+                if( isinstance(r,str) ):
+                    r = colors.strip_color(r)
+                elif( isinstance(r,tuple) ):
+                    r = colors.strip_color(r[0])
+
                 f += wrap_shorten(r) + " "
             if( len(f) > 0 ):
                 tr.td_raw(vdb.dot.color(f,color_function_dot.value))

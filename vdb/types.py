@@ -16,7 +16,7 @@ import tempfile
 import time
 
 ctags_cmd = vdb.config.parameter("vdb-types-ctags-cmd", "ctags" )
-ctags_parameters = vdb.config.parameter("vdb-types-ctags-parameters","--extra=+q -f - --sort=no -R")
+ctags_parameters = vdb.config.parameter("vdb-types-ctags-parameters","--extras=+q -f - --sort=no -R")
 
 ctags_dirs = vdb.config.parameter("vdb-types-ctags-files","/usr/include/", gdb_type = vdb.config.PARAM_ARRAY )
 
