@@ -131,6 +131,7 @@ class pahole:
         flat = layout.flatten()
 
         for _,subname,o in sorted(flat):
+            subname = vdb.shorten.symbol(subname)
             col = self.next_color()
 
             if( o.bit_size is not None ):
