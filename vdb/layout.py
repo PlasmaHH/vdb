@@ -111,6 +111,7 @@ class object:
             self.bit_size = None
         self.final = False
         self.parent = None
+        self.union = False
         # Don't clone that one
         self.index = None
 #        print("self.byte_offset = '%s'" % (self.byte_offset,) )
@@ -361,7 +362,10 @@ class object_layout:
             if( not o.final ):
                 name = o.name
                 if( name is None ):
-                    name = "???"
+                    if( o.union ):
+                        name = "<union>"
+                    else:
+                        name = "???"
                 ret += self.flatten( o,prefix + name + "::" )
                 continue
             # If it is final and a base class its an empty base, leave it out
@@ -459,6 +463,7 @@ class object_layout:
                     self.parse( so.type, so, so.byte_offset )
             elif( code == gdb.TYPE_CODE_UNION ):
                 self.parse( so.type, so, so.byte_offset )
+                so.union = True
 #                print("Sorry, unions not yet properly supported")
             else:
 #                print("so.type.code = '%s'" % so.type.code )
