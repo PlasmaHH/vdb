@@ -224,6 +224,9 @@ class object_layout:
         if( value is not None and value.type is not None and otype is not None ):
             if( value.type != otype ):
                 print(f"Warning: {otype=} and {value.type=} are different in object_layout")
+        # The object is optimized in a way to be held in a register or not exist at runtime at all
+        if( value is not None and value.address is None ):
+            value = None
 
         self.type = otype
         self.value = value
@@ -249,6 +252,8 @@ class object_layout:
 #        print("self.type = '%s'" % self.type )
 #        print("self.value.dynamic_type = '%s'" % self.value.dynamic_type )
         if( self.value is not None ):
+            print(f"{value}")
+            print(f"{self.value.address=}")
             self.vtype = vdb.util.guess_vptr_type( self.value.address ).type.target()
 #            print("self.type = '%s'" % (self.type,) )
 #            print("self.type.sizeof = '%s'" % (self.type.sizeof,) )
