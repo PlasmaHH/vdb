@@ -87,6 +87,21 @@ class command(gdb.Command,abc.ABC):
             argv = argv[1:]
         return ( argv, flags )
 
+    def context( self, flags ):
+        context = (None,None)
+        if( len(flags) != 0 ):
+            if( flags[0] == "+" and flags[1:].isdigit() ):
+                context = ( None, int(flags[1:]) )
+            elif( flags[0] == "-" and flags[1:].isdigit() ):
+                context = ( int(flags[1:]), None )
+            elif( flags[0:].isdigit() ):
+                context = int(flags[0:])
+                context = ( context, context )
+            elif( flags.find(",") != -1 ):
+                context = flags[0:].split(",")
+                context = ( int(context[0]), int(context[1]) )
+        return context
+
     def invoke_or_pipe( self, arg,argv ):
         if( sys.modules.get("vdb.pipe",None) is not None ):
             self.pipe(arg,argv)

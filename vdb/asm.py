@@ -4038,6 +4038,7 @@ def disassemble( argv ):
     source = False
     arch = None
 
+    # XXX Change to argv/flags "api"
     if( len(argv) > 0 ):
         if( argv[0][0] == "/" ):
             argv0 = argv[0][1:]
