@@ -55,11 +55,23 @@ class instruction_state:
 #        print(f"{self.asm_string=}")
         print(f"{int(self.pc[0]):#0x}  {self.asm_string}   {self.changed_registers}")
 
+
+pc_name_map = {
+        "i386:x86-64" : "rip"
+        }
+
+# XXX We need to put this and the figuring out of the current architecture name from asm.py into arch.py for all to
+# access ( here we know we have a frame, but we need a method with a loaded but not runnig/cored process)
+def get_pc_name( ):
+    archname = gdb.selected_frame().architecture().name()
+    return pc_name_map.get(archname,"pc")
+
 def xi( num ):
     regs = gdb.execute("registers",False,True)
 
     alli = []
     oldr = vdb.register.Registers()
+    pcname = get_pc_name()
     for ui in range(0,num):
 #        print("===========")
         ist = instruction_state()
@@ -68,7 +80,7 @@ def xi( num ):
         r = vdb.register.Registers()
 
         # Depending on the arch chose the right register
-        pc = oldr.get_value("pc")
+        pc = oldr.get_value(pcname)
 #        fr_pc = gdb.selected_frame().pc()
 #        print(f"{str(pc[0])=}")
 #        print(f"{fr_pc=}")

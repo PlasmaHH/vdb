@@ -7,6 +7,7 @@ import gdb
 from typing import Dict
 
 pointer_size = 0
+pc_name = None
 gdb_uintptr_t = None
 need_update = True
 need_uint_update = True
