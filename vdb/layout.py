@@ -96,7 +96,7 @@ class object:
 #            print("field.bitpos = '%s'" % (field.bitpos,) )
 #            print("field.bitsize = '%s'" % (field.bitsize,) )
             self.name = field.name
-            self.bit_offset = field.bitpos
+            self.bit_offset = int(field.bitpos)
             self.byte_offset = self.bit_offset // 8
             self.is_base_class = field.is_base_class
             if( field.bitsize > 0 ):
@@ -152,7 +152,7 @@ class object:
         return path
 
     def __str__(self):
-        s = f"{self.type}[{self.size}] : {self.name}, @{len(self.subobjects)},b{self.is_base_class} [{self.index}]{{{self.byte_offset}}} {self.bit_offset=} {self.bit_size=} {self.final=}"
+        s = f"{self.type}[{self.size}] : {self.name}, @{len(self.subobjects)},b{self.is_base_class} [{self.index}]{{{self.byte_offset}}} {self.byte_offset=}, {self.bit_offset=} {self.bit_size=} {self.final=}"
         return s
 
     def __repr__(self):

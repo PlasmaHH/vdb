@@ -59,6 +59,13 @@ class sym_location:
 annotation_tree = intervaltree.IntervalTree()
 default_sizes = { }
 
+def _dump_tree( ):
+    tbl = [ [ "From", "To", "Size", "Name" ] ]
+    tbl.append(None)
+    for x in annotation_tree:
+        tbl.append( [ x[0], x[1], int(x[1]) - int(x[0]), vdb.shorten.symbol(x[2]) ] )
+    vdb.util.print_table(tbl)
+
 def get_annotation( xaddr, symtree ):
 #    vdb.util.bark() # print("BARK")
 #    print(f"{symtree=}")
@@ -253,8 +260,12 @@ def annotate_var( addr,gval, gtype, name ):
 
     ol = vdb.layout.object_layout( gtype, gval )
 
+    addr = int(addr)
     for _,oname,obj in ol.flatten():
-        print(f"{obj=}")
+#        print(f"{obj=}")
+#        print(f"{type(addr)=}")
+#        print(f"{type(obj.byte_offset)=}")
+#        print(f"{type(obj.size)=}")
         annotation_tree[addr+obj.byte_offset:addr+obj.byte_offset+obj.size] = oname
 
 def annotate_block( block ):
