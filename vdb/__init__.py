@@ -55,9 +55,10 @@ enable_svd       = vdb.config.parameter( "vdb-enable-svd",True)
 enable_entry     = vdb.config.parameter( "vdb-enable-entry",True)
 enable_rtos      = vdb.config.parameter( "vdb-enable-rtos",True)
 enable_xi        = vdb.config.parameter( "vdb-enable-xi",True)
+enable_list      = vdb.config.parameter( "vdb-enable-list",True)
 
 configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,pahole,ftree,dashboard,hashtable,ssh,track"
-                                                                    ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos,xi" )
+                                                                    ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos,xi,list" )
 
 home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)
 search_down     = vdb.config.parameter( "vdb-plugin-search-down",True)
@@ -270,12 +271,16 @@ def start( vdbd = None, vdbinit = None ):
 
 
     available_modules = configured_modules.get().split(",")
+    special = { "list" }
     for mod in available_modules:
         try:
             bval = gdb.parameter( f"vdb-enable-{mod}")
             if( bval ):
                 vdb.util.log(f"Loading module {mod}…",level=vdb.util.Loglevel.info)
-                lmod=importlib.import_module(f"vdb.{mod}")
+                modname = mod
+                if( mod in special ):
+                    modname = f"_{mod}"
+                lmod=importlib.import_module(f"vdb.{modname}")
                 enabled_modules[mod] = lmod
             else:
                 vdb.util.log(f"Skipping load of module {mod}…",level=vdb.util.Loglevel.warn)
