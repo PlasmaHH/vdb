@@ -20,7 +20,7 @@ import copy
 auto_scan = vdb.config.parameter("vdb-svd-auto-scan",True,docstring="scan configured directories on start")
 scan_dirs = vdb.config.parameter("vdb-svd-directories","~/svd/",gdb_type=vdb.config.PARAM_ARRAY )
 scan_recur= vdb.config.parameter("vdb-svd-scan-recursive",True,docstring="Whether to scan directories recursively")
-scan_background = vdb.config.parameter("vdb-svd-scan-background",False,docstring="Do the scan in the background")
+scan_background = vdb.config.parameter("vdb-svd-scan-background",True,docstring="Do the scan in the background")
 scan_filter = vdb.config.parameter("vdb-svd-scan-filter","",docstring="Regexp to filter file names before loading")
 scan_silent = vdb.config.parameter("vdb-svd-scan-silent",True,docstring="Don't ouput every file being scanned")
 parse_delayed = vdb.config.parameter("vdb-svd-parse-delayed",False,docstring="When true, parse only fully when an svd load command is issued")
@@ -878,8 +878,11 @@ def svd_queue_file(fname,at):
     device_re = re.compile("<device")
 #    name_re = re.compile("<name>")
     device_name_re = re.compile("name>(.*?)</name")
+
     within_device = False
-    global dev_queue
+    version = "_"
+
+    # XXX Handle differently versioned files here too
     with open(fname,"r") as f:
         for line in f.readlines():
             if( device_re.search(line) is not None ):
@@ -1066,6 +1069,7 @@ def svd_scan(argv):
         global lazy_task
         lazy_task = vdb.util.async_task( do_svd_scan, argv )
         lazy_task.start()
+        print("Started svd background scan")
     else:
         do_svd_scan(None,argv)
 
