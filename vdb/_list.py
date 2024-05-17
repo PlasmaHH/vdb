@@ -16,10 +16,14 @@ import gdb
 import traceback
 import re
 import subprocess
+import os
 
 # XXX Autodetect which tool is available (by a configurable priority list) and then use that one here
-src_command = vdb.config.parameter("vdb-list-source-command","bat -r {start}:{end} -H {line} {file} --style=grid,numbers")
+src_command = vdb.config.parameter("vdb-list-source-command","bat -r {start}:{end} -H {line} {file} --style=grid,numbers --paging=never")
 marker_color= vdb.config.parameter("vdb-list-colors-marker",   "#0f0", gdb_type = vdb.config.PARAM_COLOUR)
+
+
+path_substitutions = {}
 
 
 subs_re = re.compile("`(.*)' -> `(.*)'")
@@ -33,6 +37,7 @@ def add_path_substitution( path ):
         if( (m := subs_re.search(sp) ) is not None ):
             frm = m.group(1)
             to  = m.group(2)
+            path_substitutions[frm] = to
             if( path.startswith(frm) ):
 #                print(f" {frm} =>> {to} matches {path}")
                 if( not to.endswith("/") ):
@@ -45,73 +50,138 @@ def add_path_substitution( path ):
                 nfrom = m.group(1).replace("\\","\\\\")
                 print(f"Adding new substitution {nfrom} => {pathpart}")
                 gdb.execute(f"set substitute-path '{nfrom}' '{pathpart}'")
+                path_substitutions[nfrom.replace("\\\\","\\")] = pathpart
+                break
 #                gdb.execute("show  substitute-path")
+#    print(f"{path_substitutions=}")
 
+@vdb.util.memoize(gdb.events.new_objfile)
+def get_sources( ):
+    print("Gathering source file information (may take a while for bigger binaries)")
+    return gdb.execute("info sources",True,True)
 
 error_re = re.compile("[0-9]+\s*(.*): No such file")
 def do_list( argv, flags, context, recurse = True ):
     before,after = context
-#    print(f"do_list({argv=},{flags=})")
-    try:
-        frame = gdb.selected_frame()
-    except gdb.error:
-        # Program is not running yet, try displaying main/default, ignoring everything else for now
-        code = gdb.execute(f"list",True,True)
-        if( (m := error_re.search(code)) is not None ):
-            # Try again
-            if( recurse ):
-                add_path_substitution( m.group(1) )
-                return do_list(argv,flags,context,False)
-            else:
-                print(f"Unable to find file {m.group(1)} even after possible adding substitutions")
-        else:
-            print(f"{code}")
-        return
-
-    # We have a frame, so we have access to code and all that stuff, lets figure out what the user meant
     line = None
-    if( len(argv) == 0 ):
-        # No other arguments, chose the current frame position
-        pc=frame.pc()
-        pc = int(pc)
-        # In upper levels the pc points to the instruction after the call, we don't want that, so we let it point into the
-        # instruction one above, which should be the call. It doesn't matter that we are not at the beginning
-        if( frame.level != 0 ):
-            pc -= 1
+#    print(f"do_list({argv=},{flags=})")
+       # Program is not running yet, try displaying main/default, ignoring everything else for now
+#        code = gdb.execute(f"list",True,True)
+#        if( (m := error_re.search(code)) is not None ):
+#             Try again
+#            if( recurse ):
+#                add_path_substitution( m.group(1) )
+#                return do_list(argv,flags,context,False)
+#            else:
+#                print(f"Unable to find file {m.group(1)} even after possible adding substitutions")
+#        else:
+#            print(f"{code}")
+#        return
 
-        funsym = frame.function()
-        sal = frame.find_sal()
-        fullname = sal.symtab.fullname()
-        line = sal.line
+    if( len(argv) == 0 ):
+        try:
+            frame = gdb.selected_frame()
+        except gdb.error:
+            frame = None
+    
+        if( frame is not None ):
+            # We have a frame, so we have access to code and all that stuff, lets figure out what the user meant
+            # No other arguments, chose the current frame position
+            pc=frame.pc()
+            pc = int(pc)
+            # In upper levels the pc points to the instruction after the call, we don't want that, so we let it point into the
+            # instruction one above, which should be the call. It doesn't matter that we are not at the beginning
+            if( frame.level != 0 ):
+                pc -= 1
+
+            funsym = frame.function()
+            sal = frame.find_sal()
+            fullname = sal.symtab.fullname()
+            line = sal.line
+        else: # no frame, lets see if gdb can be of any help here
+            # "help info main" gets entry point?
+            
+            current_file = None
+            smallest_name = None
+            smallest_file = None
+            line = None
+            for sline in gdb.execute("info functions main",True,True).split("\n"):
+                sline = sline.strip()
+                if( len(sline) == 0 ):
+                    continue
+                if( sline.startswith("File") ):
+                    current_file = sline[5:-1]
+#                    print(f"{sline} -> {current_file=}")
+                    continue
+                if( not sline.endswith(";") ):
+                    continue
+                # rest should be function position information
+                vl = sline.split(":")
+                sline = ":".join(vl[1:]).strip()
+
+#                print(f"{sline=}")
+                if( smallest_name is None or len(sline) < len(smallest_name) ):
+                    smallest_name = sline
+                    smallest_file = current_file
+                    line = int(vl[0])
+
+            fullname = smallest_file
+            funsym = smallest_name
 
         if( before is None ):
             before = 0
         if( after is None ):
             after = 0
 
-        start = line - before
+        start = max(1,line - before)
         end   = line + after
-    else:
+    else: # passed a filename XXX do we want to support symbols too? Can get a bit more complicated
         start = before
         end   = after
         funsym = ""
         filename = argv[0]
-        sources = gdb.execute("info sources",True,True)
+        sources = get_sources()
         for sline in sources.split("\n"):
             for src in sline.split(","):
                 src = src.strip()
                 if( src.endswith(filename) ):
                     fullname = src
                     break
-        line = None
+        line = 0
 
+
+    # Check if its accessible, if not we may need to adapt the path and try again
+    if( not os.path.isfile(fullname) or not os.access(fullname,os.R_OK) ):
+        if( recurse ):
+            add_path_substitution( fullname )
+            return do_list(argv,flags,context,False)
+
+
+    # This should cause a fresh parse into our dict
+    if( len(path_substitutions) == 0 ):
+        add_path_substitution("")
+
+    for f,t in path_substitutions.items():
+        if( fullname.startswith(f) ):
+            nfl = fullname.replace(f,t)
+            nfl=nfl.replace("\\","/")
+            if( os.path.isfile(nfl) and os.access(nfl,os.R_OK) ):
+                fullname = nfl
+                break
+
+
+    # XXX We can get the return type via "whatis" for nicer display. Maybe we want to go through everything and gather
+    # generic type handling tools? 
     try:
         print(f"{funsym} in {fullname}:{line}")
         if( src_command.value is not None and len(src_command.value) > 0 ):
             bs = start
+            ass = end
             if( bs is None ):
                 bs = ""
-            ass = end
+                if( ass is None ):
+                    ass = "1000000"
+
             if( ass is None ):
                 ass = ""
             if( line is None ):
