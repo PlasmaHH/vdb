@@ -320,6 +320,7 @@ class svd_device:
         self.peripherals = {}
         self.memory_estimation = None
         self.derive_registers = {}
+        self.version = None
 
     def load( self, unload = True ):
         print(f"Loading {len(self.registers)} register descriptions")
@@ -598,8 +599,14 @@ class svd_device:
                 altitems = ( altname % i for i in dim_index )
             if( derived is not None ):
                 ditems = ( derived % i for i in dim_index )
-            if( display_name is not None ):
-                dpyitems = ( display_name % i for i in dim_index )
+            dpyitems = []
+            try:
+                if( display_name is not None ):
+                    dpyitems = list( display_name % i for i in dim_index )
+            except:
+                if( name is not None ):
+                    dpyitems = list( name % i for i in dim_index )
+
         elif( dim is not None ):
             num_items = dim
 #            print("self.name = '%s'" % (self.name,) )
@@ -831,11 +838,13 @@ class svd_device:
                     # Some svd files tell us about the flash and (s)ram layout here, we could put that into the vmmap
                     # stuff
                     pass
+                case "version":
+                    self.version = node.text
                 case "addressUnitBits":
                     if( node.text != "8" ):
                         print(f"Unsupported address unit bits {node.text}")
                 case _:
-                    if( node.tag not in { "version", "width", "resetValue", "resetMask", "vendor", "series", "licenseText", "vendorID", "headerSystemFilename", "deviceNumInterrupts", "headerDefinitionsPrefix" } ):
+                    if( node.tag not in { "width", "resetValue", "resetMask", "vendor", "series", "licenseText", "vendorID", "headerSystemFilename", "deviceNumInterrupts", "headerDefinitionsPrefix" } ):
                         print(f"Never before seen device tag <{node.tag}>{node.text}</{node.tag}>")
         # Sometimes we need default values defined at this level to fill into the others, so parse breadth first
         for f,p in deferred_list:
@@ -912,15 +921,31 @@ def svd_load_file(fname,at):
         global devices
         key_name = ndev.name
         cnt = 0
-#        while( key_name in devices ):
+        # Check if its knonwn already, in that case we try to rename *both* with their version number
+        otherdev = devices.get(key_name,None)
+        # key_name does not include version number yet
+        if( otherdev is not None ):
+            othernewname = otherdev.name
+            if( otherdev.version is not None ):
+                del devices[key_name]
+                othernewname = f"{key_name}_{otherdev.version}"
+                devices[othernewname] = otherdev
+            if( ndev.version is not None ):
+                key_name = f"{key_name}_{ndev.version}"
+
+        oldkey = key_name
+        # If we still have the same name
         while( ( odev := devices.get(key_name,None) ) is not None ):
             # already there, check if it is from the same file, in that case we can just overwrite it
             if( odev.origin == ndev.origin ):
                 break
+            otherdev = odev
             cnt += 1
-            key_name = ndev.name + "." + str(cnt)
+            key_name = oldkey + "." + str(cnt)
+        # ouotput message if the keyname had to change
+
         if( key_name != ndev.name ):
-            print(f"Duplicate CPU {ndev.name}, renaming to {key_name}")
+            print(f"Duplicate CPU {ndev.name}, renaming new to {key_name}, old to {othernewname}")
         devices[key_name] = ndev
 
 def svd_list( flt = None):
