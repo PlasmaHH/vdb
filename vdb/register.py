@@ -429,7 +429,7 @@ class Registers():
 
     def set_bit( self, reg, bit, val ):
 #        print(f"set_bit({reg},{bit},{val})")
-        # XXX here we assume 32bit, that might be wrong
+
         bit = int(bit)
         bal = int(val)
         mask = 1 << bit

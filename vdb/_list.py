@@ -19,8 +19,9 @@ import subprocess
 import os
 
 # XXX Autodetect which tool is available (by a configurable priority list) and then use that one here
-src_command = vdb.config.parameter("vdb-list-source-command","bat -r {start}:{end} -H {line} {file} --style=grid,numbers --paging=never")
-marker_color= vdb.config.parameter("vdb-list-colors-marker",   "#0f0", gdb_type = vdb.config.PARAM_COLOUR)
+src_command     = vdb.config.parameter("vdb-list-source-command","bat -r {start}:{end} -H {line} {file} --style=grid,numbers --paging=never")
+marker_color    = vdb.config.parameter("vdb-list-colors-marker",   "#0f0", gdb_type = vdb.config.PARAM_COLOUR)
+default_context = vdb.config.parameter("vdb-list-default-context", 10 )
 
 
 path_substitutions = {}
@@ -64,7 +65,10 @@ error_re = re.compile("[0-9]+\s*(.*): No such file")
 def do_list( argv, flags, context, recurse = True ):
     before,after = context
     line = None
-#    print(f"do_list({argv=},{flags=})")
+#    print(f"do_list({argv=},{flags=},{context=})")
+
+    if( before is None and after is None ):
+        after = before = default_context.value
        # Program is not running yet, try displaying main/default, ignoring everything else for now
 #        code = gdb.execute(f"list",True,True)
 #        if( (m := error_re.search(code)) is not None ):
