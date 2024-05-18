@@ -425,10 +425,18 @@ class Registers():
 #            print("data = '%s'" % (data,) )
 
         vdb.memory.write( raddr, data )
-        print(f"set {{{rtype}}}{raddr:#0x}={val}")
+#        print(f"set {{{rtype}}}{raddr:#0x}={val:#0x}")
 
     def set_bit( self, reg, bit, val ):
-        print(f"set_bit({reg},{bit},{val})")
+#        print(f"set_bit({reg},{bit},{val})")
+        # XXX here we assume 32bit, that might be wrong
+        bit = int(bit)
+        bal = int(val)
+        mask = 1 << bit
+        if( val == 0 ):
+            self.and_reg(reg,~mask)
+        else:
+            self.or_reg(reg,mask)
 
     def set_reg( self, reg, val ):
         # TODO Add support for non memory mapped registers, also wiht $ and % prefix
@@ -438,7 +446,8 @@ class Registers():
             self.set_reg_at(mmp,val)
 
     def or_reg( self, reg, val ):
-#        vdb.util.bark() # print("BARK")
+#        print(f"or_reg({reg=},{val=})")
+
         oval,mmp = self.get_reg(reg)
         if( oval is None ):
             return
@@ -447,7 +456,8 @@ class Registers():
         self.set_reg_at(mmp,oval|val)
 
     def and_reg( self, reg, val ):
-        vdb.util.bark() # print("BARK")
+#        print(f"and_reg({reg=},{val=})")
+
         oval,mmp = self.get_reg(reg)
         if( oval is None ):
             return
@@ -455,21 +465,29 @@ class Registers():
 #        print("val = '%s'" % (val,) )
         self.set_reg_at(mmp,oval&val)
 
-    def set( self, arg0, arg1 ):
-        if( arg1 is None ):
-            arg1=""
-        args=arg0+arg1
-#        vdb.util.bark() # print("BARK")
-#        print("args = '%s'" % (args,) )
-        reg,val=args.split("=")
+    def set( self, argv ):
+        vdb.util.bark() # print("BARK")
+#        print(f"{argv=}")
+
+        ix = argv.index("=")
+#        print(f"{ix=}")
+        reg = argv[0]
+        val = " ".join(argv[ix+1:])
+        op = argv[1]
+
+#        print(f"{reg=}")
+#        print(f"{op=}")
+#        print(f"{val=}")
+
         val=vdb.util.gint(val)
+
         if( reg.find(":") > -1 ):
             reg,bit = reg.split(":")
             self.set_bit(reg,bit,val)
-        elif( reg[-1] == "&" ):
-            self.and_reg(reg[:-1],val)
-        elif( reg[-1] == "|" ):
-            self.or_reg(reg[:-1],val)
+        elif( op == "&" ):
+            self.and_reg(reg,val)
+        elif( op == "|" ):
+            self.or_reg(reg,val)
         else:
             self.set_reg(reg,val)
 
@@ -1462,7 +1480,7 @@ We recommend having an alias reg = registers in your .gdbinit
         return []
 
     def do_invoke (self, argv, legend = True ):
-#        print("do_invoke()")
+#        print(f"do_invoke({argv})")
         global registers
         try:
             self.maybe_update()
@@ -1474,41 +1492,84 @@ We recommend having an alias reg = registers in your .gdbinit
                 vdb.memory.print_legend("Ama")
 
             if( len(argv) == 0 ):
-                argv.append(reg_default.value)
+                argv += reg_default.value.split()
+
+            argv,flags = self.flags(argv)
+
+#            print(f"{argv=}")
+#            print(f"{flags=}")
+
             filter = None
 
+            # We want the setting to work like:
+            # reg r14=55
+            # reg/m SC.*UAR|=5
+            # reg/m SC.*UAR|= 5
+            # reg/m SC.*UAR |=5
+            # reg/m SC.*UAR |= 5
 
-            if( len(argv) == 2 ): # second is a regexp for filtering registers
-                filter = argv[1]
-                argv = argv[:1]
-
-            if( len(argv) == 3 and ( argv[1] in [ "=", "&=","|=" ] ) ):
-                filter = "="+argv[2]
-                argv = [ argv[0] ]
-
-            if( len(argv) == 1 ):
-                if( argv[0].startswith("/") ):
-                    if( argv[0] == "/s" ):
-                        registers.print("ipx",filter)
-                    elif( argv[0] == "/e" ):
-                        registers.print("Ipx",filter)
-                    elif( argv[0] == "/a" ):
-                        registers.print("ixofpmv",filter)
-                    elif( argv[0] == "/E" ):
-                        registers.print("IXOFPMV",filter)
-                    elif( argv[0] == "/_d" ):
-                        registers._dump()
-                    else:
-                        registers.print(argv[0][1:],filter)
-                elif( argv[0].find("=") != -1 or ( filter is not None and filter.find("=") != -1) ): # reg pc=55 // set a register
-                    registers.set(argv[0],filter)
-                else: # a register filter
-                    self.do_invoke( [ reg_default.value, argv[0] ], legend = False )
+            # make sure there is a space between all of them
+#            print(f"{argv=}")
+            args = " ".join(argv)
+#            print(f"{args=}")
+            for sep in [ "&=", "|=", "=" ]:
+                args = args.replace(sep,f" {sep} ")
+            args = args.strip()
+#            print(f"{args=}")
+            if(len(args) > 0 ):
+                argv = args.split()
             else:
-                print("Invalid argument(s) to registers: '%s'" % argv )
-                self.usage()
+                argv = []
+#            print(f"{argv=}")
+
+            if( len(argv) > 0 ): # first is a regexp for filtering registers for display, extract that out of the setting expression
+                filter = argv[0].split(":")[0]
+
+#            print("========")
+#            print(f"{argv=}")
+#            print(f"{flags=}")
+#            print(f"{filter=}")
+
+            # Not a setter expression and no flags, set flags to something default
+            if( not "=" in args ):
+                if(  len(flags) == 0 ):
+                    _,flags = self.flags(reg_default.value.split())
+                if( len(argv) > 1 ):
+                    filter = "|".join(argv)
+
+            # First display without any setting commands
+            if( len(flags) > 0 ):
+                if( flags == "s" ):
+                    registers.print("ipx",filter)
+                elif( flags == "e" ):
+                    registers.print("Ipx",filter)
+                elif( flags == "a" ):
+                    registers.print("ixofpmv",filter)
+                elif( flags == "E" ):
+                    registers.print("IXOFPMV",filter)
+                elif( flags == "_d" ):
+                    registers._dump()
+                else:
+                    registers.print(flags,filter)
+
+            # A setting expression
+            if( "=" in argv ):
+                if( len(argv) < 3 ):
+                    print("Invalid argument(s) to registers: '%s'" % argv )
+                    self.usage()
+                else:
+                    registers.set(argv)
+            # no setting expression
+#            elif( len(argv) > 1 ):
+                # This one should recurse
+#                argv = argv[1:]
+#                print(f"{flags=}")
+#                print(f"{argv=}")
+#                print("WOULD RECURSE")
+#                self.do_invoke( [ f"/{flags}" ] + argv, legend = False )
+#            else:
         except Exception as e:
-            traceback.print_exc()
+                traceback.print_exc()
 
         # Identify the cases where we can re-use the information gathered. Maybe refactor Registers() to always read
         # values on demand?
