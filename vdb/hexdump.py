@@ -254,6 +254,9 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
     if( olen != xlen ):
         print(f"Could only access {xlen} of {olen} requested bytes")
 
+def annotate_range( addr, length, name ):
+    annotation_tree[addr:addr+length] = name
+
 def annotate_var( addr,gval, gtype, name ):
 
     gtype = gtype.strip_typedefs()
@@ -300,12 +303,11 @@ def annotate( argv ):
         default_sizes[addr] = gtype.sizeof
         gval = gdb.parse_and_eval(f"*({ttype}*)({addr})")
         annotate_var( addr,gval,gtype,"")
-
     elif( len(argv) == 3):
         addr = vdb.util.gint( argv[0] )
         tlen = vdb.util.xint( argv[1] )
         txt = argv[2]
-        annotation_tree[addr:addr+tlen] = txt
+        annotate_range(addr,tlen,txt)
     elif( len(argv) == 1 and argv[0] == "frame" ):
         fr = gdb.selected_frame()
         annotate_block( fr.block() )
