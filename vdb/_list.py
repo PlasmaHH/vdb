@@ -188,9 +188,13 @@ def do_list( argv, flags, context, recurse = True ):
                 hline = 0
             else:
                 hline = line
-            cmd = src_command.value.format( start=bs, end=ass, file=fullname, line = hline )
+            cmd = src_command.value.format_map( vdb.util.kw_dict(start=bs, end=ass, line = hline) )
+            cmd = cmd.split()
+
+            for i,c in enumerate(cmd):
+                cmd[i] = c.format(file=fullname)
 #            print(f"{cmd=}")
-            subprocess.run( cmd.split() , encoding = "utf-8", check=False )
+            subprocess.run( cmd , encoding = "utf-8", check=False , stdin = subprocess.DEVNULL )
         else:
             with open(fullname) as sf:
                 print(f"Opened {fullname} as the source file, printing from {before} to {after}")
