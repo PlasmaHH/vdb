@@ -215,7 +215,8 @@ class parameter(gdb.Parameter):
             cval = ("",0)
             for _,e in enumerate(self.elements):
                 cv = vdb.color.colorl(e,e)
-                vdb.color.concat( cval, cv )
+                cval=vdb.color.concat( cval, cv )
+                cval=vdb.color.concat( cval, ";" )
             xval.append(cval)
         else:
             if( self.value is None ):
@@ -389,7 +390,6 @@ def show_config( argv ):
 #        print("n = '%s'" % (n,) )
 #        print("val = '%s'" % (val,) )
         for v in val:
-#            print("v = '%s'" % (v,) )
             if( first ):
                 line = [ n, type_map.get(c.gdb_type,c.gdb_type), hooked, v]
                 if( verbose ):
