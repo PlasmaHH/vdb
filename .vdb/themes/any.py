@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import vdb.config
-"
+
 vdb.config.set("""
 # don't print all the settings
 vdb-config-verbosity 0
