@@ -225,15 +225,21 @@ def colors( ptr, archsize = None ):
 
 # @return pure means it is just the pointer, no additional text (but maybe additional colouring)
 # Make this return the display length too somehow
-# XXX Detect loops
+
+visited = set()
 @vdb.util.memoize( gdb.events.stop )
 def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = None, last = True, tailspec = None, do_annotate = True ):
     if( archsize is None ):
         archsize = vdb.arch.pointer_size
     if( gdb_void is None ):
         update_types()
-    if( maxlen == 0 ):
+
+    if( maxlen == 0 or int(ptr) in visited ):
+        visited.clear()
         return (ellipsis.value,True)
+
+    visited.add(int(ptr))
+
 
 #    print("chain(0x%x,…)" % ptr )
 #    print("type(ptr) = '%s'" % type(ptr) )
@@ -259,6 +265,7 @@ def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = N
         if( len(s) > 0 ):
             ret += f"{arrow_right.value}{s}"
             pure = False
+            visited.clear()
             return (ret,pure)
     if( add is not None and test_for_ascii ):
         ascstring = add[1]
@@ -282,6 +289,7 @@ def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = N
         pass
 #    except:
 #        raise
+    visited.clear()
     return (ret,pure)
 
 
