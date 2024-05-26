@@ -1065,9 +1065,9 @@ def do_svd_scan(at,argv):
             print(f"Failed to scan directory '{d}'")
 
 lazy_task = None
-def svd_scan(argv):
+def svd_scan(argv, background):
     # later chose between background and foreground
-    if( scan_background.value ):
+    if( background ):
         global lazy_task
         lazy_task = vdb.util.async_task( do_svd_scan, argv )
         lazy_task.start()
@@ -1080,7 +1080,7 @@ def startup():
     if( not auto_scan.value ):
         print("svd not auto scanning due to vdb-svd-auto-scan False")
         return
-    svd_scan([])
+    svd_scan([],scan_background.value)
 
 def get( ar, ix, alt ):
     try:
@@ -1122,15 +1122,18 @@ svd/v <cmd>   - Add more information to the command
             raise gdb.GdbError('svd takes arguments.')
 
         try:
+            argv,flags = self.flags(argv)
             global verbose
             verbose = False
             keep = False
-            if( argv[0] == "/v" ):
+
+            background = scan_background.value
+            if( "v" in flags ):
                 verbose = True
-                argv=argv[1:]
-            if( argv[0] == "/k" ):
+            if( "k" in flags ):
                 keep = True
-                argv=argv[1:]
+            if( "f" in flags ):
+                background = False
 
             subcmd = argv[0]
             match(subcmd):
@@ -1141,7 +1144,7 @@ svd/v <cmd>   - Add more information to the command
                 case "list":
                     svd_list(get(argv,1,None))
                 case "scan":
-                    svd_scan(argv[1:])
+                    svd_scan(argv[1:],background)
                 case _:
                     self.usage()
         except Exception as e:

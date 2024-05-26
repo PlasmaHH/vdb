@@ -36,6 +36,20 @@ def diff_regs( r0, r1 ):
 #                print(f"{rname} => {rval1}")
     return ret
 
+def diff_mmaps( r0, r1 ):
+    ret = {}
+    for rname,rval0 in r0.items():
+        rval1 = r1.get(rname,None)
+        if( rval1 is None ):
+            continue
+        rval0 = int(rval0)
+        rval1 = int(rval1)
+        if( rval0 != rval1 ):
+            ret[str(rname)] = rval1
+    return ret
+
+
+
 class instruction_state:
 
     def __init__( self ):
@@ -48,6 +62,7 @@ class instruction_state:
         # active architecture
         self.accessible_memory = None
         self.instruction = None
+        self.mmap_registers = {}
 
     def _dump( self ):
 #        print(f"{self.pc=}")
@@ -66,18 +81,46 @@ def get_pc_name( ):
     archname = gdb.selected_frame().architecture().name()
     return pc_name_map.get(archname,"pc")
 
-def xi( num ):
+def get_mmaps( mmaps ):
+    print(f"Reading {len(mmaps)} values...")
+    ret = {}
+    for reg,rpos in mmaps.items():
+        raddr,rbit,rtype = rpos
+
+        if( raddr in vdb.register.mmapped_blacklist ):
+            continue
+
+        val = vdb.memory.read_uncached(raddr,rbit//8)
+        if( val is not None ):
+            val = gdb.Value(val,rtype)
+            ret[reg] = val
+    return ret
+
+
+
+def xi( num, full ):
     regs = gdb.execute("registers",False,True)
 
     alli = []
     oldr = vdb.register.Registers()
     pcname = get_pc_name()
+
+
+    if( full ):
+        mmaps = vdb.register.mmapped_positions
+        ommaps = get_mmaps(mmaps)
+
     for ui in range(0,num):
 #        print("===========")
         ist = instruction_state()
         alli.append(ist)
         gdb.execute("si",False,True)
         r = vdb.register.Registers()
+
+        if( full ):
+            rmmaps = get_mmaps(mmaps)
+            dm = diff_mmaps( ommaps, rmmaps )
+            ist.mmap_registers = dm
 
         # Depending on the arch chose the right register
         pc = oldr.get_value(pcname)
@@ -88,6 +131,7 @@ def xi( num ):
 #        print(f"{r.regs=}")
         dr = diff_regs(oldr,r)
         ist.changed_registers = dr
+        # XXX Needs arch independence. Check for complete list of possible flags from registers.py ?
         ist.current_flags=r._flags("eflags",r.rflags,vdb.register.flag_info,False,False,True,None)
         ist.pc = pc
         ist.asm_string,ist.instruction = vdb.asm.get_single_tuple( pc[0], extra_filter="r",do_flow=True )
@@ -145,6 +189,9 @@ def xi( num ):
             else:
                 val = "<inaccessible>"
             line.append(f"{addr}={val}")
+        for r,val in i.mmap_registers.items():
+            line.append(f"{r}={val:#0x}")
+
 #            line.append(str(addr))
 #        i._dump()
     vdb.util.print_table(otbl)
@@ -159,11 +206,15 @@ eXecute Instructions ( and save data along the way )
 
     def do_invoke (self, argv ):
         try:
-            argv,_ = self.flags(argv)
+            argv,flags = self.flags(argv)
             num = 1
+            full = False
+            if( "f" in flags ):
+                full = True
+
             if( len(argv) > 0 ):
                 num = int(argv[0])
-            xi(num)
+            xi(num,full)
 #            print (self.__doc__)
         except:
             traceback.print_exc()
