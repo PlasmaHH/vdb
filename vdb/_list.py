@@ -19,7 +19,7 @@ import subprocess
 import os
 
 # XXX Autodetect which tool is available (by a configurable priority list) and then use that one here
-src_command     = vdb.config.parameter("vdb-list-source-command","bat -r {start}:{end} -H {line} {file} --style=grid,numbers --paging=never -f")
+src_command     = vdb.config.parameter("vdb-list-source-command","bat -r {start}:{end} -H {line} {file} --style=numbers --paging=never -f")
 marker_color    = vdb.config.parameter("vdb-list-colors-marker",   "#0f0", gdb_type = vdb.config.PARAM_COLOUR)
 default_context = vdb.config.parameter("vdb-list-default-context", 10 )
 
