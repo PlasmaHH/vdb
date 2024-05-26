@@ -497,7 +497,8 @@ class cmd_unwind (vdb.command.command):
                 if( argv[0] == "enable" ):
                     enable()
                 elif( argv[0] == "disable" ):
-                    disable()
+                    disable()f( before is None and after is None ):
+                        after = before = default_context.value
                 elif( argv[0] == "hide" ):
                     hide(argv[1:])
                 elif( argv[0] == "fix" ):

@@ -188,10 +188,11 @@ flag_info = {
             "basepri"   : (  7, basepri_descriptions, None ),
             "control"   : (  2, control_descriptions, None ),
             "fpscr"     : ( 31, fpscr_descriptions, None ),
+            "xPSR"      : ( 31, apsr_descriptions | ipsr_descriptions | epsr_descriptions , None ),
             }
 possible_flags = [
         "eflags", "flags", "mxcsr", "bndcfgu", "bndstatus", "apsr", "ipsr", "epsr", "primask", 
-        "faultmask", "basepri", "control", "fpscr",
+        "faultmask", "basepri", "control", "fpscr", "xPSR"
         ]
 
 abbrflags = [ 
@@ -745,9 +746,9 @@ class Registers():
 
 
 
-    def ex_floats( self ):
+    def ex_floats( self, filter ):
         print("NOT YET IMPLEMENTED")
-        return self.floats()
+        return self.floats(filter)
 
     def arch_prctl( self, code ):
         ret = vdb.memory.read_uncached("$sp",8)
@@ -1256,6 +1257,8 @@ class Registers():
                 ival = int(fv[rawfield[0]])
             else:
                 ival = int(fv)
+            if( ival < 0 ):
+                ival += 2**32 # XXX Adapt for 64 bit arch or generalize (what if the register has different bits than arch size anyways?)
 
             if( count <= 32 ):
                 valstr = f"{ival:#010x}"
