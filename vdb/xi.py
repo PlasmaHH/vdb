@@ -175,6 +175,9 @@ def xi( num, full ):
 #                ff= self._flags( filter, self.rflags, flag_info, extended, short, mini, None )
                 line.append(f"eflags={ff}")
             else:
+                # XXX Make this depend on the type
+                if( cv < 0 ):
+                    cv += 2**32
                 line.append(f"{cr}={cv:#0x}")
         for val,addr in i.changed_memory:
 #            print(f"XMEM {addr} => {val}")
