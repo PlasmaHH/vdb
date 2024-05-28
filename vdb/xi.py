@@ -45,6 +45,7 @@ def diff_mmaps( r0, r1 ):
         rval0 = int(rval0)
         rval1 = int(rval1)
         if( rval0 != rval1 ):
+#            print(f"{str(rname)} from {rval0} to {rval1}")
             ret[str(rname)] = rval1
     return ret
 
@@ -93,7 +94,7 @@ def get_mmaps( mmaps ):
         val = vdb.memory.read_uncached(raddr,rbit//8)
         if( val is not None ):
             val = gdb.Value(val,rtype)
-            ret[reg] = val
+            ret[reg] = int(val)
     return ret
 
 
@@ -119,7 +120,11 @@ def xi( num, full ):
 
         if( full ):
             rmmaps = get_mmaps(mmaps)
+#            print(f"{ommaps['SCB.ICSR']=}")
+#            print(f"{rmmaps['SCB.ICSR']=}")
             dm = diff_mmaps( ommaps, rmmaps )
+            ommaps = rmmaps
+#            print(f"{dm=}")
             ist.mmap_registers = dm
 
         # Depending on the arch chose the right register
