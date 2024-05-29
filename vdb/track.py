@@ -691,7 +691,7 @@ class track_item(track_item_base):
             else:
                 val=gdb.parse_and_eval(self.expression)
             val = str(val)
-            if( val[-1] == "\n" ):
+            if( len(val) > 0 and val[-1] == "\n" ):
                 val = val[:-1]
             self.save_data(now,str(val))
         except Exception as e:

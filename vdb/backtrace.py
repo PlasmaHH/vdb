@@ -481,8 +481,7 @@ class BacktraceIterator:
             return sret
         sal = frame._base.find_sal()
         addr = sal.pc
-#		print("Returning BD")
-#		return BacktraceDecorator(frame)
+
         toret = None
         if( int(addr) != 0 ):
             if( self.next_real is not None ):

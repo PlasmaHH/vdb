@@ -32,27 +32,33 @@ class FrameId(object):
         self.sp = sp
         self.pc = pc
 
+def read_register( pf, reg ):
+    try:
+        return pf.read_register(reg)
+    except ValueError:
+        return None
+
 class frame_info:
 
     def __init__(self,pf):
         self.thread_id = gdb.selected_thread().num
-        self.sp = pf.read_register("sp")
-        self.pc = pf.read_register("pc")
-        self.rbp = pf.read_register("rbp")
+        self.sp = read_register(pf,"sp")
+        self.pc = read_register(pf,"pc")
+        self.rbp = read_register(pf,"rbp")
 #        print("self.sp.is_optimized_out = '%s'" % (self.sp.is_optimized_out,) )
 #        print("self.pc.is_optimized_out = '%s'" % (self.pc.is_optimized_out,) )
 #        print("self.rbp.is_optimized_out = '%s'" % (self.rbp.is_optimized_out,) )
         self.level = pf.level()
         self.registers = {}
         for r in [ "rdi", "rsi", "rdx", "rcx", "rax" ]:
-            rr = pf.read_register(r)
+            rr = read_register(pf,r)
 #            print("type(rr) = '%s'" % (type(rr),) )
 #            print("rr = '%s'" % (rr,) )
 #            print("rr.is_lazy = '%s'" % (rr.is_lazy,) )
 #            print("rr.type = '%s'" % (rr.type,) )
 #            print("rr.is_optimized_out = '%s'" % (rr.is_optimized_out,) )
-            if( not rr.is_optimized_out ):
-                self.registers[r] = pf.read_register(r)
+            if( rr is not None and not rr.is_optimized_out ):
+                self.registers[r] = rr
 #        print(self)
 
     def __str__(self):
@@ -166,9 +172,12 @@ class unwind_filter(gdb.unwinder.Unwinder):
         import vdb.asm
         sp = pending_frame.read_register("sp")
         pc = pending_frame.read_register("pc")
+        lr = pending_frame.read_register("lr")
+        print(f"{int(lr)=}")
 
+        arch=pending_frame.architecture()
         try:
-            listing = vdb.asm.parse_from_gdb(str(int(pc)),arch="x86",fakeframe=pending_frame,cached=False)
+            listing = vdb.asm.parse_from_gdb(str(int(pc)),arch=arch,fakeframe=pending_frame,cached=False)
         except:
             listing = None
         last = None
@@ -266,7 +275,8 @@ class unwind_filter(gdb.unwinder.Unwinder):
 
             unwind_info.add_saved_register("pc",fid.pc)
             unwind_info.add_saved_register("sp",fid.sp)
-            unwind_info.add_saved_register("rbp",nx.rbp)
+            if( nx.rbp is not None ):
+                unwind_info.add_saved_register("rbp",nx.rbp)
             for reg in [ "rax", "rdi", "rsi", "rdx", "rcx", "r8", "r9" ]:
                 rval = possible_registers.get(reg,None)
                 if( rval is not None ):

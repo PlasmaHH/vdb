@@ -199,7 +199,10 @@ def do_create( argv ):
     tname = argv[0]
     code = " ".join(argv[1:])
     compile(f"""
-    {code}
+    #include <cstdint>
+    #include <cstddef>
+    #include <cfloat>
+    {code};
 
     extern {tname} varx;
     {tname} var;
