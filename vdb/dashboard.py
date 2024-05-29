@@ -331,22 +331,40 @@ def modify_board( argv ):
                 db.command = " ".join(argv)
                 print(f"Modified dash {id} to {db.command} (old was {old})")
 
+def add_events( events, d ):
+    for e in events:
+        dash_events.setdefault(e,[]).append(d)
+        vdb.event.on(e,dash_on,e)
+
 def add_board( tgt, argv ):
 #    vdb.util.bark() # print("BARK")
     global dash_events
+    events = set( [ "before_prompt" ] )
+    nevents = set()
+
+    nargv = []
+    for a in argv:
+        if( a.startswith("on:") ):
+            nevents.add( a[3:] )
+        else:
+            nargv.append(a)
+    argv = nargv
+
+    if( len(nevents) != 0):
+        events = nevents
+
     # A special "log" command that basically means to redirect stuff to that dashboard
     if( argv[0] == "log" ):
         od = output_redirect(tgt)
         vdb.util.console_logprint = od.print
-        dash_events.setdefault("before_prompt",[]).append(od)
+        add_events(events,od)
         return
     cmd = " ".join(argv)
 #    print("cmd = '%s'" % cmd )
     db = dashboard()
     db.output = tgt
     db.command = cmd
-    delist = dash_events.setdefault("before_prompt",[])
-    delist.append(db)
+    add_events(events,db)
 
 def del_board( id ):
     id = int(id)
@@ -399,9 +417,6 @@ def call_dashboard( argv ):
     else:
         print("%s? What do you mean?" % argv[0])
 
-
-
-@vdb.event.before_prompt("before_prompt")
 def dash_on(evname):
     for ev in dash_events.get(evname,[]):
         ev.on_event()
