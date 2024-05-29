@@ -10,6 +10,16 @@ the command via the API you can also call arbitrary python functions and display
 
 ![](img/dashboard.0.png)
 See later on how to setup this example with the tmux panes
+
+## Events
+
+The default event is `before_prompt` causing the display to be updated before you fall back to the prompt. This is
+usually what you want.
+
+However there are various cases where it makes sense to use different events. You can use all gdb events as well as
+those synthesized by vdb.
+
+For example to update on each step of the `xi/e`  command, you can pass `on:steps`  anywhere as an argument.
 ## Ports
 `dashboard port <port> <command>`
 or

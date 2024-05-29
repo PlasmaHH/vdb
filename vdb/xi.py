@@ -14,6 +14,7 @@ from itertools import chain
 import gdb
 
 import traceback
+import re
 
 from typing import List
 
@@ -82,10 +83,18 @@ def get_pc_name( ):
     archname = gdb.selected_frame().architecture().name()
     return pc_name_map.get(archname,"pc")
 
-def get_mmaps( mmaps ):
-    print(f"Reading {len(mmaps)} values...")
+def get_mmaps( mmaps, filter ):
+    if( filter is None ):
+        print(f"Reading {len(mmaps)} values...")
+    else:
+        print(f"Reading up to {len(mmaps)} values...",end="")
+    if( filter is not None ):
+        filter = re.compile(filter)
     ret = {}
     for reg,rpos in mmaps.items():
+        if( filter is not None ):
+            if( filter.search(reg) is None ):
+                continue
         raddr,rbit,rtype = rpos
 
         if( raddr in vdb.register.mmapped_blacklist ):
@@ -95,11 +104,13 @@ def get_mmaps( mmaps ):
         if( val is not None ):
             val = gdb.Value(val,rtype)
             ret[reg] = int(val)
+    if( filter is not None ):
+        print(f" {len(ret)} matches")
     return ret
 
 
 
-def xi( num, full, events ):
+def xi( num, filter, full, events ):
     regs = gdb.execute("registers",False,True)
 
     alli = []
@@ -109,7 +120,7 @@ def xi( num, full, events ):
 
     if( full ):
         mmaps = vdb.register.mmapped_positions
-        ommaps = get_mmaps(mmaps)
+        ommaps = get_mmaps(mmaps,filter)
 
     for ui in range(0,num):
 #        print("===========")
@@ -121,7 +132,7 @@ def xi( num, full, events ):
             vdb.event.exec_hook("step")
 
         if( full ):
-            rmmaps = get_mmaps(mmaps)
+            rmmaps = get_mmaps(mmaps,filter)
 #            print(f"{ommaps['SCB.ICSR']=}")
 #            print(f"{rmmaps['SCB.ICSR']=}")
             dm = diff_mmaps( ommaps, rmmaps )
@@ -220,6 +231,16 @@ eXecute Instructions ( and save data along the way )
             num = 1
             full = False
             events = False
+            filter = None
+
+            nargv = []
+            for a in argv:
+                if( not a.isdigit() ):
+                    filter = a
+                else:
+                    nargv.append(a)
+            argv = nargv
+
 
             if( "f" in flags ):
                 full = True
@@ -228,7 +249,7 @@ eXecute Instructions ( and save data along the way )
 
             if( len(argv) > 0 ):
                 num = int(argv[0])
-            xi(num,full,events)
+            xi(num,filter,full,events)
 #            print (self.__doc__)
         except:
             traceback.print_exc()

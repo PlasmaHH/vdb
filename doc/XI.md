@@ -6,6 +6,13 @@ maybe also flags). For many cases we can figure out that some memory has changed
 
 ![](img/xi.0.png)
 
+## Flags
+
+* `xi/f` will use "full" mode, trying to read all memory mapped registers currently active. This usually is a very
+    lengthy process. Any non-numeric parameter will then be interpreted as a filter expression for these registers.
+* `xi/e` This will cause a synthesized `step`  event to be emitted for every step. Depending on what is listening to
+    this event it can be expensive which is why this is not active by default.
+
 ## Limitations
 Only for instructions where this is explicitly coded the change of memory will be recorded, and there we do not have a
 look at the number of bytes changed. 
