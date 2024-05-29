@@ -10,6 +10,7 @@ class events(Enum):
     start = auto()
     run   = auto()
     first_prompt = auto()
+    step = auto()
 
 def on_event( gdbreg, darg ):
     def decorator( func ):
@@ -38,6 +39,7 @@ def on_noop( _darg ):
 hooks : Dict[ events, List ] = {}
 
 def register_hook( ev: events, f: Callable ):
+#    print(f"register_hook({ev=},{f=})")
     hl = hooks.setdefault(ev,[])
     hl.append(f)
 
@@ -60,8 +62,11 @@ def on_hook( ev, darg ):
     return decorator
 
 def exec_hook( ev ):
-#    print(f"exec_hook({ev})")
+    if( isinstance(ev,str) ):
+        ev = events[ev]
     hl = hooks.get(ev,[])
+#    print(f"exec_hook({ev}) : {len(hl)}")
+#    print(f"{hooks=}")
     for h in hl:
         h(ev)
 
@@ -164,13 +169,13 @@ def start_hook():
     exec_hook(events.start)
 
 
-eventlist = ["cont", "exited", "stop", "new_objfile", "free_objfile", "clear_objfiles", "inferior_call", "memory_changed", "register_changed", "breakpoint_created", "breakpoint_modified", "breakpoint_deleted", "before_prompt", "new_inferior", "inferior_deleted", "new_thread", "thread_exited", "gdb_exiting", "connection_removed", "executable_changed", "new_progspace", "free_progspace", "run", "start", "before_first_prompt" ]
+eventlist = ["cont", "exited", "stop", "new_objfile", "free_objfile", "clear_objfiles", "inferior_call", "memory_changed", "register_changed", "breakpoint_created", "breakpoint_modified", "breakpoint_deleted", "before_prompt", "new_inferior", "inferior_deleted", "new_thread", "thread_exited", "gdb_exiting", "connection_removed", "executable_changed", "new_progspace", "free_progspace", "run", "start", "before_first_prompt", "step" ]
 
 # generic event mechanism (not a decorator)
 # @param eventname a string with the name
 # @param callback a callable that gets the eventname, gdb event issued arguments and darg
 def on( eventname, callback, *darg ):
-
+#    print(f"on({eventname=},{callback=},{darg=})")
     def wrapper(*arg):
         try:
             callback(*(arg+darg) )
@@ -178,9 +183,7 @@ def on( eventname, callback, *darg ):
             callback(*darg)
 
 
-    if( eventname in [ "run", "start" ] ):
-        register_hook( events[eventname], wrapper )
-    elif( eventname == "before_first_prompt" ):
+    if( eventname in [ "run", "start", "before_first_prompt", "step" ] ):
         register_hook( events[eventname], wrapper )
     elif( eventname in eventlist and hasattr(gdb.events,eventname) ):
         ge=getattr(gdb.events,eventname)

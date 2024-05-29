@@ -352,6 +352,7 @@ def add_board( tgt, argv ):
 
     if( len(nevents) != 0):
         events = nevents
+#    print(f"{events=}")
 
     # A special "log" command that basically means to redirect stuff to that dashboard
     if( argv[0] == "log" ):
@@ -418,6 +419,7 @@ def call_dashboard( argv ):
         print("%s? What do you mean?" % argv[0])
 
 def dash_on(evname):
+#    print(f"dash_on({evname=})")
     for ev in dash_events.get(evname,[]):
         ev.on_event()
 

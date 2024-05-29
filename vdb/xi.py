@@ -99,7 +99,7 @@ def get_mmaps( mmaps ):
 
 
 
-def xi( num, full ):
+def xi( num, full, events ):
     regs = gdb.execute("registers",False,True)
 
     alli = []
@@ -117,6 +117,8 @@ def xi( num, full ):
         alli.append(ist)
         gdb.execute("si",False,True)
         r = vdb.register.Registers()
+        if( events ):
+            vdb.event.exec_hook("step")
 
         if( full ):
             rmmaps = get_mmaps(mmaps)
@@ -217,12 +219,16 @@ eXecute Instructions ( and save data along the way )
             argv,flags = self.flags(argv)
             num = 1
             full = False
+            events = False
+
             if( "f" in flags ):
                 full = True
+            if( "e" in flags ):
+                events = True
 
             if( len(argv) > 0 ):
                 num = int(argv[0])
-            xi(num,full)
+            xi(num,full,events)
 #            print (self.__doc__)
         except:
             traceback.print_exc()
