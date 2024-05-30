@@ -96,7 +96,7 @@ offset_txt_fmt_dot = vdb.config.parameter("vdb-asm-text-offset-format-dot", " <+
 color_ns       = vdb.config.parameter("vdb-asm-colors-namespace",   "#ddf", gdb_type = vdb.config.PARAM_COLOUR)
 color_function = vdb.config.parameter("vdb-asm-colors-function",    "#99f", gdb_type = vdb.config.PARAM_COLOUR)
 color_marker   = vdb.config.parameter("vdb-asm-colors-next-marker", "#0f0", gdb_type = vdb.config.PARAM_COLOUR)
-color_rmarker  = vdb.config.parameter("vdb-asm-colors-next2-marker", "#f80", gdb_type = vdb.config.PARAM_COLOUR)
+color_rmarker  = vdb.config.parameter("vdb-asm-colors-next2-marker", "#080", gdb_type = vdb.config.PARAM_COLOUR)
 color_xmarker  = vdb.config.parameter("vdb-asm-colors-marker",      "#049", gdb_type = vdb.config.PARAM_COLOUR)
 color_bpmarker = vdb.config.parameter("vdb-asm-colors-breakpoint-marker", "#e45", gdb_type = vdb.config.PARAM_COLOUR)
 color_bpmarker_disabled = vdb.config.parameter("vdb-asm-colors-breakpoint-disabled-marker", "#e45", gdb_type = vdb.config.PARAM_COLOUR)
@@ -2349,19 +2349,35 @@ class fake_frame:
         return self.fake_architecture()
 
 def fix_marker( ls, alt = None, frame = None, do_flow = True ):
-#    print(f"{ls},{alt},frame,{do_flow}")
+#    print(f"fix_marker({ls},{alt},frame,{do_flow})")
 
     try:
+#        print(f"{last_working_pc=}")
+#        vdb.util.bark() # print("BARK")
         mark = vdb.util.gint(f"${last_working_pc}")
+#        vdb.util.bark() # print("BARK")
 #        print(f"{last_working_pc=} = {mark=:#0x}")
-    except:
+    except gdb.error:
+#        vdb.util.bark() # print("BARK")
+#        traceback.print_exc()
         try:
-            mark = vdb.util.gint(alt)
-#            print(f"{alt=:#0x}")
-        except:
+#            print(f"{alt=}")
+#            vdb.util.bark() # print("BARK")
+#            mark = vdb.util.gint(alt)
+            mark = gdb.parse_and_eval(alt)
+            if( mark.type.code not in { gdb.TYPE_CODE_INT, gdb.TYPE_CODE_PTR } ):
+                mark = mark.address
+
+#            print(f"{mark=}")
+#            print(f"{mark.type=}")
+#            print(f"{vdb.util.gdb_type_code(mark.type.code)=}")
+        except gdb.error:
+#            vdb.util.bark() # print("BARK")
+#            traceback.print_exc()
             mark = None
+#    vdb.util.bark() # print("BARK")
 #    if( mark is not None ):
-#        print(f"{mark=:#0x}")
+#        print(f"{mark=}")
 #    if( ls.marker is not None ):
 #            print(f"{ls.marker=:#0x}")
 
@@ -2735,7 +2751,7 @@ def info_line( addr ):
 
 def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached = True, do_flow = True ):
 
-#    print(f"parse_from_gdb(arg={arg},fakedata={len(fakedata)}, {arch=}, {fakeframe=}, {cached=}, {do_flow=}")
+#    print(f"parse_from_gdb(arg={arg},fakedata, {arch=}, {fakeframe=}, {cached=}, {do_flow=}")
     global parse_cache
 
     key = arg
@@ -3532,7 +3548,8 @@ def register_flow( lng, frame : "gdb frame" ):
 
         if( ins.marked ):
             cf = current_flags(frame)
-            possible_flags.merge(cf)
+            if( cf is not None ):
+                possible_flags.merge(cf)
             cr = current_registers(frame)
             if( debug_registers.value ):
                 for r,(v,o) in cr.values.items():
@@ -3779,6 +3796,7 @@ def register_flow( lng, frame : "gdb frame" ):
         print("unhandled_mnemonics = '%s'" % (unhandled_mnemonics,) )
 
 def parse_from( arg, fakedata = None, context = None, arch = None ):
+#    print(f"parse_from({arg=},,{context=},{arch=})")
     rng = arg.split(",")
 #    print("rng = '%s'" % (rng,) )
     if( len(rng) == 2 ):
