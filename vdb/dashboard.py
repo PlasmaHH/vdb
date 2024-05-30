@@ -251,26 +251,29 @@ dash_events: dict[str,list[dashboard]] = { }
 def show_dashboard( ):
     tbl = []
     tbl.append( ["EN","CLS","ID","Type","Target","Event(s)","Command","ExTime"] )
+    id2events = {}
+    id2dash = {}
     for on,evl in dash_events.items():
         for db in evl:
-#            print("on = '%s'" % on )
-#            print("db = '%s'" % db )
-            en = "N"
-            if( db.enabled ):
-                en = "Y"
-            id = db.id
-            typ = db.output.name()
-            tgt = db.output.target()
-            ev = on
-            cmd = db.command
-            cls = "N"
-            if( db.cls ):
-                cls = "Y"
-            t = db.last_time
+            id2events.setdefault(db.id,[]).append(str(on))
+            id2dash[db.id] = db
 
-            line  = [str(en),str(cls),str(id),str(typ),str(tgt),str(ev),str(cmd),str(t)]
-            tbl.append(line)
-            # Enabled ID   Type  target  event(s)   command
+    for id,db in id2dash.items():
+        en = "N"
+        if( db.enabled ):
+            en = "Y"
+        typ = db.output.name()
+        tgt = db.output.target()
+        ev = ",".join(id2events[id])
+        cmd = db.command
+        cls = "N"
+        if( db.cls ):
+            cls = "Y"
+        t = db.last_time
+
+        line  = [str(en),str(cls),str(id),str(typ),str(tgt),str(ev),str(cmd),str(t)]
+        tbl.append(line)
+        # Enabled ID   Type  target  event(s)   command
     txt = vdb.util.format_table(tbl)
     print(txt)
 
