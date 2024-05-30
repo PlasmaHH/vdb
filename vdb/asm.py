@@ -65,8 +65,11 @@ pre_colors_dot = [
 
 @vdb.event.start()
 def invalidate_cache( c ):
+    vdb.util.bark() # print("BARK")
     global parse_cache
+#    print(f"{parse_cache=}")
     parse_cache = {}
+#    print(f"{parse_cache=}")
 
 bp_marker = vdb.config.parameter("vdb-asm-breakpoint-marker", "⬤" )
 bp_marker_disabled = vdb.config.parameter("vdb-asm-breakpoint-disabled-marker", "◯" )
@@ -93,6 +96,7 @@ offset_txt_fmt_dot = vdb.config.parameter("vdb-asm-text-offset-format-dot", " <+
 color_ns       = vdb.config.parameter("vdb-asm-colors-namespace",   "#ddf", gdb_type = vdb.config.PARAM_COLOUR)
 color_function = vdb.config.parameter("vdb-asm-colors-function",    "#99f", gdb_type = vdb.config.PARAM_COLOUR)
 color_marker   = vdb.config.parameter("vdb-asm-colors-next-marker", "#0f0", gdb_type = vdb.config.PARAM_COLOUR)
+color_rmarker  = vdb.config.parameter("vdb-asm-colors-next2-marker", "#f80", gdb_type = vdb.config.PARAM_COLOUR)
 color_xmarker  = vdb.config.parameter("vdb-asm-colors-marker",      "#049", gdb_type = vdb.config.PARAM_COLOUR)
 color_bpmarker = vdb.config.parameter("vdb-asm-colors-breakpoint-marker", "#e45", gdb_type = vdb.config.PARAM_COLOUR)
 color_bpmarker_disabled = vdb.config.parameter("vdb-asm-colors-breakpoint-disabled-marker", "#e45", gdb_type = vdb.config.PARAM_COLOUR)
@@ -732,6 +736,7 @@ class instruction_base( abc.ABC ):
         self.bytes = None               # Byte sequence that encodes this instruction
         self.marked = False             # Is marked by gdbs "next to be executed" marker
         self.xmarked = False            # marked by a user defined marker
+        self.rmarked = False            # marked by the "possibly current position" heuristic
         self.prefix = ""
         self.infix = ""
         self.jumparrows = ""
@@ -1032,6 +1037,7 @@ class arm_instruction( instruction_base ):
 #        print("line = '%s'" % (line,) )
         self.line = line
         marker = m.group(1)
+#        print(f"{marker=}")
         tokens = line.split()
         if( marker is not None ):
             self.marked = True
@@ -1054,6 +1060,8 @@ class arm_instruction( instruction_base ):
 
 
         self.address = vdb.util.xint(addr)
+#        if( self.marked ):
+#            print(f" marked address {self.address:#0x}")
 
         ibytes = []
         while( self.bytere2.match(tokens[0]) ):
@@ -1199,17 +1207,26 @@ class listing( ):
         self.function_header = None
         self.initial_registers = register_set()
         self.marker = None
+        self.frame = None
+
+    def get_frame_register( self, reg ):
+        ret = None
+        if( self.frame is not None ):
+            ret=self.frame.read_register(reg)
+        return ret
 
     def sort( self ):
         self.instructions.sort( key = lambda x:( x.address, x ) )
 
-    def color_address( self, addr, marked, xmarked ):
+    def color_address( self, addr, marked, xmarked, rmarked ):
         mlen = 2 + vdb.arch.pointer_size // 4
         if( next_mark_ptr ):
             if( marked ):
                 return vdb.color.colorl(f"{addr:#0{mlen}x}",color_marker.value)
             if( xmarked ):
                 return vdb.color.colorl(f"{addr:#0{mlen}x}",color_xmarker.value)
+            if( rmarked ):
+                return vdb.color.colorl(f"{addr:#0{mlen}x}",color_rmarker.value)
         if( len(color_addr.value) > 0 ):
             return vdb.color.colorl(f"{addr:#0{mlen}x}",color_addr.value)
         else:
@@ -1644,6 +1661,7 @@ ascii mockup:
                 self.backtrack_next( x[0], x[1], x[2] )
 
     def compute_context( self, context, marked_line ):
+#        print(f"compute_context({context=},{marked_line=})")
         context_start = None
         context_end = None
         if( context is not None ):
@@ -1719,8 +1737,19 @@ ascii mockup:
         for _,bp in raw_breakpoints.items():
             breakpoints[bp.address] = bp
 
+        current_pc = self.get_frame_register(last_working_pc)
+        if( current_pc is None ):
+            current_pc = 0
+        else:
+            current_pc = int( current_pc )
+#        print(f"{current_pc=:#0x}")
 #        vdb.util.bark() # print("BARK")
-        for i in self.instructions:
+        for idx,i in enumerate(self.instructions):
+            if( idx > 0 ):
+                previous = self.instructions[idx-1]
+                if( previous.address <= current_pc < i.address ):
+#                    print(f"{i.address=}")
+                    previous.rmarked = True
 #            print(f"{len(otbl)=}\r",end="",flush=True,file=sys.stderr)
             line_extra = []
             if( header_repeat.value is not None and not suppress_header ):
@@ -1791,19 +1820,29 @@ ascii mockup:
                         mval=bpmark
                     marker_str += vdb.color.color_str( mval, mcol )
 
+                
+                marked_line = cnt
+                color = None
                 if( i.marked ):
-#                    line.append( ( vdb.color.color(next_marker.value,color_marker.value), len(next_marker.value) ) )
-                    marker_str+=vdb.color.color_str(next_marker.value,color_marker.value)
-                    marked_line = cnt
-                    context_start, context_end = self.compute_context(context,marked_line)
+                    color = color_marker.value
                 elif( i.xmarked ):
-                    marker_str+=vdb.color.color_str(next_marker.value,color_xmarker.value)
+                    color = color_xmarker.value
+                elif( i.rmarked ):
+                    color = color_rmarker.value
+                else:
+                    marked_line = None
+
+                if( color is not None ):
+                    marker_str+=vdb.color.color_str(next_marker.value,color)
+
+                if( marked_line is not None ):
+                    context_start, context_end = self.compute_context(context,marked_line)
                 marker_str+=" "
                 line.append( marker_str )
 
             if( "a" in showspec ):
                 prejump += 1
-                line.append( self.color_address( i.address, i.marked, i.xmarked ))
+                line.append( self.color_address( i.address, i.marked, i.xmarked, i.rmarked ))
 
 
             if( "j" in showspec ):
@@ -2330,17 +2369,30 @@ def fix_marker( ls, alt = None, frame = None, do_flow = True ):
     if( ls.marker == mark ):
         return ls
 
+    current_pc = ls.get_frame_register(last_working_pc)
+    if( current_pc is None ):
+        current_pc = 0
+    else:
+        current_pc = int( current_pc )
     if( mark is not None ):
 #        print(f"{mark=:#0x} => {ls.marker=:#0x}")
         ls.marker = int(mark)
-    for i in ls.instructions:
+
+    for idx,i in enumerate(ls.instructions):
+        previous = None
+        if( idx > 0 ):
+            previous = ls.instructions[idx-1]
         i.xmarked = False
-#            print("%s == %s ? %s " % (i.address,mark,(i.address == mark)))
         if( i.address == mark ):
             i.marked = True
         else:
             i.marked = False
-            
+        if( previous is not None ):
+            if( previous.address <= current_pc < i.address ):
+                previous.rmarked = True
+            else:
+                previous.rmarked = False
+
     update_vars(ls,frame)
     ls.do_backtrack()
     if( do_flow ):
@@ -2714,7 +2766,6 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     ret = None
     if( not debug_registers.value and cached ):
         ret = parse_cache.get(key,None)
-    ret = parse_cache.get(key,None)
 
     if( fakeframe is not None ):
         frame = fakeframe
@@ -2726,8 +2777,10 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
 #    print("ret = '%s'" % ret )
     if( ret is not None and fakedata is None ):
+        ret.frame = frame
         return fix_marker(ret,arg,frame,do_flow)
     ret = listing()
+    ret.frame = frame
 #    vdb.util.bark() # print("BARK")
 #    print("key = '%s'" % (key,) )
 #    print("parse_cache = '%s'" % (parse_cache,) )
@@ -3380,6 +3433,8 @@ def arm_current_flags( frame ):
 
 def x86_current_flags( frame ):
     eflags = frame.read_register("eflags")
+    if( eflags is None ):
+        return None
 #    print("eflags = '%s'" % (eflags,) )
 #    print("type(eflags) = '%s'" % (type(eflags),) )
 #    print("eflags.type = '%s'" % (eflags.type,) )
