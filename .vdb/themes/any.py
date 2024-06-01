@@ -39,7 +39,7 @@ vdb-asm-colors-next-marker-dot      #008000
 vdb-asm-colors-offset-dot           #909090
 vdb-asm-colors-prefix-dot           None
 vdb-asm-showspec-dot                maobnpTr
-vdb-asm-showspec                    maodbnpTrjHc
+vdb-asm-showspec                    maodbnpTrjHcx
 vdb-asm-callgrind-events            Ir,CEst
 vdb-asm-header-repeat               50
 # backtrace colours

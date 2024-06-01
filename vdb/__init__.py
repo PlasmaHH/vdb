@@ -57,7 +57,7 @@ enable_rtos      = vdb.config.parameter( "vdb-enable-rtos",True)
 enable_xi        = vdb.config.parameter( "vdb-enable-xi",True)
 enable_list      = vdb.config.parameter( "vdb-enable-list",True)
 
-configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,pahole,ftree,dashboard,hashtable,ssh,track"
+configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,xi,pahole,ftree,dashboard,hashtable,ssh,track"
                                                                     ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos,xi,list" )
 
 home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)

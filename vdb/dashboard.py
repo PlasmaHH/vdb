@@ -283,7 +283,7 @@ def trigger_dashboard( id, to ):
     for on,evl in dash_events.items():
         for db in evl:
             if( db.id == id ):
-                db.set_state( to )
+                db.set_state( to, "command" )
                 return
 
 def trigger_cls( id, to ):

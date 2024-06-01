@@ -65,7 +65,8 @@ pre_colors_dot = [
 
 @vdb.event.start()
 def invalidate_cache( c ):
-    vdb.util.bark() # print("BARK")
+#    vdb.util.bark() # print("BARK")
+#    traceback.print_stack()
     global parse_cache
 #    print(f"{parse_cache=}")
     parse_cache = {}
@@ -133,7 +134,7 @@ color_call_dot       = vdb.config.parameter("vdb-asm-colors-call-dot",       "#6
 nonfunc_bytes      = vdb.config.parameter("vdb-asm-nonfunction-bytes",16)
 history_limit      = vdb.config.parameter("vdb-asm-history-limit",4)
 tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
-asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnpTrjhc" )
+asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnpTrjhcx" )
 asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnpTr" )
 asm_tailspec       = vdb.config.parameter("vdb-asm-tailspec", "andD" )
 asm_sort           = vdb.config.parameter("vdb-asm-sort", True )
@@ -152,6 +153,8 @@ ref_width          = vdb.config.parameter("vdb-asm-reference-width", 120 )
 callgrind_eventmap = {} # name to index
 callgrind_data = {}
 from_tty = None
+
+xi_history = {}
 
 
 color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,gdb_type = vdb.config.PARAM_COLOUR_LIST )
@@ -1713,6 +1716,7 @@ ascii mockup:
                         , ("j" ,[ ("History",",,bold",0,0)])
                         , ("hH",[ ("History",",,bold",0,0) ])
                         , ("o" ,[ ("Offset",",,bold",0,0)])
+                        , ("x" ,[ ("xi History",",,bold",0,0)])
                         , ("c" ,cg_header)
                         , ("d" ,[ ("Jumps",",,bold",0,0) ])
                         , ("b" ,[("Bytes",",,bold",0,0)])
@@ -1869,6 +1873,16 @@ ascii mockup:
                     line.append( vdb.color.colorl(offset_fmt.value.format(offset = io, maxlen = self.maxoffset ),color_offset.value))
                 except:
                     line.append( vdb.color.colorl(offset_txt_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value))
+
+            if( "x" in showspec ):
+                if( ( xilist := xi_history.get(i.address,None) ) is not None ):
+                    entry = ""
+                    for xi in xilist:
+                        entry = f"{entry},{xi}"
+                    entry = entry[1:]
+                    line += [ entry ]
+                else:
+                    line += [None]
 
             if( "c" in showspec ):
 
@@ -4279,6 +4293,7 @@ if __name__ == "__main__":
 # For the gather_vars and display stuff, consider the case where a variable doesn't live at an address but is a
 # parameter passed in a register. Figure out a way that this is displayed and distinguishable from a variable that lives
 # e.g. on the stack ( maybe again @ vs. = ? )
+# context should still display header
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

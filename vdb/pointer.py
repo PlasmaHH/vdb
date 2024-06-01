@@ -6,7 +6,7 @@ import vdb.config
 import vdb.color
 import vdb.vmmap
 import vdb.util
-import vdb.asm
+#import vdb.asm
 import vdb.arch
 
 import gdb

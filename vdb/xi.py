@@ -179,7 +179,9 @@ def xi( num, filter, full, events ):
     print(regs)
     otbl = []
     otbl.append(["Addr","asm","regs"])
-    for i in alli:
+    xi_history = {}
+    for ix,i in enumerate(alli):
+        xi_history.setdefault(int(i.pc[0]),[]).append(ix)
         line : List = []
         otbl.append(line)
         pv,_,_,_,pl = vdb.pointer.color(i.pc[0],vdb.arch.pointer_size)
@@ -216,6 +218,8 @@ def xi( num, filter, full, events ):
 #            line.append(str(addr))
 #        i._dump()
     vdb.util.print_table(otbl)
+    if( vdb.enabled("asm") ):
+        vdb.asm.xi_history = xi_history
 
 class cmd_xi (vdb.command.command):
     """
