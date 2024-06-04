@@ -16,6 +16,7 @@ import traceback
 import re
 import sys
 import copy
+import lzma
 
 
 auto_scan = vdb.config.parameter("vdb-svd-auto-scan",True,docstring="scan configured directories on start")
@@ -873,6 +874,13 @@ def parse_device(xml):
 
 dev_queue = {}
 
+# move to util?
+def any_open( fn ):
+    if( fn.endswith(".xz") ):
+        return lzma.open(fn,"r")
+    else:
+        return open(fn,"r")
+
 def svd_queue_file(fname,at):
 #    if( at is None ):
 #        print(f"\r{fname}",flush=True,end="")
@@ -885,7 +893,7 @@ def svd_queue_file(fname,at):
     version = "_"
 
     # XXX Handle differently versioned files here too
-    with open(fname,"r") as f:
+    with any_open(fname) as f:
         for line in f.readlines():
             if( device_re.search(line) is not None ):
 #                print("line = '%s'" % (line,) )
@@ -907,8 +915,10 @@ def svd_load_file(fname,at):
         if( not scan_silent.value ):
             print(f"Loading {fname}… ",end="")
 
-    with open(fname,"r") as f:
+    with any_open(fname) as f:
         data = f.read()
+        if( not isinstance(data,str) ):
+            data = data.decode()
         data = data.replace(" & "," &amp; ")
     if( len(data) < 16 ):
         print("File too small, does it contain anything?")
@@ -1007,7 +1017,7 @@ def do_svd_scan_one(dirname,at,filter_re):
     dirname = os.path.expanduser(dirname)
     for root, dirs, files in os.walk(dirname,followlinks=True):
         for f in files:
-            if( f.endswith(".svd") ):
+            if( f.endswith(".svd") or f.endswith(".svd.xz") ):
                 fullpath = os.path.join(root,f)
                 if( filter_re is not None and filter_re.search(fullpath) is None ):
                     continue
