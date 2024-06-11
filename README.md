@@ -30,6 +30,7 @@ under x86_64 Linux with gcc > 10.
     * [hexdump](#hexdump)
     * [asm](#asm)
     * [pahole](#pahole)
+    * [List](#list)
     * [dashboard](#dashboard)
     * [ftree](#ftree)
     * [hashtable](#hashtable)
@@ -180,6 +181,11 @@ inheritance and a possibly more useful layout display.
 
 ![](doc/img/pahole.f.c.png)
 [You can find detailed information about this module here](doc/PAHOLE.md)
+## List
+An enhanced version for source code listing that is calling an external program for better syntax highlighting and has
+the standard intuitive context syntax.
+
+[You can find detailed information about this module here](doc/LIST.md)
 
 ## dashboard
 ![](doc/img/dashboard.0.png)
