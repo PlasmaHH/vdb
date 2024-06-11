@@ -90,7 +90,9 @@ class command(gdb.Command,abc.ABC):
     def context( self, flags ):
         context = (None,None)
         if( len(flags) != 0 ):
-            if( flags[0] == "+" and flags[1:].isdigit() ):
+            if( flags == "*" ):
+                context = ( sys.maxsize, sys.maxsize )
+            elif( flags[0] == "+" and flags[1:].isdigit() ):
                 context = ( None, int(flags[1:]) )
             elif( flags[0] == "-" and flags[1:].isdigit() ):
                 context = ( int(flags[1:]), None )
