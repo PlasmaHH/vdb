@@ -100,8 +100,12 @@ def do_list( argv, flags, context, recurse = True ):
 
             funsym = frame.function()
             sal = frame.find_sal()
-            fullname = sal.symtab.fullname()
-            line = sal.line
+            if( sal.symtab is not None ):
+                fullname = sal.symtab.fullname()
+                line = sal.line
+            else:
+                fullname = ""
+                line = -1
         else: # no frame, lets see if gdb can be of any help here
             # "help info main" gets entry point?
             
@@ -177,7 +181,10 @@ def do_list( argv, flags, context, recurse = True ):
     # XXX We can get the return type via "whatis" for nicer display. Maybe we want to go through everything and gather
     # generic type handling tools? 
     try:
-        print(f"{funsym} in {fullname}:{line}")
+        if( len(fullname) == 0 ):
+            print("Unknown source file")
+        else:
+            print(f"{funsym} in {fullname}:{line}")
         if( src_command.value is not None and len(src_command.value) > 0 ):
             bs = start
             ass = end
@@ -198,9 +205,10 @@ def do_list( argv, flags, context, recurse = True ):
             for i,c in enumerate(cmd):
                 cmd[i] = c.format(file=fullname)
 #            print(f"{cmd=}")
-            result = subprocess.run( cmd , encoding = "utf-8", check=False , stdin = subprocess.DEVNULL, capture_output = True )
-            print(result.stdout,end="")
-            print(result.stderr,end="")
+            if( len(fullname) > 0 ):
+                result = subprocess.run( cmd , encoding = "utf-8", check=False , stdin = subprocess.DEVNULL, capture_output = True )
+                print(result.stdout,end="")
+                print(result.stderr,end="")
         else:
             with open(fullname) as sf:
                 print(f"Opened {fullname} as the source file, printing from {before} to {after}")
