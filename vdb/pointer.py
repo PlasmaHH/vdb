@@ -6,7 +6,7 @@ import vdb.config
 import vdb.color
 import vdb.vmmap
 import vdb.util
-#import vdb.asm
+import vdb.asm
 import vdb.arch
 
 import gdb
@@ -16,7 +16,7 @@ import re
 import math
 import struct
 import sys
-
+from enum import Enum,auto
 
 mod=sys.modules[__name__]
 vdb.enabled_modules["pointer"] = mod
@@ -78,8 +78,8 @@ def as_c_str( ptr, maxlen = 64 ):
 
 def annotate( ptr ):
     try:
-        gmv=gdb.parse_and_eval(f"(void*)({int(ptr)})")
-        mv = str(gmv)
+        mv=gdb.parse_and_eval("(void*)(%s)" % int(ptr) )
+        mv = str(mv)
         pbs = mv.find("<")
         if( pbs != -1 ):
             mv = mv[pbs:]
@@ -93,7 +93,7 @@ def dereference( ptr ):
 #        print("gptr = '%s'" % gptr )
 #        print("gptr.type = '%s'" % gptr.type )
 #        xptr = gptr.cast(gdb_void_ptr)
-#    xptr = gptr.cast(gdb.lookup_type("void").pointer())
+    xptr = gptr.cast(gdb.lookup_type("void").pointer())
 #        print("xptr = '%s'" % xptr )
 #        print("xptr.type = '%s'" % xptr.type )
     xptr = gptr.cast(gdb_void_ptr)
@@ -158,7 +158,7 @@ def as_tailspec( ptr, minasc, spec ):
                 if( dvalue == 0 ): # all 0 bytes result in this, most likely a false positive
                     continue
 #                print("dvalue = '%s'" % (dvalue,) )
-                _,e = math.frexp( dvalue )
+                m,e = math.frexp( dvalue )
 #                print("m = '%s'" % (m,) )
 #                print("e = '%s'" % (e,) )
                 if( e >= max_exponents.elements[0] and e <= max_exponents.elements[1] ):
@@ -168,8 +168,8 @@ def as_tailspec( ptr, minasc, spec ):
         elif( sp == "D"): # Is itself possible a double value
             try:
                 ba = struct.pack("q",int(ptr))
-                dv = struct.unpack("d",ba)[0]
-                _,e = math.frexp( dv )
+                dv = struct.unpack("d",ba)
+                m,e = math.frexp( dv )
                 if( e >= max_exponents.elements[0] and e <= max_exponents.elements[1] ):
                     return f"(double){dv}"
             except:
@@ -194,7 +194,7 @@ def color( ptr, archsize = None ):
     plen = archsize // 4
 #    t,additional = get_type(ptr,archsize)
 
-    _,mm,col,additional = vdb.memory.mmap.color(ptr,colorspec="Asma")
+    s,mm,col,additional = vdb.memory.mmap.color(ptr,colorspec=vdb.memory.default_colorspec.value)
 #    scolor = colormap.get(t,color_unknown)
 
     if( mm.mtype == vdb.memory.memory_type.NULL ):
@@ -225,21 +225,14 @@ def colors( ptr, archsize = None ):
 
 # @return pure means it is just the pointer, no additional text (but maybe additional colouring)
 # Make this return the display length too somehow
-
-visited = set()
 @vdb.util.memoize( gdb.events.stop )
 def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = None, last = True, tailspec = None, do_annotate = True ):
     if( archsize is None ):
         archsize = vdb.arch.pointer_size
     if( gdb_void is None ):
         update_types()
-
-    if( maxlen == 0 or int(ptr) in visited ):
-        visited.clear()
+    if( maxlen == 0 ):
         return (ellipsis.value,True)
-
-    visited.add(int(ptr))
-
 
 #    print("chain(0x%x,…)" % ptr )
 #    print("type(ptr) = '%s'" % type(ptr) )
@@ -265,7 +258,6 @@ def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = N
         if( len(s) > 0 ):
             ret += f"{arrow_right.value}{s}"
             pure = False
-            visited.clear()
             return (ret,pure)
     if( add is not None and test_for_ascii ):
         ascstring = add[1]
@@ -287,9 +279,8 @@ def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = N
     except gdb.MemoryError as e:
 #        print("e = '%s'" % e )
         pass
-#    except:
-#        raise
-    visited.clear()
+    except:
+        raise
     return (ret,pure)
 
 

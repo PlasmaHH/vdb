@@ -52,7 +52,7 @@ color_iv = vdb.config.parameter("vdb-memory-colors-invalid"     , "#16f", gdb_ty
 ignore_empty = vdb.config.parameter("vdb-memory-ignore-empty-sections", False, gdb_type = gdb.PARAM_BOOLEAN )
 
 test_write = vdb.config.parameter("vdb-memory-test-write-access", True )
-default_colorspec = vdb.config.parameter("vdb-memory-default-colorspec","sma")
+default_colorspec = vdb.config.parameter("vdb-memory-default-colorspec","smAa")
 
 
 class access_type(Enum):

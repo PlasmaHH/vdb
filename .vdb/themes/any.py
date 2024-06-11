@@ -76,7 +76,7 @@ vdb-history-colors-statistics       #afaf87
 # Code listing
 vdb-list-colors-marker              #0f0
 # memory/pointer coloring
-vdb-memory-default-colorspec        sma
+vdb-memory-default-colorspec        smAa
 vdb-memory-colors-ascii             #aa0
 vdb-memory-colors-bss               #609
 vdb-memory-colors-code              #a0a
@@ -127,7 +127,7 @@ vdb-memory-colors-section-_rodata
 vdb-memory-colors-section-_stapsdt_base
 vdb-memory-colors-section-_tbss
 vdb-memory-colors-section-_tdata
-vdb-memory-colors-section-_text     #df4
+vdb-memory-colors-section-_text     #a0a
 vdb-memory-colors-shared            #15c
 vdb-memory-colors-stack-foreign     #f70
 vdb-memory-colors-stack-own         #070
