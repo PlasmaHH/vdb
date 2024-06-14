@@ -252,8 +252,8 @@ class object_layout:
 #        print("self.type = '%s'" % self.type )
 #        print("self.value.dynamic_type = '%s'" % self.value.dynamic_type )
         if( self.value is not None ):
-            print(f"{value}")
-            print(f"{self.value.address=}")
+#            print(f"{value}")
+#            print(f"{self.value.address=}")
             self.vtype = vdb.util.guess_vptr_type( self.value.address ).type.target()
 #            print("self.type = '%s'" % (self.type,) )
 #            print("self.type.sizeof = '%s'" % (self.type.sizeof,) )
