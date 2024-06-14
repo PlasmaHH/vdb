@@ -76,6 +76,13 @@ class type_or_function:
         self.tail = ""
         self.cached_string = None
         self.failed = False
+    
+    def replace_name( self, s, r ):
+        self.name = self.name.replace(s,r)
+        if( self.namespace is not None ):
+            self.namespace.name = self.namespace.name.replace(s,r)
+        if( self.subobject is not None ):
+            self.subobject.replace_name(s,r)
 
     def to_dot( self, g ):
         n = g.node(f"{self.name}.{self.id}")
@@ -228,10 +235,16 @@ class type_or_function:
             return ""
 
         ret = ""
+#        print(f"A {ret=}")
         if( self.namespace is not None ):
             ret += str(self.namespace) + "::"
+#        print(f"B {ret=}")
         ret += selfname
+#        print(f"{self.name=}")
+#        print(f"{selfname=}")
+#        print(f"C {ret=}")
         ret = self.shorten(ret)
+#        print(f"D {ret=}")
 
 #        print(f"STR {self.id}:{self.name} => {self.suppress_templates}")
         if( self.template_parameters is not None ):
@@ -327,8 +340,10 @@ def parse_fragment( frag, obj, level = 0 ):
 #            print(f"sofar use params '{sofar}'")
 #            vdb.util.bark() # print("BARK")
             obj.name = use_sofar(sofar)
+#            print(f"A1 {obj.name=}")
             sofar = ""
             obj.set_type("function")
+#            print(f"S1 {obj.name=}")
             while True:
                 ct = type_or_function()
                 ct.set_type("function parameter")
@@ -346,11 +361,13 @@ def parse_fragment( frag, obj, level = 0 ):
 #                    vdb.util.bark() # print("BARK")
 #                    print("ct.name = '%s'" % (ct.name,) )
                     obj.add_param(ct)
+#                    print(f"S2 {obj.name=}")
 #                print("obj.id = '%s'" % (obj.id,) )
                 if( frag[i] == ")" ):
                     if( ct.subobject is not None ):
                         obj.subobject = ct.subobject
                         obj.subobject.name = None
+#                        print(f"S3 {obj.name=}")
                         ct.subobject = None
                     break
 #            print("obj.name = '%s'" % (obj.name,) )
@@ -359,6 +376,7 @@ def parse_fragment( frag, obj, level = 0 ):
         if( s == ")" ):
 #            vdb.util.bark() # print("BARK")
             obj.name = use_sofar(sofar)
+#            print(f"A2 {obj.name=}")
 #            print("obj.name = '%s'" % (obj.name,) )
             if( i+1 < len(frag) and frag[i+1] == "(" ):
                 # a member funciton pointer special case thingie? parse parameters again I guess?
@@ -372,6 +390,7 @@ def parse_fragment( frag, obj, level = 0 ):
             return i
         if( s == ":" ):
             obj.add_ns( use_sofar(sofar) )
+#            print(f"S4 {obj.name=}")
             sofar = ""
             continue
         if( s == "," ):
@@ -381,9 +400,11 @@ def parse_fragment( frag, obj, level = 0 ):
                 obj.subobject = type_or_function()
                 obj.subobject.name = use_sofar(sofar)
                 obj.name="__UNNAMED_OBJECT__"
+#                print(f"S5 {obj.name=}")
             else:
 #            print("comma use_sofar '{sofar}'")
                 obj.name = use_sofar(sofar)
+#                print(f"A3 {obj.name=}")
             return i
         if( sofar in [ "operator", "operator<", "operator>" ] and s in "<>" ):
             pass
@@ -396,6 +417,7 @@ def parse_fragment( frag, obj, level = 0 ):
                 i -= 1
                 continue
             obj.name = use_sofar(sofar)
+#            print(f"A4 {obj.name=}")
 #            print(f"sofar before '{sofar}'")
 #            print(f"obj.name before '{obj.name}'")
             while True:
@@ -411,6 +433,7 @@ def parse_fragment( frag, obj, level = 0 ):
 #                print(f"after template fragment @{level} frag[{i}]='{frag[i]}'")
 #                print("ct.name = '%s'" % (ct.name,) )
                 obj.add_template( ct )
+#                print(f"S6 {obj.name=}")
 #                print("i = '%s'" % i )
 #                print("len(frag) = '%s'" % len(frag) )
 #                print("frag = '%s'" % (frag,) )
@@ -420,23 +443,34 @@ def parse_fragment( frag, obj, level = 0 ):
                 if( frag[i] == "," ):
                     continue
                 if( frag[i] == ">" ):
+#                    print(f"F1 {obj.name=}")
 #                    obj.name = use_sofar(sofar)
 #                    sofar = ""
 #                    print(f"tail: '{frag[i+1:]}'")
                     if( (i+1) < len(frag) ):
                         for tail in tmpl_tailset:
-                            if( frag[i+1:].startswith(tail) ):
+                            off = 1
+                            while i+off < len(frag):
+                                if( frag[i+off] == " " ):
+                                    off += 1
+                                else:
+                                    break
+#                            print(f"{tail=}")
+#                            print(f"{frag[i+off:]=}")
+                            if( frag[i+off:].startswith(tail) ):
                                 sub = type_or_function()
-                                if( frag[i+1] == ":" ):
+                                if( frag[i+off] == ":" ):
                                     sub.tail = "::"
-                                if( frag[i+1] == " " ):
+                                if( frag[i+off] == " " ):
                                     sub.tail = " "
 #                                print("replacing subobject")
                                 obj.subobject = sub
                                 obj = sub
+#                                print(f"S7 {obj.name=}")
 #                                obj.name = use_sofar(sofar)
                                 sofar = ""
                                 break
+#                    print(f"F2 {obj.name=}")
 #                    else:
 #                        i+=1
 #                    print("level = '%s'" % (level,) )
@@ -457,9 +491,11 @@ def parse_fragment( frag, obj, level = 0 ):
 #            print("obj.name = '%s'" % (obj.name,) )
 #            print("sofar = '%s'" % (sofar,) )
             if( obj.name is not None and len(sofar) > 0 and obj.name != sofar ):
+#                print(f"S8 {obj.name=}")
 #                print("Going subobject")
                 obj.subobject = type_or_function()
                 obj.subobject.name = use_sofar(sofar)
+#                print(f"B1 {obj.subobject.name=}")
             elif( obj.name is not None and len(sofar) == 0 ):
 #                print("Leaving name")
                 pass # leave the old name
@@ -467,17 +503,20 @@ def parse_fragment( frag, obj, level = 0 ):
 #                print("Old overwrite")
 #            if( len(sofar) > 0 ):
                 obj.name = use_sofar(sofar)
+#                print(f"A5 {obj.name=}")
             if( len(obj.name) == 0 ):
                 obj.name = None
             return i
-
+#        print(f"{sofar=} += {s=}")
         sofar += s
 
 #    print("len(frag) = '%s'" % (len(frag),) )
 #    print("at end i = '%s'" % (i,) )
     i += 1
     if( len(sofar) > 0 ):
+#        print(f"{sofar=}")
         obj.name = use_sofar(sofar)
+#        print(f"S9 {obj.name=}")
 #        print(f"exit obj.name '{obj.name}'")
     return i
 
@@ -491,9 +530,14 @@ def parse_function( fun, silent = False ):
     sub = func
     func.set_type("type_or_function")
 
+#    print(f"X0 {sub.name=}")
     rest = rest.replace("operator()","operator__CALL__")
+    rest = rest.replace("<union>","__UNION__")
     i = parse_fragment( rest , sub )
-    sub.name = sub.name.replace("operator__CALL__","operator()")
+    sub.replace_name("operator__CALL__","operator()")
+    sub.replace_name("__UNION__","<union>")
+
+#    print(f"X1 {sub.name=}")
 
 
 
@@ -513,6 +557,7 @@ def parse_function( fun, silent = False ):
     else:
         s0s = s0
         s1s = s1
+
 
     if( debug.value and s0s != s1s ):
         #		func.dump()

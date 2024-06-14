@@ -437,6 +437,9 @@ tests = [
                 "vdb shorten std::less<std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)2>*>",
                 "vdb shorten std::remove_reference<std::ios_base::<unnamed enum> >",
                 "vdb shorten s0<(end)1, void>",
+                "vdb shorten xtree::str::<union>::_M_allocated_capacity",
+                "vdb shorten xtree::str::<union>::_M_local_buf"
+
 
                     ],
                 "expect" : "shorten_function.exp",
