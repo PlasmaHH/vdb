@@ -1875,6 +1875,7 @@ ascii mockup:
                     line.append( vdb.color.colorl(offset_txt_fmt.value.format(offset = i.offset, maxlen = self.maxoffset ),color_offset.value))
 
             if( "x" in showspec ):
+                prejump += 1
                 if( ( xilist := xi_history.get(i.address,None) ) is not None ):
                     entry = ""
                     for xi in xilist:
