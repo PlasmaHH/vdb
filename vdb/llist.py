@@ -10,8 +10,8 @@ import vdb.pointer
 import gdb
 import gdb.types
 
-import traceback
 import re
+import time
 
 
 default_limit = vdb.config.parameter("vdb-llist-default-list-limit", 128 )
@@ -306,6 +306,10 @@ def scan( argv, bidirectional ):
     pt = prog.add_task( txt, total = int(work) )
     prog.start()
 
+    cnt_mod = 2500
+    t0 = time.time()
+    last_cnt = 0
+    next_cnt = 2500
     # old indicator: 7.3s
     try:
         cnt = 0
@@ -316,8 +320,22 @@ def scan( argv, bidirectional ):
                     if( cl >= min_chain.value ):
                         results.append( (cl, cn, bcn, start+sadd, offset, bdoffset ) )
                     cnt += 1
-                    if( cnt % 2500 == 0 ):
+                    if( cnt >= next_cnt ):
                         prog.update( pt, completed = cnt, description = txt % len(results) )
+                        t1 = time.time()
+                        td = t1-t0
+                        t0 = t1
+                        # strive for approx 20fps
+                        factor = 0.05 / td
+#                        print(f"{factor=}")
+                        cnt_mod = cnt - last_cnt
+#                        print(f"{cnt_mod=}")
+                        cnt_mod = int( factor * cnt_mod )
+
+#                        print(f"{cnt_mod=}")
+                        last_cnt = cnt
+                        next_cnt = cnt + cnt_mod
+#                        print(f"{td=}")
     except KeyboardInterrupt:
         print()
         print(f"Stopping scan, displaying {len(results)} partial results")
