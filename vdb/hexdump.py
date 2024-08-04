@@ -288,7 +288,7 @@ def annotate_block( block ):
             if( v.address is not None ):
                 annotate_var( v.address,v, v.type, i.name )
         except:
-            traceback.print_exc()
+            vdb.print_exc()
 #            pass
     if( block.superblock ):
         annotate_block( block.superblock )
@@ -401,7 +401,7 @@ We recommend having an alias hd = hexdump in your .gdbinit
         try:
             call_hexdump(argv)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
 #            pass
         self.dont_repeat()

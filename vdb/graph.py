@@ -174,7 +174,7 @@ class hist_process(graph_process):
             maxy *= 10
             self.axis.set_ylim(top=maxy)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
 
         return self.bar.patches
 
@@ -274,7 +274,7 @@ class plot_process(graph_process):
 #            maxy *= 10
 #            self.axis.set_ylim(top=maxy)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
         return self.lines
 #        return self.bar.patches
 
@@ -716,7 +716,7 @@ graph/rt <id>  - use relative timestamps with the id
                 extract_graph(argv)
 
         except Exception as e:
-            traceback.print_exc()
+            vdb.print_exc()
         self.dont_repeat()
         vdb.util.bark() # print("BARK")
 

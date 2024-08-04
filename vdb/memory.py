@@ -825,7 +825,7 @@ class memory_map:
                         mm.mtype = memory_type.FOREIGN_STACK
                         mm.thread = thread
         except gdb.error:
-#            traceback.print_exc()
+#            vdb.print_exc()
             pass
         finally:
             try:
@@ -1007,7 +1007,7 @@ Sets some memory to some value
         try:
             memset(argv[0],vdb.util.gint(argv[1]),vdb.util.gint(argv[2]))
         except Exception as e:
-            traceback.print_exc()
+            vdb.print_exc()
 
 cmd_memset()
 

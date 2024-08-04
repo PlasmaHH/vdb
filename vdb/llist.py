@@ -198,7 +198,7 @@ def show_list( argv, bidirectional ):
                     line.append( str(afv) )
             except Exception as e:
                 print("pae = '%s'" % (pae,) )
-                traceback.print_exc()
+                vdb.print_exc()
                 line.append( f"<{type(e).__module__}.{type(e).__name__}>")
 
         if( pcnt is not None ): # loops back
@@ -245,7 +245,7 @@ def chainlen( addr, offset, bdoffset, bidirectional ):
         except gdb.MemoryError:
             nval = None
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             nval = None
         # in the bidirectional case, check if the object at nval has a previous pointer, pointing back
         if( bidirectional and nval is not None ):
@@ -256,7 +256,7 @@ def chainlen( addr, offset, bdoffset, bidirectional ):
             except gdb.MemoryError:
                 bval = None
             except:
-                traceback.print_exc()
+                vdb.print_exc()
                 bval = None
             if( bval is None or bval != addr ):
                 nval = None
@@ -375,7 +375,7 @@ llist <list> <next>    - Output the <list> by using member <next> as the next it
 
             show_list( argv, bidirectional )
         except gdb.error as e:
-            traceback.print_exc()
+            vdb.print_exc()
             pass
 
 cmd_llist()

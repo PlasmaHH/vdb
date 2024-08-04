@@ -56,9 +56,12 @@ enable_entry     = vdb.config.parameter( "vdb-enable-entry",True)
 enable_rtos      = vdb.config.parameter( "vdb-enable-rtos",True)
 enable_xi        = vdb.config.parameter( "vdb-enable-xi",True)
 enable_list      = vdb.config.parameter( "vdb-enable-list",True)
+enable_list      = vdb.config.parameter( "vdb-enable-time",True)
 
 configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,xi,pahole,ftree,dashboard,hashtable,ssh,track"
-                                                                    ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos,xi,list" )
+                                                                    ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos,xi,list"
+                                                                    ",time" )
+
 
 home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)
 search_down     = vdb.config.parameter( "vdb-plugin-search-down",True)
@@ -66,7 +69,18 @@ honor_sp        = vdb.config.parameter( "vdb-plugin-honor-safe-path",True)
 max_threads     = vdb.config.parameter( "vdb-max-threads",4)
 inithome_first  = vdb.config.parameter( "vdb-init-home-first",True)
 initsearch_down = vdb.config.parameter( "vdb-init-search-down",True)
+rich_tracebacks = vdb.config.parameter( "vdb-rich-traceback",True)
 
+# enabling as early as possible gives the most value
+if( rich_tracebacks.value ):
+    import rich.traceback
+    rich.traceback.install(show_locals=True)
+
+def print_exc( ):
+    if( rich_tracebacks.value ):
+        vdb.util.console.print_exception( show_locals = True )
+    else:
+        vdb.print_exc()
 
 enabled_modules: Dict[str,ModuleType] = {}
 vdb_dir = None
@@ -209,9 +223,9 @@ def load_plugins( plugindir ):
                         vdb.util.log(f"Could not load plugin {plugindir}/{pt}/{fn}. {e}", level=vdb.util.Loglevel.warn)
                     except:
                         vdb.util.log(f"Error while loading plugin {plugindir}/{pt}/{fn}", level=vdb.util.Loglevel.error)
-                        traceback.print_exc()
+                        vdb.print_exc()
     except:
-        traceback.print_exc()
+        vdb.print_exc()
     finally:
         sys.path = oldpath
 
@@ -241,7 +255,7 @@ def load_themes( vdbdir ):
     except ModuleNotFoundError as e:
         vdb.util.log(f"Could not load theme {theme.value}: {e}", level=vdb.util.Loglevel.error)
     except:
-        traceback.print_exc()
+        vdb.print_exc()
     finally:
         sys.path = oldpath
 

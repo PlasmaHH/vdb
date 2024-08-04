@@ -256,7 +256,7 @@ eXecute Instructions ( and save data along the way )
             xi(num,filter,full,events)
 #            print (self.__doc__)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
         self.dont_repeat()
 

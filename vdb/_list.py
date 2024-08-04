@@ -262,7 +262,7 @@ list code
             do_list(argv,flags,context)
 #            print (self.__doc__)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
         self.dont_repeat()
 

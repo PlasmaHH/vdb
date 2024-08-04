@@ -129,7 +129,7 @@ class parameter(gdb.Parameter):
             else:
                 print(f"Sorry, we do not support appending for {vdb.util.gdb_type_code( self.original_type )}" )
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             self.value = self.previous_value
         self.previous_value = self.value
 
@@ -187,7 +187,7 @@ class parameter(gdb.Parameter):
             if( self.on_set is not None ):
                 self.on_set(self)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             self.value = self.previous_value
             raise
         self.previous_value = self.value
@@ -259,7 +259,7 @@ def set_string( s ):
         gdb.execute(f"set {s}")
     except:
         print(f"Failed to set {s}")
-#        traceback.print_exc()
+#        vdb.print_exc()
 
 def set_iterable( l ):
     for i in l:
@@ -283,7 +283,7 @@ def execute_string( s ):
         gdb.execute(f"{s}")
     except:
         print(f"Failed to execute {s}")
-#        traceback.print_exc()
+#        vdb.print_exc()
 
 def execute_iterable( l ):
     for i in l:

@@ -72,7 +72,7 @@ class command(gdb.Command,abc.ABC):
             vdb.pipe.call(pa[0],gout,pa[1:])
             return
         except:
-#            traceback.print_exc()
+#            vdb.print_exc()
             pass
         self.do_invoke(argv)
 
@@ -137,7 +137,7 @@ class command(gdb.Command,abc.ABC):
             else:
                 self.invoke_or_pipe(arg,argv)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
 
     def message( self, msg, text ):

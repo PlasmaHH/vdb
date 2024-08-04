@@ -351,7 +351,7 @@ class cmd_fz (vdb.command.command):
             print( vdb.prompt.refresh_prompt() + "fz ", end = "" )
             return self.last_returned
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
             pass
         return []

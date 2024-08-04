@@ -230,7 +230,7 @@ Additionally a table tells you details about the amount of chain lengths and how
         try:
             eval_hashtable(a0)
         except gdb.error:
-            traceback.print_exc()
+            vdb.print_exc()
         self.dont_repeat()
 
 cmd_hashtable()

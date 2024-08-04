@@ -184,7 +184,7 @@ def std_tree_member( m, val, path ):
                 node_type = node_type.strip_typedefs()
                 return node_type
         except gdb.error:
-            traceback.print_exc()
+            vdb.print_exc()
             pass
 
     return None
@@ -653,7 +653,7 @@ class ftree:
                 rettr.append(xtr)
         except:
 #            print("EXCEPTION")
-            traceback.print_exc()
+            vdb.print_exc()
 #        finally:
 #            print("FINALLY")
 
@@ -717,7 +717,7 @@ class ftree:
                 except gdb.MemoryError:
                     rettd["bgcolor"] = color_invalid.value
                 except:
-                    traceback.print_exc()
+                    vdb.print_exc()
                     rettd["bgcolor"] = color_invalid.value
                 rettd.content = "*" + "{:#0x}".format(int(fval))
             elif( real_type.code == gdb.TYPE_CODE_REF ):
@@ -735,7 +735,7 @@ class ftree:
                     rettd["bgcolor"] = color_invalid.value
                 except:
                     rettd["bgcolor"] = color_invalid.value
-                    traceback.print_exc()
+                    vdb.print_exc()
                     pass
 #                rettd.content = "@" + str(fval)
             elif( real_type.code == gdb.TYPE_CODE_STRUCT ):
@@ -751,7 +751,7 @@ class ftree:
 #                        rettd.content = "NONE real code %s" % vdb.util.gdb_type_code(real_type.code)
 #                    return ( rettd, ptrlist, True )
                 except:
-                    traceback.print_exc()
+                    vdb.print_exc()
                     pass
             elif( real_type.code == gdb.TYPE_CODE_ARRAY ):
 #                print("real_type.range() = '%s,%s'" % real_type.range() )
@@ -790,11 +790,11 @@ class ftree:
 #                    print("elements = '%s'" % elements )
                     rettd.set(str(fval))
         except gdb.MemoryError:
-            traceback.print_exc()
+            vdb.print_exc()
             pass
         except:
 #            print("BARK")
-            traceback.print_exc()
+            vdb.print_exc()
             pass
         sw.stop()
         vdb.cache.add_time(sw.get(),"table_entry")
@@ -833,7 +833,7 @@ class ftree:
 #            print("val.is_lazy = '%s'" % val.is_lazy )
 #            print("val = '%s'" % val )
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             pass
 
     def check_for_array( self, ptr ):
@@ -1028,7 +1028,7 @@ class ftree:
             vptr = val["__vptr"] # XXX Check how different compilers do it
             vindent(4,level,"vptr = '%s'" % (vptr,) )
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             pass
 
         dval = val.dereference()
@@ -1242,7 +1242,7 @@ ftree <pointer>|<variable> [<limit>]  - It takes a pointer to some object or a v
                 try:
                     px = a1.cast(px.type)
                 except:
-                    traceback.print_exc()
+                    vdb.print_exc()
                     px = None
                     pass
 
@@ -1263,7 +1263,7 @@ ftree <pointer>|<variable> [<limit>]  - It takes a pointer to some object or a v
             try:
                 f.ftree( val, 0, limit, g )
             except:
-                traceback.print_exc()
+                vdb.print_exc()
 #            import cProfile
 #            cProfile.runctx("f.ftree( val, 0, limit, g )",globals(),locals())
 #            print("f.edge_redirects = '%s'" % f.edge_redirects )
@@ -1285,7 +1285,7 @@ ftree <pointer>|<variable> [<limit>]  - It takes a pointer to some object or a v
             os.system(cmd)
             vdb.cache.dump()
         except Exception as e:
-            traceback.print_exc()
+            vdb.print_exc()
         self.dont_repeat()
 
 cmd_ftree()

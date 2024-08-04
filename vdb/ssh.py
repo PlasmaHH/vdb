@@ -648,7 +648,7 @@ class cmd_ssh (vdb.command.command):
         try:
             call_ssh(argv)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
             pass
         self.dont_repeat()

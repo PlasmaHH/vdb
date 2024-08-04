@@ -462,11 +462,11 @@ Remember that you can use dash as short as long as no other command collides wit
 #            cProfile.runctx("call_dashboard(argv)",globals(),locals())
             call_dashboard(argv)
         except gdb.error as ge:
-#            traceback.print_exc()
+#            vdb.print_exc()
             vdb.util.log(f"dashboard: {ge}", level=vdb.util.Loglevel.warn)
 
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
             pass
         self.dont_repeat()

@@ -193,7 +193,7 @@ pahole/e - expanded output, showing each byte on one line (the default)
                 sobj = sobj.dereference()
                 stype = ptype.target()
                 ptype = stype.strip_typedefs()
-#            traceback.print_exc()
+#            vdb.print_exc()
 
         if ptype.code not in { gdb.TYPE_CODE_STRUCT, gdb.TYPE_CODE_UNION }:
             raise gdb.GdbError('%s is not a struct/union type: %s' % (" ".join(argv), vdb.util.gdb_type_code(ptype.code)))
@@ -201,7 +201,7 @@ pahole/e - expanded output, showing each byte on one line (the default)
             xl = vdb.layout.object_layout(stype,sobj)
             print_pahole(xl,condensed)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
 
 cmd_pahole()
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

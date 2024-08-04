@@ -801,7 +801,7 @@ def async_load_typedefs( at ):
         load_typedefs( at )
         print("Finished loading typelist")
     except:
-        traceback.print_exc()
+        vdb.print_exc()
     finally:
         at.set_progress(None)
     global lazy_task

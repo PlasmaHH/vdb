@@ -116,7 +116,7 @@ def guess_intrep( val ):
 #            return (pc, "")
         return ( str(val), None )
     except:
-        traceback.print_exc()
+        vdb.print_exc()
         return ( str(val), None )
 
 def int_range( saved, frm, to, stopvalues = set() ):
@@ -473,7 +473,7 @@ def va_print( arg ):
                 rco = fixed_int_color.value
             funcstr += vdb.color.color(str(rval),rco)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             funcstr += vdb.color.color("?",fixed_int_color.value)
             break
 
@@ -506,7 +506,7 @@ def va_print( arg ):
                 rco = fixed_float_color.value
             funcstr += vdb.color.color(str(rval),rco)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
 
             funcstr += vdb.color.color("?",fixed_int_color.value)
 
@@ -615,7 +615,7 @@ class cmd_va (vdb.command.command):
                     return
             va_print(argv)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
             pass
         self.dont_repeat()

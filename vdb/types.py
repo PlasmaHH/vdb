@@ -79,7 +79,7 @@ def progress_refresh_locations( at ):
     try:
         refresh_locations(at)
     except:
-        traceback.print_exc()
+        vdb.print_exc()
         pass
     finally:
         ctags = None
@@ -264,7 +264,7 @@ class cmd_types (vdb.command.command):
 
 
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
             pass
         self.dont_repeat()

@@ -47,7 +47,7 @@ class fake_unwinder(gdb.unwinder.Unwinder):
                 return None
         except:
             print("fake_unwind __call__")
-            traceback.print_exc()
+            vdb.print_exc()
         return None
 
     def reset( self ):
@@ -418,7 +418,7 @@ class cmd_rtos(vdb.command.command):
         try:
             rtos(argv)
         except Exception as e:
-            traceback.print_exc()
+            vdb.print_exc()
         finally:
             global unwinder
             if( unwinder is not None ):

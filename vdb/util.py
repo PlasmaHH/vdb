@@ -11,6 +11,8 @@ import types
 import functools
 import logging
 import logging.handlers
+import rich.console
+import rich.progress
 
 from enum import Enum,auto
 import os
@@ -311,7 +313,7 @@ def guess_vptr_type( val ):
             val = val.cast(gdb_vptype.pointer())
         return val
     except:
-        traceback.print_exc()
+        vdb.print_exc()
         return val
 
 id_store = { }
@@ -564,7 +566,7 @@ class async_task:
                 time.sleep(0) # necessary so the start function below can exit
             self.task(self,*self.args)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
         finally:
             self.progress = None
 
@@ -690,7 +692,7 @@ class Enum(Enum):
         try:
             return cls[s]
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             return default
 
 class spinner_types(Enum):
@@ -988,6 +990,9 @@ def is_started( ):
         return True
     except:
         return False
+
+# Since we are wrapped rich won't detect the console capabilities directly
+console = rich.console.Console( force_terminal = True, color_system = "truecolor" )
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

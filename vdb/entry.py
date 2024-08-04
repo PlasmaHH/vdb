@@ -40,7 +40,7 @@ class cmd_entry(vdb.command.command):
         try:
             entry(argv)
         except Exception: # pylint: disable=try-except-raise
-#            traceback.print_exc()
+#            vdb.print_exc()
             raise
 
 cmd_entry()

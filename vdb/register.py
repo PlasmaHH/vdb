@@ -731,7 +731,7 @@ class Registers():
                     xval.append("INVALID")
                     print("tname = '%s'" % (tname,) )
                     print("i = '%s'" % (i,) )
-                    traceback.print_exc()
+                    vdb.print_exc()
 
         yval=[]
 #        print("len(xval) = '%s'" % len(xval) )
@@ -782,7 +782,7 @@ class Registers():
             if( gs_base is not None ):
                 self.segs[self.get("gs")] = ( gs_base, None )
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             pass
         return self.prefixes(filter)
 
@@ -1428,7 +1428,7 @@ We recommend having an alias reg = registers in your .gdbinit
             registers = nrr
         except Exception as e:
             print("When trying to make sense out of registers, we encountered an exception: %s" % e )
-            traceback.print_exc()
+            vdb.print_exc()
 
     def maybe_update( self ):
         global registers
@@ -1478,7 +1478,7 @@ We recommend having an alias reg = registers in your .gdbinit
 #            print("m = '%s'" % (m,) )
             return m
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             pass
         return []
 
@@ -1572,7 +1572,7 @@ We recommend having an alias reg = registers in your .gdbinit
 #                self.do_invoke( [ f"/{flags}" ] + argv, legend = False )
 #            else:
         except Exception as e:
-                traceback.print_exc()
+                vdb.print_exc()
 
         # Identify the cases where we can re-use the information gathered. Maybe refactor Registers() to always read
         # values on demand?

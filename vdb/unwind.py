@@ -116,7 +116,7 @@ class unwind_filter(gdb.unwinder.Unwinder):
                 return None
         except:
             print("unwind __call__")
-            traceback.print_exc()
+            vdb.print_exc()
 
     def record( self, frameno, pf ):
         self.cache[frameno] = frame_info(pf)
@@ -231,7 +231,7 @@ class unwind_filter(gdb.unwinder.Unwinder):
                     unwind_info.add_saved_register(rnum,rval)
                 except:
                     print("rnum = '%s'" % (rnum,) )
-                    traceback.print_exc()
+                    vdb.print_exc()
             unwind_info.add_saved_register("pc",fid.pc)
             unwind_info.add_saved_register("sp",fid.sp)
             unwind_info.add_saved_register("rbp",r.rbp)
@@ -270,7 +270,7 @@ class unwind_filter(gdb.unwinder.Unwinder):
                     unwind_info.add_saved_register(rnum,rval)
                 except:
                     print("rnum = '%s'" % (rnum,) )
-                    traceback.print_exc()
+                    vdb.print_exc()
 
 
             unwind_info.add_saved_register("pc",fid.pc)
@@ -319,7 +319,7 @@ class unwind_dispatch(gdb.unwinder.Unwinder):
                 return None
         except:
             print("unwind __call__")
-            traceback.print_exc()
+            vdb.print_exc()
 
     def current_unwinder( self, tid = None ):
         if( tid  is None ):
@@ -401,7 +401,7 @@ def hint( argv ):
                 dis=gdb.execute(cmd,False,True)
             except:
                 print("Failed: cmd = '%s'" % (cmd,) )
-                traceback.print_exc()
+                vdb.print_exc()
                 dis=None
             dis = dis.splitlines()
 #            rng = dis[0]
@@ -521,7 +521,7 @@ class cmd_unwind (vdb.command.command):
             else:
                 raise Exception("unwind got %s arguments, expecting 0 or 1" % len(argv) )
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
             pass
         self.dont_repeat()

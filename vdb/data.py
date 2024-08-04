@@ -61,7 +61,7 @@ class cmd_data (vdb.command.command):
 
 
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
             pass
 

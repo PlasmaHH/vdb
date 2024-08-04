@@ -48,7 +48,7 @@ class cmd_profile (vdb.command.command):
                 p.sort_stats("tottime").print_stats()
 
         except: # pylint: disable=try-except-raise
-#            traceback.print_exc()
+#            vdb.print_exc()
             raise
 
         self.dont_repeat()

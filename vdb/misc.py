@@ -28,13 +28,13 @@ class cmd_toggle(vdb.command.command):
                             par = not par
                             gdb.set_parameter(cfg,{True:"on",False:"off"}[par])
                     except:
-                        traceback.print_exc()
+                        vdb.print_exc()
                         print(f"gdb does not know parameter '{cfg}'")
             else:
                 raise RuntimeError(f"toggle got {len(argv)} arguments, expecting 1 or more")
 
         except: # pylint: disable=try-except-raise
-#            traceback.print_exc()
+#            vdb.print_exc()
             raise
 
         self.dont_repeat()

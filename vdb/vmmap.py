@@ -270,7 +270,7 @@ def visual( argv, regions = None ):
 #                    else:
 #                        gdb.inferiors()[0].threads()[0].handle()
                 except:
-#                    traceback.print_exc()
+#                    vdb.print_exc()
                     ro_color = None
                     pass
                 if( region.atype == vdb.memory.access_type.ACCESS_EX ):
@@ -336,7 +336,7 @@ vmmap <cspec> - uses this colorspec
                             addr = int(addr)
                             argv = argv[1:]
                         except:
-#                            traceback.print_exc()
+#                            vdb.print_exc()
                             pass
                         if( len(argv) > 0 ):
                             colorspec = argv[0]
@@ -344,7 +344,7 @@ vmmap <cspec> - uses this colorspec
                         if( addr is not None ):
                             return show_region( addr, colorspec )
                 except:
-                    traceback.print_exc()
+                    vdb.print_exc()
                     return
                     pass
             else:
@@ -353,7 +353,7 @@ vmmap <cspec> - uses this colorspec
             vdb.memory.print_legend(colorspec)
             vdb.memory.mmap.print(colorspec,short)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
             pass
         self.dont_repeat()

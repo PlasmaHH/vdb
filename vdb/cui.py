@@ -161,7 +161,7 @@ cui scan      - Scan configured list of directories and (re)reads the found cui 
         try:
             curses.wrapper( cui_loop )
         except Exception as e:
-            traceback.print_exc()
+            vdb.print_exc()
         print("curses.COLORS = '%s'" % (curses.COLORS,) )
         print("curses.COLOR_PAIRS = '%s'" % (curses.COLOR_PAIRS,) )
 

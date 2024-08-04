@@ -415,7 +415,7 @@ class asm_arg_base( ):
         try:
             self.parse(arg)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             print("Failed to parse " + arg)
             raise
         self.arg_string = arg
@@ -2374,7 +2374,7 @@ def fix_marker( ls, alt = None, frame = None, do_flow = True ):
 #        print(f"{last_working_pc=} = {mark=:#0x}")
     except gdb.error:
 #        vdb.util.bark() # print("BARK")
-#        traceback.print_exc()
+#        vdb.print_exc()
         try:
 #            print(f"{alt=}")
 #            vdb.util.bark() # print("BARK")
@@ -2388,7 +2388,7 @@ def fix_marker( ls, alt = None, frame = None, do_flow = True ):
 #            print(f"{vdb.util.gdb_type_code(mark.type.code)=}")
         except gdb.error:
 #            vdb.util.bark() # print("BARK")
-#            traceback.print_exc()
+#            vdb.print_exc()
             mark = None
 #    vdb.util.bark() # print("BARK")
 #    if( mark is not None ):
@@ -2480,7 +2480,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
 #            print(f"{int(pval.address)=:#0x}")
 #            print(f"gather_vars({frame=},{lng=},symlist,{str(pval)=},{prefix=},{reglist=},{level=}")
 #        except:
-#            traceback.print_exc()
+#            vdb.print_exc()
     if( level >= gv_limit.value ):
         return ""
     level += 1
@@ -2548,7 +2548,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                     baddr = xbaddr
         except gdb.error as e:
             if( str(e).find("optimized out") == -1 ):
-                traceback.print_exc()
+                vdb.print_exc()
                 vdb.util.bark() # print("BARK")
                 print("pval = '%s'" % (pval,) )
                 print("pval.type = '%s'" % (pval.type,) )
@@ -2563,7 +2563,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
         except KeyboardInterrupt:
             raise
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             print("b.name = '%s'" % (b.name,) )
             print("pval = '%s'" % (pval,) )
             pass
@@ -2582,14 +2582,14 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
         except KeyboardInterrupt:
             raise
         except:
-#            traceback.print_exc()
+#            vdb.print_exc()
             pass
         try:
             ret += gather_vars( frame, lng, b.type.fields(), xbval, prefix + b.name + ".", [], level )
         except KeyboardInterrupt:
             raise
         except:
-#            traceback.print_exc()
+#            vdb.print_exc()
             pass
 
         try:
@@ -2597,7 +2597,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
         except KeyboardInterrupt:
             raise
         except:
-#            traceback.print_exc()
+#            vdb.print_exc()
             pass
 
 #        try:
@@ -2660,10 +2660,10 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                         ret += " = <...>"
                 ret += ","
         except AttributeError:
-#            traceback.print_exc()
+#            vdb.print_exc()
             pass
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             print("bval = '%s'" % (bval,) )
             print("bval.address = '%s'" % (bval.address,) )
             print("bval.type = '%s'" % (bval.type,) )
@@ -3758,10 +3758,10 @@ def register_flow( lng, frame : "gdb frame" ):
                                     ins_references.append( "%=" + vdb.color.color(fav,color_location.value) )
                 except:
                     extra.value += "EXCEPTION"
-                    traceback.print_exc()
+                    vdb.print_exc()
 
                     if( debug_all(ins) ):
-                        traceback.print_exc()
+                        vdb.print_exc()
                     pass
 #            for irx in range(0,len(ins_references)-1):
 #                ins_references[irx] = ins_references[irx] + ","
@@ -3794,7 +3794,7 @@ def register_flow( lng, frame : "gdb frame" ):
             except:
                 ins.reference.append(opr)
                 if( debug_all(ins) ):
-                    traceback.print_exc()
+                    vdb.print_exc()
 
 
         if( debug_registers.value ):
@@ -3846,7 +3846,7 @@ def parse_from( arg, fakedata = None, context = None, arch = None ):
             return parse_from("$pc,"+nfbytes)
         else:
             print("e = '%s'" % e )
-            traceback.print_exc()
+            vdb.print_exc()
             raise e
 
     return ret
@@ -4202,7 +4202,7 @@ def disassemble( argv ):
             g.write("dis.dot")
             os.system("nohup dot -Txlib dis.dot &")
     except:
-        traceback.print_exc()
+        vdb.print_exc()
         pass
     return None
 
@@ -4228,7 +4228,7 @@ def get_single_tuple( bpos, showspec_filter = "abomjhHcdtT", extra_filter = "", 
         rets = ret[1]
         reti = li.instructions[0]
     except:
-        traceback.print_exc()
+        vdb.print_exc()
         pass
     return (rets,reti)
 
@@ -4265,7 +4265,7 @@ part of a function, unlike the disassemble command those are right away disassem
         except gdb.error as e:
             print("asm: %s" % e)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
             pass
         self.dont_repeat()
@@ -4282,7 +4282,7 @@ if __name__ == "__main__":
     try:
         disassemble( sys.argv[1:] )
     except:
-        traceback.print_exc()
+        vdb.print_exc()
         pass
 
 # TODO/Ideas

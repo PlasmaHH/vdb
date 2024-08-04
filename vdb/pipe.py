@@ -94,7 +94,7 @@ class cmd_external(vdb.command.command):
 #            print("argv = '%s'" % (argv,) )
             subprocess.run( cmd , encoding = "utf-8", check=False )
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
 #            pass
         self.dont_repeat()
@@ -135,7 +135,7 @@ class cmd_wrap(vdb.command.command):
         except gdb.error as e:
             print(e)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
 #            pass
         self.dont_repeat()

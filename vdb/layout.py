@@ -177,7 +177,7 @@ def get_vtt_name( atype, name = None ):
         VTT=g.group(1)
 #        print("VTT = '%s'" % VTT )
     except:
-#        traceback.print_exc()
+#        vdb.print_exc()
         pass
     return VTT
 

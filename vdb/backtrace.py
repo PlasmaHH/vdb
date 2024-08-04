@@ -571,7 +571,7 @@ def do_backtrace( argv ):
         print("backtrace: %s" % e)
         pass
     except:
-        traceback.print_exc()
+        vdb.print_exc()
         pass
     finally:
         bf.enabled = True

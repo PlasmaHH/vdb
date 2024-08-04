@@ -297,7 +297,7 @@ def do_continue( ):
     continues -= 1
 #    print("GDB EXECUTE CONTINUE")
     try:
-        traceback.print_exc()
+        vdb.print_exc()
         gdb.execute("continue",True)
     # somehow we schedule two of them, for now just suppress the error
     except gdb.error:
@@ -323,7 +323,7 @@ def do_finish( ):
 #        gdb.execute("finish")
     # somehow we schedule two of them, for now just suppress the error
     except gdb.error:
-        traceback.print_exc()
+        vdb.print_exc()
         traceback.print_stack()
         pass
 
@@ -440,7 +440,7 @@ def stop( bpev ):
                             cont = True
     except Exception as e:
         print("e = '%s'" % e )
-#        traceback.print_exc()
+#        vdb.print_exc()
         pass
 
 
@@ -474,7 +474,7 @@ def stop( bpev ):
                     cont = True
     except Exception as e:
         print("e = '%s'" % e )
-#        traceback.print_exc()
+#        vdb.print_exc()
         pass
 #    vdb.util.bark() # print("BARK")
 #    print("cont = '%s'" % (cont,) )
@@ -696,7 +696,7 @@ class track_item(track_item_base):
             self.save_data(now,str(val))
         except Exception as e:
             print("e = '%s'" % e )
-            traceback.print_exc()
+            vdb.print_exc()
             pass
         return False
 
@@ -1046,7 +1046,7 @@ You should have a look at the data and graph modules, which can take the data fr
             else:
                 print (self.__doc__)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
             raise
             pass
         self.dont_repeat()
@@ -1091,7 +1091,7 @@ class finish_breakpoint( gdb.FinishBreakpoint ):
 #        try:
 #            print("self.return_value = '%s'" % (self.return_value,) )
 #        except:
-#            traceback.print_exc()
+#            vdb.print_exc()
 #        print("self.return_value = '%s'" % (self.return_value,) )
 
     def stop( self ):
@@ -1165,7 +1165,7 @@ class track_action:
         try:
             return self.get(expression,way)
         except:
-            traceback.print_exc()
+            vdb.print_exc()
 #            print(f"{gdb.selected_thread().ptid=}")
             return None
 
@@ -1416,7 +1416,7 @@ class hexdump_track_action( track_action ):
 #                print("self.buffer_expression = '%s'" % (self.buffer_expression,) )
 #                print("self.size_expression = '%s'" % (self.size_expression,) )
             except:
-                traceback.print_exc()
+                vdb.print_exc()
                 # ok, something went wrong, silently ignore it and try the next tuple
                 pass
 #            break
@@ -1544,7 +1544,7 @@ class extended_track_item:
                     ai.fin_bp = finish_breakpoint( frame, ai )
 #                    oret = None
             except:
-                traceback.print_exc()
+                vdb.print_exc()
                 pass
 #        print(f"{oret=}")
         return oret
