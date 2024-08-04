@@ -50,7 +50,6 @@ def svd_load(idname,keep):
             return
         svd_load_file(d,None)
         d = devices.get(idname,None)
-        d.load(not keep)
     d.load(not keep)
 
 amap = {
