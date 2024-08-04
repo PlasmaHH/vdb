@@ -897,6 +897,8 @@ def svd_queue_file(fname,at):
     # XXX Handle differently versioned files here too
     with any_open(fname) as f:
         for line in f.readlines():
+            if( not isinstance(line,str) ):
+                line = line.decode()
             if( device_re.search(line) is not None ):
 #                print("line = '%s'" % (line,) )
                 within_device = True
@@ -1038,7 +1040,6 @@ def do_svd_scan_one(dirname,at,filter_re):
     filter_re = None
     if( scan_filter.value is not None and len(scan_filter.value) > 0 ):
         filter_re = re.compile(scan_filter.value)
-    pi = None
     pt = None
 
     prog = vdb.util.progress_bar(num_completed = True, spinner = True)
@@ -1046,10 +1047,8 @@ def do_svd_scan_one(dirname,at,filter_re):
     if( filter_re is not None ):
         xtra="up to "
     if( parse_delayed.value and at is None ):
-        pi = vdb.util.progress_indicator(f"\rQueueing {xtra}{len(pathlist)} SVD Files ",total=len(pathlist),use_eta=True,cps=20,avg_steps=len(pathlist)*0.3)
         pt = prog.add_task( f"Queueing {xtra}{len(pathlist)} SVD Files ", total = len(pathlist) )
     if( not parse_delayed.value and at is None and scan_silent.value ):
-        pi = vdb.util.progress_indicator(f"\rParsing {xtra}{len(pathlist)} SVD Files ",total=len(pathlist),use_eta=True,cps=2,avg_steps=len(pathlist)*0.1)
         pt = prog.add_task(f"Parsing {xtra}{len(pathlist)} SVD Files ", total = len(pathlist)  )
     print(f"{pt=}")
     if( pt is not None ):
@@ -1065,14 +1064,12 @@ def do_svd_scan_one(dirname,at,filter_re):
             at.set_progress(f"[svd {i}/{len(pathlist)}]")
         try:
             if( parse_delayed.value ):
-                if( pi is not None ):
-                    print(pi.get(pos=i),end="",flush=True)
+                if( pt is not None ):
+                    prog.update( pt, completed = i )
                 svd_queue_file(p,at)
             else:
                 if( pt is not None ):
                     prog.update( pt, completed = i )
-#                if( pi is not None ):
-#                    print(pi.get(pos=i),end="",flush=True)
                 svd_load_file(p,at)
         except KeyboardInterrupt:
             prog.stop()
@@ -1081,8 +1078,6 @@ def do_svd_scan_one(dirname,at,filter_re):
             vdb.print_exc()
             print(f"Failed to load {p}")
     prog.stop()
-    if( pi is not None ):
-        print(pi.get(pos=len(pathlist)),flush=True)
 
 #    if( parse_delayed.value and at is None ):
 #        print("Done")
