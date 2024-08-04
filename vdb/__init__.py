@@ -365,16 +365,9 @@ atexit.register(exit)
 
 log = vdb.util.log
 
-def stripped_lines( string ):
-    for line in string.split("\n"):
-        line = line.strip()
-        if( len(line) == 0 ):
-            continue
-        yield line
-
 def rich_theme( ts ):
     theme = {}
-    for l in stripped_lines(ts):
+    for l in vdb.util.stripped_lines(ts):
         name,style = l.split(maxsplit=2)
         theme[name] = style
     if( len(theme) > 0 ):

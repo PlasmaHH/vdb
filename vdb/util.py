@@ -1011,5 +1011,13 @@ def progress_bar( bar_width = 120, complete_style = "bar.complete", style = "bar
     ret = rich.progress.Progress( *dcol,console = console )
     return ret
 
+def stripped_lines( string ):
+    for line in string.split("\n"):
+        line = line.strip()
+        if( len(line) == 0 ):
+            continue
+        yield line
+
+
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
