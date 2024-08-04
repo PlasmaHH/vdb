@@ -994,7 +994,7 @@ def is_started( ):
 # Since we are wrapped rich won't detect the console capabilities directly
 console = rich.console.Console( force_terminal = True, color_system = "truecolor" )
 
-def progress_bar( bar_width = 120, complete_style = "bar.complete", style = "bar.back", spinner = None, num_completed = False ):
+def progress_bar( bar_width = 120, complete_style = "bar.complete", style = "bar.back", spinner = None, num_completed = False, download = False, speed = False ):
     dcol = list(rich.progress.Progress.get_default_columns())
     dcol[1] = rich.progress.BarColumn( bar_width = bar_width, complete_style = complete_style, style = style )
     if( num_completed ):
@@ -1004,6 +1004,10 @@ def progress_bar( bar_width = 120, complete_style = "bar.complete", style = "bar
             dcol.insert( 2, rich.progress.SpinnerColumn(spinner_name=spinner ) )
         else:
             dcol.insert( 2, rich.progress.SpinnerColumn( ) )
+    if( speed ):
+        dcol.insert( 2, rich.progress.TransferSpeedColumn( ) )
+    if( download ):
+        dcol.insert( 2, rich.progress.DownloadColumn( ) )
     ret = rich.progress.Progress( *dcol,console = console )
     return ret
 

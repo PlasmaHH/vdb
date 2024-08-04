@@ -300,10 +300,13 @@ def scan( argv, bidirectional ):
         bdrange = 1
 
     work = scan_offset.value * bdrange * ( size / ptrbytes )
-    txt = f"Scanning address range {int(start):#0x} - {int(start+size):#0x} ( %s/{work} lists, %s found )"
-    spin = vdb.util.spinner_types.get(scan_spintype.value,vdb.util.spinner_types.ascii) 
-    pi = vdb.util.progress_indicator( txt, total = work, use_eta = True, avg_steps = 100, spintype = spin )
+    txt = f"Scanning address range {int(start):#0x} - {int(start+size):#0x} ( %s found )"
 
+    prog = vdb.util.progress_bar(num_completed = False, speed = True, download = True)
+    pt = prog.add_task( txt, total = int(work) )
+    prog.start()
+
+    # old indicator: 7.3s
     try:
         cnt = 0
         for offset in range( 0, scan_offset.value ):
@@ -313,12 +316,12 @@ def scan( argv, bidirectional ):
                     if( cl >= min_chain.value ):
                         results.append( (cl, cn, bcn, start+sadd, offset, bdoffset ) )
                     cnt += 1
-                    if( cnt % 10000 == 0 ):
-                        ps = pi.get(pos = cnt, text = txt % (cnt,len(results)) )
-                        print(f"\r{ps}",end="",flush=True)
+                    if( cnt % 2500 == 0 ):
+                        prog.update( pt, completed = cnt, description = txt % len(results) )
     except KeyboardInterrupt:
         print()
         print(f"Stopping scan, displaying {len(results)} partial results")
+    prog.stop()
 
     results.sort(reverse=True)
    
@@ -364,14 +367,13 @@ llist <list> <next>    - Output the <list> by using member <next> as the next it
         try:
             global verbose
             verbose = False
-            if( argv0[0] == "/" ):
-                argv = argv[1:]
-                if( "v" in argv0 ):
-                    verbose = True
-                if( "b" in argv0 ):
-                    bidirectional = True
-                if( "s" in argv0 ):
-                    return scan( argv, bidirectional )
+            argv,flags = self.flags(argv)
+            if( "v" in flags ):
+                verbose = True
+            if( "b" in flags ):
+                bidirectional = True
+            if( "s" in flags ):
+                return scan( argv, bidirectional )
 
             show_list( argv, bidirectional )
         except gdb.error as e:
