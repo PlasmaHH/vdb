@@ -1023,15 +1023,6 @@ def stop_parsing( ):
     global keep_parsing
     keep_parsing = False
 
-import rich.progress
-def progress_bar( bar_width = 120, complete_style = None, style = None, spinner = None ):
-    dcol = list(rich.progress.Progress.get_default_columns())
-#    dcol[1] = rich.progress.BarColumn( bar_width = bar_width, complete_style = complete_style, style = style )
-    if( spinner is not None ):
-        dcol.insert( 2, rich.progress.SpinnerColumn( ) )
-    ret = rich.progress.Progress( *dcol,console = vdb.util.console )
-    return ret
-
 def do_svd_scan_one(dirname,at,filter_re):
     global keep_parsing
     keep_parsing = True
@@ -1050,25 +1041,7 @@ def do_svd_scan_one(dirname,at,filter_re):
     pi = None
     pt = None
 
-    prog = progress_bar()
-    prog.start()
-    print(f"{prog=}")
-
-
-
-#    console.print("[red]HELL[/]O?")
-#    with rich.progress.Progress(*dcol,expand=True,console=console) as p:
-#        t0 = p.add_task( "Parsing...", total = 377 )
-#        t1 = p.add_task( "Doing things and Parsing...", total = 377 )
-#        for i in range(0,377):
-#            time.sleep(0.25)
-#            p.update( t0, completed = i , description = f"File {i}" )
-#            p.update( t1, completed = i/7 )
-
-
-
-
-
+    prog = vdb.util.progress_bar(num_completed = True, spinner = True)
     xtra=""
     if( filter_re is not None ):
         xtra="up to "
@@ -1079,8 +1052,8 @@ def do_svd_scan_one(dirname,at,filter_re):
         pi = vdb.util.progress_indicator(f"\rParsing {xtra}{len(pathlist)} SVD Files ",total=len(pathlist),use_eta=True,cps=2,avg_steps=len(pathlist)*0.1)
         pt = prog.add_task(f"Parsing {xtra}{len(pathlist)} SVD Files ", total = len(pathlist)  )
     print(f"{pt=}")
-    if( pt is None ):
-        prog.stop()
+    if( pt is not None ):
+        prog.start()
 
     for i,p in enumerate(pathlist):
         if( not keep_parsing ):

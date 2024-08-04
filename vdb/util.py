@@ -994,5 +994,18 @@ def is_started( ):
 # Since we are wrapped rich won't detect the console capabilities directly
 console = rich.console.Console( force_terminal = True, color_system = "truecolor" )
 
+def progress_bar( bar_width = 120, complete_style = "bar.complete", style = "bar.back", spinner = None, num_completed = False ):
+    dcol = list(rich.progress.Progress.get_default_columns())
+    dcol[1] = rich.progress.BarColumn( bar_width = bar_width, complete_style = complete_style, style = style )
+    if( num_completed ):
+        dcol.insert(2, rich.progress.MofNCompleteColumn() )
+    if( spinner is not None ):
+        if( isinstance(spinner,str) ):
+            dcol.insert( 2, rich.progress.SpinnerColumn(spinner_name=spinner ) )
+        else:
+            dcol.insert( 2, rich.progress.SpinnerColumn( ) )
+    ret = rich.progress.Progress( *dcol,console = console )
+    return ret
+
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

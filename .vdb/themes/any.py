@@ -177,4 +177,8 @@ vdb-vmmap-colors-readonly           #f03
 vdb-config-verbosity default
 """)
 
+vdb.rich_theme("""
+               bar.complete #008822
+""")
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

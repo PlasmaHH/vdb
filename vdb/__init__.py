@@ -365,4 +365,21 @@ atexit.register(exit)
 
 log = vdb.util.log
 
+def stripped_lines( string ):
+    for line in string.split("\n"):
+        line = line.strip()
+        if( len(line) == 0 ):
+            continue
+        yield line
+
+def rich_theme( ts ):
+    theme = {}
+    for l in stripped_lines(ts):
+        name,style = l.split(maxsplit=2)
+        theme[name] = style
+    if( len(theme) > 0 ):
+        import rich.theme
+        vdb.util.console = rich.console.Console( force_terminal = True, color_system = "truecolor", theme = rich.theme.Theme(theme) )
+
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
