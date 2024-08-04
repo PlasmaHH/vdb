@@ -18,6 +18,7 @@ import sys
 import copy
 import lzma
 import time
+import concurrent.futures
 
 
 
@@ -28,6 +29,7 @@ scan_background = vdb.config.parameter("vdb-svd-scan-background",True,docstring=
 scan_filter = vdb.config.parameter("vdb-svd-scan-filter","",docstring="Regexp to filter file names before loading")
 scan_silent = vdb.config.parameter("vdb-svd-scan-silent",True,docstring="Don't ouput every file being scanned")
 parse_delayed = vdb.config.parameter("vdb-svd-parse-delayed",False,docstring="When true, parse only fully when an svd load command is issued")
+threads = vdb.config.parameter("vdb-svd-use-threads",False)
 
 
 verbose = False
@@ -1024,6 +1026,29 @@ def stop_parsing( ):
     global keep_parsing
     keep_parsing = False
 
+class task_pool:
+    def __init__( self ):
+        self.threads = []
+        self.completed = []
+
+    def submit( self, *args ):
+        t = vdb.texe.submit( *args )
+        self.threads.append(t)
+
+    def wait( self ):
+        for f in concurrent.futures.as_completed( self.threads ):
+            self.completed.append(f)
+            yield f
+
+    def clear( self ):
+        self.threads = []
+        self.completed = []
+
+    def cancel( self ):
+        for t in self.threads:
+            t.cancel()
+
+
 def do_svd_scan_one(dirname,at,filter_re):
     global keep_parsing
     keep_parsing = True
@@ -1049,9 +1074,13 @@ def do_svd_scan_one(dirname,at,filter_re):
         pt = prog.add_task( f"Queueing {xtra}{len(pathlist)} SVD Files ", total = len(pathlist) )
     if( not parse_delayed.value and at is None and scan_silent.value ):
         pt = prog.add_task(f"Parsing {xtra}{len(pathlist)} SVD Files ", total = len(pathlist)  )
-    print(f"{pt=}")
+
     if( pt is not None ):
         prog.start()
+
+    tp = None
+    if( threads.value ):
+        tp = task_pool()
 
     for i,p in enumerate(pathlist):
         if( not keep_parsing ):
@@ -1063,19 +1092,36 @@ def do_svd_scan_one(dirname,at,filter_re):
             at.set_progress(f"[svd {i}/{len(pathlist)}]")
         try:
             if( parse_delayed.value ):
-                if( pt is not None ):
-                    prog.update( pt, completed = i )
-                svd_queue_file(p,at)
+                if( threads.value ):
+                    tp.submit( svd_queue_file,p,at)
+                else:
+                    svd_queue_file(p,at)
+                    if( pt is not None ):
+                        prog.update( pt, completed = i )
             else:
                 if( pt is not None ):
                     prog.update( pt, completed = i )
                 svd_load_file(p,at)
         except KeyboardInterrupt:
             prog.stop()
+            tp.cancel()
             return
         except:
             vdb.print_exc()
             print(f"Failed to load {p}")
+
+    if( threads.value ):
+        try:
+            for f in tp.wait():
+                r = f.result()
+                prog.update( pt, completed = len(tp.completed) )
+        except KeyboardInterrupt:
+            prog.stop()
+            tp.cancel()
+            return
+        except:
+            vdb.print_exc()
+
     prog.stop()
 
 #    if( parse_delayed.value and at is None ):

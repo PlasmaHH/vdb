@@ -133,7 +133,7 @@ def prompt_replace( prompt, fmt, txt, col ):
 #    print("txt = '%s'" % txt )
     re_fmt = "{([^}:]*)[:]*" + fmt + "[:]*([^}]*)}"
     if( txt is not None ):
-        re_txt = "\g<1>" + txt + "\g<2>"
+        re_txt = r"\g<1>" + txt + r"\g<2>"
     else:
         re_txt = ""
 #    prompt = prompt.replace(fmt,txt)
