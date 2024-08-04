@@ -29,7 +29,7 @@ scan_background = vdb.config.parameter("vdb-svd-scan-background",True,docstring=
 scan_filter = vdb.config.parameter("vdb-svd-scan-filter","",docstring="Regexp to filter file names before loading")
 scan_silent = vdb.config.parameter("vdb-svd-scan-silent",True,docstring="Don't ouput every file being scanned")
 parse_delayed = vdb.config.parameter("vdb-svd-parse-delayed",False,docstring="When true, parse only fully when an svd load command is issued")
-threads = vdb.config.parameter("vdb-svd-use-threads",False)
+threads = vdb.config.parameter("vdb-svd-use-threads",True)
 
 
 verbose = False
@@ -603,8 +603,11 @@ class svd_device:
             items = ( name % i for i in dim_index )
             if( altname is not None ):
                 altitems = ( altname % i for i in dim_index )
-            if( derived is not None ):
-                ditems = ( derived % i for i in dim_index )
+            try:
+                if( derived is not None ):
+                    ditems = list( derived % i for i in dim_index )
+            except:
+                ditems = items
             dpyitems = []
             try:
                 if( display_name is not None ):
@@ -1099,12 +1102,16 @@ def do_svd_scan_one(dirname,at,filter_re):
                     if( pt is not None ):
                         prog.update( pt, completed = i )
             else:
-                if( pt is not None ):
-                    prog.update( pt, completed = i )
-                svd_load_file(p,at)
+                if( threads.value ):
+                    tp.submit( svd_load_file,p,at)
+                else:
+                    svd_load_file(p,at)
+                    if( pt is not None ):
+                        prog.update( pt, completed = i )
         except KeyboardInterrupt:
             prog.stop()
-            tp.cancel()
+            if( threads.value ):
+                tp.cancel()
             return
         except:
             vdb.print_exc()

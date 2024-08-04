@@ -60,7 +60,12 @@ def rxint( s ):
         try:
             r = int(s,16)
         except:
-            raise Exception("%s can not be parsed as integer, neither base 10 or 16" % s )
+            if( s.startswith("#") ):
+                xs=s.replace("#","0b")
+            try:
+                r = int(xs,2)
+            except:
+                raise Exception("%s can not be parsed as integer, neither base 10 or 16 or 2" % s )
     return r
 
 class hexint(int):
