@@ -598,11 +598,18 @@ class svd_device:
         derived = node.attrib.get("derivedFrom",None)
 
         num_items = 0
+        # BUG !!
+        # dim_index is a string and we act like its a list of something
         if( dim_index is not None ):
             num_items = len(dim_index)
-            items = ( name % i for i in dim_index )
-            if( altname is not None ):
-                altitems = ( altname % i for i in dim_index )
+            items = list( name % i for i in dim_index )
+            print(f"{items=}")
+            try:
+                if( altname is not None ):
+                    altitems = list( altname % i for i in dim_index )
+            except:
+                altitems = list( altname + i for i in dim_index )
+
             try:
                 if( derived is not None ):
                     ditems = list( derived % i for i in dim_index )
