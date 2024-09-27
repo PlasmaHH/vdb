@@ -4199,8 +4199,9 @@ def disassemble( argv ):
         asm_listing.print(asm_showspec.value, context,marked, source)
         if( dotty ):
             g = asm_listing.to_dot(asm_showspec_dot.value)
-            g.write("dis.dot")
-            os.system("nohup dot -Txlib dis.dot &")
+            oid = id(asm_listing)
+            g.write(f"dis.{oid}.dot")
+            os.system(f"nohup dot -Txlib dis.{oid}.dot &")
     except:
         vdb.print_exc()
         pass

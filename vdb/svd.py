@@ -603,7 +603,7 @@ class svd_device:
         if( dim_index is not None ):
             num_items = len(dim_index)
             items = list( name % i for i in dim_index )
-            print(f"{items=}")
+#            print(f"{items=}")
             try:
                 if( altname is not None ):
                     altitems = list( altname % i for i in dim_index )
