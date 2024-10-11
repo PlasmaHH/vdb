@@ -427,7 +427,19 @@ class Registers():
                 val = gdb.Value(mc,rtype)
                 return ( val, mmp )
             else:
-                bonk
+#                print(f"{mmp=}")
+#                print(f"{part=}")
+                mdesc = mmapped_descriptions.get(mmp[0])
+#                print(f"{mdesc=}")
+                for bit,desc in mdesc[2].items():
+                    if( desc[1] == part ):
+                        val = 42
+                        rname,raddr,rbit,rtype = mmp
+                        mc = vdb.memory.read_uncached( raddr, rbit//8 )
+                        val = gdb.Value(mc,rtype)
+                        val, mask = self.bitextract( bit, desc[0], int(val) )
+                        return( val, mmp )
+                return (None, None)
         else:
             return ( None, None )
 
@@ -455,7 +467,7 @@ class Registers():
 #                    print(f"{bit=}")
 #                    print(f"{mdesc[1]=}")
 #                    print(f"{int(oldval)=:#0x}")
-                    ex, mask = self.bitextract( bit, 1, int(oldval) )
+                    ex, mask = self.bitextract( bit, p[0], int(oldval) )
 
                     valmask = ~mask
 #                    print(f"{valmask=:#0x}")
@@ -1348,6 +1360,7 @@ class Registers():
 
     def mmapped( self, filter, full = False, short=False, mini=False ):
         show_address = False
+        pfilter = filter
         if( filter is not None and len(filter) > 0 ):
             if( filter[0] == "&" ):
                 show_address = True
@@ -1357,6 +1370,12 @@ class Registers():
             else:
                 filter = None
         itlist = Registers.mmap_reg()
+
+        # might be an expression down to the bit(s) or otherwise an exact match
+        if( pfilter is not None ):
+            val,mmp = self.get_reg( pfilter )
+            if( val is not None ):
+                return f"{val:#0x}"
 
         addrmap = {}
 
