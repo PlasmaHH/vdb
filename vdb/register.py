@@ -262,7 +262,7 @@ register_sizes = {
 # same format as flag_info basically
 mmapped_descriptions = {}
 mmapped_positions    = {}
-mmapped_blacklist = set()
+mmapped_blacklist = {}
 
 possible_prefixes = [
 		"cs", "ds", "es", "fs", "gs", "ss"
@@ -314,6 +314,39 @@ def altname( regname ):
     if( regname[0] == "r" and regname[-1] == "d" ):
         return regname[:-1]
     return None
+
+# move this deeper into the memory part so we can use it there too for e.g. hexdump
+def blacklist( regs, cond = None ):
+    if( not isinstance(regs,(list,set,tuple) ) ):
+        regs = [ regs ]
+
+    for reg in regs:
+        mmapped_blacklist[reg] = cond
+
+def is_blacklisted( raddr ):
+#    print(f"is_blacklisted({raddr})")
+    cond = mmapped_blacklist.get( raddr, is_blacklisted )
+    if( cond is is_blacklisted ):
+        return False
+
+    # unconditionally blacklisted
+    if( cond is None ):
+        return True
+
+    if( callable(cond) ):
+        return cond(raddr)
+
+    addr, expected = cond
+
+    # register string e.g. DBGMCU.CR.TRACE_EN
+    if( isinstance( addr, str ) ):
+        val,mmp = registers.get_reg( addr )
+    else:
+        data = vdb.memory.read_uncached( addr, 1 )
+
+#    print(f"{val=}")
+#    print(f"{expected=}")
+    return ( val != expected )
 
 class Registers():
 
@@ -411,8 +444,8 @@ class Registers():
 #        print(f"{type(mmp)=}")
 #        print(f"{mmapped_descriptions.keys()=}")
 #        print("len(mmapped_positions) = '%s'" % (len(mmapped_positions),) )
-        if( mmp is None ):
-            print(f"Unable to find memory position for register {reg}")
+#        if( mmp is None ):
+#            print(f"Unable to find memory position for register {reg}")
         return (mmp,part)
 
     def get_reg( self, reg ):
@@ -436,6 +469,8 @@ class Registers():
                         val = 42
                         rname,raddr,rbit,rtype = mmp
                         mc = vdb.memory.read_uncached( raddr, rbit//8 )
+                        if( mc is None ):
+                            return (None,None)
                         val = gdb.Value(mc,rtype)
                         val, mask = self.bitextract( bit, desc[0], int(val) )
                         return( val, mmp )
@@ -1375,7 +1410,9 @@ class Registers():
         if( pfilter is not None ):
             val,mmp = self.get_reg( pfilter )
             if( val is not None ):
-                return f"{val:#0x}"
+                # ok it matches, but is it really a bit?
+                if( len(pfilter.split(".")) == 3 ):
+                    return f"{int(val):#0x}"
 
         addrmap = {}
 
@@ -1384,15 +1421,14 @@ class Registers():
                 if( filter.search(reg) is None ):
                     continue
             rname,raddr,rbit,rtype = rpos
-            global mmapped_blacklist
-            if( raddr in mmapped_blacklist ):
+            if( is_blacklisted(raddr) ):
                 continue
 #            print(f"{reg}@{raddr:#0x},{rbit},{rtype}")
             val = vdb.memory.read_uncached(raddr,rbit//8)
             if( val is None ): # unable to read or otherwise not accessible
                 if( not mmapfake.value ):
                     print(f"{reg}@{raddr:#0x} blacklisted: memory not accessible")
-                    mmapped_blacklist.add(raddr)
+                    blacklist(raddr)
                     continue
                 else:
                     val = b"\0\0\0\0"

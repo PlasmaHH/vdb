@@ -329,7 +329,7 @@ class svd_device:
 
     def load( self, unload = True ):
         print(f"Loading {len(self.registers)} register descriptions")
-        vdb.register.mmapped_blacklist = set()
+        vdb.register.mmapped_blacklist = {}
         if( unload ):
             vdb.register.mmapped_descriptions = {}
             vdb.register.mmapped_positions = {}

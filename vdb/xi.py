@@ -97,7 +97,7 @@ def get_mmaps( mmaps, filter ):
                 continue
         raddr,rbit,rtype = rpos
 
-        if( raddr in vdb.register.mmapped_blacklist ):
+        if( vdb.register.is_blacklisted( raddr ) ):
             continue
 
         val = vdb.memory.read_uncached(raddr,rbit//8)
