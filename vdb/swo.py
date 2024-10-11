@@ -29,8 +29,10 @@ default_colors = vdb.config.parameter("vdb-swo-colors", "#ffffff;#ffff77;#ff9900
 # sync/async mode: only output what was captured "before_prompt"
 
 swo_colors = []
+swo_rich = []
 for i in range(0,10):
     swo_colors.append( vdb.config.parameter( f"vdb-swo-colors-{i}", default_colors.elements[i], gdb_type = vdb.config.PARAM_COLOUR ) )
+    swo_rich.append( vdb.config.parameter( f"vdb-swo-use-rich-{i}", False ) )
 
 class SWO:
 
@@ -46,8 +48,12 @@ class SWO:
             print(data,end="")
         
         def flush( self ):
-            color = swo_colors[self.channel % len(swo_colors)].value
-            self.output( vdb.color.color(self.buffer,color) )
+            idx = self.channel % len(swo_colors)
+            if( swo_rich[idx].value ):
+                vdb.util.console.print( self.buffer, end = "" )
+            else:
+                color = swo_colors[self.channel % len(swo_colors)].value
+                self.output( vdb.color.color(self.buffer,color) )
             self.buffer = ""
             self.last_flushed = time.time()
 
