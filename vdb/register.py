@@ -175,20 +175,20 @@ fpscr_descriptions = {
         }
 
 flag_info = {
-            "eflags"    : ( 21, flag_descriptions, None ),
-            "mxcsr"     : ( 15, mxcsr_descriptions, None ),
-            "bndcfgu"   : ( 12, bndcfgu_descriptions, ( "raw", "config" ) ),
-            "bndstatus" : (  4, bndstatus_descriptions, ( "raw", "status" ) ),
+            "eflags"    : ( "", 21, flag_descriptions, None ),
+            "mxcsr"     : ( "", 15, mxcsr_descriptions, None ),
+            "bndcfgu"   : ( "", 12, bndcfgu_descriptions, ( "raw", "config" ) ),
+            "bndstatus" : ( "",  4, bndstatus_descriptions, ( "raw", "status" ) ),
             # From Cortex M3 Documentation, if others vary we need to figure that out somehow
-            "apsr"      : ( 31, apsr_descriptions, None ),
-            "ipsr"      : (  9, ipsr_descriptions, None ),
-            "epsr"      : ( 26, epsr_descriptions, None ),
-            "primask"   : (  1, primask_descriptions, None ),
-            "faultmask" : (  1, faultmask_descriptions, None ),
-            "basepri"   : (  7, basepri_descriptions, None ),
-            "control"   : (  2, control_descriptions, None ),
-            "fpscr"     : ( 31, fpscr_descriptions, None ),
-            "xPSR"      : ( 31, apsr_descriptions | ipsr_descriptions | epsr_descriptions , None ),
+            "apsr"      : ( "", 31, apsr_descriptions, None ),
+            "ipsr"      : ( "",  9, ipsr_descriptions, None ),
+            "epsr"      : ( "", 26, epsr_descriptions, None ),
+            "primask"   : ( "",  1, primask_descriptions, None ),
+            "faultmask" : ( "",  1, faultmask_descriptions, None ),
+            "basepri"   : ( "",  7, basepri_descriptions, None ),
+            "control"   : ( "",  2, control_descriptions, None ),
+            "fpscr"     : ( "", 31, fpscr_descriptions, None ),
+            "xPSR"      : ( "", 31, apsr_descriptions | ipsr_descriptions | epsr_descriptions , None ),
             }
 possible_flags = [
         "eflags", "flags", "mxcsr", "bndcfgu", "bndstatus", "apsr", "ipsr", "epsr", "primask", 
@@ -399,32 +399,80 @@ class Registers():
 
 
     def get_pos( self, reg ):
-        mmp = mmapped_positions.get(reg,None)
+        # cut off sub-int part if necessary
+        parts = reg.split(".")
+        fullreg = ".".join(parts[:2])
+        mmp = mmapped_positions.get(fullreg,None)
+        if( len(parts) > 2 ):
+            part = parts[2]
+        else:
+            part = None
+#        print(f"{mmp=}")
+#        print(f"{type(mmp)=}")
+#        print(f"{mmapped_descriptions.keys()=}")
 #        print("len(mmapped_positions) = '%s'" % (len(mmapped_positions),) )
         if( mmp is None ):
             print(f"Unable to find memory position for register {reg}")
-        return mmp
+        return (mmp,part)
 
     def get_reg( self, reg ):
-        mmp = self.get_pos(reg)
+        mmp,part = self.get_pos(reg)
+        return self.get_reg_at( mmp, part )
+
+    def get_reg_at( self, mmp, part = None ):
         if( mmp is not None ):
-            raddr,rbit,rtype = mmp
-            mc = vdb.memory.read_uncached( raddr, rbit//8 )
-            val = gdb.Value(mc,rtype)
-            return ( val, mmp )
+            if( part is None ):
+                rname,raddr,rbit,rtype = mmp
+                mc = vdb.memory.read_uncached( raddr, rbit//8 )
+                val = gdb.Value(mc,rtype)
+                return ( val, mmp )
+            else:
+                bonk
         else:
             return ( None, None )
 
-    def set_reg_at( self, mmp, val ):
+    def set_reg_at( self, mmp, val, part = None ):
 #        print("mmp = '%s'" % (mmp,) )
-        raddr,rbit,rtype = mmp
+        rname,raddr,rbit,rtype = mmp
         val = int(val)
 #            print("raddr = '%s'" % (raddr,) )
 #            print("rbit = '%s'" % (rbit,) )
 #            print("rtype = '%s'" % (rtype,) )
         data = val.to_bytes(rbit//8,"little")
+        msgval = val
 #            print("data = '%s'" % (data,) )
 
+        if( part is not None ):
+            oldval,_ = self.get_reg_at( mmp )
+            mdesc = mmapped_descriptions.get(rname)
+#            print(f"{mdesc=}")
+            parts = mdesc[2]
+#            print(f"{parts=}")
+            # XXX We might want to change that format so we dont have to search that much
+            for bit,p in parts.items():
+                if( p[1] == part ):
+#                    print(f"{p=}")
+#                    print(f"{bit=}")
+#                    print(f"{mdesc[1]=}")
+#                    print(f"{int(oldval)=:#0x}")
+                    ex, mask = self.bitextract( bit, 1, int(oldval) )
+
+                    valmask = ~mask
+#                    print(f"{valmask=:#0x}")
+                    newval  = valmask & int(oldval)
+#                    print(f"{newval=:#0x}")
+                    newshifted = val << bit
+#                    print(f"{newshifted=:#0x}")
+                    newval |= newshifted
+#                    print(f"{newval=:#0x}")
+#                    print(f"{ex=}")
+#                    print(f"{mask=:#0x}")
+                    data = newval.to_bytes(rbit//8,"little")
+                    msgval = newval
+                    break
+
+
+        print(f"set {{uint{rbit}_t}}{raddr:#0x}={msgval:#0x}")
         vdb.memory.write( raddr, data )
 #        print(f"set {{{rtype}}}{raddr:#0x}={val:#0x}")
 
@@ -442,9 +490,10 @@ class Registers():
     def set_reg( self, reg, val ):
         # TODO Add support for non memory mapped registers, also wiht $ and % prefix
 #        print(f"set_reg({reg},{val})")
-        mmp = self.get_pos(reg)
-        if( mmp != None ):
-            self.set_reg_at(mmp,val)
+        mmp,part = self.get_pos(reg)
+#        print(f"{mmp=}")
+        if( mmp is not None ):
+            self.set_reg_at(mmp,val,part)
 
     def or_reg( self, reg, val ):
 #        print(f"or_reg({reg=},{val=})")
@@ -467,7 +516,7 @@ class Registers():
         self.set_reg_at(mmp,oval&val)
 
     def set( self, argv ):
-        vdb.util.bark() # print("BARK")
+#        vdb.util.bark() # print("BARK")
 #        print(f"{argv=}")
 
         ix = argv.index("=")
@@ -1251,7 +1300,7 @@ class Registers():
             if( fr.name in abbrflags ):
                 abbr = True
 
-            count,desc,rawfield = flag_inf.get(fr.name,(None,None,None))
+            _,count,desc,rawfield = flag_inf.get(fr.name,(None,None,None))
             
             if( rawfield is not None ):
                 ival = int(fv[rawfield[0]])
@@ -1315,7 +1364,7 @@ class Registers():
             if( filter is not None ):
                 if( filter.search(reg) is None ):
                     continue
-            raddr,rbit,rtype = rpos
+            rname,raddr,rbit,rtype = rpos
             global mmapped_blacklist
             if( raddr in mmapped_blacklist ):
                 continue
@@ -1346,44 +1395,49 @@ class Registers():
             ret+=self._flags( None, itlist, mmapped_descriptions, False, True, False, addrmap )
         if( mini ):
             ret+=self._flags( None, itlist, mmapped_descriptions, False, False, True, addrmap )
+        
 
         return vdb.util.format_table(ret)
 #        print("mmapped_descriptions = '%s'" % (mmapped_descriptions,) )
 
+    def print_if( self, msg ):
+        if( len(msg) > 0 ):
+            print(msg)
+
     def print( self, showspec, filter = None ):
         for s in showspec:
             if( s == "i" ):
-                print(self.ints(filter,extended=False))
+                self.print_if(self.ints(filter,extended=False))
             elif( s == "I" ):
-                print(self.ints(filter,extended=True,wrapat=1))
+                self.print_if(self.ints(filter,extended=True,wrapat=1))
             elif( s == "v" ):
-                print(self.vectors(filter,extended=False))
+                self.print_if(self.vectors(filter,extended=False))
             elif( s == "V" ):
-                print(self.vectors(filter,extended=True))
+                self.print_if(self.vectors(filter,extended=True))
             elif( s == "f" ):
-                print(self.floats(filter))
+                self.print_if(self.floats(filter))
             elif( s == "F" ):
-                print(self.ex_floats(filter))
+                self.print_if(self.ex_floats(filter))
             elif( s == "y" ):
-                print(self.flags(filter,extended=False,short=False,mini=True))
+                self.print_if(self.flags(filter,extended=False,short=False,mini=True))
             elif( s == "x" ):
-                print(self.flags(filter,extended=False,short=True,mini=False))
+                self.print_if(self.flags(filter,extended=False,short=True,mini=False))
             elif( s == "X" ):
-                print(self.flags(filter,extended=True,short=False,mini=False))
+                self.print_if(self.flags(filter,extended=True,short=False,mini=False))
             elif( s == "o" ):
-                print(self.other(filter,extended=False))
+                self.print_if(self.other(filter,extended=False))
             elif( s == "O" ):
-                print(self.other(filter,extended=True,wrapat=1))
+                self.print_if(self.other(filter,extended=True,wrapat=1))
             elif( s == "p" ):
-                print(self.prefixes(filter))
+                self.print_if(self.prefixes(filter))
             elif( s == "P" ):
-                print(self.ex_prefixes(filter))
+                self.print_if(self.ex_prefixes(filter))
             elif( s == "m" ):
-                print(self.mmapped(filter,short=True))
+                self.print_if(self.mmapped(filter,short=True))
             elif( s == "M" ):
-                print(self.mmapped(filter,full=True))
+                self.print_if(self.mmapped(filter,full=True))
             elif( s == "d" ):
-                print(self.mmapped(filter,mini=True))
+                self.print_if(self.mmapped(filter,mini=True))
             elif( s == "." ):
                 pass
             elif( s == "?" ):
@@ -1491,8 +1545,6 @@ We recommend having an alias reg = registers in your .gdbinit
             if( registers is None or registers.thread == 0 ):
                 print("No running thread to read registers from")
                 return
-            if( legend ):
-                vdb.memory.print_legend("Ama")
 
             if( len(argv) == 0 ):
                 argv += reg_default.value.split()
@@ -1539,6 +1591,8 @@ We recommend having an alias reg = registers in your .gdbinit
                     _,flags = self.flags(reg_default.value.split())
                 if( len(argv) > 1 ):
                     filter = "|".join(argv)
+                if( legend ):
+                    vdb.memory.print_legend("Ama")
 
             # First display without any setting commands
             if( len(flags) > 0 ):
