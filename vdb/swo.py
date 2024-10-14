@@ -11,6 +11,7 @@ import gdb
 
 import vdb.command
 import vdb.color
+import vdb.util
 
 import rich.console
 
@@ -45,8 +46,12 @@ class SWO:
 
         # other output modules should overwrite this?
         def output( self, data ):
-            print(data,end="")
-        
+            db = channel_outputs.get(self.channel)
+            if( db is not None ):
+                db.write(data)
+            else:
+                print(data,end="")
+
         def flush( self ):
             idx = self.channel % len(swo_colors)
             if( swo_rich[idx].value ):
@@ -201,7 +206,10 @@ class SWO:
         else:
             self._consume(1)
 
+channel_outputs = {}
 
+def link_board( channel, dashboard ):
+    channel_outputs[channel] = dashboard
 
 swo = None
 
@@ -222,7 +230,40 @@ def stop_swo( flags = None, argv = None ):
         swo.stop()
         swo = None
 
+def status_swo( flags, argv ):
+    if( swo is None ):
+        print("swo is not active")
+        return
+    tbl = [[ "Channel", "Buffersize", "Last Flushed", "Dashboard" ]]
+    tbl.append(None)
+    for ch,cbuf in swo.channels.items():
+        row = []
+        row.append( ch )
+        row.append( len(cbuf.buffer) )
+        row.append( cbuf.last_flushed )
+        db = channel_outputs.get( ch )
+        row.append( db.id )
+        tbl.append(row)
+    vdb.util.print_table(tbl)
+
+
 def link_dash( flags, argv ):
+    print(f"link_dash({flags},{argv})")
+    if( len(argv) < 2):
+        raise RuntimeError("Expecting at least two args to dash link")
+    channel = int(argv[0])
+    try:
+        dashboard = int(argv[1])
+        db = vdb.dashboard.get_dashboard(dashboard)
+        if( db is None ):
+            raise RuntimeError(f"Could not find a dashboard with ID {dashboard}. Use 'dash show' to list available ones.")
+    except ValueError:
+    # if its not a number we create a new one using that text as if it was a dash command
+        db = vdb.dashboard.call_dashboard(argv[1:] + [ "*" ])
+        if( db is None ):
+            raise RuntimeError(f"Failed to use '{argv[1:]}' to create a dashboard.")
+    print(f"{db=}")
+    link_board( channel, db )
     # swo dash 0 1 # link channel 0 output into dashboard id 1
     # swo dash 0 tmux foobar # link channel 0 output into a new tmux dashboard
 
@@ -245,6 +286,8 @@ class cmd_swo (vdb.command.command):
                     start_swo(flags,argv[1:])
                 case "stop":
                     stop_swo(flags,argv[1:])
+                case "status":
+                    status_swo(flags,argv[1:])
                 case "dash":
                     link_dash(flags,argv[1:])
                 case _:

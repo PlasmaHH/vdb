@@ -205,7 +205,14 @@ class dashboard:
     def disable( self, reason ):
         self.set_state(False,reason)
 
+    def write( self, data ):
+        self.output.write(data)
+
     def do_output( self ):
+        # Special "redirect only"
+        if( self.command is None ):
+            return
+
         sw = vdb.util.stopwatch()
         sw.start()
         cout=""
@@ -219,13 +226,13 @@ class dashboard:
 
 #        print("cout = '%s'" % cout )
         if( self.cls ):
-            self.output.write("\033[2J\033[H")
+            self.write("\033[2J\033[H")
         if( show_stat.value ):
             sw.stop()
             sofar = sw.get()
             bts = len(cout)
-            self.output.write(f"{sofar:.7}s, {bts}B\n")
-        self.output.write(cout)
+            self.write(f"{sofar:.7}s, {bts}B\n")
+        self.write(cout)
         self.output.flush()
         sw.stop()
         self.last_time = sw.get()
@@ -233,7 +240,7 @@ class dashboard:
             runtime = sw.get()
             now = datetime.datetime.now().strftime(time_format.value)
             now = now.format(**locals())
-            self.output.write(now)
+            self.write(now)
             self.output.flush()
         if( self.last_time > auto_time.fvalue ):
             self.disable("Execution time exceeded: %s" % auto_time.value )
@@ -246,6 +253,7 @@ class dashboard:
         if( self.output is not None ):
             if( self.output.enabled ):
                 self.do_output()
+
 dash_events: dict[str,list[dashboard]] = { }
 
 def show_dashboard( ):
@@ -277,23 +285,24 @@ def show_dashboard( ):
     txt = vdb.util.format_table(tbl)
     print(txt)
 
-def trigger_dashboard( id, to ):
+def get_dashboard( id ):
     id = int(id)
     global dash_events
     for on,evl in dash_events.items():
         for db in evl:
             if( db.id == id ):
-                db.set_state( to, "command" )
-                return
+                return db
+    return None
+
+def trigger_dashboard( id, to ):
+    db = get_dashboard(id)
+    if( db is not None ):
+        db.set_state( to, "command" )
 
 def trigger_cls( id, to ):
-    id = int(id)
-    global dash_events
-    for on,evl in dash_events.items():
-        for db in evl:
-            if( db.id == id ):
-                db.cls = to
-                return
+    db = get_dashboard(id)
+    if( db is not None ):
+        db.cls = to
 
 class output_redirect:
 
@@ -363,7 +372,10 @@ def add_board( tgt, argv ):
         vdb.util.console_logprint = od.print
         add_events(events,od)
         return None
-    cmd = " ".join(argv)
+    elif( argv[0] == "*" ):
+        cmd = None
+    else:
+        cmd = " ".join(argv)
 #    print("cmd = '%s'" % cmd )
     db = dashboard()
     db.output = tgt
