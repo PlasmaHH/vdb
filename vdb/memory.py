@@ -303,7 +303,7 @@ default_region_prefixes = [
         ( ".fini", memory_type.CODE ),
 ]
 
-@vdb.util.memoize( [gdb.events.stop, gdb.events.memory_changed, gdb.events.inferior_call] )
+@vdb.util.memoize( [gdb.events.stop, gdb.events.memory_changed, gdb.events.inferior_call,gdb.events.new_objfile,gdb.events.new_inferior] )
 def read( ptr, count = 1, partial = False ):
     return read_uncached(ptr,count,partial)
 

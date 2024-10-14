@@ -6,6 +6,7 @@ import sys
 import threading
 import select
 import time
+import re
 
 import gdb
 
@@ -23,7 +24,6 @@ flush_timeout = vdb.config.parameter("vdb-swo-flush-timeout", 50, docstring = "T
 flush_watermark = vdb.config.parameter("vdb-swo-flush-watermark", 64, docstring = "If this much bytes are in the buffer it will be flushed")
 auto_reconnected = vdb.config.parameter("vdb-swo-auto-reconnect", True )
 
-
 default_colors = vdb.config.parameter("vdb-swo-colors", "#ffffff;#ffff77;#ff9900;#ff7777;#00ff00;#0000ff;#ff00ff;#00ffff;#88aaff;#aa00aa" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
 # TODO
@@ -31,11 +31,26 @@ default_colors = vdb.config.parameter("vdb-swo-colors", "#ffffff;#ffff77;#ff9900
 
 swo_colors = []
 swo_rich = []
+short_rich = []
+
 for i in range(0,10):
     swo_colors.append( vdb.config.parameter( f"vdb-swo-colors-{i}", default_colors.elements[i], gdb_type = vdb.config.PARAM_COLOUR ) )
     swo_rich.append( vdb.config.parameter( f"vdb-swo-use-rich-{i}", False ) )
+    short_rich.append( vdb.config.parameter( f"vdb-swo-short-rich-{i}", True ) )
+
+
+rich_map = {}
+
+def update_replacements( cfg ):
+    rich_map.clear()
+    for k,v in cfg.elements:
+        rich_map[k] = v
+
+rich_replacements = vdb.config.parameter("vdb-swo-rich-replacements", "R:#ff0000,G:#00ff00,B:#0000ff", gdb_type = vdb.config.PARAM_ARRAY, on_set = update_replacements )
 
 class SWO:
+
+    rich_re = re.compile("\[(.*?)\]")
 
     class ChannelBuffer:
         def __init__( self, channel ):
@@ -52,13 +67,30 @@ class SWO:
             else:
                 print(data,end="")
 
+        def _expand_rich( self, data ):
+            newdata = data
+            for rp in SWO.rich_re.findall( data ):
+                mapto = rich_map.get(rp)
+                if( mapto is not None ):
+                    newdata = newdata.replace(f"[{rp}]",f"[{mapto}]")
+            return newdata
+
         def flush( self ):
             idx = self.channel % len(swo_colors)
             if( swo_rich[idx].value ):
-                vdb.util.console.print( self.buffer, end = "" )
+                data = self.buffer
+                # XXX What do we do if the buffer only contains half of some rich syntax?
+                if( short_rich[idx].value ):
+                    data = self._expand_rich( data )
+
+                with vdb.util.console.capture() as cap:
+                    vdb.util.console.print( data, end = "" )
+                outputdata = str( cap.get() )
             else:
                 color = swo_colors[self.channel % len(swo_colors)].value
-                self.output( vdb.color.color(self.buffer,color) )
+                outputdata = vdb.color.color(self.buffer,color)
+
+            self.output( outputdata )
             self.buffer = ""
             self.last_flushed = time.time()
 
@@ -300,8 +332,15 @@ class cmd_swo (vdb.command.command):
         self.dont_repeat()
 
 cmd_swo()
-# TODO
-# optional output of the function/context/symbol in one column
-# vim: tabstop=4 shiftwidth=4 expandtab ft=python
+
+def main( ):
+    swo = SWO("localhost",22888)
+    for i in [ "Text", "This [R]red[/] is" ]:
+        x = swo._expand_rich( i )
+        print(f"{x=}")
+
+
+if __name__ == '__main__':
+    main()
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

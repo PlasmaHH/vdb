@@ -64,19 +64,22 @@ class parameter(gdb.Parameter):
         self.gdb_type = gdb_type
         self.original_type = gdb_type
         self.elements = []
+        self.internal_on_set = None
+        self.on_set = on_set
         if( gdb_type == PARAM_COLOR ):
             if( name.find("-colors-") == -1 ):
                 raise RuntimeError(f"Colour names must have -colors- in their name, '{name}' does not" % name )
             self.is_colour = True
             gdb_type = gdb.PARAM_STRING
             self.theme_default = default
-        elif( gdb_type == PARAM_COLOUR_LIST and on_set is None ):
+            self.internal_on_set = self.check_colour
+        elif( gdb_type == PARAM_COLOUR_LIST ):
             self.is_colour = True
             gdb_type = gdb.PARAM_STRING
-            on_set = split_colors
+            self.internal_on_set = split_colors
             self.theme_default = default
-        elif( gdb_type == PARAM_ARRAY and on_set is None ):
-            on_set = set_array_elements
+        elif( gdb_type == PARAM_ARRAY ):
+            self.internal_on_set = set_array_elements
             gdb_type = guess_gdb_type(default)
         elif( gdb_type is None ):
             gdb_type = guess_gdb_type(default)
@@ -90,11 +93,11 @@ class parameter(gdb.Parameter):
         super().__init__(name, gdb.COMMAND_SUPPORT, gdb_type )
         self.value = default
         self.previous_value = self.value
-        self.on_set = on_set
+
         try:
-            if( self.on_set is not None ):
-                self.on_set(self)
+            self._safe_on_set()
         except:
+#            vdb.util.console.print_exception( show_locals = True )
             pass
 
         registry[self.name] = self
@@ -112,6 +115,12 @@ class parameter(gdb.Parameter):
             return True
         return False
 
+    def _safe_on_set( self ):
+        if( self.internal_on_set ):
+            self.internal_on_set(self)
+        if( self.on_set ):
+            self.on_set(self)
+
     def append( self, val ):
         try:
             if( self.original_type == gdb.PARAM_STRING ):
@@ -120,12 +129,12 @@ class parameter(gdb.Parameter):
 #                print("len(self.elements) = '%s'" % (len(self.elements),) )
                 self.value += ";"
                 self.value += val
-                self.on_set(self)
+                self._safe_on_set()
 #                print("len(self.elements) = '%s'" % (len(self.elements),) )
             elif( self.original_type == PARAM_ARRAY ):
                 self.value += ","
                 self.value += val
-                self.on_set(self)
+                self._safe_on_set()
             else:
                 print(f"Sorry, we do not support appending for {vdb.util.gdb_type_code( self.original_type )}" )
         except:
@@ -141,7 +150,7 @@ class parameter(gdb.Parameter):
             return self.fvalue
         return self.value
 
-    def check_colour( self ):
+    def check_colour( self, _ ):
         _ = vdb.color.color("",self.value)
 
     def record_origin( self ):
@@ -178,10 +187,8 @@ class parameter(gdb.Parameter):
             elif( self.value == "default" ):
                 self.value = self.default
             if( self.is_colour ):
-                if( self.on_set is not None ):
-                    self.on_set(self)
-                else:
-                    self.check_colour()
+                self._safe_on_set()
+#                self.check_colour(self)
             if( self.is_float ):
                 self.fvalue = float(self.value)
             if( self.on_set is not None ):
