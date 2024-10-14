@@ -362,13 +362,14 @@ def add_board( tgt, argv ):
         od = output_redirect(tgt)
         vdb.util.console_logprint = od.print
         add_events(events,od)
-        return
+        return None
     cmd = " ".join(argv)
 #    print("cmd = '%s'" % cmd )
     db = dashboard()
     db.output = tgt
     db.command = cmd
     add_events(events,db)
+    return db
 
 def del_board( id ):
     id = int(id)
@@ -390,20 +391,20 @@ def call_dashboard( argv ):
         if( len(argv) < 3 ):
             raise gdb.error("dashboard tty, need at least 2 parameters")
         tgt = tty(argv[1])
-        add_board(tgt,argv[2:])
+        return add_board(tgt,argv[2:])
     elif( "null".startswith(argv[0]) ):
         tgt = null()
-        add_board(tgt,argv[1:])
+        return add_board(tgt,argv[1:])
     elif( "tmux".startswith(argv[0]) ):
         if( len(argv) < 3 ):
             raise gdb.error("dashboard tmux, need at least 2 parameters")
         tgt = tmux(argv[1])
-        add_board(tgt,argv[2:])
+        return add_board(tgt,argv[2:])
     elif( "port".startswith(argv[0]) ):
         if( len(argv) < 3 ):
             raise gdb.error("dashboard port, need at least 2 parameters")
         tgt = port(argv[1])
-        add_board(tgt,argv[2:])
+        return add_board(tgt,argv[2:])
     elif( "delete".startswith(argv[0]) ):
         del_board(argv[1])
     elif( "show".startswith(argv[0]) ):
@@ -420,6 +421,8 @@ def call_dashboard( argv ):
         trigger_cls(argv[1],False)
     else:
         print("%s? What do you mean?" % argv[0])
+
+    return None
 
 def dash_on(evname):
 #    print(f"dash_on({evname=})")

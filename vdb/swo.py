@@ -222,6 +222,10 @@ def stop_swo( flags = None, argv = None ):
         swo.stop()
         swo = None
 
+def link_dash( flags, argv ):
+    # swo dash 0 1 # link channel 0 output into dashboard id 1
+    # swo dash 0 tmux foobar # link channel 0 output into a new tmux dashboard
+
 class cmd_swo (vdb.command.command):
     """
     Control swo comms
@@ -241,6 +245,8 @@ class cmd_swo (vdb.command.command):
                     start_swo(flags,argv[1:])
                 case "stop":
                     stop_swo(flags,argv[1:])
+                case "dash":
+                    link_dash(flags,argv[1:])
                 case _:
                     print(f"Unrecognized command {argv[0]}")
                     self.usage()
