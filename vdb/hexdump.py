@@ -410,5 +410,6 @@ cmd_hexdump()
 
 # TODO/BUG/XXX/ETC
 # When first byte of a hd is a variable that is 1 byte in size, it will not be coloured
+# BUG: When memory is not accessible within the last few (one?) bytes of a hexdump, all will be displayed as 0
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

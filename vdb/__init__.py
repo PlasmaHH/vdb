@@ -58,10 +58,11 @@ enable_xi        = vdb.config.parameter( "vdb-enable-xi",True)
 enable_list      = vdb.config.parameter( "vdb-enable-list",True)
 enable_time      = vdb.config.parameter( "vdb-enable-time",True)
 enable_swo       = vdb.config.parameter( "vdb-enable-swo",True)
+enable_hardfault = vdb.config.parameter( "vdb-enable-hardfault",True)
 
 configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,xi,pahole,ftree,dashboard,hashtable,ssh,track"
                                                                     ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos,xi,list"
-                                                                    ",time,swo" )
+                                                                    ",time,swo,hardfault" )
 
 
 home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)

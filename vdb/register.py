@@ -1393,6 +1393,25 @@ class Registers():
         def items( self ):
             return self.item_list
 
+    def get_mmapped( self, reg ):
+        rpos = mmapped_positions.get(reg)
+        if( rpos is None ):
+            return None
+        rname,raddr,rbit,rtype = rpos
+        if( is_blacklisted(raddr) ):
+            return None
+        val = vdb.memory.read_uncached(raddr,rbit//8)
+        if( val is None ): # unable to read or otherwise not accessible
+            if( not mmapfake.value ):
+                print(f"{reg}@{raddr:#0x} blacklisted: memory not accessible")
+                blacklist(raddr)
+                return None
+            else:
+                val = b"\0\0\0\0"
+        val = gdb.Value(val,rtype)
+        return (val,raddr)
+
+
     def mmapped( self, filter, full = False, short=False, mini=False ):
         show_address = False
         pfilter = filter
@@ -1420,23 +1439,10 @@ class Registers():
             if( filter is not None ):
                 if( filter.search(reg) is None ):
                     continue
-            rname,raddr,rbit,rtype = rpos
-            if( is_blacklisted(raddr) ):
+            val,raddr = self.get_mmapped(reg)
+            if( val is None ):
                 continue
-#            print(f"{reg}@{raddr:#0x},{rbit},{rtype}")
-            val = vdb.memory.read_uncached(raddr,rbit//8)
-            if( val is None ): # unable to read or otherwise not accessible
-                if( not mmapfake.value ):
-                    print(f"{reg}@{raddr:#0x} blacklisted: memory not accessible")
-                    blacklist(raddr)
-                    continue
-                else:
-                    val = b"\0\0\0\0"
-#            print("type(val) = '%s'" % (type(val),) )
-#            print("val = '%s'" % (val,) )
-#            print("type(rtype) = '%s'" % (type(rtype),) )
-#            print("rtype = '%s'" % (rtype,) )
-            val = gdb.Value(val,rtype)
+
             itlist.add(reg,val)
             p,_ = vdb.pointer.chain(raddr)
             addrmap[reg] = p
@@ -1450,7 +1456,7 @@ class Registers():
             ret+=self._flags( None, itlist, mmapped_descriptions, False, True, False, addrmap )
         if( mini ):
             ret+=self._flags( None, itlist, mmapped_descriptions, False, False, True, addrmap )
-        
+
 
         return vdb.util.format_table(ret)
 #        print("mmapped_descriptions = '%s'" % (mmapped_descriptions,) )
@@ -1504,7 +1510,6 @@ registers = None
 
 @vdb.event.new_objfile()
 def reset( self ):
-#    print("Resetting global register object")
     global registers
     registers = None
 
@@ -1540,7 +1545,7 @@ We recommend having an alias reg = registers in your .gdbinit
             vdb.print_exc()
 
     def maybe_update( self ):
-        global registers
+#        global registers
 #        print("registers = '%s'" % registers )
 #        if( registers is not None ):
 #            print("registers.thread = '%s'" % registers.thread )
