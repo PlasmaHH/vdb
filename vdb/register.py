@@ -502,7 +502,13 @@ class Registers():
 #                    print(f"{bit=}")
 #                    print(f"{mdesc[1]=}")
 #                    print(f"{int(oldval)=:#0x}")
-                    ex, mask = self.bitextract( bit, p[0], int(oldval) )
+                    sz = p[0]
+#                    print(f"{sz=}")
+                    maxval = (1<<sz)-1
+                    if( val > maxval ):
+                        raise Exception(f"{val} is too big for field of {sz} bits")
+#                    print(f"{maxval=}")
+                    ex, mask = self.bitextract( bit, sz, int(oldval) )
 
                     valmask = ~mask
 #                    print(f"{valmask=:#0x}")
