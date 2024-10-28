@@ -22,8 +22,9 @@ color_filename = vdb.config.parameter("vdb-bt-colors-filename",                 
 color_objfile  = vdb.config.parameter("vdb-bt-colors-object-file",              "#ffbbbb", gdb_type = vdb.config.PARAM_COLOUR)
 color_defobj   = vdb.config.parameter("vdb-bt-colors-default-object",           "#ffbbff", gdb_type = vdb.config.PARAM_COLOUR)
 color_rtti     = vdb.config.parameter("vdb-bt-colors-rtti-warning",             "#c00",    gdb_type = vdb.config.PARAM_COLOUR)
-color_argument = vdb.config.parameter("vdb-bt-colors-argument",                 "#008844", gdb_type = vdb.config.PARAM_COLOUR)
+color_argument = vdb.config.parameter("vdb-bt-colors-argument",                 "#008888", gdb_type = vdb.config.PARAM_COLOUR)
 color_argvalue = vdb.config.parameter("vdb-bt-colors-argvalue",                 None,    gdb_type = vdb.config.PARAM_COLOUR)
+color_numvalue = vdb.config.parameter("vdb-bt-colors-numvalue",                 "#f80",    gdb_type = vdb.config.PARAM_COLOUR)
 #color_ = vdb.config.parameter( "vdb-bt-colors-","#")
 
 color_addr     = vdb.config.parameter("vdb-bt-color-addresses", True )
@@ -34,15 +35,48 @@ frame_marker = vdb.config.parameter("vdb-bt-selected-frame-marker","► ")
 
 class ArgVal():
 
-    def __init__( self, sym, val ):
+    def __init__( self, sym, val, vtype = None ):
         self.sym = sym
         self.val = val
+        self.val_type = vtype
 
     def symbol(self):
         return self.sym
 
     def value(self):
-        return self.val
+        if( self.val_type is None ):
+            return self.val
+
+#        print(f"{type(self.val)=} ... {self.val_type} ... {vdb.util.gdb_type_code(self.val_type.code)}")
+        ps = 0
+        match self.val_type.code:
+            case gdb.TYPE_CODE_PTR:
+                if( self.val_type.is_string_like ):
+                    vals = str(self.val)
+                    idx = vals.find('"')
+                    vals = vals[idx:]
+                    valc,_ = vdb.pointer.colors( self.val, ps )
+                    val = f"{valc} {vals}"
+                else:
+                    val,_ = vdb.pointer.colors( self.val, ps )
+                val = f"BEGIN_PTR{val}END_PTR"
+            case gdb.TYPE_CODE_REF:
+                val,_ = vdb.pointer.colors( self.val.address, ps )
+                val = f"BEGIN_PTR@{val}END_PTR"
+            case gdb.TYPE_CODE_INT|gdb.TYPE_CODE_FLT:
+                if( color_numvalue.value is not None ):
+                    val = vdb.color.color(self.val,color_numvalue.value)
+                else:
+                    val = vdb.color.color(self.val,color_argvalue.value)
+                val = f"BEGIN_PTR{val}END_PTR"
+#            case gdb.TYPE_CODE_REF:
+#                val,_ = vdb.pointer.colors( self.val, vdb.arch.pointer_size )
+#                val = f"BEGIN_PTR{val}END_PTR"
+            case _:
+                val = vdb.color.color(self.val,color_argvalue.value)
+#                val = f"{val} ({self.val_type},{vdb.util.gdb_type_code(self.val_type.code)})"
+                val = f"BEGIN_PTR{val}END_PTR"
+        return val
 
 signals = {
 1 : "SIGHUP",
@@ -390,8 +424,8 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
             if( "P" in showspec.value ):
                 try:
                     val = frame.read_var(a.symbol())
-                    val = vdb.color.color(val,color_argvalue.value)
-                    ret.append( ArgVal( symbol, val) )
+                    vtype = val.type
+                    ret.append( ArgVal( symbol, val, vtype) )
                 except gdb.MemoryError as e:
                     ret.append( ArgVal( symbol, str(e) ) )
 #                val = "\x1b[1D" + val
@@ -400,10 +434,11 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
 #                ret.append( ArgVal( symbol, XValue(42) ) )
             elif( "E" in showspec.value ):
                 ret.append( ArgVal( a.symbol(), a.value() ) )
-            else:
+            else: # "p" only
                 ret.append( ArgVal( symbol, "") )
 #		gdb.execute("set logging redirect off")
 #		gdb.execute("set logging off")
+
         return ret
 
     def color_address( self, ptr = None ):
@@ -557,12 +592,17 @@ def do_backtrace( argv ):
             argv = argv[1:]
 
 
-        try:
-            btoutput = gdb.execute("backtrace {} {} {}".format(full,frameargs," ".join(argv)),False,bf.enabled)
-        except:
-            btoutput = gdb.execute("backtrace {}".format(" ".join(argv)),False,bf.enabled)
+        with gdb.with_parameter( "print repeats", 0 ):
+            try:
+                btoutput = gdb.execute("backtrace {} {} {}".format(full,frameargs," ".join(argv)),False,bf.enabled)
+            except:
+                btoutput = gdb.execute("backtrace {}".format(" ".join(argv)),False,bf.enabled)
+
 
         if( btoutput is not None ):
+            for full,ptrfix in re.findall('("BEGIN_PTR(.*?)END_PTR")',btoutput):
+                unp = ptrfix.encode("raw_unicode_escape").decode("unicode_escape")
+                btoutput = btoutput.replace(full,unp)
             btoutput = re.sub( "warning: RTTI symbol not found for class '.*?'\n",vdb.color.color("RTTI",color_rtti.value),btoutput)
             if( "n" not in showspec.value ):
                 btoutput = re.sub( "^(\s*)#[0-9]*", " ", btoutput, flags = re.MULTILINE )
