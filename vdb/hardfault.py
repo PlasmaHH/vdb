@@ -27,7 +27,7 @@ def get_reasons( flags, val ):
 
 def hardfault_info():
     print("Hard Fault interesting registers:")
-    gdb.execute("reg/M &BFSR|UFSR|HFSR|BFAR")
+    gdb.execute("reg/M &BFSR|UFSR|MMFSR|HFSR|BFAR")
     registers = vdb.register.Registers()
 
     ufsr_flags = {
@@ -50,6 +50,16 @@ def hardfault_info():
                     0x8000 : ( "BFARVALID"   , "BFAR valid." ),
                 }
 
+
+    mmfsr_flags = {
+                    0x0001 : ( "IACCVIOL"   ,"Instruction access violation." ),
+                    0x0002 : ( "DACCVIOL"   ,"Data access violation flag." ),
+                    0x0008 : ( "MUNSTKERR"  ,"MemManage unstacking error flag." ),
+                    0x0010 : ( "MSTKERR"    ,"MemManage stacking error flag." ),
+                    0x0020 : ( "MLSPERR"    ,"MemManage lazy state preservation error flag." ),
+                    0x0080 : ( "MMARVALID"  ,"MMFAR valid." ),
+                }
+
     print("Analyzing hard fault reasons and conditions...")
 
     ufsr,_ = registers.get_mmapped( "SCB.UFSR" )
@@ -63,12 +73,25 @@ def hardfault_info():
     if( len(bfsr_reasons) > 0 ):
         print(f"Bus Fault Reason: {','.join(bfsr_reasons)}")
 
+    mmfsr,_ = registers.get_mmapped( "SCB.MMFSR" )
+    mmfarvalid = ( mmfsr & 0x80 ) != 0
+    mmfsr_reasons = get_reasons( mmfsr_flags, mmfsr )
+    if( len(mmfsr_reasons) > 0 ):
+        print(f"MemManage Fault Reason: {','.join(mmfsr_reasons)}")
+
     if( bfarvalid ):
         bfar,_ = registers.get_mmapped("SCB.BFAR")
         bfar = int(bfar)
         print(f"BUS Fault while trying to access memory at {bfar:#0x}")
     else:
         print("BFAR not valid")
+
+    if( mmfarvalid ):
+        mmfar,_ = registers.get_mmapped("SCB.MMFAR")
+        mmfar = int(mmfar)
+        print(f"MemManage Fault while trying to access memory at {mmfar:#0x}")
+    else:
+        print("MMFAR not valid")
 
     gdb.execute("bt")
 

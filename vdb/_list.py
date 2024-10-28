@@ -82,6 +82,7 @@ def do_list( argv, flags, context, recurse = True ):
 #            print(f"{code}")
 #        return
 
+    fullname = ""
     if( len(argv) == 0 ):
         try:
             frame = gdb.selected_frame()
