@@ -230,7 +230,6 @@ class os_embos( ):
         pTask = self.OS_Global["pTask"]
         while( pTask != 0 ):
             t = task()
-            ret.append(t)
             if( pTask == current ):
                 t.current = True
             try:
@@ -238,17 +237,22 @@ class os_embos( ):
             except gdb.error:
                 pTask=pTask.cast(otp)
                 t.name = pTask["sName"]
-            t.id = int(pTask)
-            t.priority = int(pTask["Priority"])
-            t.stack = pTask["pStack"]
-            t.status = int(pTask["Stat"])
+            try:
+                t.id = int(pTask)
+                t.priority = int(pTask["Priority"])
+                t.stack = pTask["pStack"]
+                t.status = int(pTask["Stat"])
 
-            t.pc = t.stack["Base"]["OS_REG_PC"]
-            t.pc = gdb.parse_and_eval(f"(void*){t.pc}")
+                x = t.stack["Base"]
+                t.pc = t.stack["Base"]["OS_REG_PC"]
+                t.pc = gdb.parse_and_eval(f"(void*){t.pc}")
 
 #            t.lr = t.stack["Base"]["OS_REG_LR"]
-            t.lr = t.stack["Base"]["OS_REG_R14"]
-            t.lr = gdb.parse_and_eval(f"(void*){t.lr}")
+                t.lr = t.stack["Base"]["OS_REG_R14"]
+                t.lr = gdb.parse_and_eval(f"(void*){t.lr}")
+            except gdb.error:
+                break
+            ret.append(t)
             pTask = pTask["pNext"]
 
         return ret
@@ -383,7 +387,11 @@ embos = None
 def embos_rtos( argv ):
     global embos
     if( embos is None ):
-        embos = os_embos()
+        try:
+            embos = os_embos()
+        except gdb.error as e:
+            print(f"Failed to detect embOS: {e}")
+            return
     tl=embos.get_task_list()
     ver = embos.version()
     name = embos.name()
