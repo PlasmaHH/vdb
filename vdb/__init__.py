@@ -353,6 +353,10 @@ def start( vdbd = None, vdbinit = None ):
             print(f"Calling second stage start of {name}")
             mod.start()
 
+    # All done, set the variable to denote us being active
+    # TODO As soon as we have versions, introduce this as a version code: XX.YY.ZZ => XXYYZZ
+    gdb.set_convenience_variable("vdb",1)
+
 def enabled( mod ):
     if( mod in enabled_modules ):
         return True
