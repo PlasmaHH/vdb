@@ -25,6 +25,7 @@ color_rtti     = vdb.config.parameter("vdb-bt-colors-rtti-warning",             
 color_argument = vdb.config.parameter("vdb-bt-colors-argument",                 "#008888", gdb_type = vdb.config.PARAM_COLOUR)
 color_argvalue = vdb.config.parameter("vdb-bt-colors-argvalue",                 None,    gdb_type = vdb.config.PARAM_COLOUR)
 color_numvalue = vdb.config.parameter("vdb-bt-colors-numvalue",                 "#f80",    gdb_type = vdb.config.PARAM_COLOUR)
+color_opttout  = vdb.config.parameter("vdb-bt-colors-optimized-out",            "#333",    gdb_type = vdb.config.PARAM_COLOUR)
 #color_ = vdb.config.parameter( "vdb-bt-colors-","#")
 
 color_addr     = vdb.config.parameter("vdb-bt-color-addresses", True )
@@ -47,6 +48,9 @@ class ArgVal():
         if( self.val_type is None ):
             return self.val
 
+        if( self.val.is_optimized_out ):
+            oo = vdb.color.color("<optimized out>",color_opttout.value)
+            return f"BEGIN_PTR{oo}END_PTR"
 #        print(f"{type(self.val)=} ... {self.val_type} ... {vdb.util.gdb_type_code(self.val_type.code)}")
         ps = 0
         match self.val_type.code:
@@ -438,7 +442,13 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
                 ret.append( ArgVal( symbol, "") )
 #		gdb.execute("set logging redirect off")
 #		gdb.execute("set logging off")
-
+#        print()
+#        print(f"{len(ret)=}")
+#        for r in ret:
+#            try:
+#                print(f"R = {r.value()}")
+#            except:
+#                print(f"RV = {r.val}")
         return ret
 
     def color_address( self, ptr = None ):
