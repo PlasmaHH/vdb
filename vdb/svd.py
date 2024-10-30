@@ -1064,6 +1064,7 @@ def do_svd_scan_one(dirname,at,filter_re):
     keep_parsing = True
     pathlist = []
     dirname = os.path.expanduser(dirname)
+
     for root, dirs, files in os.walk(dirname,followlinks=True):
         for f in files:
             if( f.endswith(".svd") or f.endswith(".svd.xz") ):
@@ -1148,6 +1149,7 @@ def do_svd_scan(at,argv):
 #    print("at = '%s'" % (at,) )
     if( at is not None ):
         at.set_progress("[svd #/#]")
+
     for d in scan_dirs.elements:
         try:
             do_svd_scan_one(d,at,filter_re)

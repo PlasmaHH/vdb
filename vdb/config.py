@@ -125,6 +125,7 @@ class parameter(gdb.Parameter):
         try:
             if( self.original_type == gdb.PARAM_STRING ):
                 self.value += val
+                self._safe_on_set()
             elif( self.original_type == PARAM_COLOUR_LIST ):
 #                print("len(self.elements) = '%s'" % (len(self.elements),) )
                 self.value += ";"
@@ -186,13 +187,12 @@ class parameter(gdb.Parameter):
                 self.value = None
             elif( self.value == "default" ):
                 self.value = self.default
-            if( self.is_colour ):
-                self._safe_on_set()
+#            if( self.is_colour ):
+#                self._safe_on_set()
 #                self.check_colour(self)
             if( self.is_float ):
                 self.fvalue = float(self.value)
-            if( self.on_set is not None ):
-                self.on_set(self)
+            self._safe_on_set()
         except:
             vdb.print_exc()
             self.value = self.previous_value
