@@ -1402,16 +1402,16 @@ class Registers():
     def get_mmapped( self, reg ):
         rpos = mmapped_positions.get(reg)
         if( rpos is None ):
-            return None
+            return (None,None)
         rname,raddr,rbit,rtype = rpos
         if( is_blacklisted(raddr) ):
-            return None
+            return (None,None)
         val = vdb.memory.read_uncached(raddr,rbit//8)
         if( val is None ): # unable to read or otherwise not accessible
             if( not mmapfake.value ):
                 print(f"{reg}@{raddr:#0x} blacklisted: memory not accessible")
                 blacklist(raddr)
-                return None
+                return (None,None)
             else:
                 val = b"\0\0\0\0"
         val = gdb.Value(val,rtype)
