@@ -78,7 +78,8 @@ class type_or_function:
         self.failed = False
     
     def replace_name( self, s, r ):
-        self.name = self.name.replace(s,r)
+        if( self.name is not None ):
+            self.name = self.name.replace(s,r)
         if( self.namespace is not None ):
             self.namespace.name = self.namespace.name.replace(s,r)
         if( self.subobject is not None ):
