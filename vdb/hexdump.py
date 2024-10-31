@@ -107,11 +107,9 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
     else:
         symtree = intervaltree.IntervalTree()
 
-    suppress = 0
-    if( align ):
-#        print(f"addr = {int(addr):#0x}" if addr is not None else "addr = None")
+    suppress = 0 # amount of bytes at the beginning to leave out
+    if( align ): # needs to align to 16 bytes
         naddr = addr & ~0xf
-#        print(f"naddr = {int(naddr):#0x}" if naddr is not None else "naddr = None")
         suppress = addr - naddr
         addr = naddr
         xlen += suppress
@@ -119,6 +117,10 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
     olen = xlen
 
     data = vdb.memory.read(addr,xlen,partial=True)
+#    if( data is not None ):
+#        print(f"{data.tobytes()=}")
+
+    # Could not read data for whatever reason...
     if( data is None ):
 #        print(f"vdb.memory.read({addr:#0x},xlen,True) => None")
         data = vdb.memory.read(addr+suppress,1)
@@ -130,6 +132,9 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
     if( data is None ):
         print(f"Can not access memory at {addr:#0x}")
         return
+#    print(f"{type(data)=}")
+#    print(f"{type(data[0])=}")
+
     xaddr = addr
 #    p,add,col,mm,_ = vdb.pointer.color(addr,vdb.arch.pointer_size)
 #    nm = gdb.parse_and_eval(f"(void*)({addr})")
@@ -143,6 +148,8 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
     while(len(data) > 0 ):
         dc = data[:16]
         data = data[16:]
+#        print(f"{dc.tobytes()=}")
+#        print(f"{data.tobytes()=}")
         p,_,_,_,_ = vdb.pointer.color(xaddr,vdb.arch.pointer_size)
         cnt = 0
         l = ""
@@ -165,8 +172,15 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
                     pointer_string += ps
                     pointer_string += pc_separator.value
 
+#        print(f"{type(dc)=}")
+#        print(f"{type(dc[0])=}")
         for d in dc:
-            d = bytes(d)
+#            if( isinstance(d,int) ):
+#                d=d.to_bytes()
+#            print(f"{type(d)=}")
+#            print(f"1{d=}")
+#            d = bytes(d)
+#            print(f"2{d=}")
             if( suppress ):
                 suppress -= 1
                 l += "   "

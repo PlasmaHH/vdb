@@ -314,7 +314,8 @@ def read_uncached( ptr, count = 1, partial = False ):
         addr=vdb.util.gint(ptr)
     else:
         addr=ptr
-#    print(f"read_uncached( {addr:#0x}, {count}, {partial=}")
+#    print(f"read_uncached( {addr:#0x}, {count}, {partial=})")
+
     try:
 #        print("addr = '%s'" % (addr,) )
         while( addr < 0 ):
@@ -335,7 +336,10 @@ def read_uncached( ptr, count = 1, partial = False ):
             cnt0 = count // 2
             cnt1 = count-cnt0
             r0 = read_uncached( ptr, cnt0, partial=True )
-#            print("r0 = '%s'" % (r0,) )
+#            if( r0 is None ):
+#                print(f"{r0=}")
+#            else:
+#                print(f"{r0.tobytes()=}")
             if( r0 is None ): # then not even a single byte could be read
                 return None
             if( len(r0) >= cnt0 ):
@@ -344,7 +348,8 @@ def read_uncached( ptr, count = 1, partial = False ):
                     r0b = r0.tobytes()
                     r1b = r1.tobytes()
                     allbytes = r0b+r1b
-                    return memoryview(allbytes)
+#                    print(f"{type(allbytes)=}")
+                    return memoryview(allbytes).cast("c")
                 else:
                     return r0
             else:
