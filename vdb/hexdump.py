@@ -91,7 +91,7 @@ def tile_format( cnt, t, l ):
         l += " "
     return (t,l)
 
-def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False, symbols = True, align = None ):
+def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False, symbols = True, align = None, uncached = False ):
 
     if( align is None ):
         align = default_align.value
@@ -116,19 +116,19 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
 
     olen = xlen
 
-    data = vdb.memory.read(addr,xlen,partial=True)
+    data = vdb.memory.read_u(uncached,addr,xlen,partial=True)
 #    if( data is not None ):
 #        print(f"{data.tobytes()=}")
 
     # Could not read data for whatever reason...
     if( data is None ):
 #        print(f"vdb.memory.read({addr:#0x},xlen,True) => None")
-        data = vdb.memory.read(addr+suppress,1)
+        data = vdb.memory.read_u(uncached,addr+suppress,1)
         if( data is not None ):
             data = None
             while(data is None ):
                 xlen -= 1
-                data = vdb.memory.read(addr,xlen)
+                data = vdb.memory.read_u(uncached,addr,xlen)
     if( data is None ):
         print(f"Can not access memory at {addr:#0x}")
         return
@@ -337,7 +337,7 @@ def annotate( argv ):
     print(f"Annotated {argv}")
 
 
-def call_hexdump( argv ):
+def call_hexdump( argv, flags ):
 #    argv = gdb.string_to_argv(arg)
     if( len(argv) == 0 ):
         print(cmd_hexdump.__doc__)
@@ -345,30 +345,36 @@ def call_hexdump( argv ):
     pointers = False
     values = False
     align = None
+    uncached = False
     chainlen = -1
-    if( argv[0].startswith("/") ):
-        argv[0] = argv[0][1:]
-        m = re.search("p[0-9]*",argv[0])
-        if( m is not None ):
-            pointers = True
-            try:
-                chainlen = int(argv[0][1:])
-            except:
-                pass
-            argv[0] = argv[0].replace(m.group(0),"")
 
-        if( argv[0].find("v") != -1 ):
-            values = True
-            argv[0] = argv[0].replace("v","")
+    m = re.search("p[0-9]*",flags)
+    if( m is not None ):
+        pointers = True
+        try:
+            chainlen = int(flags[1:])
+        except:
+            pass
+        flags = flags.replace(m.group(0),"")
 
-        if( argv[0].find("a") != -1 ):
-            align = True
-            argv[0] = argv[0].replace("a","")
+    # Maybe we want a "flags consume" object thing?
 
-        if( len(argv[0]) > 0 ):
-            print(f"Unknown argument {argv[0]}")
-            return
-        argv = argv[1:]
+    if( flags.find("u") != -1 ):
+        uncached = True
+        flags = flags.replace("u","")
+
+    if( flags.find("v") != -1 ):
+        values = True
+        flags = flags.replace("v","")
+
+    if( flags.find("a") != -1 ):
+        align = True
+        flags = flags.replace("a","")
+
+    if( len(flags) > 0 ):
+        print(f"Unknown flags {flags}")
+        return
+
     if( len(argv) > 0 and argv[0] == "annotate" ):
         annotate( argv[1:] )
     else:
@@ -376,11 +382,11 @@ def call_hexdump( argv ):
         xlen = None
         if( len(argv) == 1 ):
             addr = vdb.util.gint("(void*)" + argv[0])
-            hexdump(addr,pointers=pointers,chaindepth=chainlen,values=values,align=align)
+            hexdump(addr,pointers=pointers,chaindepth=chainlen,values=values,align=align,uncached=uncached)
         elif( len(argv) == 2 ):
             addr = vdb.util.gint("(void*)" + argv[0])
             xlen = vdb.util.gint(argv[1])
-            hexdump(addr,xlen,pointers=pointers,chaindepth=chainlen,values=values,align=align)
+            hexdump(addr,xlen,pointers=pointers,chaindepth=chainlen,values=values,align=align,uncached=uncached)
         else:
             print(cmd_hexdump.__doc__)
     return
@@ -413,7 +419,8 @@ We recommend having an alias hd = hexdump in your .gdbinit
 
     def do_invoke (self, argv):
         try:
-            call_hexdump(argv)
+            argv,flags = self.flags(argv)
+            call_hexdump(argv,flags)
         except:
             vdb.print_exc()
             raise
