@@ -1719,18 +1719,21 @@ ascii mockup:
             # t : show our target, and only the raw_target if our target is unavailable
             # T : Always show our target and the raw target, even when both exist
             if( any((c in showspec) for c in "tT" ) ):
-                if( i.targets is not None ):
-                    for tgt in i.targets:
-                        symtree = vdb.memory.get_symbols(tgt,1)
-                        for sym in symtree:
-                            offset = tgt - sym.begin
-                            name = sym.data
-                            if( offset == 0 ):
-                                sstr = f"{tgt:#0x} <{name}>"
-                            else:
-                                sstr = f"{tgt:#0x} <{name}+{offset}>"
-                            line.append( sstr )
-#                        line.append( i.targets )
+                if( len(i.reference) == 0 ):
+                    if( i.targets is not None ):
+                        for tgt in i.targets:
+                            symtree = vdb.memory.get_symbols(tgt,1)
+                            for sym in symtree:
+                                offset = tgt - sym.begin
+                                name = sym.data
+                                if( offset == 0 ):
+                                    sstr = f"{tgt:#0x} <{name}>"
+                                else:
+                                    sstr = f"{tgt:#0x} <{name}+{offset}>"
+                                #line.append( sstr )
+                                ltpl = line[-1]
+                                ltpl=vdb.color.concat( [ltpl,",",sstr] )
+                                line[-1] = ltpl
                 if( "T" in showspec ):
                     if( i.target_name is not None ):
                         line.append( "TGT:"+wrap_shorten(i.target_name))
