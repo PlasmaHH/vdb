@@ -14,6 +14,7 @@ import vdb.memory
 
 import gdb
 import colors
+import importlib
 
 import re
 import traceback
@@ -40,6 +41,21 @@ asm_colors = [
         ( "hlt.*|syscall.*|int.*", "#a11" ),
         ( "XXXX", "#904449" ),
         ]
+
+asm_class_colors = {
+            "jump" : "#f0f",
+            "mem"  : "#0ff",
+            "nop"  : "#338",
+            "bit"  : "#da4",
+            "math" : "#909",
+            "sys"  : "#a11",
+            "ret"  : "#8f9",
+            "call" : "#66f",
+            "stack": "#080",
+            "cond" : "#f99",
+            "vector" : "#aa6",
+            "default" : "#f00"
+        }
 
 asm_colors_dot = [
         ( "j.*", "#f000f0" ),
@@ -134,8 +150,8 @@ color_call_dot       = vdb.config.parameter("vdb-asm-colors-call-dot",       "#6
 nonfunc_bytes      = vdb.config.parameter("vdb-asm-nonfunction-bytes",16)
 history_limit      = vdb.config.parameter("vdb-asm-history-limit",4)
 tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
-asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnpTrjhcx" )
-asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnpTr" )
+asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnptrjhcx" )
+asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnptr" )
 asm_tailspec       = vdb.config.parameter("vdb-asm-tailspec", "andD" )
 asm_sort           = vdb.config.parameter("vdb-asm-sort", True )
 dot_fonts          = vdb.config.parameter("vdb-asm-font-dot", "Inconsolata,Source Code Pro,DejaVu Sans Mono,Lucida Console,Roboto Mono,Droid Sans Mono,OCR-A,Courier" )
@@ -147,6 +163,7 @@ direct_output      = vdb.config.parameter("vdb-asm-direct-output", True )
 gv_limit           = vdb.config.parameter("vdb-asm-variable-expansion-limit", 3 )
 default_argspec    = vdb.config.parameter("vdb-asm-default-argspec", "i@%=,o@%" )
 annotate_jumps     = vdb.config.parameter("vdb-asm-annotate-jumps", True )
+annotate_cmove     = vdb.config.parameter("vdb-asm-annotate-cmove", True )
 asm_explain        = vdb.config.parameter("vdb-asm-explain", False, on_set = invalidate_cache  )
 ref_width          = vdb.config.parameter("vdb-asm-reference-width", 120 )
 
@@ -371,8 +388,10 @@ class register_set:
                 return ( rv, rname, origin )
         return ( altval, name, None )
 
-    def merge( self, other ):
+    def merge( self, other, origin = None ):
         for n,(v,o) in other.values.items():
+            if( origin is not None ):
+                o = origin
             self.set( n, v, origin=o )
 
     def copy( self, other, rlist ):
@@ -575,67 +594,7 @@ class asm_arg_base( ):
         print(f"arg %{self.register}, ${self.immediate}, ({self.dereference}), {self.offset},,, T{self.target} :{self.prefix}:: {self.multiplier}*REG + {self.add_register} => {self}")
 
 
-class x86_asm_arg(asm_arg_base):
 
-    @vdb.overrides
-    def parse( self, arg ):
-#        vdb.util.bark() # print("BARK")
-#        print("arg = '%s'" % (arg,) )
-        oarg = arg
-        if( arg.find(":") != -1 ):
-            pf = arg.split(":")
-            arg = pf[1]
-            self.prefix = pf[0][1:]
-#        print("self.prefix = '%s'" % (self.prefix,) )
-#        print("arg = '%s'" % (arg,) )
-
-        if( arg[0] == "*" ):
-            self.asterisk = True
-            arg = arg[1:]
-
-        if( arg[-1] == ")" ):
-            self.dereference = True
-            if( arg[0] == "(" ):
-                arg = arg[1:-1]
-            else:
-                argv = arg.split("(")
-#                print("argv = '%s'" % (argv,) )
-                po = argv[0]
-#                print("po = '%s'" % (po,) )
-                if( po[0] == "%" ):
-                    if( po[-1] == ":" ):
-                        self.prefix = po[1:-1]
-                else:
-                    self.offset = vdb.util.rxint(po)
-#                    print("self.offset = '%s'" % (self.offset,) )
-                arg = argv[1][:-1]
-#                print("arg = '%s'" % (arg,) )
-                marg = arg.split(",")
-#                print("marg = '%s'" % (marg,) )
-                if( len(marg) == 2 ):
-                    self._check(oarg)
-                elif( len(marg) == 3):
-                    if( len(marg[0]) > 0 ):
-                        self.add_register = marg[0][1:]
-#                        print("self.add_register = '%s'" % (self.add_register,) )
-                    self.register = marg[1][1:]
-                    self.multiplier = vdb.util.rxint(marg[2])
-                    self._check(oarg)
-                    return
-
-        if( arg[0] == "%" ):
-            self.register = arg[1:]
-#            print("self.register = '%s'" % (self.register,) )
-
-        if( arg[0] == "$" ):
-            if( arg.startswith("$0x") ):
-                self.immediate_hex = True
-            self.immediate = vdb.util.rxint( arg[1:] )
-
-        if( arg.startswith("0x") ):
-            self.jmp_target = vdb.util.rxint( arg )
-#        print("self.jmp_target = '%s'" % (self.jmp_target,) )
-        self._check(oarg)
 
 class arm_asm_arg(asm_arg_base):
 
@@ -703,6 +662,7 @@ class arm_asm_arg(asm_arg_base):
 
 
 
+
 class instruction_base( abc.ABC ):
 
     """
@@ -713,14 +673,41 @@ class instruction_base( abc.ABC ):
     bytere2 = re.compile("^[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]$")
     cmpre  = re.compile("^\$(0x[0-9a-fA-F]*),.*")
 
+#    class_cache = {}
+#    class_res = []
+
+    @staticmethod
+    def compile_class_res( relist ):
+        ret = []
+        for r,n in relist:
+            ret.append( ( re.compile(r), n ) )
+        return ret
+
+    @classmethod
+    def mnemonic_class( cls, mnemonic ):
+        # XXX can be a base class functionality
+        ret = cls.class_cache.get( mnemonic )
+        if( ret is None ):
+            for r,n in cls.class_res:
+                if( r.match(mnemonic) ):
+                    ret = n
+                    cls.class_cache[mnemonic] = n
+                    break
+            else:
+                ret = "default"
+                cls.class_cache[mnemonic] = "default"
+        return ret
+
     def __init__( self ):
         self.mnemonic = None            # Instructions "name" like mov or sub or push or call
-        self.args = None                # tokenized list of argument strings
+        self.args = []                  # tokenized list of argument strings
         self.arguments = []             # objects for each arguments
-        self.args_string = None         # Original full string for the arguments
+        self.args_string = ""           # Original full string for the arguments
 
         self.conditional_jump = False   # Whether this is a conditional jump type of instruction
+        self.unconditional_jump = False # Whether this is a unconditional jump type of instruction
         self.call = False               # Whether this is a call type of instruction
+        self.jump = False               # Any kind of jump/call etc. that could change the execution flow and has a target
         self.return_ = False            # Whether this is a return kind of instruction (next will not be executed)
 
         self.raw_target = None          # For jumps etc. the raw string that gdb displays
@@ -751,6 +738,7 @@ class instruction_base( abc.ABC ):
         self.file_line = None
         self.possible_in_register_sets = []
         self.possible_out_register_sets = []
+        self.iclass = None
 
         self.possible_in_flag_sets = []
         self.possible_out_flag_sets = []
@@ -761,6 +749,47 @@ class instruction_base( abc.ABC ):
         self.line = None
         self.unhandled = False
         self.explanation = []
+        self.last_seen_registers = None # last time this was marked with real registers
+
+    # parse common parts of all asm dialects like
+    # - current position marker
+    # - address
+    # - offset marker ( <+55> )
+    def parse_common( self, line, m, oldins ):
+        self.line = line
+
+        tokens = line.split()
+        marker = m.group(1)
+        if( marker is not None ):
+            self.marked = True
+            tokens = tokens[1:]
+
+        addr = tokens[0].strip()
+        # A : there tells us there is no <+###> offset following (common when the symbol is not known)
+        if( addr[-1] == ":" ):
+            addr = addr[:-1]
+            self.offset = ""
+            del tokens[0] # address
+        else:
+            self.offset = tokens[1].strip()[1:-2]
+            if( self.offset[0] == "+" ):
+                self.offset = self.offset[1:]
+            del tokens[0] # address
+            del tokens[0] # offset
+
+        self.address = vdb.util.xint(addr)
+
+        return tokens
+
+    def color_mnemonic( self ):
+        if( len(color_mnemonic.value) > 0 ):
+            return vdb.color.color(mnemonic,color_mnemonic.value)
+        else:
+            return self.color_mnemonic_class()
+
+    def color_mnemonic_class( self ):
+        col = asm_class_colors.get(self.iclass)
+        return vdb.color.color(self.mnemonic,col)
 
     def add_explanation( self, ex ):
         if( len(self.explanation) > 0 ):
@@ -791,6 +820,9 @@ class instruction_base( abc.ABC ):
     def _gen_extra( self ):
         self._gen_extra_regs( "INREG", self.possible_in_register_sets )
         self._gen_extra_regs( "OUTREG", self.possible_out_register_sets )
+        if( self.last_seen_registers is not None ):
+            self._gen_extra_regs( "LASTREG", [ self.last_seen_registers ] )
+
         for pfs in self.possible_in_flag_sets:
             self.add_extra(f"INFLG {pfs}")
         for pfs in self.possible_out_flag_sets:
@@ -802,12 +834,14 @@ class instruction_base( abc.ABC ):
 
     def _gen_debug( self ):
         self.add_extra( f"self.line      : '{self.line}'")
+        self.add_extra( f"self.mnemonic  : '{self.mnemonic}'")
         self.add_extra( f"self.args      : '{self.args}'")
         self.add_extra( f"self.targets   : '{self.targets}'")
         self.add_extra( f"self.target_of : '{self.target_of}'")
         self.add_extra( f"self.reference          : '{self.reference}'")
         self.add_extra( f"self.parsed_reference   : '{self.parsed_reference}'")
         self.add_extra( f"self.raw_target         : '{self.raw_target}'")
+        self.add_extra( f"self.raw_reference      : '{self.raw_reference}'")
         self.add_extra( f"self.target_name        : '{self.target_name}'")
         self.add_extra( f"self.parsed_target_name : '{self.parsed_target_name}'")
 
@@ -879,314 +913,8 @@ class instruction_base( abc.ABC ):
     @abc.abstractmethod
     def parse( self, line, m, oldins ):
         pass
+# Reset should we ever be able to change classes dynamically
 
-class x86_instruction( instruction_base ):
-
-    last_cmp_immediate = 1
-    @vdb.overrides
-    def parse( self, line, m, oldins ) -> x86_instruction:
-        jmpre  = re.compile("^\*(0x[0-9a-fA-F]*)\(.*")
-#        print("m.groups() = '%s'" % (m.groups(),) )
-        self.line = line
-        tokens = line.split()
-        marker = m.group(1)
-        if( marker is not None ):
-            self.marked = True
-            tokens = tokens[1:]
-#            print("tokens = '%s'" % tokens )
-        # the dissamble version without <line+>
-        if( tokens[0][-1] == ":" ):
-            tokens[0] = tokens[0][:-1]
-        elif( tokens[1][-1] != ":" ):
-            while( tokens[1][-1] != ":" ):
-#                    print("tokens[1][-1] = '%s'" % tokens[1][-1] )
-                tokens[1] += tokens[2]
-#                    print("tokens[1] = '%s'" % tokens[1] )
-                del tokens[2]
-
-        xtokens = []
-#            print("tokens = '%s'" % tokens )
-        while len(tokens) > 0:
-            tok = tokens[0]
-            if( len(xtokens) > 0 and xtokens[-1].endswith(",") ):
-                xtokens[-1] += tok
-            else:
-                xtokens.append(tok)
-            tokens = tokens[1:]
-#            print("xtokens = '%s'" % xtokens )
-        tokens = xtokens
-
-        self.address = vdb.util.xint(tokens[0])
- #            print("tokens[1] = '%s'" % tokens[1] )
-        if( len(tokens[1]) < 2 or tokens[1][1] == "+" ):
-            self.offset = tokens[1][2:-2]
-        else:
-            self.offset = tokens[1][1:-2]
-#            print("self.offset = '%s'" % self.offset )
-        tpos = 1
-        ibytes = []
-#            print("tpos = '%s'" % (tpos,) )
-#            print("tokens = '%s'" % (tokens,) )
-        if( len(self.offset) == 0 ):
-            tpos -= 1
-        while( tpos < len(tokens) ):
-            tpos += 1
-            tok = tokens[tpos]
-            if( self.bytere.match(tok) ):
-                ibytes.append( tok )
-            else:
-                break
-#            print("ibytes= '%s'" % (ibytes,) )
-        self.bytes = ibytes
-        tokens = tokens[tpos:]
-        tpos = 0
-        if( tokens[tpos] in prefixes ):
-            self.prefix = tokens[tpos]
-            tpos += 1
-        self.mnemonic = tokens[tpos]
-        tpos += 1
-        if( self.mnemonic in return_mnemonics ):
-            self.return_ = True
-        if( len(tokens) > tpos ):
-            self.args = split_args(tokens[tpos])
-            self.args_string = tokens[tpos]
-            tpos += 1
-
-        if( self.mnemonic in conditional_jump_mnemonics ):
-            self.conditional_jump = True
-        if( self.mnemonic.startswith("cmp") ):
-            m = re.search(self.cmpre,self.args_string)
-#                print("m = '%s'" % m )
-            if( m is not None ):
-                cmparg = m.group(1)
-                x86_instruction.last_cmp_immediate = vdb.util.xint(cmparg)
-
-        if( len(tokens) > tpos ):
-#                print("tokens = '%s'" % (tokens,) )
-#                print("tokens[tpos] = '%s'" % tokens[tpos] )
-            if( tokens[tpos] == "#" ):
-                self.reference.append( " ".join(tokens[tpos+1:]) )
-#                    print("self.reference = '%s'" % self.reference )
-            else:
-                if( self.mnemonic not in unconditional_jump_mnemonics ):
-                    self.conditional_jump = True
-#                    print("TARGET ADD '%s'" % tokens[tpos-1])
-                try:
-                    self.targets.add(vdb.util.xint(tokens[tpos-1]))
-                except:
-                    pass
-                self.target_name = " ".join(tokens[tpos:])
-                self.raw_target = " ".join(tokens[tpos:]) # And never change it anymore
-#            elif( self.mnemonic in conditional_jump_mnemonics ):
-        elif( self.conditional_jump ):
-#                print("CONDITIONAL JUMP? %s %s" % (self.mnemonic, tokens ) )
-            try:
-                self.targets.add(vdb.util.xint(tokens[tpos-1]))
-            except:
-                pass
-        elif( self.mnemonic in unconditional_jump_mnemonics ):
-#                print("UNCONDITIONAL JUMP? %s %s" % (self.mnemonic, tokens ) )
-            m = re.search(jmpre,self.args_string)
-            if( m is not None ):
-                table = m.group(1)
-                cnt = 0
-                while True:
-                    try:
-                        jmpval = gdb.parse_and_eval(f"*((void**){table}+{cnt})")
-#                        print("jmpval = '%s'" % jmpval )
-                        if( jmpval == 0 ):
-                            break
-                    except gdb.MemoryError:
-                        break
-                    if( cnt > x86_instruction.last_cmp_immediate ):
-                        break
-#                        print("last_cmp_immediate = '%s'" % last_cmp_immediate )
-                    self.targets.add(int(jmpval))
-                    cnt += 1
-                self.reference.append( f"{len(self.targets)} computed jump targets " ) # + str(self.targets)
-#                    print("jmpval = '%s'" % jmpval )
-#                    print("m = '%s'" % m )
-#                    print("m.group(1) = '%s'" % m.group(1) )
-#                    print("self = '%s'" % self )
-            else:
-                try:
-                    self.targets.add(vdb.util.xint(tokens[tpos-1]))
-                except:
-                    pass
-
-        if( self.mnemonic in call_mnemonics ):
-            self.call = True
-            self.conditional_jump = False
-#            print("tokens = '%s'" % tokens[tpos:] )
-
-        if( oldins is not None and oldins.mnemonic != "ret" ):
-            oldins.next = self
-            self.previous = oldins
-        oldins = self
-        return self
-
-class arm_instruction( instruction_base ):
-
-    last_cmp_immediate = 1
-
-    def __init__( self ):
-        super().__init__()
-        self.arg_is_list = False
-
-
-    @vdb.overrides
-    def parse( self, line, m, oldins ):
-#        vdb.util.bark() # print("BARK")
-#        print("line = '%s'" % (line,) )
-        self.line = line
-        marker = m.group(1)
-#        print(f"{marker=}")
-        tokens = line.split()
-        if( marker is not None ):
-            self.marked = True
-            tokens = tokens[1:]
-#        print("m.groups() = '%s'" % (m.groups(),) )
-#        print("tokens = '%s'" % (tokens,) )
-
-        addr = tokens[0].strip()
-        if( addr[-1] == ":" ):
-            addr = addr[:-1]
-            self.offset = ""
-            del tokens[0] # address
-        else:
-            self.offset = tokens[1].strip()[1:-1]
-            if( self.offset[0] == "+" ):
-                self.offset = self.offset[1:]
-            del tokens[0] # address
-            del tokens[0] # offset
-
-
-
-        self.address = vdb.util.xint(addr)
-#        if( self.marked ):
-#            print(f" marked address {self.address:#0x}")
-
-        ibytes = []
-        while( self.bytere2.match(tokens[0]) ):
-            ibytes.append(tokens[0])
-            del tokens[0]
-        self.bytes = ibytes
-
-        if( tokens[0] in prefixes ):
-            self.prefix = tokens[0]
-            del tokens[0]
-
-        self.mnemonic = tokens[0]
-        if( self.mnemonic == ";" ):
-            self.mnemonic = ""
-        else:
-            del tokens[0]
-
-        # up until to the mnemonic x86 and arm are the same, so put everything into a function
-        tokens = " ".join(tokens)
-        tokens = tokens.split(";")
-        if( len(tokens) == 1 ): ## aarch64 uses // instead of ;
-            tokens = tokens[0].split("//")
-        if( len(tokens) == 1 ): ## sometimes there is an @
-            tokens = tokens[0].split("@")
-        if( len(tokens) > 1 ):
-            self.reference = "".join(tokens[1:])
-            self.reference = [ ( self.reference, len(self.reference) ) ]
-        args = tokens[0].strip()
-#        print(f"{args=}")
-        if( len(args) > 0 and args[-1] == ">" and ( ( lbi := args.find("<") ) > 0 ) ):
-#            print(f"{lbi=}")
-            args = args[:lbi]
-#        print(f"{args=}")
-        self.args_string = args
-
-        oargs = args
-#        print("oargs = '%s'" % (args,) )
-
-        if( len(args) > 0 ):
-            self.args = []
-            if( args[0] == "{" and args[-1] == "}" ):
-                self.arg_is_list = True
-                args = args[1:-1]
-#            print("args = '%s'" % (args,) )
-            args = args.split(",")
-#            print("args = '%s'" % (args,) )
-            target = True
-            while len(args) > 0:
-                arg = args[0].strip()
-                if( arg[0] == "[" ):
-                    arg = ",".join(args)
-                    args = []
-                else:
-                    del args[0]
-                aarg = arm_asm_arg(target,arg)
-                target = False
-                self.args.append(arg)
-                self.arguments.append(aarg)
-        reargs = ", ".join(map(str,self.arguments))
-        if( self.arg_is_list ):
-            reargs = "{" + reargs + "}"
-        if( reargs != oargs.strip() ):
-            print("CHECK OF WHOLE EXPRESION FAILED")
-            print("oargs  = '%s'" % (oargs,) )
-            print("reargs = '%s'" % (reargs,) )
-            self.add_extra(reargs)
-
-        
-        if( self.mnemonic in arm_conditional_jump_mnemonics ):
-#            print("self = '%s'" % (self,) )
-#            print("self.next = '%s'" % (self.next,) )
-#            print("oargs = '%s'" % (oargs,) )
-#            print("self.args = '%s'" % (self.args,) )
-            self.targets.add( vdb.util.xint(self.args[-1]) )
-            self.conditional_jump = True
-        elif( self.mnemonic in arm_unconditional_jump_mnemonics ):
-#            print("self = '%s'" % (self,) )
-            self.targets.add( vdb.util.xint(oargs) )
-        elif( self.mnemonic in ["tbb","tbh"] ): # arm jump table stuff
-#            print("ARM TBB/TBH DETECTED")
-            try:
-                # TODO Check how to support other registers (would probably require rewriting targets)
-                if( self.arguments[0].register == "pc" ):
-                    if( self.mnemonic == "tbh" ):
-                        ctyp = "unsigned short"
-                        csz  = 2
-                    else:
-                        ctyp = "unsigned char"
-                        csz  = 1
-                    tbllen = int(arm_instruction.last_cmp_immediate)
-#                    print("tbllen = '%s'" % (tbllen,) )
-#                    print("self.address = '%s'" % (self.address,) )
-                    for i in range(0,tbllen):
-                        gexp = f"{self.address} +4+ *({ctyp}*)({self.address}+4+{csz}*{i})*2"
-#                        print("gexp = '%s'" % (gexp,) )
-#                        gdb.execute(f"p *({ctyp}*)({self.address}+4+{csz}*{i})*2")
-                        gexp = gdb.parse_and_eval( gexp )
-#                        print("gexp = '%x'" % (gexp,) )
-                        self.targets.add( int(gexp) )
-#                        print("self = '%s'" % (self,) )
-
-
-            except ValueError:
-                pass
-        elif( self.mnemonic.startswith("cmp") ):
-            arm_instruction.last_cmp_immediate = self.arguments[1].immediate
-#            print("arm_instruction.last_cmp_immediate = '%s'" % (arm_instruction.last_cmp_immediate,) )
-
-        if( debug_all(self) ):
-            print("###########################################################")
-            print("self.targets = '%s'" % (self.targets,) )
-
-        if( oldins is not None ):
-#            print("oldins = '%s'" % (oldins,) )
-#            print("self = '%s'" % (self,) )
-#            print("oldins.mnemonic = '%s'" % (oldins.mnemonic,) )
-#            print("oldins.next = '%s'" % (oldins.next,) )
-            if oldins.mnemonic not in arm_unconditional_jump_mnemonics :
-                oldins.next = self
-#            print("oldins.next = '%s'" % (oldins.next,) )
-#            print("2oldins = '%s'" % (oldins,) )
-        return self
 
 class listing( ):
 
@@ -1243,11 +971,6 @@ class listing( ):
                 return vdb.color.color(s,c)
         return s
 
-    def color_mnemonic( self, mnemonic ):
-        if( len(color_mnemonic.value) > 0 ):
-            return vdb.color.color(mnemonic,color_mnemonic.value)
-        else:
-            return self.color_relist(mnemonic,asm_colors)
 
     def color_prefix( self, prefix ):
         if( len(color_prefix.value) > 0 ):
@@ -1925,7 +1648,8 @@ ascii mockup:
             if( "n" in showspec ):
                 postjump += 1
                 pre = self.color_prefix(i.prefix)
-                mne = self.color_mnemonic(i.mnemonic)
+#                mne = self.color_mnemonic(i.mnemonic)
+                mne = i.color_mnemonic()
                 mxe = pre + i.infix + mne
                 mlen = len(i.prefix) + len(i.infix) + len(i.mnemonic)
 #                aslen += mlen
@@ -1962,12 +1686,14 @@ ascii mockup:
 
             reference_lines = []
             if( "r" in showspec ):
-                f = ""
+                rtpl=("",0)
+                if( i.unhandled ):
+                    rtpl=vdb.color.colorl("!","#900")
+
                 if(len(i.reference) == 0 ):
-                    line.append("")
+                    line.append(rtpl)
                 else:
                     # Refrence line data plus its display length
-                    rtpl=("",0)
 #                    print("i.reference = '%s'" % (i.reference,) )
                     for rf in i.reference:
 #                        print("rf = '%s'" % (rf,) )
@@ -1990,18 +1716,21 @@ ascii mockup:
                         line.append(reference_lines[0])
                         reference_lines = reference_lines[1:]
 
-
-#                for r in i.reference:
-#                    f += wrap_shorten(r) + " "
-#                if( len(f) > 0 ):
-#                    f = f[:-1]
-#                    line.append(f)
-
             # t : show our target, and only the raw_target if our target is unavailable
             # T : Always show our target and the raw target, even when both exist
             if( any((c in showspec) for c in "tT" ) ):
-#                if( i.targets is not None ):
-#                    line.append( i.targets)
+                if( i.targets is not None ):
+                    for tgt in i.targets:
+                        symtree = vdb.memory.get_symbols(tgt,1)
+                        for sym in symtree:
+                            offset = tgt - sym.begin
+                            name = sym.data
+                            if( offset == 0 ):
+                                sstr = f"{tgt:#0x} <{name}>"
+                            else:
+                                sstr = f"{tgt:#0x} <{name}+{offset}>"
+                            line.append( sstr )
+#                        line.append( i.targets )
                 if( "T" in showspec ):
                     if( i.target_name is not None ):
                         line.append( "TGT:"+wrap_shorten(i.target_name))
@@ -2239,14 +1968,7 @@ ascii mockup:
         # "up" jumping part of the target_of, the "down" jumping part is done in finish()
         self.add_target(ins)
 
-x86_conditional_jump_mnemonics = set([ "jo", "jno", "js", "jns", "je", "jz", "jne", "jnz", "jb", "jnae", "jc", "jnb","jae","jnc","jbe","jna","ja","jnbe","jl","jng","jge","jnl","jle","jng","jg","jnle","jp","jnle","jp","jpe","jnp","jpo","jcxz","jecxz" ])
-x86_unconditional_jump_mnemonics = set([ "jmp", "jmpq" ] )
-x86_return_mnemonics = set (["ret","retq","iret"])
-x86_call_mnemonics = set(["call","callq","int"])
-x86_prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd", "cs", "ss", "ds", "es", "fs", "gs" ])
-x86_base_pointer = "rbp" # what for 32bit?
 
-call_preserved_registers = [ "rbx", "rsp", "rbp", "r12", "r13", "r14", "r15" ]
 
 arm_conditional_suffixes = [ "eq","ne","cs","hs","cc","lo","mi","pl","vs","vc","hi","ls","ge","lt","gt","le","z","nz" ]
 arm_encoding_suffixes = [ "n","w" ]
@@ -2281,59 +2003,70 @@ last_working_pc = ""
 
 current_arch = None
 
+
 def configure_arch( arch = None ):
     archname = "x86"
     origarch = archname
+#    print(f"forced arch: {arch}")
     try:
         if( arch is not None ):
             archname = arch
         else:
+            # might throw "no frame currently selected" when not running
             archname = gdb.selected_frame().architecture().name()
+#            print(f"gdb frame arch {archname}")
 
+#        print(f"Trying aliases of {archname}")
         origarch = archname
-        archname = arch_aliases.get(archname,archname)
-#        print("archname = '%s'" % (archname,) )
-    except:
+#        print(f"after aliasing {archname=}")
+    except gdb.error:
+#        vdb.print_exc()
         try:
             archname = gdb.execute("show architecture",False,True)
-            print("archname = '%s'" % (archname,) )
+#            print(f"show architecutre: {archname}")
             archname = archname.split('"')
             archname = archname[3]
-            print("archname = '%s'" % (archname,) )
+#            print(f"parsed {archname=}")
         except:
             print("Not configured for architecture %s, falling back to x86" % archname )
-    if( archname.startswith("armv") ):
-        archname = "arm"
+    archname = arch_aliases.get(archname,archname)
+#    print(f"dealiased {archname=}")
+#    if( archname.startswith("armv") ):
+#        archname = "arm"
 
     global current_arch
-    if( archname == current_arch ): # already setup
+    if( current_arch is not None and archname == current_arch.name ): # already setup
         return
+    print(f"Configuring asm architecture {archname}")
+
+    imod = importlib.import_module(f"vdb.asm.{archname}")
+    current_arch = imod
 
     try:
         module = sys.modules[__name__]
         # First set them to the default architecture
-        for gv in dir(module):
-            if( gv.startswith("x86_") ):
-                varn = gv[4:]
-                def_val = getattr(module,gv,None)
-                if( def_val is not None ):
-                    setattr( module, varn, def_val )
+#        for gv in dir(module):
+#            if( gv.startswith("x86_") ):
+#                varn = gv[4:]
+#                def_val = getattr(module,gv,None)
+#                if( def_val is not None ):
+#                    setattr( module, varn, def_val )
 #                    print(f"{varn} => {def_val}")
 
         # Now overwrite with the architecture name ( note that the vt_flow stuff does it in its own way so we don't
         # interfere here with setting those
-        arch_prefix = archname + "_"
+#        arch_prefix = archname + "_"
 #        print("arch_prefix = '%s'" % (arch_prefix,) )
-        for gv in dir(module):
-            if( gv.startswith(arch_prefix) ):
-                varn = gv[len(arch_prefix):]
-                xval = getattr(module,gv)
-                setattr( module, varn, xval )
+#        for gv in dir(module):
+#            if( gv.startswith(arch_prefix) ):
+#                varn = gv[len(arch_prefix):]
+#                xval = getattr(module,gv)
+#                setattr( module, varn, xval )
 #                print(f"{varn} => {xval}")
     except:
         pass
 
-    current_arch = archname
+#    current_arch = archname
     gen_vtable()
     return archname
 
@@ -2454,6 +2187,7 @@ def split_args( in_args : str ) -> list[str]:
 
 #    print("ret = '%s'" % (ret,) )
     if( ",".join(ret) != in_args ):
+        print("BUG? ##############################################")
         print("in_args = '%s'" % (in_args,) )
         print("ret = '%s'" % (ret,) )
     return ret
@@ -2470,6 +2204,7 @@ class fake_symbol( gdb.Value ):
 
 #TODO This whole thing is a total mess, we need at least a bit documentation and possibly refactor some stuff to tell what it is that this funciton is really doing
 
+base_pointer = "rbp" # what for 32bit?
 def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, level = 0 ):
     """
     @returns a string suitable for display as function parameter list ( together with values )
@@ -2766,8 +2501,9 @@ def info_line( addr ):
 
 def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached = True, do_flow = True ):
 
-#    print(f"parse_from_gdb(arg={arg},fakedata, {arch=}, {fakeframe=}, {cached=}, {do_flow=}")
+    print(f"parse_from_gdb(arg={arg},fakedata, {arch=}, {fakeframe=}, {cached=}, {do_flow=}")
     global parse_cache
+    print(f"{len(parse_cache)=}")
 
     key = arg
 
@@ -2861,8 +2597,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
         ins = None
         if( m ):
-            ins = instruction()
-            ins = ins.parse( line, m, oldins )
+            ins = current_arch.instruction( line, m, oldins )
 
         if ins is not None :
             if( ins.marked ):
@@ -2892,49 +2627,6 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
 flow_vtable = {}
 
-jconditions = {
-        "je"  : ( False, [ ( "ZF", 1 ) ] ),
-        "jne" : ( False, [ ( "ZF", 0 ) ] ),
-        "jb"  : ( False, [ ( "CF", 1 ) ] ),
-        "jnb" : ( False, [ ( "CF", 0 ) ] ),
-        "ja"  : ( False, [ ( "ZF", 0 ), ( "CF", 0 ) ] ),
-        "jna" : ( True,  [ ( "CF", 1 ), ( "ZF", 1 ) ] ),
-        "jl"  : ( False, [ ( "SF_OF", 0 ) ] ),
-        "jge" : ( False, [ ( "SF_OF", 1 ) ] ),
-        "jle" : ( True,  [ ( "ZF", 1 ), ( "SF_OF", 0 ) ] ),
-        "jg"  : ( False, [ ( "ZF", 0 ), ( "SF_OF", 1 ) ] ),
-        "jp"  : ( False, [ ( "PF", 1 ) ] ),
-        "jnp" : ( False, [ ( "PF", 0 ) ] ),
-
-        } # All others not supported yet due to no support for these flags yet
-
-jaliases = {
-        "jz":   "je",
-        "jbe":  "jna",
-        "jnae": "jb",
-        "jc":   "jb",
-        "jae":  "jnb",
-        "jnc":  "jnb",
-        "jnbe" : "ja",
-        "jnge" : "jl",
-        "jnl" : "jge",
-        "jng" : "jle",
-        "jnle" : "jg",
-        "jpe" : "jp",
-        "jpo" : "jnp",
-        }
-
-def flag_extra( name, cmp, exp, value ):
-#    vdb.util.bark() # print("BARK")
-    if( name == "SF_OF" ):
-        if( value ):
-            ret = ", SF == OF"
-        else:
-            ret = ", SF != OF"
-    else:
-        ret = f", {name}[{value}] {cmp} {exp}"
-#    print("ret = '%s'" % (ret,) )
-    return ret
 
 def arm_vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     if( asm_explain.value ):
@@ -2989,429 +2681,15 @@ def arm_vt_flow_push( ins, frame, possible_registers, possible_flags ):
 
 
 
-
-
-
-def x86_vt_flow_j( ins, frame, possible_registers, possible_flags ):
-    if( not annotate_jumps.value ):
-        return (possible_registers,possible_flags)
-
-    mnemonic = jaliases.get( ins.mnemonic, ins.mnemonic )
-
-    use_or,exflags = jconditions.get(mnemonic,(None,None))
-#    print("mnemonic = '%s'" % (mnemonic,) )
-#    print("use_or = '%s'" % (use_or,) )
-#    print("exflags = '%s'" % (exflags,) )
-#    print("possible_flags = '%s'" % (possible_flags,) )
-    if( exflags is None ):
-        print(f"Unhandled conditional jump {ins.mnemonic}")
-    else:
-        extrastring = ""
-        valid = False
-        taken = True
-        for exflag in exflags:
-#            print("exflag = '%s'" % (exflag,) )
-            flag_value = possible_flags.get(exflag[0])
-#            print("flag_value = '%s'" % (flag_value,) )
-            if( flag_value is not None ):
-                if( flag_value == exflag[1] ):
-#                    vdb.util.bark() # print("BARK")
-#                    extrastring += f", {exflag[0]} == {flag_value}"
-                    extrastring += flag_extra(exflag[0],"==",exflag[1],flag_value)
-                    if( use_or ):
-                        valid = True
-                        taken = True
-                        break
-                else:
-                    taken = False
-#                    vdb.util.bark() # print("BARK")
-                    extrastring += flag_extra(exflag[0],"!=",exflag[1],flag_value)
-            else:
-                break
-        else:
-            valid = True
-
-        if( valid ):
-            if( taken ):
-                ins.add_extra(f"Jump taken" + extrastring)
-            else:
-                ins.add_extra(f"Jump NOT taken" + extrastring)
-#        print("extrastring = '%s'" % (extrastring,) )
-#        print("possible_flags = '%s'" % (possible_flags,) )
-
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_push( ins, frame, possible_registers, possible_flags ):
-    vl,rname,_ = possible_registers.get("rsp")
-    oldvl=vl
-    if( vl is not None ):
-        vl = int(vl) - ( vdb.arch.pointer_size // 8 )
-        possible_registers.set(rname,vl,origin="flow_push")
-
-    if( asm_explain.value ):
-        pval,_ = ins.arguments[0].value(possible_registers)
-        if( pval is not None ):
-            vls=f"({pval:#0x})"
-        else:
-            vls=""
-
-        ex=f"Pushes value of {ins.args[0]}{vls} to the stack"
-        if( oldvl is not None ):
-            ex += f" @{oldvl:#0x}"
-        ins.add_explanation(ex)
-    # no flags affected
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_pop( ins, frame, possible_registers, possible_flags ):
-    vl,rname,_ = possible_registers.get("rsp")
-    if( vl is not None ):
-        vl = int(vl) + ( vdb.arch.pointer_size // 8 )
-        possible_registers.set(rname,vl,origin="flow_pop")
-
-    # no flags affected
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_mov( ins, frame, possible_registers, possible_flags ):
-    if( debug_all(ins) ):
-        print()
-        vdb.util.bark() # print("BARK")
-
-
-    if( debug_all(ins) ):
-        print("ins = '%s'" % (ins,) )
-        print("ins.mnemonic = '%s'" % (ins.mnemonic,) )
-        print("ins.args_string = '%s'" % (ins.args_string,) )
-        print("ins.args = '%s'" % (ins.args,) )
-        print("ins.arguments = '%s'" % (ins.arguments,) )
-
-        print("possible_registers = '%s'" % (possible_registers,) )
-        print("ins.possible_in_register_sets = '%s'" % (ins.possible_in_register_sets,) )
-        print("ins.possible_out_register_sets = '%s'" % (ins.possible_out_register_sets,) )
-
-    frm = ins.arguments[0]
-    to  = ins.arguments[1]
-
-    frmval,_ = frm.value( possible_registers )
-    toval,toloc = to.value( possible_registers )
-    # the new register value will be...
-    if( not to.dereference ):
-        # We ignore any (initial frame setup) move of rsp to rbp to keep the value intact
-        # XXX if we do it that way we can also from here on (backwards?) assume rsp=rbp. (likely just after it we
-        # sub something from rsp, we should support basic calculations too)
-        if( frm.register != "rsp" or to.register != "rbp" ):
-            possible_registers.set( to.register, frmval,origin="flow_mov" )
-        # TODO We need to do this anyways when we are at a position before that move
-        # TODO this all seems fishy, we need a testcase for when this matters. maybe only in backpropagation?
-        possible_registers.set( to.register, frmval,origin="flow_mov" )
-#        if( frm.register == "rsp" and to.register == "rbp" ):
-#            if( toval is not None ):
-#                possible_registers.set( "rsp", toval )
-    to.specfilter("=")
-    to.specfilter("%")
-
-    if( debug_all(ins) ):
-        print("possible_registers = '%s'" % (possible_registers,) )
-        print("ins.possible_in_register_sets = '%s'" % (ins.possible_in_register_sets,) )
-        print("ins.possible_out_register_sets = '%s'" % (ins.possible_out_register_sets,) )
-
-
-    if( asm_explain.value ):
-        frmstr=""
-        if( frmval is not None ):
-            frmstr=f"({frmval:#0x})"
-        ex = ""
-        if( frm.immediate is not None ):
-            ex += f"Store immediate value {frm} "
-        elif( frm.dereference ):
-            ex += f"Store memory value at {frm}{frmstr} "
-        else:
-            ex += f"Store register value of {frm}{frmstr} "
-
-        if( to.dereference ):
-            memtgt=""
-            if( toloc is not None ):
-                memtgt=f"({toloc:#0x})"
-            ex += f"in memory location {to}{memtgt}"
-        else:
-            ex += f"in register {to}"
-
-        ins.add_explanation(ex)
-
-    # no flags affected
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_jmp( ins, frame, possible_registers, possible_flags ):
-    # no flags affected
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_sub( ins, frame, possible_registers, possible_flags ):
-    sub,_ = ins.arguments[0].value( possible_registers )
-    tgtv,_ = ins.arguments[1].value( possible_registers )
-    possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
-    nv = None
-    if( tgtv is not None and sub is not None):
-        nv = tgtv - sub
-        possible_registers.set( ins.arguments[1].register, nv, origin="flow_sub" )
-        possible_flags.set_result( nv, ins.arguments[1] )
-        possible_flags.set( "CF", int(tgtv > sub) )
-    else:
-        ins.arguments[0].argspec = ""
-    
-    if( asm_explain.value ):
-        nvs=""
-        tvs=""
-        if( nv is not None ):
-            nvs=f"({nv:#0x})"
-        if( tgtv is not None ):
-            tvs=f"({tgtv:#0x})"
-        ins.add_explanation( f"Subtracts {ins.args[0]} from {ins.args[1]}{tvs} and stores it in {ins.args[1]}{nvs}" )
-
-    return ( possible_registers, possible_flags )
-
-
-def x86_vt_flow_add( ins, frame, possible_registers, possible_flags ):
-    add,_ = ins.arguments[0].value( possible_registers )
-    tgtv,_ = ins.arguments[1].value( possible_registers )
-    possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
-    if( tgtv is not None and add is not None):
-        nv = tgtv + add
-        possible_registers.set( ins.arguments[1].register, nv,origin="flow_add" )
-        possible_flags.set_result( nv, ins.arguments[1] )
-        possible_flags.set( "CF", int(tgtv > add) )
-    else:
-        ins.arguments[0].argspec = ""
-
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_test( ins, frame, possible_registers, possible_flags ):
-#    print("ins = '%s'" % (ins,) )
-    a0,_ = ins.arguments[0].value( possible_registers )
-    a1,_ = ins.arguments[1].value( possible_registers )
-    if( ins.arguments[0].arg_string != ins.arguments[1].arg_string ):
-        ins.arguments[1].argspec += "%"
-#    print("a0 = '%s'" % (a0,) )
-#    print("a1 = '%s'" % (a1,) )
-    possible_flags.unset( [ "SF","ZF","AF","PF"] )
-    if( a0 is not None and a1 is not None ):
-        t = a0 & a1
-        possible_flags.set_result(t,ins.arguments[1])
-        # XXX add SF and PF support as soon as some other place needs it
-#        ins.possible_flag_sets.append( possible_flags )
-    possible_flags.set("OF",0)
-    possible_flags.set("CF",0)
-    # No changes in registers, so just
-    return ( possible_registers, possible_flags )
-
-def explain_xor( ins, v0, v1, t, args ):
-    if( len(args) == 2 and args[0].register == args[1].register ):
-        ins.add_explanation( f"Performs xor on register {args[0]} with itself, setting it to 0")
-    else:
-        v0s=""
-        v1s=""
-        ts =""
-        if( v0 is not None ):
-            v0s=f"({v0:#0x})"
-        if( v1 is not None ):
-            v1s=f"({v0:#0x})"
-        if( t is not None ):
-            ts=f"({t:#0x})"
-        if( args[0].dereference ):
-            a0loc = "memory location"
-        else:
-            a0loc = "register"
-        if( args[1].dereference ):
-            a1loc = "memory location"
-        else:
-            a1loc = "register"
-        ins.add_explanation(f"Performs xor on {a0loc} {args[0]}{v0s} with {a1loc} {args[1]}{v1s} and storing the result in {a1loc} {args[1]}{ts}")
-
-
-def x86_vt_flow_pxor( ins, frame, possible_registers, possible_flags ):
-    args = ins.arguments
-    v0=None
-    v1=None
-    t = None
-    if( not args[1].dereference ):
-        v0,_ = args[0].value( possible_registers )
-        v1,_ = args[1].value( possible_registers )
-        if( v0 is not None and v1 is not None ):
-            t = v0 ^ v1
-            possible_registers.set( args[1].register, t,origin="flow_pxor" )
-        else: # no idea about the outcome, don't set it
-            possible_registers.remove( args[1].register )
-        if( len(args) == 2 ):
-            # xor zeroeing out a register
-            if( args[0].register == args[1].register ):
-                possible_registers.set( args[1].register ,0, origin="flow_pxor")
-                args[0].specfilter("%")
-
-    if( asm_explain.value ):
-        explain_xor(ins,v0,v1,t,args)
-
-    return ( possible_registers, possible_flags )
-
-
-def x86_vt_flow_xor( ins, frame, possible_registers, possible_flags ):
-    args = ins.arguments
-
-    v0=None
-    v1=None
-    t = None
-    # We only do it when not writing to memory
-    possible_flags.unset( [ "SF","ZF","AF","PF"] )
-    if( not args[1].dereference ):
-        v0,_ = args[0].value( possible_registers )
-        v1,_ = args[1].value( possible_registers )
-        if( v0 is not None and v1 is not None ):
-            t = v0 ^ v1
-            possible_registers.set( args[1].register, t,origin="flow_xor" )
-            possible_flags.set_result(t)
-        else: # no idea about the outcome, don't set it
-            possible_registers.remove( args[1].register )
-        if( len(args) == 2 ):
-            # xor zeroeing out a register
-            if( args[0].register == args[1].register ):
-                possible_registers.set( args[1].register ,0,origin="flow_xor")
-                possible_flags.set_result(0)
-                args[0].specfilter(None)
-
-    possible_flags.set("OF",0)
-    possible_flags.set("CF",0)
-
-    if( asm_explain.value ):
-        explain_xor(ins,v0,v1,t,args)
-
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_and( ins, frame, possible_registers, possible_flags ):
-    args = ins.arguments
-
-    # We only do it when not writing to memory
-    possible_flags.unset( [ "SF","ZF","AF","PF"] )
-    if( not args[1].dereference ):
-        v0,_ = args[0].value( possible_registers )
-        v1,_ = args[1].value( possible_registers )
-        if( v0 is not None and v1 is not None ):
-            t = v0 & v1
-            possible_registers.set( args[1].register, t ,origin="flow_and")
-            possible_flags.set_result(t)
-        else: # no idea about the outcome, don't set it
-            possible_registers.remove( args[1].register )
-
-    possible_flags.set("OF",0)
-    possible_flags.set("CF",0)
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_movz( ins, frame, possible_registers, possible_flags ):
-    # no flags affected
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_movs( ins, frame, possible_registers, possible_flags ):
-    # no flags affected
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_neg( ins, frame, possible_registers, possible_flags ):
-    ins.arguments[0].target = True
-    val,_ = ins.arguments[0].value(  possible_registers )
-    possible_flags.clear() # until we properly support them its better to not leave wrongs in
-    possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
-    if( val is not None ):
-        val = 0 - val
-        possible_registers.set( ins.arguments[0].register, val ,origin="flow_neg")
-        if( val == 0 ):
-            possible_flags.set("CF",0)
-        else:
-            possible_flags.set("CF",1)
-    else:
-        possible_flags.unset("CF")
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_lea( ins, frame, possible_registers, possible_flags ):
-#    print("ins.line = '%s'" % (ins.line,) )
-    a0 = ins.arguments[0]
-    a1 = ins.arguments[1]
-
-    # the value is unintresting, lea only computes the address
-    a0.specfilter("=")
-
-    fv,fa = a0.value(possible_registers)
-    possible_registers.remove( a1.register )
-    if( fa is not None ):
-        if( not a1.dereference and a1.register is not None):
-            possible_registers.set( a1.register, fa ,origin="flow_lea")
-
-    # no flags affected
-    return ( possible_registers, possible_flags )
-
-# XXX sub does exactly the same with the flags, maybe combine into a common function
-def x86_vt_flow_cmp( ins, frame, possible_registers, possible_flags ):
-    a0 = ins.arguments[0]
-    a1 = ins.arguments[1]
-
-    a1.argspec += "=" # we compare values and want to see the involved ones
-
-    v0 = a0.value(possible_registers)[0]
-    v1 = a1.value(possible_registers)[0]
-#    print("v0 = '%s'" % (v0,) )
-#    print("v1 = '%s'" % (v1,) )
-    possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
-    if( v0 is not None and v1 is not None ):
-        t = v1-v0
-        possible_flags.set( "ZF", int( v0 == v1 ) )
-        possible_flags.set( "CF", int( v0 > v1 ) ) # XXX revisit for accurate signed/unsigned 32/64 bit stuff (and the other flags)
-        possible_flags.set_result( t,a1 )
-
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
-#            print("possible_registers = '%s'" % (possible_registers,) )
-#            ins._gen_extra()
-    rax,_,_ = possible_registers.get("rax",None)
-    if( rax is not None ):
-        sc = get_syscall( rax )
-#                    print("rax = '%s'" % (rax,) )
-#                    print("sc = '%s'" % (sc,) )
-        if( sc is not None ):
-            qm = "?"
-            if( ins.marked or (ins.next and ins.next.marked) ):
-                qm="!"
-            ins.add_extra( sc.to_str(possible_registers,qm,frame) )
-            possible_registers = sc.clobber(possible_registers)
-        else:
-            ins.add_extra(f"syscall[{rax}]()")
-    possible_flags.clear() # syscall can return whatever
-#                    ins.add_extra(f"{possible_registers}")
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_leave( ins, frame, possible_registers, possible_flags ):
-    rbp,_,_ = possible_registers.get("rbp",None)
-    if( rbp is not None ):
-        possible_registers.set("rsp",rbp,origin="flow_leave")
-    # XXX do the "pop rbp" too
-    # no flags affected
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_call( ins, frame, possible_registers, possible_flags ):
-    npr = register_set()
-    npr.copy( possible_registers, call_preserved_registers )
-    possible_registers = npr
-    # no flags affected
-    return ( possible_registers, possible_flags )
-
-def x86_vt_flow_ret( ins, frame, possible_registers, possible_flags ):
-    npr = register_set()
-    possible_registers = npr
-    # no flags affected
-    return ( possible_registers, possible_flags )
-
 def gen_vtable( ):
 #    vdb.util.bark() # print("BARK")
     global flow_vtable
-    thismodule = sys.modules[__name__]
-    start = current_arch + "_vt_flow_"
-    for funname in dir(thismodule):
+#    print(f"{current_arch=}")
+    start = "vt_flow_"
+    for funname in dir(current_arch):
+#        print(f"{funname=}")
         if( funname.startswith(start) ):
-            fun = getattr( thismodule, funname )
+            fun = getattr( current_arch, funname )
             funname = funname[len(start):]
             flow_vtable[funname] = fun
 #    print("flow_vtable = '%s'" % (flow_vtable,) )
@@ -3462,29 +2740,6 @@ def arm_current_flags( frame ):
     fs = flag_set()
     return fs
 
-def x86_current_flags( frame ):
-    eflags = frame.read_register("eflags")
-    if( eflags is None ):
-        return None
-#    print("eflags = '%s'" % (eflags,) )
-#    print("type(eflags) = '%s'" % (type(eflags),) )
-#    print("eflags.type = '%s'" % (eflags.type,) )
-#    print("eflags.type.code = '%s'" % (vdb.util.gdb_type_code(eflags.type.code),) )
-    e_val = int(eflags)
-#    print("eflags.type.fields() = '%s'" % (eflags.type.fields(),) )
-    fs = flag_set()
-    for bit,fd in vdb.register.flag_descriptions.items():
-        mask = 1 << bit
-#        print(f"mask = {int(mask):#0x}")
-#        print("fd[1] = '%s'" % (fd[1],) )
-        fval = e_val & mask
-#        print("fval = '%s'" % (fval,) )
-        if( fval > 0 ):
-            fs.set(fd[1],1)
-        else:
-            fs.set(fd[1],0)
-#    print("fs = '%s'" % (fs,) )
-    return fs
 
 def register_flow( lng, frame : "gdb frame" ):
     global flow_vtable
@@ -3529,7 +2784,7 @@ def register_flow( lng, frame : "gdb frame" ):
     unhandled_mnemonics = set()
 
     
-#    vdb.util.bark() # print("BARK")
+    # at the end we advance to the next instruction or get one from a stack of conditional jump points (flowstack)
     while ins is not None:
 #        print("ins = '%s'" % (ins,) )
         # Simple protection against any kinds of endless loops
@@ -3543,14 +2798,8 @@ def register_flow( lng, frame : "gdb frame" ):
         # Assumes the last one is the target, might be different for different archs
 #        print(f"{ins.args=}")
         # XXX x86 relies on this while arm parses them for the instruction already. Unify that.
-        if( ins.args is not None and len(ins.arguments) == 0 ):
-            target = False
-            for a in ins.args:
-                ins.arguments.append( asm_arg(target,a) )
-                target = True
-
         # As per convention, rip on x86 as an argument is the next instruction
-        if( current_arch == "arm" ):
+        if( current_arch.name == "arm" ):
             if( ins.next is not None ):
                 possible_registers.set( "pc", ins.next.address, origin="ins.next" )
             elif( len(ins.bytes) > 0 ):
@@ -3561,8 +2810,16 @@ def register_flow( lng, frame : "gdb frame" ):
             elif( len(ins.bytes) > 0 ):
                 possible_registers.set( "pc", ins.address + len(ins.bytes),origin="len(ins.bytes)" )
 
+        if( ins.last_seen_registers is not None ):
+            ls = register_set()
+            ls.merge( ins.last_seen_registers, origin = "last_seen" )
+            ls.merge(possible_registers)
+            possible_registers = ls
+            #   →  0x0000000000401152 0  <+12>:           48 83 7d f8 04    cmpq  $0x4,-0x8(%rbp) %=0x4,x@-0x8(%rbp),x@@0x7fffffffccc8,x@=0x1
+            #                                                               cmpq $0x4,-0x8(%rbp) %=0x4,x@-0x8(%rbp)
+
         if( ins.marked ):
-            cf = current_flags(frame)
+            cf = current_arch.current_flags(frame)
             if( cf is not None ):
                 possible_flags.merge(cf)
             cr = current_registers(frame)
@@ -3572,6 +2829,7 @@ def register_flow( lng, frame : "gdb frame" ):
                     if( ov is not None and v != ov ):
                         ins.add_extra( f"Real register {r} has real value {v} from {o} but we deduced {ov} for {an} from {origin}")
             possible_registers.merge(cr)
+            ins.last_seen_registers = possible_registers.clone()
 
         # Check if we have a special function handling more than the basics
         fun = flow_vtable.get(ins.mnemonic,None)
@@ -4126,6 +3384,8 @@ def disassemble( argv ):
     source = False
     arch = None
 
+#    print(f"disassemble start: {len(parse_cache)=}")
+
     # XXX Change to argv/flags "api"
     if( len(argv) > 0 ):
         if( argv[0][0] == "/" ):
@@ -4153,6 +3413,7 @@ def disassemble( argv ):
                 elif( argv0[0] == "F" ):
                     invalidate_cache(None)
                     print("Flushed disassembler parse cache")
+#                    print(f"disassemble flushed: {len(parse_cache)=}")
                     return None
                 elif( argv0[0] == "s" ):
                     source = True
@@ -4265,10 +3526,10 @@ part of a function, unlike the disassemble command those are right away disassem
             disassemble( argv )
         except gdb.error as e:
             print("asm: %s" % e)
-        except:
-            vdb.print_exc()
-            raise
-            pass
+#        except:
+#            vdb.print_exc()
+#            raise
+#            pass
         self.dont_repeat()
 
 Dis()

@@ -136,6 +136,8 @@ class command(gdb.Command,abc.ABC):
                 cProfile.runctx("self.invoke_or_pipe(arg,argv)",globals(),locals(),sort="tottime")
             else:
                 self.invoke_or_pipe(arg,argv)
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except:
             vdb.print_exc()
             raise
