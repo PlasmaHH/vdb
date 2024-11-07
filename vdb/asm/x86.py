@@ -67,6 +67,10 @@ _x86_class_res = [
         ( "hlt.*|syscall.*|int.*", "sys" ),
         ]
 
+# Should arch setup change these? A module getting a "setup" call for the flavor?
+base_pointer = "rbp" # XXX what for 32bit?
+argument_registers = [ "rdi", "rsi", "rdx", "rcx", "r8", "r9" ]
+
 class asm_arg(vdb.asm.asm_arg_base):
 
     @vdb.overrides
@@ -334,7 +338,10 @@ class instruction( vdb.asm.instruction_base ):
 
 #            print("tokens = '%s'" % tokens[tpos:] )
 
-        if( oldins is not None and oldins.mnemonic != "ret" ):
+        # Previous insstruction "falls through" to this one, except:
+        # - its a ret(urn)
+        # - its an unconditional jump
+        if( oldins is not None and not oldins.return_ and not oldins.unconditional_jump ):
             oldins.next = self
             self.previous = oldins
         oldins = self

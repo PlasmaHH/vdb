@@ -177,7 +177,15 @@ xi_history = {}
 color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
 valid_archs = [ "x86", "arm" ]
-arch_aliases = { "i386" : "x86", "i386:x86-64" : "x86", "aarch64" : "arm" }
+arch_aliases = {
+                "i386" : "x86",
+                "i386:x86-64" : "x86",
+                "aarch64" : "arm",
+                "armv7-m" : "arm",
+                "armv7-m.main" : "arm",
+                "armv8-m" : "arm",
+                "armv8-m.main" : "arm",
+                }
 
 
 def debug_all( ins = None ):
@@ -596,70 +604,6 @@ class asm_arg_base( ):
 
 
 
-class arm_asm_arg(asm_arg_base):
-
-    @vdb.overrides
-    def parse( self, arg ):
-        arg = arg.strip()
-#        vdb.util.bark() # print("BARK")
-        oarg = arg
-        if( arg.startswith("0x") ):
-            args = arg.split("<")
-            if( len(args) > 1 ):
-                arg = args[0].strip()
-                # we throw away the symbolname here, do we want to keep it in case no other way shows it?
-            self.jmp_target = vdb.util.rxint( arg )
-        elif( arg.startswith("#") ):
-            if( arg.startswith("#0x") ):
-                self.immediate_hex = vdb.util.xint(arg[1:])
-            else:
-                self.immediate = int(arg[1:])
-        elif( arg.startswith("[") and arg.endswith("]")):
-            arg = arg[1:-1]
-            arg = list(map(str.strip,arg.split(",")))
-            self.dereference = True
-            self.register = arg[0]
-            if( len(arg) > 1 ):
-#                print("arg[1] = '%s'" % (arg[1],) )
-                if( arg[1][0] == "#" ):
-                    self.offset = int(arg[1][1:])
-                else:
-                    self.add_register = arg[1]
-        else:
-            self.register = arg
-#        print("arg = '%s'" % (arg,) )
-#        print("str(self) = '%s'" % (str(self),) )
-        self._check(oarg,False)
-
-    def __str__( self ):
-        ret = ""
-        if( self.asterisk ):
-            ret +=  "*"
-        if( self.prefix is not None ):
-            ret += f"%{self.prefix}:"
-        if( self.dereference ):
-            ret += "["
-            if( self.multiplier is not None ):
-                if( self.add_register is not None ):
-                    ret += "%" + self.add_register
-                ret += ","
-            ret += self.register
-            if( self.offset is not None ):
-                ret += ", #" + str(self.offset)
-            if( self.multiplier is not None ):
-                ret += f",{self.multiplier}"
-            ret += "]"
-        elif( self.register is not None ):
-            ret += self.register
-        if( self.immediate is not None ):
-            if( self.immediate_hex ):
-                ret += f"${self.immediate:#0x}"
-            else:
-                ret += f"#{self.immediate}"
-        if( self.jmp_target is not None ):
-            ret += f"{self.jmp_target:#0x}"
-        return ret
-
 
 
 
@@ -830,11 +774,13 @@ class instruction_base( abc.ABC ):
         if( self.unhandled ):
             self.add_extra("UNHANDLED")
         self.add_extra(f"REFERENCES = {self.reference}")
+        self.add_extra(f"PASS = {self.passes}")
 #        self.add_extra(f"NEXT = {self.next}")
 
     def _gen_debug( self ):
         self.add_extra( f"self.line      : '{self.line}'")
         self.add_extra( f"self.mnemonic  : '{self.mnemonic}'")
+        self.add_extra( f"self.next      : '{self.next}'")
         self.add_extra( f"self.args      : '{self.args}'")
         self.add_extra( f"self.targets   : '{self.targets}'")
         self.add_extra( f"self.target_of : '{self.target_of}'")
@@ -1973,33 +1919,9 @@ ascii mockup:
 
 
 
-arm_conditional_suffixes = [ "eq","ne","cs","hs","cc","lo","mi","pl","vs","vc","hi","ls","ge","lt","gt","le","z","nz" ]
-arm_encoding_suffixes = [ "n","w" ]
-arm_unconditional_jump_mnemonics = set([ "b", "cb" ] )
-arm_conditional_jump_mnemonics = set()
-for uj in arm_unconditional_jump_mnemonics:
-    for csuf in arm_conditional_suffixes:
-        fmn = uj+csuf
-        arm_conditional_jump_mnemonics.add(fmn)
-        for enc in arm_encoding_suffixes:
-            arm_conditional_jump_mnemonics.add(fmn + "." + enc )
-
-narm = set()
-for unc in arm_unconditional_jump_mnemonics:
-    narm.add(unc)
-    for enc in arm_encoding_suffixes:
-        narm.add(f"{unc}.{enc}")
-
-arm_unconditional_jump_mnemonics = narm
-
 
 #print("arm_conditional_jump_mnemonics = '%s'" % (arm_conditional_jump_mnemonics,) )
 
-arm_return_mnemonics = set ([])
-arm_call_mnemonics = set(["bl", "blx"])
-arm_prefixes = set([ ])
-arm_base_pointer = "r11" # can be different
-aarch64_base_pointer = "sp"
 
 pc_list = [ "pc", "rip", "eip", "ip" ]
 last_working_pc = ""
@@ -2008,6 +1930,7 @@ current_arch = None
 
 
 def configure_arch( arch = None ):
+#    print(f"configure_arch( {arch=} )")
     archname = "x86"
     origarch = archname
 #    print(f"forced arch: {arch}")
@@ -2019,9 +1942,7 @@ def configure_arch( arch = None ):
             archname = gdb.selected_frame().architecture().name()
 #            print(f"gdb frame arch {archname}")
 
-#        print(f"Trying aliases of {archname}")
         origarch = archname
-#        print(f"after aliasing {archname=}")
     except gdb.error:
 #        vdb.print_exc()
         try:
@@ -2032,10 +1953,14 @@ def configure_arch( arch = None ):
 #            print(f"parsed {archname=}")
         except:
             print("Not configured for architecture %s, falling back to x86" % archname )
+
+    
+#    print(f"Trying aliases of {archname}")
     archname = arch_aliases.get(archname,archname)
 #    print(f"dealiased {archname=}")
-#    if( archname.startswith("armv") ):
-#        archname = "arm"
+    if( archname.startswith("armv") ):
+        print(f"Architecture {archname} prefix mapped to arm, you might want to add it to aliases")
+        archname = "arm"
 
     global current_arch
     if( current_arch is not None and archname == current_arch.name ): # already setup
@@ -2207,7 +2132,6 @@ class fake_symbol( gdb.Value ):
 
 #TODO This whole thing is a total mess, we need at least a bit documentation and possibly refactor some stuff to tell what it is that this funciton is really doing
 
-base_pointer = "rbp" # what for 32bit?
 def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, level = 0 ):
     """
     @returns a string suitable for display as function parameter list ( together with values )
@@ -2226,13 +2150,10 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
     regindex = -1
     if( reglist is None ):
         regindex = 0
-        # we have these list all over the place, save them in an architecture dependent object instead
-        reglist = [ "rdi", "rsi", "rdx", "rcx", "r8", "r9" ]
-        if( current_arch == "arm" ):
-            reglist = [ "r0","r1","r2","r3","r4","r5","r6","r7","r8" ]
+        reglist = current_arch.argument_registers
     # TODO support float/double registers and vectors
 
-    rbp = base_pointer
+    rbp = current_arch.base_pointer
 
     rbpval = frame.read_register(rbp)
     if( rbpval is not None ):
@@ -2631,58 +2552,6 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 flow_vtable = {}
 
 
-def arm_vt_flow_mov( ins, frame, possible_registers, possible_flags ):
-    if( asm_explain.value ):
-        frm = ins.arguments[1]
-        to  = ins.arguments[0]
-        if( frm.immediate is not None ):
-            frmstr=f"{frm}"
-            frmval,_ = frm.value( possible_registers )
-            if( frmval is not None ):
-                frmstr=f"{frmval:#0x}"
-            ins.add_explanation(f"Move immediate value {frmstr} to register {to}")
-        else:
-            ins.add_explanation(f"Move contents from register {frm} to register {to}")
-    return (possible_registers,possible_flags)
-
-def arm_vt_flow_bl( ins, frame, possible_registers, possible_flags ):
-    if( not annotate_jumps.value ):
-        return (possible_registers,possible_flags)
-    ins.add_extra(f"BL TO BE HANDLED")
-
-    if( ins.next is not None ):
-        ins.add_explanation(f"Branch to {ins.targets} and put return address {ins.next.address} in lr register (branch and link)")
-    return (possible_registers,possible_flags)
-
-def arm_vt_flow_b( ins, frame, possible_registers, possible_flags ):
-    if( not annotate_jumps.value ):
-        return (possible_registers,possible_flags)
-    ins.add_extra(f"JUMP TO BE HANDLED")
-    if( ins.conditional_jump ):
-        ins.add_explanation("Branch conditionally")
-    else:
-        ins.add_explanation("Branch unconditionally")
-        ins.next = None
-    return (possible_registers,possible_flags)
-
-def arm_vt_flow_push( ins, frame, possible_registers, possible_flags ):
-    vl,rname,_ = possible_registers.get("sp")
-    if( vl is not None ):
-        nargs = len(ins.args)
-        vl = int(vl) - nargs*( vdb.arch.pointer_size // 8 )
-        possible_registers.set(rname,vl,origin="flow_push")
-
-    for a in ins.arguments:
-        a.target = False
-        a.reset_argspec()
-    ins.add_explanation(f"Push registers {{{', '.join(ins.args)}}} to the stack")
-
-    # no flags affected
-    return ( possible_registers, possible_flags )
-
-
-
-
 
 def gen_vtable( ):
 #    vdb.util.bark() # print("BARK")
@@ -2739,9 +2608,6 @@ def current_registers( frame ):
         rset.set( reg.name, frame.read_register(reg), origin="frame" )
     return rset
 
-def arm_current_flags( frame ):
-    fs = flag_set()
-    return fs
 
 
 def register_flow( lng, frame : "gdb frame" ):
@@ -2772,10 +2638,10 @@ def register_flow( lng, frame : "gdb frame" ):
 #    print("possible_registers = '%s'" % (possible_registers,) )
     possible_flags = flag_set()
 
-    rbp = frame.read_register(base_pointer)
+    rbp = frame.read_register(current_arch.base_pointer)
     if( rbp is not None ):
         if( vdb.memory.mmap.accessible(rbp) ):
-            possible_registers.set( base_pointer, rbp, origin="frame.bp" ,)
+            possible_registers.set( current_arch.base_pointer, rbp, origin="frame.bp" ,)
 
 #    for ins in ret.instructions:
     flowstack = [ (None,None,None) ]
@@ -2793,10 +2659,6 @@ def register_flow( lng, frame : "gdb frame" ):
         # Simple protection against any kinds of endless loops
         # XXX Better would be to check (additionally?) if the register and flag sets are the same as in previous runs
         ins.passes += 1
-        if( ins.passes >= passlimit ):
-            next = None
-        else:
-            next = ins.next
 
         # Assumes the last one is the target, might be different for different archs
 #        print(f"{ins.args=}")
@@ -2830,7 +2692,7 @@ def register_flow( lng, frame : "gdb frame" ):
                 for r,(v,o) in cr.values.items():
                     ov,an,origin = possible_registers.get(r)
                     if( ov is not None and v != ov ):
-                        ins.add_extra( f"Real register {r} has real value {v} from {o} but we deduced {ov} for {an} from {origin}")
+                        ins.add_extra( f"Real register {r} has real value {v:#0x} from {o} but we deduced {ov:#0x} for {an} from {origin}")
             possible_registers.merge(cr)
             ins.last_seen_registers = possible_registers.clone()
 
@@ -3061,11 +2923,21 @@ def register_flow( lng, frame : "gdb frame" ):
         if( debug_registers.value ):
             ins._gen_extra()
 
-#        print(f"{ins} ===> {next}    ({ins.next})")
-        ins = next
+        # Check if the next instruction would go over the pass limit
+        ins = ins.next
+        if( ins is not None and ins.passes >= passlimit ):
+            ins = None
 
-        if( ins is None ):
+        # We don't want to pass multiple times over the marked one as here we know exactly what the values are
+        if( ins is not None and ins.marked and ins.passes > 0 ):
+            ins = None
+
+        while( ins is None ):
             ins,possible_registers,possible_flags = flowstack.pop()
+            if( ins is None ): # marker for the flowstack being empty
+                break
+            if( ins.marked and ins.passes > 0 ):
+                ins = None
 
     # while(ins) done
     if( debug_all() ):
