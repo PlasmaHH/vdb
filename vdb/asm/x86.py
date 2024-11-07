@@ -706,6 +706,7 @@ def _vt_flow_cmovcc( flags, ins, frame, possible_registers, possible_flags ):
     msgstring = ""
     for flag,val in flags.items():
         flag_value = possible_flags.get(flag)
+        # XXX Refactor this to use the same thing as the  jumps as the suffixes are the same
         # No value known? Can't tell if we execute
         if( flag_value is None ):
             msgstring = f"{flag} is unknown"
@@ -714,9 +715,9 @@ def _vt_flow_cmovcc( flags, ins, frame, possible_registers, possible_flags ):
         # Not the expected one, don't copy
         if( flag_value != val ):
             msgstring = "not moved"
-            extrastring += flag_extra(flag,"!=", flag_value, val )
+            extrastring += f",{flag}[{flag_value}] != {val}"
             break
-        extrastring += flag_extra(flag,"==", flag_value, val )
+        extrastring += f",{flag}[{flag_value}] == {val}"
     else: # went through all, they seem to match
         if( src_val is None ):
             # src not known so tgt is unknown now to
