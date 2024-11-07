@@ -734,6 +734,7 @@ class instruction_base( abc.ABC ):
         self.extra = []
         self.static_extra = []
         self.file_line = None
+        self.override_register_set = None
         self.possible_in_register_sets = []
         self.possible_out_register_sets = []
         self.iclass = None
@@ -2192,6 +2193,17 @@ class fake_symbol( gdb.Value ):
 
 #TODO This whole thing is a total mess, we need at least a bit documentation and possibly refactor some stuff to tell what it is that this funciton is really doing
 
+# frame is the frame to extract the information from
+# lng is the ListiNG to attacht the gathered information to
+# symlist can either be:
+# - a gdb fields() iterator
+# - a gdb block
+# - an empty list
+# - a list with one fake symbol
+# pval is when recursing into a struct the variable object
+# prefix is the variable expression so far, empty string when starting at the outer frame
+# reglist not sure what this is really, we sometimes pass an empty list. This is somehow used for functions when
+# parameters are passed in registers
 def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, level = 0 ):
     """
     @returns a string suitable for display as function parameter list ( together with values )
@@ -2203,34 +2215,57 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
 #            print(f"gather_vars({frame=},{lng=},symlist,{str(pval)=},{prefix=},{reglist=},{level=}")
 #        except:
 #            vdb.print_exc()
+
+    # We don't want to descend too deep into structures, it could get messy and more unlikely to be accssed.
     if( level >= gv_limit.value ):
         return ""
-    level += 1
-    ret = ""
+    level += 1 # to keep track how deep we decended
+    ret = "" # Add to this for later return
+
+    # XXX Figure out exactly how we use this
     regindex = -1
     if( reglist is None ):
         regindex = 0
         reglist = current_arch.argument_registers
     # TODO support float/double registers and vectors
 
+    # Base of the stackframe, almost all local variable accesses will use expressions relative to this so these
+    # expressions we synthesize to later be able to match
     rbp = current_arch.base_pointer
 
     rbpval = frame.read_register(rbp)
     if( rbpval is not None ):
         rbpval = int(rbpval)
-#    print("rbpval = '%s'" % (rbpval,) )
+
+    rsp = current_arch.stack_pointer
+
+    rspval = frame.read_register(rsp)
+    if( rspval is not None ):
+        rspval = int(rspval)
+
 
     if( frame.function() is not None ):
         fname = frame.function().name
     else:
         fname = "__anonymous__"
 
+    # funcion_registers contains user set registers for named functions. This is our first input to the initial
+    # registers, the user can help us here when we cannot automatically determine values at the function start (e.g.
+    # when the $pc is in the middle of it already)
     lng.initial_registers.merge( function_registers.get(fname,register_set() ) )
 
     if( debug_all() ):
         print("symlist = '%s'" % (symlist,) )
 
+#    print(f"{type(symlist)=}")
+    # type(symlist)=<class 'list'>
+    # type(symlist)=<class 'gdb.Block'>
+    # type(symlist[0])=<class 'gdb.Field'>
+#    if( isinstance(symlist,list) and len(symlist) > 0 ):
+#        print(f"{type(symlist[0])=}")
     for b in symlist:
+        # type(b)=<class 'gdb.Field'>
+        # type(b)=<class 'gdb.Symbol'>
         if( debug_all() ):
             vdb.util.bark() # print("BARK")
             print("b = '%s'" % (b,) )
@@ -2241,10 +2276,13 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                 print("b.type.fields() = '%s'" % (b.type.fields(),) )
             except:
                 print("fields() failed")
+
         bval = None
         baddr = None
         try:
+            # First call, not recursing into an existing variable...
             if( pval is None ):
+#                print(f"{type(b)=}")
                 bval = b.value(frame)
                 xbaddr= bval.address
                 if( xbaddr is not None ):
@@ -2252,6 +2290,8 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                     baddr = xbaddr
 #                print("bval = '%s'" % (bval,) )
             else:
+#                print(f"{b.name=}")
+#                print(f"{pval}")
                 if( b.name is None ): # ignore anonymous structs/unions etc. for now
                     continue
                 if( b.is_base_class ):
@@ -2261,11 +2301,16 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                     bval = pval
                 else:
                     bval = pval[b.name]
-                xbaddr= bval.address
+                xbaddr = bval.address
                 if( xbaddr is not None ):
                     int(xbaddr)
                     baddr = xbaddr
+            bval.fetch_lazy()
+            if( bval.is_optimized_out ):
+                continue
         except gdb.error as e:
+#            print(f"{e=}")
+#            vdb.print_exc()
             if( str(e).find("optimized out") == -1 ):
                 vdb.print_exc()
                 vdb.util.bark() # print("BARK")
@@ -2278,23 +2323,36 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                 print("b = '%s'" % (b,) )
                 print("b.type = '%s'" % (b.type,) )
                 print("b.type.code = '%s'" % (vdb.util.gdb_type_code(b.type.code),) )
+            else:
+                # Has been optimized out, no point in digging deeper
+                continue
 
         except KeyboardInterrupt:
             raise
         except:
+            traceback.print_stack()
             vdb.print_exc()
             print("b.name = '%s'" % (b.name,) )
             print("pval = '%s'" % (pval,) )
             pass
 
+        # We already know about the address, so probably been there through another path
         if( baddr is not None and int(baddr) in lng.var_addresses ):
 #            print("-",end="",flush=True)
             return ret
 
+        if( bval is None ):
+            print("BUG: bval is none")
+            traceback.print_stack()
+            continue
+
+        bval.fetch_lazy()
         xbval=bval
         # XXX FIXME This can get quickly slow as it exponentially blows up the read variables. Figure out a good way to
         # prevent duplications. Maybe a set of already read addresses? Maybe only ever try . when -> fails?
         try:
+#            vdb.util.bark() # print("BARK")
+#            print(f"{xbval=}")
             uxbval = bval.dereference()
 #            print("bval.type.fields() = '%s'" % (bval.type.fields(),) )
             ret += gather_vars( frame, lng, uxbval.type.fields() , uxbval, prefix + b.name + "->", [], level )
@@ -2304,6 +2362,8 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
 #            vdb.print_exc()
             pass
         try:
+#            vdb.util.bark() # print("BARK")
+#            print(f"{xbval=}")
             ret += gather_vars( frame, lng, b.type.fields(), xbval, prefix + b.name + ".", [], level )
         except KeyboardInterrupt:
             raise
@@ -2312,6 +2372,8 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
             pass
 
         try:
+#            vdb.util.bark() # print("BARK")
+#            print(f"{xbval=}")
             ret += gather_vars( frame, lng, b.type.target().unqualified().fields(), xbval, prefix + b.name + ".", [], level )
         except KeyboardInterrupt:
             raise
@@ -2331,8 +2393,14 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
         if( baddr is not None ):
             lng.var_addresses[int(baddr)] = prefix + b.name
 
+            # One expression relative to the base pointer
             boffset = int(baddr) - rbpval
             expr = f"{boffset:#0x}(%{rbp})"
+            lng.var_expressions[expr] = prefix + b.name
+
+            # And one relative to the stack pointer
+            boffset = int(baddr) - rspval
+            expr = f"{boffset:#0x}(%{rsp})"
             lng.var_expressions[expr] = prefix + b.name
 
         try:
@@ -2396,21 +2464,56 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
             print(f"{k:#0x} : {v}")
     return ret
 
+
+# ls is the current listing to be updated,
+# frame is the frame to update things from
+# We want to mainly collect:
+# - expressions known to contain ceratin variables (e.g. 0x18(%rsp) or so). These will stay the same for each invocation
+# - actual addresses of stuff used in the function, this can be
+#   - globals/statics. those addresses should never change
+#   - locals on the stack. those can be different on each invocation
+#
+# This should work recursively so for an address we can see it is a.x.y.__ptr
 def update_vars( ls, frame ):
 
+    # This is manually added variables by user command
     va = function_vars.get( ls.function, {} ).copy()
+
+    # Seed var_addresses with a copy
     ls.var_addresses = va.copy()
 #    print("ls.var_addresses = '%s'" % (ls.var_addresses,) )
     ls.var_expressions = {}
 
+    # ls.function is sometimes mangled, try to demangle it
+    ls.function = gdb.execute(f"demangle {ls.function}",False,True).strip()
 
     fun = frame.function()
-#    print("fun.name = '%s'" % (fun.name,) )
-#    print("ls.function = '%s'" % (ls.function,) )
-#    print("ls.function = '%s'" % (ls.function,) )
-#    print("fun.symtab = '%s'" % (fun.symtab,) )
-    # only extract names from the block when we disassemble the current frame
-    if( fun is not None and fun.name == ls.function ):
+    if( fun ):
+        funname = gdb.execute(f"demangle {fun.linkage_name}",False,True).strip()
+
+    if( debug_all() ):
+        print(f"{type(fun)=}")
+        print(f"{fun.print_name=}")
+        print(f"{fun.linkage_name=}")
+        print(f"   {fun.name=}")
+        print(f"{ls.function=}")
+        print(f"{funname=}")
+        print(f"{frame.name()=}")
+        print(f"{(fun.name == ls.function)=}")
+        print(f"{ls.function.endswith(fun.name)=}")
+        print(f"{ls.function == funname=}")
+        print(f"{frame=}")
+        print(f"{fun.symtab=}")
+        lookedup = gdb.lookup_symbol(ls.function)
+        print(f"{lookedup=}")
+        lookedup = gdb.lookup_global_symbol(ls.function)
+        print(f"{lookedup=}")
+
+    # only extract names from the block when we disassemble the current frames function
+    # XXX Can we somehow look in the backtrace for other frames that might match? What if two frames in two different
+    # threads do?
+
+    if( fun is not None and funname == ls.function ):
         block = frame.block()
     else:
         block = None
@@ -2422,22 +2525,23 @@ def update_vars( ls, frame ):
 #            print("b.value(frame) = '%s'" % (b.value(frame),) )
 #        print("b.value(frame).address = '%s'" % (b.value(frame).address,) )
 
-
     if( fun is None ):
         funhead = "????"
     else:
         funhead = ls.function
 
-#    print("va = '%s'" % (va,) )
+    # This is still the user defined variables only, run gather_vars mainly to figure out the expressions for it
     for a,n in va.items():
 #        print("a = '%s'" % (a,) )
 #        print("n = '%s'" % (n,) )
         try:
             vv = frame.read_var(n)
-#            print("vv = '%s'" % (vv,) )
-#            print("vv.type = '%s'" % (vv.type,) )
+            print("vv = '%s'" % (vv,) )
+            print("vv.type = '%s'" % (vv.type,) )
+            when # will this be called? So far We did not see it anywhere
             # XXX do we want to output this anywhere?
 #            gather_vars( frame, ls, vv.type.fields(), vv, n + "." )
+            # Would it make more sense to just assemble a complete list and then run this?
             gather_vars( frame, ls, [ fake_symbol(vv,n) ], None, n + "." )
 
         except KeyboardInterrupt:
@@ -2449,15 +2553,16 @@ def update_vars( ls, frame ):
             # variable not recognized
             pass
 
-#    print("block.function = '%s'" % (block.function,) )
-#    print("block.superblock.function = '%s'" % (block.superblock.function,) )
+    # Ask the block (a gdb debug info container thing) for all the local variables, including parameters
     if( block is not None ):
         gv = gather_vars( frame, ls, block )
         # sometimes the args are in a superblock
         if( block.function is None and block.superblock is not None ):
             gv += gather_vars( frame, ls, block.superblock )
     else:
+        # XXX Not sure what this would gather anyways?
         gv = gather_vars( frame, ls, [] )
+
     if( debug_all() ):
         vdb.util.bark() # print("BARK")
         print("gv = '%s'" % (gv,) )
@@ -2465,11 +2570,27 @@ def update_vars( ls, frame ):
     if( len(gv) > 0 ):
         funhead += "(" + gv + ")"
 
+    # Contains function signature and parameters location information, e.g.
+    # main(int, char const**)( argc@0x7fffffffc8dc[-0x344(%rbp)] = 1, argv@0x7fffffffc8d0[-0x350(%rbp)] = 0x7fffffffcd38,)
     ls.function_header = funhead
 
-#    print("var_addresses = '%s'" % (ls.var_addresses,) )
-#    print("var_expressions = '%s'" % (ls.var_expressions,) )
+    if( debug_all() ):
+        print(f"{ls.function_header=}")
+        tbl=[["Name","Address","Expression"]]
+        # XXX Should we indicate if there is a duplication?
+        funcmap = {}
+        for va,vn in ls.var_addresses.items():
+            oa,oe = funcmap.get(vn,(None,None))
+            funcmap[vn] = (va,oe)
+        for ve,vn in ls.var_expressions.items():
+            oa,oe = funcmap.get(vn,(None,None))
+            funcmap[vn] = (oa,ve)
 
+        for vn,vx in funcmap.items():
+            va,ve = vx
+            va = f"{va:#0x}"
+            tbl.append( [ vn, va, ve ] )
+        vdb.util.print_table(tbl)
 
 
 ilinere = re.compile('Line ([0-9]*) of "(.*)"')
@@ -2858,10 +2979,16 @@ def register_flow( lng, frame : "gdb frame" ):
                     argval = None
                     # Check via the possible register sets the value of the register
                     argaddr = None
-                    for prs in reversed(regset):
-                        argval,argaddr= arg.value(prs,target)
-                        if( argval is not None or argaddr is not None ):
-                            break
+                    # target is the target argument to the instruction, mainly here for the type (8/16/32/64 bit register)
+                    # the override set is a special one that can be used by the register flow mechanism to override
+                    # things used here to display some extra info
+                    if( ins.override_register_set is not None ):
+                        argval,argaddr = arg.value(ins.override_register_set,target)
+                    if( argval is None ):
+                        for prs in reversed(regset):
+                            argval,argaddr= arg.value(prs,target)
+                            if( argval is not None or argaddr is not None ):
+                                break
                     addr = argaddr
                     if( argval is not None ):
                         extra.value += f", argval = {argval:#0x}, addr = {addr}"

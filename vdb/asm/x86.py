@@ -71,6 +71,7 @@ _x86_class_res = [
 
 # Should arch setup change these? A module getting a "setup" call for the flavor?
 base_pointer = "rbp" # XXX what for 32bit?
+stack_pointer = "rsp"
 argument_registers = [ "rdi", "rsi", "rdx", "rcx", "r8", "r9" ]
 
 class asm_arg(vdb.asm.asm_arg_base):
@@ -315,12 +316,12 @@ class instruction( vdb.asm.instruction_base ):
 #                print(f"{a=}")
                 # Pretend these are the only registers known is the various versions of ip/pc
                 next_ip = self.address + len(self.bytes) # on x86 the current rip value is already pointing to the next instruction
-                pc_registers = {
-                                "rip" : (next_ip,0,0),
-                                "eip" : (next_ip,0,0),
-                                "ip" : (next_ip,0,0),
-                                "pc" : (next_ip,0,0),
-                                }
+
+                pc_registers = vdb.asm.register_set()
+                pc_registers.set( "rip" , next_ip)
+                pc_registers.set( "eip" , next_ip)
+                pc_registers.set( "ip" , next_ip)
+                pc_registers.set( "pc" , next_ip)
                 # If this is of the usual type of "jmp *0xdeadbeef(%rip)" then this gets the address to jump to
                 ival,iaddr = a.value(pc_registers)
 
@@ -539,6 +540,18 @@ def vt_flow_shl( ins, frame, possible_registers, possible_flags ):
         possible_registers.set( ins.arguments[1].register, nv, origin="flow_shl" )
     return ( possible_registers, possible_flags )
 
+def vt_flow_shr( ins, frame, possible_registers, possible_flags ):
+    shifts,_ = ins.arguments[0].value( possible_registers )
+    tgtv,_ = ins.arguments[1].value( possible_registers )
+
+    if( tgtv is not None ):
+        nv = tgtv >> shifts
+        # XXX Sign extend?
+        # XXX CF setting is not handled (as it depends on the size of the used register)
+        possible_registers.set( ins.arguments[1].register, nv, origin="flow_shr" )
+    return ( possible_registers, possible_flags )
+
+
 def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     sub,_ = ins.arguments[0].value( possible_registers )
     tgtv,_ = ins.arguments[1].value( possible_registers )
@@ -745,12 +758,18 @@ def vt_flow_nop( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
+def vt_flow_hlt( ins, frame, possible_registers, possible_flags ):
+    # no flags affected
+    return ( possible_registers, possible_flags )
+
 def vt_flow_movz( ins, frame, possible_registers, possible_flags ):
     # XXX Not implemented
+    ins.unhandled = True
     return ( possible_registers, possible_flags )
 
 def vt_flow_movs( ins, frame, possible_registers, possible_flags ):
     # XXX Not implemented
+    ins.unhandled = True
     return ( possible_registers, possible_flags )
 
 def vt_flow_neg( ins, frame, possible_registers, possible_flags ):
@@ -838,6 +857,29 @@ def vt_flow_call( ins, frame, possible_registers, possible_flags ):
     npr = vdb.asm.register_set()
     npr.copy( possible_registers, call_preserved_registers )
     possible_registers = npr
+
+    # For calculated calls/jumps we usually don't have the register available when we are past that point, however when
+    # the next one is the marked one, that means we are still within the call, meaning the register should still be the
+    # valid one. This is often the case in stacktraces, thus it makes sense to handle it here
+    # Nothing else could calculate the target yet, use this as a last resort
+#    if( len(ins.targets) == 0 ):
+#        ins.add_extra("LAST RESORT CALCULATION FOR TARGET DONE")
+    # XXX Turns out this mostly doesn't work since gdb doesn't provide us with the register if its later overwritten,
+    # dang
+    # Here is the next idea: rsp should be available. Make a backwards flow mechanism too that will recover these
+    # values. Be conservative there and break if we are target of something else than the previous instruction?
+#        if( ins.next is not None and ins.next.marked ):
+#            ins.add_extra("NEXT IS MARKED")
+#            arg = ins.arguments[0]
+#            ins.add_extra(str(arg))
+#            ins.add_extra(str(arg.register))
+#            rval = frame.read_register(arg.register)
+#            rval = int(rval)
+#            ins.add_extra(f"{arg.register} set to {rval}")
+#            ins.override_register_set = vdb.asm.register_set()
+#            ins.override_register_set.set( arg.register, rval )
+##            val = arg.value(frame)
+#            ins.add_extra(str(val))
     # no flags affected
     return ( possible_registers, possible_flags )
 
@@ -852,4 +894,7 @@ def vt_flow_ret( ins, frame, possible_registers, possible_flags ):
 def current_flags( frame ):
     return vdb.asm.current_flags(frame,"eflags")
 
+# Enhancements:
+# To the flow we could add some "speculative memory" that we read stuff from first, that way we can in later parts of
+# the listing "see" things set in the speculative execution of further ones.
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

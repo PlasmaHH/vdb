@@ -10,6 +10,7 @@ return_mnemonics = set ([])
 call_mnemonics = set(["bl", "blx"])
 prefixes = set([ ])
 base_pointer = "r11" # can be different
+stack_pointer = "sp" # msp/psp should be handled by gdb itself
 
 # ( use_or, list_of_flags )
 flag_conditions = {
