@@ -11,7 +11,28 @@ call_mnemonics = set(["bl", "blx"])
 prefixes = set([ ])
 base_pointer = "r11" # can be different
 
-conditional_suffixes = [ "eq","ne","cs","hs","cc","lo","mi","pl","vs","vc","hi","ls","ge","lt","gt","le","z","nz" ]
+# ( use_or, list_of_flags )
+flag_conditions = {
+        "eq"  : ( False, [ ( "Z", 1, True ) ] ),
+        "ne"  : ( False, [ ( "Z", 0, True ) ] ),
+        "cs"  : ( False, [ ( "C", 1, True ) ] ),
+        "hs"  : ( False, [ ( "C", 1, True ) ] ),
+        "cc"  : ( False, [ ( "C", 0, True ) ] ),
+        "lo"  : ( False, [ ( "C", 0, True ) ] ),
+        "mi"  : ( False, [ ( "N", 1, True ) ] ),
+        "pl"  : ( False, [ ( "N", 0, True ) ] ),
+        "vs"  : ( False, [ ( "V", 1, True ) ] ),
+        "vc"  : ( False, [ ( "V", 0, True ) ] ),
+        "hi"  : ( False, [ ( "C", 1, True ), ( "Z", 0, True ) ] ),
+        "ls"  : ( True,  [ ( "C", 0, True ), ( "Z", 1, True ) ] ),
+        "ge"  : ( False, [ ( "N", "V", True ) ] ),
+        "lt"  : ( False, [ ( "N", "V", False ) ] ),
+        "gt"  : ( False, [ ( "Z", 0, True ), ( "N", "V", True ) ] ),
+        "le"  : ( True,  [ ( "Z", 1, True ), ( "N", "V", False ) ] ),
+        } # All others not supported yet due to no support for these flags yet
+
+
+conditional_suffixes = { "eq","ne","cs","hs","cc","lo","mi","pl","vs","vc","hi","ls","ge","lt","gt","le","z","nz" }
 encoding_suffixes = [ "n","w" ]
 unconditional_jump_mnemonics = set([ "b", "bx", "cb" ] )
 conditional_jump_mnemonics = set()
@@ -29,6 +50,19 @@ for unc in unconditional_jump_mnemonics:
         narm.add(f"{unc}.{enc}")
 
 unconditional_jump_mnemonics = narm
+
+def extract_conditional( mnemonic ):
+    if( mnemonic.endswith(".n") or mnemonic.endswith(".w" ) ):
+        mnemonic = mnemonic[:-2]
+    l1 = mnemonic[-1:]
+    if( l1 in conditional_suffixes ):
+        return l1
+
+    l2 = mnemonic[-2:]
+    if( l2 in conditional_suffixes ):
+        return l2
+
+    return None
 
 # XXX This is just copied from x86, we need to go through things and add them here
 _arm_class_res = [
@@ -48,7 +82,7 @@ _arm_class_res = [
         ( "push.*|pop.*|lea.*", "stack" ),
         ( "hlt.*|syscall.*|int.*", "sys" ),
         ( "ld.*|str.*", "mem" ),
-        ( "lsl.*|uxt.*|sxt.*", "bit" ),
+        ( "lsl.*|uxt.*|sxt.*|lsr.*", "bit" ),
         ( "it.*", "cond" ),
         ]
 
@@ -59,9 +93,21 @@ base_pointer = "sp"
 
 class asm_arg(vdb.asm.asm_arg_base):
 
+    shift_map = {
+            "lsl #1" : 1,
+            "lsl #2" : 2,
+            "lsl #3" : 3
+            }
     @vdb.overrides
     def parse( self, arg ):
         arg = arg.strip()
+        if( arg.startswith("{") ):
+            self.list_start = True
+            arg = arg[1:]
+
+        if( arg.endswith("}") ):
+            self.list_end = True
+            arg = arg[:-1]
 #        vdb.util.bark() # print("BARK")
         oarg = arg
         if( arg.startswith("0x") ):
@@ -77,19 +123,40 @@ class asm_arg(vdb.asm.asm_arg_base):
                 self.immediate = int(arg[1:])
         elif( arg.startswith("[") and arg.endswith("]")):
             arg = arg[1:-1]
+#            print(f"{arg=}")
             arg = list(map(str.strip,arg.split(",")))
+#            print(f"{arg=}")
             self.dereference = True
             self.register = arg[0]
-            if( len(arg) > 1 ):
+            offset_pos = None
+            shift_pos = None
+            if( len(arg) == 2 ):
+                offset_pos = 1
+            elif( len(arg) == 3 ):
+                offset_pos = 1
+                shift_pos = 2
 #                print("arg[1] = '%s'" % (arg[1],) )
-                if( arg[1][0] == "#" ):
-                    self.offset = int(arg[1][1:])
-                else:
-                    self.add_register = arg[1]
+            if( offset_pos is not None ):
+                self.offset = arg[offset_pos]
+                if( self.offset.startswith("#") ):
+                    self.offset = int(self.offset[1:])
+            if( shift_pos is not None ):
+                self.offset_shift = arg[shift_pos]
+                self.offset_shift = self.shift_map.get(self.offset_shift)
+
+#            if( len(arg) >= 3 ):
+#                print(f"{len(arg)=}")
+#                print(f"{arg=}")
+#                print(f"{oarg=}")
+#                print(f"{str(self)=}")
+#                print(f"{self.register=}")
+#                print(f"{self.add_register=}")
+#                print(f"{self.offset=}")
+#                print(f"{self.offset_shift=}")
+#                print("########################################################################..........")
         else:
             self.register = arg
-#        print("arg = '%s'" % (arg,) )
-#        print("str(self) = '%s'" % (str(self),) )
+
         self._check(oarg,False)
 
     def __str__( self ):
@@ -100,15 +167,16 @@ class asm_arg(vdb.asm.asm_arg_base):
             ret += f"%{self.prefix}:"
         if( self.dereference ):
             ret += "["
-            if( self.multiplier is not None ):
-                if( self.add_register is not None ):
-                    ret += "%" + self.add_register
-                ret += ","
             ret += self.register
+            if( self.add_register is not None ):
+                ret += ", " + self.add_register
             if( self.offset is not None ):
-                ret += ", #" + str(self.offset)
-            if( self.multiplier is not None ):
-                ret += f",{self.multiplier}"
+                if( isinstance(self.offset,int) ):
+                    ret += ", #" + str(self.offset)
+                else:
+                    ret += ", " + self.offset
+            if( self.offset_shift is not None ):
+                ret += ", lsl #" + str(self.offset_shift)
             ret += "]"
         elif( self.register is not None ):
             ret += self.register
@@ -119,6 +187,7 @@ class asm_arg(vdb.asm.asm_arg_base):
                 ret += f"#{self.immediate}"
         if( self.jmp_target is not None ):
             ret += f"{self.jmp_target:#0x}"
+
         return ret
 
 
@@ -131,7 +200,6 @@ class instruction( vdb.asm.instruction_base ):
 
     def __init__( self, line, m, oldins ):
         super().__init__()
-        self.arg_is_list = False
         self.parse(line,m,oldins)
 
     @vdb.overrides
@@ -175,13 +243,10 @@ class instruction( vdb.asm.instruction_base ):
         self.args_string = args
 
         oargs = args
-#        print("oargs = '%s'" % (args,) )
+#        print("start oargs = '%s'" % (args,) )
 
         if( len(args) > 0 ):
             self.args = []
-            if( args[0] == "{" and args[-1] == "}" ):
-                self.arg_is_list = True
-                args = args[1:-1]
 #            print("args = '%s'" % (args,) )
             args = args.split(",")
 #            print("args = '%s'" % (args,) )
@@ -194,22 +259,36 @@ class instruction( vdb.asm.instruction_base ):
                 else:
                     del args[0]
                 aarg = asm_arg(target,arg)
+#                print(f"{aarg=}")
                 target = False
                 self.args.append(arg)
                 self.arguments.append(aarg)
-        reargs = ", ".join(map(str,self.arguments))
-        if( self.arg_is_list ):
-            reargs = "{" + reargs + "}"
+
+        # reassemble to check the string for consistency
+        reargs = []
+        for a in self.arguments:
+            astr = ""
+            if( a.list_start ):
+                astr = "{"
+            astr += str(a)
+            if( a.list_end ):
+                astr += "}"
+            reargs.append(astr)
+        reargs = ", ".join(reargs)
+
         if( reargs != oargs.strip() ):
             print("CHECK OF WHOLE EXPRESION FAILED")
             print("oargs  = '%s'" % (oargs,) )
             print("reargs = '%s'" % (reargs,) )
-            self.add_extra(reargs)
+            self.add_extra(reargs,static=True)
 
-        
         if( self.mnemonic in call_mnemonics ):
             self.call = True
-            self.targets.add( vdb.util.xint(self.args[-1]) )
+            try:
+                # Might be a register
+                self.targets.add( vdb.util.xint(self.args[-1]) )
+            except ValueError:
+                pass
         elif( self.mnemonic in conditional_jump_mnemonics ):
 #            print("self = '%s'" % (self,) )
 #            print("self.next = '%s'" % (self.next,) )
@@ -244,12 +323,31 @@ class instruction( vdb.asm.instruction_base ):
                         self.targets.add( int(gexp) )
 #                        print("self = '%s'" % (self,) )
 
+        # Try to find possible return equivalents
 
             except ValueError:
                 pass
         elif( self.mnemonic.startswith("cmp") ):
             instruction.last_cmp_immediate = self.arguments[1].immediate
 #            print("instruction.last_cmp_immediate = '%s'" % (instruction.last_cmp_immediate,) )
+
+        if( self.mnemonic == "pop" ):
+            if( "pc" in self.args ):
+                self.return_ = True
+
+        if( self.mnemonic == "b" or self.mnemonic == "bx" ):
+            if( self.args[0] == "lr" ):
+                self.return_ = True
+
+        # "generic" pop like instructions
+        if( self.mnemonic.startswith("ldm") ):
+            for a in self.arguments:
+                if( a.register == "pc" ):
+                    self.return_ = True
+                    break
+
+        if( self.return_ ):
+            self.add_extra("return",static=True)
 
         if( vdb.asm.debug_all(self) ):
             print("###########################################################")
@@ -267,16 +365,72 @@ class instruction( vdb.asm.instruction_base ):
         self.iclass = self.mnemonic_class( self.mnemonic )
         return self
 
-# XXX There are some, we just need to extract them
-def current_flags( frame ):
-    fs = vdb.asm.flag_set()
-    return fs
+# for the "according to the result" flags
+def set_flags_result( flag_set, result, arg = None ):
+    #  So far this is a copy of x86 and obviously wrong. Before we can do anything we need to figure out a good way to
+    #  make vdb.register more architecture independent as things like the register size are not handled that way yet.
+#    print(f"set_flags_result( {flag_set}, {result}, {arg} )")
+#        vdb.util.bark() # print("BARK")
+#    print(f"{arg.bitsize=}")
+    if( result < 0 ):
+        if( arg is not None and ( bs := arg.bitsize ) is not None ):
+            result += (1 << bs)
 
+    flag_set.set("Z", int(result == 0) )
+    if( arg is not None and ( bs := arg.bitsize ) is not None ):
+        sbit = ( 1 << (bs-1) )
+        flag_set.set("N", int( (result & sbit) != 0  ))
+        mask = ( 1 << bs ) - 1
+#            print(f"mask = {int(mask):#0x}")
+#            print("bs = '%s'" % (bs,) )
+        r = result & mask
+        # XXX really not sure about this one in case of signs and all
+        flag_set.set("V", int(r != result) )
+        flag_set.set("C", int(r != result) )
+
+def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
+    val,addr = ins.arguments[1].value( possible_registers )
+    possible_registers.set( ins.arguments[0].register, val ,origin="flow_ldr" )
+    return (possible_registers,possible_flags)
+
+def vt_flow_add( ins, frame, possible_registers, possible_flags ):
+    if( len(ins.arguments) == 2 ):
+        suml,_ = ins.arguments[0].value( possible_registers )
+        sumr,_ = ins.arguments[1].value( possible_registers )
+    else: # 3
+        suml,_ = ins.arguments[1].value( possible_registers )
+        sumr,_ = ins.arguments[2].value( possible_registers )
+
+    extext = f"Adding {suml} and {sumr}, storing it in {ins.arguments[0]}"
+    
+    if( ins.mnemonic == "adds" ):
+        possible_flags.unset( [ "N", "Z", "C", "V" ] )
+        extext += ", setting flags"
+
+    if( suml is not None and sumr is not None ):
+        sumv = suml + sumr
+        possible_registers.set( ins.arguments[0].register, sumv,origin="flow_add" )
+        if( ins.mnemonic == "adds" ):
+            set_flags_result( possible_flags, sumv, ins.arguments[0] )
+            filtered = possible_flags.subset( { "Z","N","C","V" } )
+            extext += f" to {filtered}"
+    else:
+        possible_registers.set( ins.arguments[0].register, None )
+        ins.arguments[0].argspec = ""
+
+    if( vdb.asm.asm_explain.value ):
+        ins.add_explanation(extext)
+
+    return (possible_registers,possible_flags)
 
 def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
+    frm = ins.arguments[1]
+    to  = ins.arguments[0]
+
+    frmval,_ = frm.value( possible_registers )
+    possible_registers.set( to.register, frmval )
+
     if( vdb.asm.asm_explain.value ):
-        frm = ins.arguments[1]
-        to  = ins.arguments[0]
         if( frm.immediate is not None ):
             frmstr=f"{frm}"
             frmval,_ = frm.value( possible_registers )
@@ -285,6 +439,7 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
             ins.add_explanation(f"Move immediate value {frmstr} to register {to}")
         else:
             ins.add_explanation(f"Move contents from register {frm} to register {to}")
+
     return (possible_registers,possible_flags)
 
 def vt_flow_bl( ins, frame, possible_registers, possible_flags ):
@@ -294,18 +449,37 @@ def vt_flow_bl( ins, frame, possible_registers, possible_flags ):
         return (possible_registers,possible_flags)
 
     if( ins.next is not None ):
-        ins.add_explanation(f"Branch to {ins.targets} and put return address {ins.next.address} in lr register (branch and link)")
+        ins.add_explanation(f"Branch to {ins.targets} and put return address {ins.next.address:#0x} in lr register (branch and link)")
     return (possible_registers,possible_flags)
 
 def vt_flow_b( ins, frame, possible_registers, possible_flags ):
-    if( not vdb.asm.annotate_jumps.value ):
-        return (possible_registers,possible_flags)
-    ins.add_extra(f"JUMP TO BE HANDLED")
-    if( ins.conditional_jump ):
-        ins.add_explanation("Branch conditionally")
-    else:
-        ins.add_explanation("Branch unconditionally")
-        ins.next = None
+    if( vdb.asm.asm_explain.value ):
+        if( ins.conditional_jump ):
+            ins.add_explanation("Branch conditionally")
+        else:
+            ins.add_explanation("Branch unconditionally")
+
+    if( vdb.asm.annotate_jumps.value ):
+        if( ins.conditional_jump ):
+            csuf = extract_conditional( ins.mnemonic )
+            if( csuf is None ):
+                ins.add_extra("Could not extract conditional suffix")
+
+            taken,extrastring = vdb.asm.flag_check( csuf , possible_flags, flag_conditions )
+            if( taken is not None ):
+                if( taken ):
+                    ins.add_extra(f"branch taken" + extrastring)
+                else:
+                    ins.add_extra(f"branch NOT taken" + extrastring)
+            else:
+                ins.add_extra(f"Unhandled conditional branch: {extrastring}")
+
+#    taken,extrastring = vdb.asm.flag_check( mnemonic, possible_flags, jconditions )
+#    ins.add_extra("MNE " + str(ins.mnemonic))
+#    ins.add_extra("NEXT " + str(ins.next))
+#    ins.add_extra("TARGETS " + str(ins.targets))
+#    ins.add_extra("FLAGS " + str(possible_flags))
+
     return (possible_registers,possible_flags)
 
 def vt_flow_push( ins, frame, possible_registers, possible_flags ):
@@ -314,6 +488,8 @@ def vt_flow_push( ins, frame, possible_registers, possible_flags ):
         nargs = len(ins.args)
         vl = int(vl) - nargs*( vdb.arch.pointer_size // 8 )
         possible_registers.set(rname,vl,origin="flow_push")
+    else:
+        possible_registers.set(rname,None)
 
     for a in ins.arguments:
         a.target = False
@@ -324,6 +500,8 @@ def vt_flow_push( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 
+def current_flags( frame ):
+    return vdb.asm.current_flags(frame,"fpscr")
 
 
 

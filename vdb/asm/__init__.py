@@ -256,7 +256,6 @@ class string_ref:
     def __len__( self ):
         return len(self.value)
 
-bit_counts = bytes(bin(x).count("1") for x in range(256))  
 # similar to register_set a wrapper around a dict that stores possible flag values
 class flag_set:
 
@@ -283,11 +282,13 @@ class flag_set:
             self._maybe_set_sf_of(name)
 #        print("self = '%s'" % (self,) )
 
+    # XXX Can possibly be removed
     def _maybe_set_sf_of( self, name  ):
 #        print("name = '%s'" % (name,) )
         if( name in set(["SF","OF"]) ):
             self._set_sf_of()
 
+    # XXX Can possibly be removed
     def _set_sf_of( self ):
         sfv = self.get("SF")
         ofv = self.get("OF")
@@ -311,27 +312,12 @@ class flag_set:
         for k,v in other.flags.items():
             self.set(k,v)
 
-    # for the "according to the result" flags
-    def set_result( self, result, arg = None ):
-#        vdb.util.bark() # print("BARK")
-        if( result < 0 ):
-            if( arg is not None and ( bs := arg.bitsize ) is not None ):
-                result += (1 << bs)
-
-#        print("result = '%s'" % (result,) )
-        lsb = result & 0xFF
-        bcnt = bit_counts[lsb]
-        self.set("PF", int( bcnt & 1 == 0 ) )
-        self.set("ZF", int(result == 0) )
-        if( arg is not None and ( bs := arg.bitsize ) is not None ):
-            sbit = ( 1 << (bs-1) )
-            self.set("SF", int( (result & sbit) != 0  ))
-            mask = ( 1 << bs ) - 1
-#            print(f"mask = {int(mask):#0x}")
-#            print("bs = '%s'" % (bs,) )
-            r = result & mask
-            # XXX really not sure about this one in case of signs and all
-            self.set("OF", int(r != result) )
+    def subset( self, filterset ):
+        ret = flag_set()
+        for fk,fv in self.flags.items():
+            if( fk in filterset ):
+                ret.flags[fk] = fv
+        return ret
 
     def __str__( self ):
         ret = "{"
@@ -342,6 +328,91 @@ class flag_set:
 
     def __repr__( self ):
         return str(self)
+
+def current_flags( frame, flagregister ):
+    eflags = frame.read_register(flagregister)
+#    print(f"EFLAGS    ------------------ {eflags=}")
+    if( eflags is None ):
+        return None
+#    print("eflags = '%s'" % (eflags,) )
+#    print("type(eflags) = '%s'" % (type(eflags),) )
+#    print("eflags.type = '%s'" % (eflags.type,) )
+#    print("eflags.type.code = '%s'" % (vdb.util.gdb_type_code(eflags.type.code),) )
+    e_val = int(eflags)
+#    print("eflags.type.fields() = '%s'" % (eflags.type.fields(),) )
+    fs = vdb.asm.flag_set()
+    _,_,fdesc,_ = vdb.register.flag_info.get( flagregister )
+    for bit,fd in fdesc.items():
+        mask = 1 << bit
+#        print(f"mask = {int(mask):#0x}")
+#        print("fd[1] = '%s'" % (fd[1],) )
+        fval = e_val & mask
+#        print("fval = '%s'" % (fval,) )
+        if( fval > 0 ):
+            fs.set(fd[1],1)
+        else:
+            fs.set(fd[1],0)
+#    print("fs = '%s'" % (fs,) )
+    return fs
+
+
+
+# returns ( True/False/None, "description string" )
+# None means "not handled"
+def flag_check( suffix, flagset, condset ):
+#    print(f"flag_check( {suffix=}, {flagset=}, {len(condset)=} )")
+
+    use_or,exflags = condset.get(suffix,(None, None))
+    if( exflags is None ):
+        return (None,f"Unhandled conditional suffix {suffix}")
+    else:
+        extrastring = ""
+        taken = None
+
+        for exflag in exflags:
+            flag0,flag1,cresult = exflag
+            flag0text,flag1text,_ = exflag
+
+            if( isinstance(flag0,str) ):
+                flag0 = flagset.get(flag0)
+                flag0text = f"{exflag[0]}[{flag0}]"
+            if( isinstance(flag1,str) ):
+                flag1 = flagset.get(flag1)
+                flag1text = f"{exflag[1]}[{flag1}]"
+
+            if( flag0 is None or flag1 is None ):
+                # We cant say anything,
+                extrastring += f"Flag value(s) {exflag[0]},{exflag[1]} unknown"
+                taken = None
+                break
+            else:
+                if( cresult ):
+                    cmp = "=="
+                    ncmp = "=="
+                else:
+                    ncmp = "!="
+                # We should compare the values
+                matches = ( flag0 == flag1 ) == cresult
+                if( matches ):
+                    extrastring += f", {flag0text} {cmp} {flag1text}"
+                else:
+                    extrastring += f", {flag0text} {ncmp} {flag1text}"
+
+                if( use_or ):
+                    if( matches ):
+                        taken = True
+                        break
+                else: #  use and
+                    if( not matches ):
+                        taken = False
+                        break
+#                    vdb.util.bark() # print("BARK")
+        else:
+            # We only ever end here when all AND cases got true, None and or cases break early
+            taken = True
+
+    return (taken,extrastring)
+
 
 # a wrapper around a register dict that can deal with alternative register names
 class register_set:
@@ -433,12 +504,15 @@ class asm_arg_base( ):
         self.dereference = None
         self.prefix = None
         self.offset = None
+        self.offset_shift = None
         self.target = target
         self.jmp_target = None
         self.multiplier = None
         self.add_register = None
         self.asterisk = False
         self.reset_argspec()
+        self.list_start = False
+        self.list_end = False
         try:
             self.parse(arg)
         except:
@@ -524,11 +598,18 @@ class asm_arg_base( ):
 #            print("val = '%s'" % (val,) )
 #            print("self.offset = '%s'" % (self.offset,) )
             if( val is not None  ):
-#                print(f"{val=}")
+#                print(f"{val=:#0x}")
 #                print(f"{prefixval=}")
                 val += prefixval
+#                print(f"{self.offset=}")
                 if( self.offset is not None ):
-                    val += self.offset
+                    if( isinstance(self.offset,str) ):
+                        ofreg,_,_ = registers.get( self.offset )
+                        if( ofreg is None ):
+                            return (None,None)
+                        val += ofreg
+                    else:
+                        val += self.offset
                 if( self.dereference ):
                     castto = "P"
                     if( target is None ):
@@ -561,34 +642,6 @@ class asm_arg_base( ):
 
         return self._fixup_values( None, None )
 
-    def __str__( self ):
-        ret = ""
-        if( self.asterisk ):
-            ret +=  "*"
-        if( self.prefix is not None ):
-            ret += f"%{self.prefix}:"
-        if( self.offset is not None ):
-            ret += f"{self.offset:#0x}"
-        if( self.dereference ):
-            ret += "("
-            if( self.multiplier is not None ):
-                if( self.add_register is not None ):
-                    ret += "%" + self.add_register
-                ret += ","
-            ret += "%" + self.register
-            if( self.multiplier is not None ):
-                ret += f",{self.multiplier}"
-            ret += ")"
-        elif( self.register is not None ):
-            ret += "%" + self.register
-        if( self.immediate is not None ):
-            if( self.immediate_hex ):
-                ret += f"${self.immediate:#0x}"
-            else:
-                ret += f"${self.immediate}"
-        if( self.jmp_target is not None ):
-            ret += f"{self.jmp_target:#0x}"
-        return ret
 
     def __repr__( self ):
         return str(self)
@@ -679,6 +732,7 @@ class instruction_base( abc.ABC ):
         self.history = None
         self.bt_idx = None
         self.extra = []
+        self.static_extra = []
         self.file_line = None
         self.possible_in_register_sets = []
         self.possible_out_register_sets = []
@@ -803,7 +857,7 @@ class instruction_base( abc.ABC ):
     * a tuple[str,int] for table cells. Third value will be extended to be 0 to not garble the table
     * a list. Will vdb.color.concat() them to a tuple for a cell
     """
-    def add_extra( self, s, lvl = 2 ):
+    def add_extra( self, s, lvl = 0, static = False ):
 #        print(f"add_extra({type(s)}:{s})")
         if( isinstance(s,string_ref) ):
 #            s = str(s)
@@ -835,7 +889,10 @@ class instruction_base( abc.ABC ):
 #        print("s[0] = '%s'" % (s[0],) )
 #        print("s[1] = '%s'" % (s[1],) )
 
-        self.extra.append( s )
+        if( static ):
+            self.static_extra.append( (s,lvl) )
+        else:
+            self.extra.append( (s,lvl) )
 
     def __str__( self ):
         ta = "None"
@@ -1693,14 +1750,16 @@ ascii mockup:
                 for e in i.explanation:
                     line_extra.append( vdb.color.colorl(e,color_explanation.value) )
 
-            def output_extra( lst, lvl, otbl ):
+            def output_extra( lst, otbl, lvl = None ):
                 if( lst is None ):
                     return
                 if( len(lst) == 0 ):
                     return
+                if( lvl is not None ):
+                    lst = list( (x,lvl) for x in lst )
 #                print("lst = '%s'" % (lst,) )
 
-                for ex in lst:
+                for ex,nlvl in lst:
                     if( isinstance(ex,str) ):
                         unc = vdb.color.colors.strip_color(ex)
                         if( unc != ex ):
@@ -1723,17 +1782,18 @@ ascii mockup:
                         el = pre + post
                     else:
                         el = pre + [postarrows] + post
-                    el += lvl*[None]
+                    el += nlvl*[None]
 #                    el = ["m","a","h","H","o","d","BYTES" + str(len(line)-1)]
                     el.append(ex)
 #                    print("el = '%s'" % (el,) )
                     otbl.append(el)
 
 #            output_extra(["END"],0,otbl)
-            output_extra( reference_lines,2,otbl)
-            output_extra(i.extra,0,otbl)
-            output_extra(i.file_line,0,otbl)
-            output_extra(line_extra,2,otbl)
+            output_extra( reference_lines,otbl,2)
+            output_extra(i.static_extra,otbl)
+            output_extra(i.extra,otbl)
+            output_extra(i.file_line,otbl,0)
+            output_extra(line_extra,otbl,1)
 
 
             otmap[cnt] = len(otbl)
@@ -2425,9 +2485,9 @@ def info_line( addr ):
 
 def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached = True, do_flow = True ):
 
-    print(f"parse_from_gdb(arg={arg},fakedata, {arch=}, {fakeframe=}, {cached=}, {do_flow=}")
+#    print(f"parse_from_gdb(arg={arg},fakedata, {arch=}, {fakeframe=}, {cached=}, {do_flow=}")
     global parse_cache
-    print(f"{len(parse_cache)=}")
+#    print(f"{len(parse_cache)=}")
 
     key = arg
 
@@ -2696,6 +2756,7 @@ def register_flow( lng, frame : "gdb frame" ):
             possible_registers.merge(cr)
             ins.last_seen_registers = possible_registers.clone()
 
+        # XXX Refactor to have the register setting etc. just once
         # Check if we have a special function handling more than the basics
         fun = flow_vtable.get(ins.mnemonic,None)
         if( fun is not None ):

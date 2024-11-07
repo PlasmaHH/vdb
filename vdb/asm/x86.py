@@ -27,19 +27,21 @@ jaliases = {
         "jz"   : "je",
         }
 
+# FLAG, FLAG, bool => (FLAG == FLAG) == bool
+
 jconditions = {
-        "je"  : ( False, [ ( "ZF", 1 ) ] ),
-        "jne" : ( False, [ ( "ZF", 0 ) ] ),
-        "jb"  : ( False, [ ( "CF", 1 ) ] ),
-        "jnb" : ( False, [ ( "CF", 0 ) ] ),
-        "ja"  : ( False, [ ( "ZF", 0 ), ( "CF", 0 ) ] ),
-        "jna" : ( True,  [ ( "CF", 1 ), ( "ZF", 1 ) ] ),
-        "jl"  : ( False, [ ( "SF_OF", 0 ) ] ),
-        "jge" : ( False, [ ( "SF_OF", 1 ) ] ),
-        "jle" : ( True,  [ ( "ZF", 1 ), ( "SF_OF", 0 ) ] ),
-        "jg"  : ( False, [ ( "ZF", 0 ), ( "SF_OF", 1 ) ] ),
-        "jp"  : ( False, [ ( "PF", 1 ) ] ),
-        "jnp" : ( False, [ ( "PF", 0 ) ] ),
+        "e"  : ( False, [ ( "ZF", 1, True ) ] ),
+        "ne" : ( False, [ ( "ZF", 0, True ) ] ),
+        "b"  : ( False, [ ( "CF", 1, True ) ] ),
+        "nb" : ( False, [ ( "CF", 0, True ) ] ),
+        "a"  : ( False, [ ( "ZF", 0, True ), ( "CF", 0, True ) ] ),
+        "na" : ( True,  [ ( "CF", 1, True ), ( "ZF", 1, True ) ] ),
+        "l"  : ( False, [ ( "SF","OF", False ) ] ),
+        "ge" : ( False, [ ( "SF","OF", True ) ] ),
+        "le" : ( True,  [ ( "ZF", 1, True ), ( "SF","OF", False ) ] ),
+        "g"  : ( False, [ ( "ZF", 0, True ), ( "SF","OF", True ) ] ),
+        "p"  : ( False, [ ( "PF", 1, True ) ] ),
+        "np" : ( False, [ ( "PF", 0, True ) ] ),
 
         } # All others not supported yet due to no support for these flags yet
 
@@ -132,6 +134,35 @@ class asm_arg(vdb.asm.asm_arg_base):
             self.jmp_target = vdb.util.rxint( arg )
 #        print("self.jmp_target = '%s'" % (self.jmp_target,) )
         self._check(oarg)
+
+    def __str__( self ):
+        ret = ""
+        if( self.asterisk ):
+            ret +=  "*"
+        if( self.prefix is not None ):
+            ret += f"%{self.prefix}:"
+        if( self.offset is not None ):
+            ret += f"{self.offset:#0x}"
+        if( self.dereference ):
+            ret += "("
+            if( self.multiplier is not None ):
+                if( self.add_register is not None ):
+                    ret += "%" + self.add_register
+                ret += ","
+            ret += "%" + self.register
+            if( self.multiplier is not None ):
+                ret += f",{self.multiplier}"
+            ret += ")"
+        elif( self.register is not None ):
+            ret += "%" + self.register
+        if( self.immediate is not None ):
+            if( self.immediate_hex ):
+                ret += f"${self.immediate:#0x}"
+            else:
+                ret += f"${self.immediate}"
+        if( self.jmp_target is not None ):
+            ret += f"{self.jmp_target:#0x}"
+        return ret
 
 class instruction( vdb.asm.instruction_base ):
 
@@ -347,64 +378,45 @@ class instruction( vdb.asm.instruction_base ):
         oldins = self
         return self
 
-def flag_extra( name, cmp, exp, value ):
-#    vdb.util.bark() # print("BARK")
-    if( name == "SF_OF" ):
-        if( value ):
-            ret = ", SF == OF"
-        else:
-            ret = ", SF != OF"
-    else:
-        ret = f", {name}[{value}] {cmp} {exp}"
-#    print("ret = '%s'" % (ret,) )
-    return ret
+bit_counts = bytes(bin(x).count("1") for x in range(256))  
+# for the "according to the result" flags
+def set_flags_result( flag_set, result, arg = None ):
+#        vdb.util.bark() # print("BARK")
+    if( result < 0 ):
+        if( arg is not None and ( bs := arg.bitsize ) is not None ):
+            result += (1 << bs)
 
-
+#        print("result = '%s'" % (result,) )
+    lsb = result & 0xFF
+    bcnt = bit_counts[lsb]
+    flag_set.set("PF", int( bcnt & 1 == 0 ) )
+    flag_set.set("ZF", int(result == 0) )
+    if( arg is not None and ( bs := arg.bitsize ) is not None ):
+        sbit = ( 1 << (bs-1) )
+        flag_set.set("SF", int( (result & sbit) != 0  ))
+        mask = ( 1 << bs ) - 1
+#            print(f"mask = {int(mask):#0x}")
+#            print("bs = '%s'" % (bs,) )
+        r = result & mask
+        # XXX really not sure about this one in case of signs and all
+        flag_set.set("OF", int(r != result) )
+        flag_set.set("CF", int(r != result) )
 
 def vt_flow_j( ins, frame, possible_registers, possible_flags ):
     if( not vdb.asm.annotate_jumps.value ):
         return (possible_registers,possible_flags)
 
     mnemonic = jaliases.get( ins.mnemonic, ins.mnemonic )
+    mnemonic = mnemonic[1:] # cut of the "j"
 
-    use_or,exflags = jconditions.get(mnemonic,(None,None))
-#    print("mnemonic = '%s'" % (mnemonic,) )
-#    print("use_or = '%s'" % (use_or,) )
-#    print("exflags = '%s'" % (exflags,) )
-#    print("possible_flags = '%s'" % (possible_flags,) )
-    if( exflags is None ):
-        print(f"Unhandled conditional jump {ins.mnemonic}")
-    else:
-        extrastring = ""
-        valid = False
-        taken = True
-        for exflag in exflags:
-#            print("exflag = '%s'" % (exflag,) )
-            flag_value = possible_flags.get(exflag[0])
-#            print("flag_value = '%s'" % (flag_value,) )
-            if( flag_value is not None ):
-                if( flag_value == exflag[1] ):
-#                    vdb.util.bark() # print("BARK")
-#                    extrastring += f", {exflag[0]} == {flag_value}"
-                    extrastring += flag_extra(exflag[0],"==",exflag[1],flag_value)
-                    if( use_or ):
-                        valid = True
-                        taken = True
-                        break
-                else:
-                    taken = False
-#                    vdb.util.bark() # print("BARK")
-                    extrastring += flag_extra(exflag[0],"!=",exflag[1],flag_value)
-            else:
-                break
+    taken,extrastring = vdb.asm.flag_check( mnemonic, possible_flags, jconditions )
+    if( taken is not None ):
+        if( taken ):
+            ins.add_extra(f"Jump taken" + extrastring)
         else:
-            valid = True
-
-        if( valid ):
-            if( taken ):
-                ins.add_extra(f"Jump taken" + extrastring)
-            else:
-                ins.add_extra(f"Jump NOT taken" + extrastring)
+            ins.add_extra(f"Jump NOT taken" + extrastring)
+    else:
+        ins.add_extra(f"Unhandled conditional jump: {extrastring}")
 #        print("extrastring = '%s'" % (extrastring,) )
 #        print("possible_flags = '%s'" % (possible_flags,) )
 
@@ -535,7 +547,7 @@ def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     if( tgtv is not None and sub is not None):
         nv = tgtv - sub
         possible_registers.set( ins.arguments[1].register, nv, origin="flow_sub" )
-        possible_flags.set_result( nv, ins.arguments[1] )
+        set_flags_result( possible_flags, nv, ins.arguments[1] )
         possible_flags.set( "CF", int(tgtv > sub) )
     else:
         ins.arguments[0].argspec = ""
@@ -559,9 +571,10 @@ def vt_flow_add( ins, frame, possible_registers, possible_flags ):
     if( tgtv is not None and add is not None):
         nv = tgtv + add
         possible_registers.set( ins.arguments[1].register, nv,origin="flow_add" )
-        possible_flags.set_result( nv, ins.arguments[1] )
+        set_flags_result( possible_flags, nv, ins.arguments[1] )
         possible_flags.set( "CF", int(tgtv > add) )
     else:
+        possible_registers.set( ins.arguments[1].register, None )
         ins.arguments[0].argspec = ""
 
     return ( possible_registers, possible_flags )
@@ -577,7 +590,7 @@ def vt_flow_test( ins, frame, possible_registers, possible_flags ):
     possible_flags.unset( [ "SF","ZF","AF","PF"] )
     if( a0 is not None and a1 is not None ):
         t = a0 & a1
-        possible_flags.set_result(t,ins.arguments[1])
+        set_flags_result( possible_flags,t,ins.arguments[1])
         # XXX add SF and PF support as soon as some other place needs it
 #        ins.possible_flag_sets.append( possible_flags )
     possible_flags.set("OF",0)
@@ -621,7 +634,7 @@ def vt_flow_pxor( ins, frame, possible_registers, possible_flags ):
             t = v0 ^ v1
             possible_registers.set( args[1].register, t,origin="flow_pxor" )
         else: # no idea about the outcome, don't set it
-            possible_registers.remove( args[1].register )
+            possible_registers.set( args[1].register, None )
         if( len(args) == 2 ):
             # xor zeroeing out a register
             if( args[0].register == args[1].register ):
@@ -648,14 +661,14 @@ def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
         if( v0 is not None and v1 is not None ):
             t = v0 ^ v1
             possible_registers.set( args[1].register, t,origin="flow_xor" )
-            possible_flags.set_result(t)
+            set_flags_result( possible_flags,t)
         else: # no idea about the outcome, don't set it
-            possible_registers.remove( args[1].register )
+            possible_registers.set( args[1].register, None )
         if( len(args) == 2 ):
             # xor zeroeing out a register
             if( args[0].register == args[1].register ):
                 possible_registers.set( args[1].register ,0,origin="flow_xor")
-                possible_flags.set_result(0)
+                set_flags_result( possible_flags,0)
                 args[0].specfilter(None)
 
     possible_flags.set("OF",0)
@@ -677,9 +690,9 @@ def vt_flow_and( ins, frame, possible_registers, possible_flags ):
         if( v0 is not None and v1 is not None ):
             t = v0 & v1
             possible_registers.set( args[1].register, t ,origin="flow_and")
-            possible_flags.set_result(t)
+            set_flags_result( possible_flags,t)
         else: # no idea about the outcome, don't set it
-            possible_registers.remove( args[1].register )
+            possible_registers.set( args[1].register, None )
 
     possible_flags.set("OF",0)
     possible_flags.set("CF",0)
@@ -696,7 +709,7 @@ def _vt_flow_cmovcc( flags, ins, frame, possible_registers, possible_flags ):
         # No value known? Can't tell if we execute
         if( flag_value is None ):
             msgstring = f"{flag} is unknown"
-            possible_registers.remove( tgt.register )
+            possible_registers.set( tgt.register, None )
             break
         # Not the expected one, don't copy
         if( flag_value != val ):
@@ -707,7 +720,7 @@ def _vt_flow_cmovcc( flags, ins, frame, possible_registers, possible_flags ):
     else: # went through all, they seem to match
         if( src_val is None ):
             # src not known so tgt is unknown now to
-            possible_registers.remove( tgt.register )
+            possible_registers.set( tgt.register, None )
             msgstring = "would move, srcval unknown"
         else:
             possible_registers.set( tgt.register,  src_val, "flow_cmov" )
@@ -764,7 +777,7 @@ def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
     a0.specfilter("=")
 
     fv,fa = a0.value(possible_registers)
-    possible_registers.remove( a1.register )
+    possible_registers.set( a1.register, None )
     if( fa is not None ):
         if( not a1.dereference and a1.register is not None):
             possible_registers.set( a1.register, fa ,origin="flow_lea")
@@ -788,7 +801,7 @@ def vt_flow_cmp( ins, frame, possible_registers, possible_flags ):
         t = v1-v0
         possible_flags.set( "ZF", int( v0 == v1 ) )
         possible_flags.set( "CF", int( v0 > v1 ) ) # XXX revisit for accurate signed/unsigned 32/64 bit stuff (and the other flags)
-        possible_flags.set_result( t,a1 )
+        set_flags_result( possible_flags, t,a1 )
 
     return ( possible_registers, possible_flags )
 
@@ -797,7 +810,7 @@ def vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
 #            ins._gen_extra()
     rax,_,_ = possible_registers.get("rax",None)
     if( rax is not None ):
-        sc = get_syscall( rax )
+        sc = vdb.asm.get_syscall( rax )
 #                    print("rax = '%s'" % (rax,) )
 #                    print("sc = '%s'" % (sc,) )
         if( sc is not None ):
@@ -834,31 +847,8 @@ def vt_flow_ret( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 
+
 def current_flags( frame ):
-    eflags = frame.read_register("eflags")
-#    print(f"EFLAGS    ------------------ {eflags=}")
-    if( eflags is None ):
-        return None
-#    print("eflags = '%s'" % (eflags,) )
-#    print("type(eflags) = '%s'" % (type(eflags),) )
-#    print("eflags.type = '%s'" % (eflags.type,) )
-#    print("eflags.type.code = '%s'" % (vdb.util.gdb_type_code(eflags.type.code),) )
-    e_val = int(eflags)
-#    print("eflags.type.fields() = '%s'" % (eflags.type.fields(),) )
-    fs = vdb.asm.flag_set()
-    for bit,fd in vdb.register.flag_descriptions.items():
-        mask = 1 << bit
-#        print(f"mask = {int(mask):#0x}")
-#        print("fd[1] = '%s'" % (fd[1],) )
-        fval = e_val & mask
-#        print("fval = '%s'" % (fval,) )
-        if( fval > 0 ):
-            fs.set(fd[1],1)
-        else:
-            fs.set(fd[1],0)
-#    print("fs = '%s'" % (fs,) )
-    return fs
-
-
+    return vdb.asm.current_flags(frame,"eflags")
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
