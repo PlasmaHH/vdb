@@ -299,7 +299,11 @@ class instruction( vdb.asm.instruction_base ):
             self.conditional_jump = True
         elif( self.mnemonic in unconditional_jump_mnemonics ):
 #            print("self = '%s'" % (self,) )
-            self.targets.add( vdb.util.xint(oargs) )
+            try:
+                self.targets.add( vdb.util.xint(oargs) )
+            # Might not be a value, in that case we just ignore it
+            except ValueError:
+                pass
             self.unconditional_jump = True
         elif( self.mnemonic in ["tbb","tbh"] ): # arm jump table stuff
 #            print("ARM TBB/TBH DETECTED")
@@ -445,12 +449,11 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
 
 def vt_flow_bl( ins, frame, possible_registers, possible_flags ):
 
-    possible_registers.set( "lr", ins.next.address, origin = "flow_bl" )
-    if( not vdb.asm.annotate_jumps.value ):
-        return (possible_registers,possible_flags)
 
     if( ins.next is not None ):
-        ins.add_explanation(f"Branch to {ins.targets} and put return address {ins.next.address:#0x} in lr register (branch and link)")
+        possible_registers.set( "lr", ins.next.address, origin = "flow_bl" )
+        if( vdb.asm.asm_explain.value ):
+            ins.add_explanation(f"Branch to {ins.targets} and put return address {ins.next.address:#0x} in lr register (branch and link)")
     return (possible_registers,possible_flags)
 
 def vt_flow_b( ins, frame, possible_registers, possible_flags ):

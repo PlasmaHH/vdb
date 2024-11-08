@@ -2492,11 +2492,19 @@ def update_vars( ls, frame ):
     ls.var_expressions = {}
 
     # ls.function is sometimes mangled, try to demangle it
-    ls.function = gdb.execute(f"demangle {ls.function}",False,True).strip()
+    if( ls.function is not None ):
+        try:
+            ls.function = gdb.execute(f"demangle {ls.function}",False,True).strip()
+        # It throws when it can't demangle, but we want to proceed with the mangled name then, better than nothing
+        except gdb.error:
+            pass
 
     fun = frame.function()
     if( fun ):
-        funname = gdb.execute(f"demangle {fun.linkage_name}",False,True).strip()
+        try:
+            funname = gdb.execute(f"demangle {fun.linkage_name}",False,True).strip()
+        except gdb.error:
+            funname = fun.linkage_name
 
     if( debug_all() ):
         print(f"{type(fun)=}")
