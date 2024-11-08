@@ -2308,6 +2308,9 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
             bval.fetch_lazy()
             if( bval.is_optimized_out ):
                 continue
+        except gdb.MemoryError:
+            # Don't care about things that are inaccessible really
+            pass
         except gdb.error as e:
 #            print(f"{e=}")
 #            vdb.print_exc()
@@ -2409,7 +2412,10 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
             if( b.is_argument ):
                 if( debug_all() ):
                     print("b = '%s'" % (b,) )
-                if( regindex >= 0 ):
+                # For arguments we take the current call register, but only up to the point where things are done in a
+                # register, the rest will go to stack anyways
+                # XXX We don't support float stuff yet
+                if( regindex >= 0 and regindex < len(reglist) ):
                     if( debug_all() ):
                         vdb.util.bark() # print("BARK")
                         print("regindex = '%s'" % (regindex,) )
@@ -2427,6 +2433,7 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
                     elif( bval.type.code == gdb.TYPE_CODE_STRUCT and not bval.type.is_scalar ):
                         lng.initial_registers.set( reglist[regindex] , int(bval.address), origin=f"gather_vars(CODE_REF)@{bval.address}")
                     else:
+#                        print(f"{vdb.util.gdb_type_code( bval.type.code )} : {reglist=}, {regindex=}")
                         lng.initial_registers.set( reglist[regindex] , int(bval), origin=f"gather_vars()@{bval.address}")
                     if( debug_all() ):
                         print("lng.initial_registers = '%s'" % (lng.initial_registers,) )
