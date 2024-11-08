@@ -398,6 +398,11 @@ def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
     possible_registers.set( ins.arguments[0].register, val ,origin="flow_ldr" )
     return (possible_registers,possible_flags)
 
+def vt_flow_str( ins, frame, possible_registers, possible_flags ):
+    val,addr = ins.arguments[0].value( possible_registers )
+    possible_registers.set( ins.arguments[1].register, val ,origin="flow_str" )
+    return (possible_registers,possible_flags)
+
 def vt_flow_add( ins, frame, possible_registers, possible_flags ):
     if( len(ins.arguments) == 2 ):
         suml,_ = ins.arguments[0].value( possible_registers )
@@ -407,7 +412,7 @@ def vt_flow_add( ins, frame, possible_registers, possible_flags ):
         sumr,_ = ins.arguments[2].value( possible_registers )
 
     extext = f"Adding {suml} and {sumr}, storing it in {ins.arguments[0]}"
-    
+
     if( ins.mnemonic == "adds" ):
         possible_flags.unset( [ "N", "Z", "C", "V" ] )
         extext += ", setting flags"
