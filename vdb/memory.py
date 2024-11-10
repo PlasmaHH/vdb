@@ -280,9 +280,9 @@ def print_legend( colorspec = "Aasm" ):
         legends.append(vdb.color.color("[UNK]",  access_colors[access_type.ACCESS_UNKNOWN].value ))
     if( "s" in colorspec ):
         for cs,_ in color_sections.items():
-#            print("cs = '%s'" % cs )
             co = section_color(cs).value
-            legends.append( vdb.color.color(f"[{cs}]",co) )
+            if( co is not None and len(co) > 0 ):
+                legends.append( vdb.color.color(f"[{cs}]",co) )
 
     s=""
     for l in legends:

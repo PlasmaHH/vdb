@@ -144,6 +144,9 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
     line = 0
 
     rowf = row_format.value
+
+    if( len(data) > 0 ):
+        vdb.memory.print_legend( )
     #pylint: disable=possibly-unused-variable
     while(len(data) > 0 ):
         dc = data[:16]

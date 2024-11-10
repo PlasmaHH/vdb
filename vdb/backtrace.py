@@ -587,7 +587,7 @@ def do_backtrace( argv ):
             bf.enabled = False
             argv = argv[1:]
         elif( len(argv) > 0 and argv[0] == "/f" ):
-            full="-full"
+            full="-full" # XXX Does not seem tow ork?
             argv = argv[1:]
             vdb.memory.print_legend( addr_colorspec.value )
         elif( color_addr.value ):
