@@ -241,16 +241,12 @@ class instruction( vdb.asm.instruction_base ):
 
         # Parse the arguments into argument objects
         if( self.args is not None and len(self.arguments) == 0 ):
-            target = False
-            # mov $0x18,%edi means load 0x18 into %edi, thus the second is the target (for more than two we have to
-            # check)
+            # mov $0x18,%edi means load 0x18 into %edi, thus the second is the target. For more the last one is always
+            # marked.
             for a in self.args:
-                self.arguments.append( asm_arg(target,a) )
-                target = True
-
-        # see above comment
-        if( len(self.args) > 2 ):
-            print("ARGUMENTS MORE THAN 2 ############################# CHECK WHAT IT IS AND FIX TARGET ALLOCATION")
+                self.arguments.append( asm_arg(False,a) )
+            if( len(self.arguments) > 0 ):
+                self.arguments[-1].target = True
 
         if( self.mnemonic in return_mnemonics ):
             self.return_ = True
