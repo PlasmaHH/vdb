@@ -2065,6 +2065,7 @@ class fake_frame:
     class fake_function:
         def __init__( self ):
             self.name = "__fake_function__"
+            self.linkage_name = self.name
 
     class fake_architecture:
         def registers( self ):
@@ -2908,7 +2909,7 @@ def register_flow( lng, frame : "gdb frame" ):
             if( ins.mnemonic not in unhandled_mnemonics ):
                 for mn,fun in flow_vtable.items():
                     if( ins.mnemonic.startswith(mn) ):
-                        print(f"{mn} => {ins.mnemonic}")
+                        vdb.log(f"Synthesized mnemonic {ins.mnemonic} from {mn}, if their flow is not handled the same, create an additional one for {ins.mnemonic}",level=4)
                         flow_vtable[ins.mnemonic] = fun
                         ins.possible_in_register_sets.append( possible_registers.clone() )
                         ins.possible_in_flag_sets.append( possible_flags.clone() )
