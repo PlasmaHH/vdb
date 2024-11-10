@@ -23,25 +23,6 @@ import os
 import time
 import abc
 
-# TODO: have instruction "classes" and colour then accordingly, then define the clases in terms of these settings
-
-asm_colors = [
-        ( "j.*", "#f0f" ),
-        ( "b.*", "#f0f" ),
-        ( "cb.*", "#f0f" ),
-        ( "mov.*", "#0ff" ),
-        ( "cmp.*|test.*|cmov.*", "#f99" ),
-        ( "call.*", "#6666ff" ),
-        ( "ret.*", "#8f9" ),
-        ( "nop.*" ,"#338" ),
-        ( "pxor.*|punpckl.*", "#aa6" ),
-        ( "sub.*|add.*|imul.*|mul.*|div.*|dec.*|inc.*|neg.*", "#909" ),
-        ( "xor.*|shr.*|and.*|or.*", "#da4" ),
-        ( "push.*|pop.*|lea.*", "#080" ),
-        ( "hlt.*|syscall.*|int.*", "#a11" ),
-        ( "XXXX", "#904449" ),
-        ]
-
 asm_class_colors = {
             "jump" : "#f0f",
             "mem"  : "#0ff",
@@ -81,12 +62,9 @@ pre_colors_dot = [
 
 @vdb.event.start()
 def invalidate_cache( c ):
-#    vdb.util.bark() # print("BARK")
-#    traceback.print_stack()
     global parse_cache
-#    print(f"{parse_cache=}")
     parse_cache = {}
-#    print(f"{parse_cache=}")
+    vdb.log("Invalidating disassembler parse cache",level=4)
 
 bp_marker = vdb.config.parameter("vdb-asm-breakpoint-marker", "⬤" )
 bp_marker_disabled = vdb.config.parameter("vdb-asm-breakpoint-disabled-marker", "◯" )
@@ -2013,20 +1991,20 @@ def configure_arch( arch = None ):
             archname = archname[3]
 #            print(f"parsed {archname=}")
         except:
-            print("Not configured for architecture %s, falling back to x86" % archname )
+            vdb.log(f"Not configured for architecture {archname}, falling back to x86", level=2 )
 
     
 #    print(f"Trying aliases of {archname}")
     archname = arch_aliases.get(archname,archname)
 #    print(f"dealiased {archname=}")
     if( archname.startswith("armv") ):
-        print(f"Architecture {archname} prefix mapped to arm, you might want to add it to aliases")
+        vdb.log(f"Architecture {archname} prefix mapped to arm, you might want to add it to aliases",level=3)
         archname = "arm"
 
     global current_arch
     if( current_arch is not None and archname == current_arch.name ): # already setup
         return
-    print(f"Configuring asm architecture {archname}")
+    vdb.log(f"Configuring asm architecture {archname}",level=3)
 
     imod = importlib.import_module(f"vdb.asm.{archname}")
     current_arch = imod
@@ -2552,9 +2530,9 @@ def update_vars( ls, frame ):
 #        print("n = '%s'" % (n,) )
         try:
             vv = frame.read_var(n)
-            print("vv = '%s'" % (vv,) )
-            print("vv.type = '%s'" % (vv.type,) )
-            when # will this be called? So far We did not see it anywhere
+#            print("vv = '%s'" % (vv,) )
+#            print("vv.type = '%s'" % (vv.type,) )
+#            when # will this be called? So far We did not see it anywhere
             # XXX do we want to output this anywhere?
 #            gather_vars( frame, ls, vv.type.fields(), vv, n + "." )
             # Would it make more sense to just assemble a complete list and then run this?
@@ -2622,7 +2600,7 @@ def info_line( addr ):
 
 def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached = True, do_flow = True ):
 
-#    print(f"parse_from_gdb(arg={arg},fakedata, {arch=}, {fakeframe=}, {cached=}, {do_flow=}")
+    vdb.log(f"parse_from_gdb(arg={arg}, fakedata, {arch=}, {fakeframe=}, {cached=}, {do_flow=})",level=4)
     global parse_cache
 #    print(f"{len(parse_cache)=}")
 
@@ -3492,7 +3470,6 @@ def disassemble( argv ):
                 elif( argv0[0] == "F" ):
                     invalidate_cache(None)
                     print("Flushed disassembler parse cache")
-#                    print(f"disassemble flushed: {len(parse_cache)=}")
                     return None
                 elif( argv0[0] == "s" ):
                     source = True

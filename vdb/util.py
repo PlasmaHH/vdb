@@ -154,6 +154,7 @@ def init_logger( ):
     logger.removeHandler(rfh)
     rfh = logging.FileHandler(logfilename)
     logger.addHandler(rfh)
+    logger.setLevel(1)
     global logprint
     formatter = logging.Formatter( style="{", fmt = "{asctime} {message}" )
     rfh.setFormatter(formatter)
@@ -187,8 +188,8 @@ def maybe_logprint( level, msg, queue = False ):
     # never print anything to console but not to logfile
     if( loglevel < console_loglevel ):
         loglevel = console_loglevel
+
     if( level <= loglevel ):
-#        print(f"logprint({msg=})")
         if( logprint is not None ):
             logprint(logprefix+loc+msg,level)
     if( level <= console_loglevel ):
@@ -943,6 +944,7 @@ def memoize( reset_events = [] ):
                 re.connect( self.reset )
 
         def reset( self, xxx = None ):
+            log(f"Resetting memoize cache for {self.func}",level=4)
 #            print(f"reset({self},{xxx}")
 #            bark() # print("BARK")
             self.cache = {}
