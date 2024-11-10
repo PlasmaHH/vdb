@@ -1408,13 +1408,14 @@ ascii mockup:
 
         cg_events = []
         cg_header = []
-        for evn in callgrind_events.elements:
-            ix = callgrind_eventmap.get(evn,None)
-            if( ix is not None ):
-                cg_events.append(ix)
-                cg_header.append( (evn,",,bold",0) )
-            else:
-                vdb.util.log(f"Specified callgrind event {evn} not present in any loaded file", level = 4)
+        if( len(callgrind_eventmap) > 0 ):
+            for evn in callgrind_events.elements:
+                ix = callgrind_eventmap.get(evn,None)
+                if( ix is not None ):
+                    cg_events.append(ix)
+                    cg_header.append( (evn,",,bold",0) )
+                else:
+                    vdb.util.log(f"Specified callgrind event {evn} not present in any loaded file", level = 4)
 
         headfields = [    ("m" ,[ ("Marker",",,bold",0,0) ])
                         , ("a" ,[("Address",",,bold")])
