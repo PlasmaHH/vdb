@@ -2262,6 +2262,13 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
         try:
             # First call, not recursing into an existing variable...
             if( pval is None ):
+#                print(f"{b.is_argument=}")
+#                print(f"{b.is_constant=}")
+#                print(f"{b.is_function=}")
+#                print(f"{b.is_variable=}")
+                if( not b.is_argument and not b.is_variable ):
+#                    print(f"Skipping {b.print_name}")
+                    continue
 #                print(f"{type(b)=}")
                 bval = b.value(frame)
                 xbaddr= bval.address

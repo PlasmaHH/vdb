@@ -82,9 +82,10 @@ _arm_class_res = [
         ( "psrldq|pslldq", "bit" ),
         ( "push.*|pop.*|lea.*", "stack" ),
         ( "hlt.*|syscall.*|int.*", "sys" ),
+        ( "ldm.*|stm.*", "stack" ),
         ( "ld.*|str.*", "mem" ),
-        ( "lsl.*|uxt.*|sxt.*|lsr.*", "bit" ),
-        ( "it.*", "cond" ),
+        ( "eor.*|lsl.*|uxt.*|sxt.*|lsr.*", "bit" ),
+        ( "it.*|tst.*", "cond" ),
         ]
 
 

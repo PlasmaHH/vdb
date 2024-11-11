@@ -162,6 +162,7 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
         value_string=""
         parr = []
         step = vdb.arch.pointer_size // 8
+        # XXX Suppress the output of the pointers also when at least one of their bytes is suppressed
         if( pointers ):
             for poffset in range(0,16,step):
 #                print("poffset = '%s'" % poffset )

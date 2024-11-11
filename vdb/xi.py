@@ -109,6 +109,14 @@ def get_mmaps( mmaps, filter ):
     return ret
 
 
+breakpoint_hit = False
+# XXX For performance reasons register this only during the xi run
+@vdb.event.stop()
+def bp_stop( bpev ):
+    global breakpoint_hit
+    if( isinstance( bpev, gdb.BreakpointEvent ) ):
+        breakpoint_hit = True
+#    print(f"{bpev=}")
 
 def xi( num, filter, full, events ):
     regs = gdb.execute("registers",False,True)
@@ -117,64 +125,72 @@ def xi( num, filter, full, events ):
     oldr = vdb.register.Registers()
     pcname = get_pc_name()
 
+    global breakpoint_hit
+    breakpoint_hit = False
 
     if( full ):
         mmaps = vdb.register.mmapped_positions
         ommaps = get_mmaps(mmaps,filter)
 
     for ui in range(0,num):
+        try:
+            if( breakpoint_hit ):
+                break
 #        print("===========")
-        ist = instruction_state()
-        alli.append(ist)
-        gdb.execute("si",False,True)
-        r = vdb.register.Registers()
-        if( events ):
-            vdb.event.exec_hook("step")
+            ist = instruction_state()
+            alli.append(ist)
+            gdb.execute("si",False,True)
+            r = vdb.register.Registers()
+            if( events ):
+                vdb.event.exec_hook("step")
 
-        if( full ):
-            rmmaps = get_mmaps(mmaps,filter)
+            if( full ):
+                rmmaps = get_mmaps(mmaps,filter)
 #            print(f"{ommaps['SCB.ICSR']=}")
 #            print(f"{rmmaps['SCB.ICSR']=}")
-            dm = diff_mmaps( ommaps, rmmaps )
-            ommaps = rmmaps
+                dm = diff_mmaps( ommaps, rmmaps )
+                ommaps = rmmaps
 #            print(f"{dm=}")
-            ist.mmap_registers = dm
+                ist.mmap_registers = dm
 
-        # Depending on the arch chose the right register
-        pc = oldr.get_value(pcname)
+            # Depending on the arch chose the right register
+            pc = oldr.get_value(pcname)
 #        fr_pc = gdb.selected_frame().pc()
 #        print(f"{str(pc[0])=}")
 #        print(f"{fr_pc=}")
 #        print(f"{r.all=}")
 #        print(f"{r.regs=}")
-        dr = diff_regs(oldr,r)
-        ist.changed_registers = dr
-        # XXX Needs arch independence. Check for complete list of possible flags from registers.py ?
-        ist.current_flags=r._flags("eflags",r.rflags,vdb.register.flag_info,False,False,True,None)
-        ist.pc = pc
-        ist.asm_string,ist.instruction = vdb.asm.get_single_tuple( pc[0], extra_filter="r",do_flow=True )
+            dr = diff_regs(oldr,r)
+            ist.changed_registers = dr
+            # XXX Needs arch independence. Check for complete list of possible flags from registers.py ?
+            ist.current_flags=r._flags("eflags",r.rflags,vdb.register.flag_info,False,False,True,None)
+            ist.pc = pc
+            ist.asm_string,ist.instruction = vdb.asm.get_single_tuple( pc[0], extra_filter="r",do_flow=True )
 #        print(f"{ist.instruction.arguments=}")
 #        print(f"{ist.instruction.args=}")
 
-        for arg in ist.instruction.arguments:
-            if( arg.dereference ):
-                nr = vdb.asm.register_set()
-                # XXX python should probably have some lambda magic for that
-                # Also, here we have an incompatibility between asm and register that seem to do very similar
-                # bookkeeping and surely can benefit from shared code
+            for arg in ist.instruction.arguments:
+                if( arg.dereference ):
+                    nr = vdb.asm.register_set()
+                    # XXX python should probably have some lambda magic for that
+                    # Also, here we have an incompatibility between asm and register that seem to do very similar
+                    # bookkeeping and surely can benefit from shared code
 
-                for k,v in r.regs.items():
-                    nr.values[str(k)] = (int(v[0]),None)
+                    for k,v in r.regs.items():
+                        nr.values[str(k)] = (int(v[0]),None)
 #                print(f"{nr=}")
 #                print(f"{nr.get('rip')=}")
-                val = arg.value( nr )
-                if( val is not None ):
+                    val = arg.value( nr )
+                    if( val is not None ):
 #                    print(f" MEM {arg} => {val}")
-                    ist.changed_memory.append(val)
+                        ist.changed_memory.append(val)
 #                print(f"{val=}")
 #            arg._dump()
 #            print(f"{arg=}")
-        oldr = r
+            oldr = r
+        except KeyboardInterrupt:
+            print("Aborting xi")
+            break
 
     print(regs)
     otbl = []

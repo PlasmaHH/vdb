@@ -190,6 +190,7 @@ colormap = {
 """
 
 # some more specific sections that we support
+# XXX Only activate them when its detected that they are present
 color_sections = {
 
         ".interp":           None,

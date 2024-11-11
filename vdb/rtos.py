@@ -155,6 +155,10 @@ class task:
         self.priority = None
         self.status = None
         self.stack = None
+        self.stack_start = None
+        self.stack_position = None
+        self.stack_size = None
+        self.stack_usage = None
         self.current = False
         self.pc = None
 
@@ -240,17 +244,38 @@ class os_embos( ):
             try:
                 t.id = int(pTask)
                 t.priority = int(pTask["Priority"])
+
                 t.stack = pTask["pStack"]
+                # This seems to be the current/saved stack pointer
+                t.stack_position = pTask["pStack"]
+
+                t.stack_size = pTask["StackSize"]
+                stack_base = pTask["pStackBase"]
+                t.stack_start = int(stack_base) + int(t.stack_size)
+                # This all should enable us to maintain a set of "other stack"
+                if( t.current ):
+#                    print(f"pStack {int(t.stack):#0x}")
+#                    print(f"pStackBase {int(stack_base):#0x}")
+                    frame = gdb.selected_frame()
+                    sp = frame.read_register("sp")
+                    t.stack_position = sp
+#                    print(f"sp {int(sp):#0x}")
+
+
+                t.stack_usage = int(t.stack_start) - int(t.stack_position)
                 t.status = int(pTask["Stat"])
 
                 x = t.stack["Base"]
                 t.pc = t.stack["Base"]["OS_REG_PC"]
                 t.pc = gdb.parse_and_eval(f"(void*){t.pc}")
 
+
+
 #            t.lr = t.stack["Base"]["OS_REG_LR"]
                 t.lr = t.stack["Base"]["OS_REG_R14"]
                 t.lr = gdb.parse_and_eval(f"(void*){t.lr}")
             except gdb.error:
+                vdb.print_exc()
                 break
             ret.append(t)
             pTask = pTask["pNext"]
@@ -269,7 +294,7 @@ class os_embos( ):
 
     def print_task_list( self, tlist, with_bt = None, id_filter = None ):
         tbl = []
-        tbl.append( [ "ID","Name","Stack","Prio","Status","pc","lr" ] )
+        tbl.append( [ "ID","Name","Stack","Usage","Prio","Status","pc","lr" ] )
         global unwinder
         if( with_bt is not None and unwinder is None ):
             unwinder = fake_unwinder()
@@ -282,8 +307,8 @@ class os_embos( ):
                 col = color_active_task.value
             if( id_filter == t.id ):
                 col = color_marked_task.value
-
-            tbl.append( [ vdb.color.colorl(f"{int(t.id):#0x}",col), t.name.string("iso-8859-15"), f"{int(t.stack):#0x}", t.priority, self._status_string(t.status), t.pc, t.lr ] )
+            usage = f"{t.stack_usage}/{t.stack_size}"
+            tbl.append( [ vdb.color.colorl(f"{int(t.id):#0x}",col), t.name.string("iso-8859-15"), f"{int(t.stack):#0x}", usage, t.priority, self._status_string(t.status), t.pc, t.lr ] )
         if( with_bt is not None ):
 #            print("unwinder.enabled = '%s'" % (unwinder.enabled,) )
             frame = gdb.selected_frame()
