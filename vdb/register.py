@@ -281,8 +281,6 @@ possible_specials = [
         "pkru"
         ]
 
-gdb_uint64_t = gdb.lookup_type("unsigned long long")
-gdb_uint8_t = gdb.lookup_type("unsigned char")
 
 size_per_reg = {}
 def gen_size_per_reg( ):
@@ -663,11 +661,10 @@ class Registers():
 #        print("val.type = '%s'" % val.type )
 #        print("val.type.tag = '%s'" % val.type.tag )
 #        print("val.type.code = '%s'" % vdb.util.gdb_type_code(val.type.code) )
-#        print("vdb.arch.gdb_uintptr_t = '%s'" % vdb.arch.gdb_uintptr_t )
-        if( vdb.arch.gdb_uintptr_t is not None ):
-            val=int( val.cast(vdb.arch.gdb_uintptr_t) )
+        if( vdb.arch.uintptr_t is not None ):
+            val=int( val.cast(vdb.arch.uintptr_t) )
         else:
-            val=int( val.cast(gdb_uint64_t) )
+            val=int( val.cast(vdb.arch.uint(64) ) )
 
         try:
             name = regdesc.name
@@ -762,7 +759,7 @@ class Registers():
                 if( hexdump ):
                     row = 1 + ( (cnt-1) // 8)
                     os = valmatrix.get((row,idx),"")
-                    fval = int(fval.cast(gdb_uint8_t))
+                    fval = int(fval.cast(vdb.arch.uint(8)))
                     os += f"{fval:02X} "
                     if( cnt % 4 == 0 ):
                         os += " "
@@ -845,10 +842,10 @@ class Registers():
         for i in range(0,elements):
             #			print("BARK")
             try:
-                xval.append(int(val[tname][i].cast(gdb_uint64_t)))
+                xval.append(int(val[tname][i].cast(vdb.arch.uint(64))))
             except:
                 try:
-                    xval.append(int(val[tname].cast(gdb_uint64_t)))
+                    xval.append(int(val[tname].cast(vdb.arch.uint(64))))
                 except:
                     xval.append("INVALID")
                     print("tname = '%s'" % (tname,) )

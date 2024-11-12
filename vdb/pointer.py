@@ -31,18 +31,6 @@ min_ascii = vdb.config.parameter("vdb-pointer-min-ascii", 3 )
 max_exponents = vdb.config.parameter("vdb-pointer-max-exponents", "-6,15", gdb_type = vdb.config.PARAM_ARRAY )
 
 
-gdb_void     = None
-gdb_void_ptr = None
-gdb_void_ptr_ptr = None
-
-@vdb.event.new_objfile()
-def update_types( ):
-    global gdb_void
-    global gdb_void_ptr
-    global gdb_void_ptr_ptr
-    gdb_void     = gdb.lookup_type("void")
-    gdb_void_ptr = gdb_void.pointer()
-    gdb_void_ptr_ptr = gdb_void_ptr.pointer()
 
 def as_c_str( ptr, maxlen = 64 ):
     c_str = bytearray()
@@ -93,13 +81,14 @@ def dereference( ptr ):
 #        print("gptr = '%s'" % gptr )
 #        print("gptr.type = '%s'" % gptr.type )
 #        xptr = gptr.cast(gdb_void_ptr)
+    # XXX Why do we do it in exactly this way?
     xptr = gptr.cast(gdb.lookup_type("void").pointer())
 #        print("xptr = '%s'" % xptr )
 #        print("xptr.type = '%s'" % xptr.type )
-    xptr = gptr.cast(gdb_void_ptr)
+    xptr = gptr.cast(vdb.arch.void_ptr_t)
 #        print("xptr = '%s'" % xptr )
 #        print("xptr.type = '%s'" % xptr.type )
-    nptr = gptr.cast(gdb_void_ptr_ptr)
+    nptr = gptr.cast(vdb.arch.void_ptr_ptr_t)
 #        print("nptr = '%s'" % nptr )
     gvalue = nptr.dereference()
     return (nptr,gvalue)
@@ -229,8 +218,7 @@ def colors( ptr, archsize = None ):
 def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = None, last = True, tailspec = None, do_annotate = True ):
     if( archsize is None ):
         archsize = vdb.arch.pointer_size
-    if( gdb_void is None ):
-        update_types()
+
     if( maxlen == 0 ):
         return (ellipsis.value,True)
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import vdb.arch
 import vdb.config
 import vdb.color
 import vdb.command
@@ -82,15 +83,6 @@ class instruction_state:
         print(f"{int(self.pc[0]):#0x}  {self.asm_string}   {self.changed_registers}")
 
 
-pc_name_map = {
-        "i386:x86-64" : "rip"
-        }
-
-# XXX We need to put this and the figuring out of the current architecture name from asm.py into arch.py for all to
-# access ( here we know we have a frame, but we need a method with a loaded but not runnig/cored process)
-def get_pc_name( ):
-    archname = gdb.selected_frame().architecture().name()
-    return pc_name_map.get(archname,"pc")
 
 def get_mmaps( mmaps, filter ):
     if( filter is None ):
@@ -160,7 +152,7 @@ class xi_listing:
             otbl.append(["Time","SI Time", "PTime", "Rest", "Addr","asm","regs"])
         else:
             otbl.append(["Addr","asm","regs"])
-        pcname = get_pc_name()
+        pcname = vdb.arch.get_pc_name()
         for ix,i in enumerate(self.listing):
             line : List = []
             otbl.append(line)
@@ -225,7 +217,7 @@ def xi( num, filter, full, events, flow ):
     regs = gdb.execute("registers",False,True)
 
     oldr = vdb.register.Registers()
-    pcname = get_pc_name()
+    pcname = vdb.arch.get_pc_name()
 
     global breakpoint_hit
     breakpoint_hit = False
