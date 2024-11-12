@@ -15,6 +15,7 @@ import gdb
 
 import traceback
 import time
+import datetime
 import re
 
 from typing import List
@@ -133,6 +134,7 @@ class xi_listing:
 
     def __init__( self ):
         self.id = vdb.util.next_id("xi")
+        self.time = time.time()
         self.listing = []
 
     def add( self, xi ):
@@ -176,7 +178,7 @@ class xi_listing:
                 line.append( tdif - (i.si_time - i.time) - (i.point_time - i.si_time) )
             pv,_,_,_,pl = vdb.pointer.color(i.pc[0],vdb.arch.pointer_size)
             line.append( (pv,pl) )
-            # Then flow was not active and we delayed getting the asm 
+            # Then flow was not active and we delayed getting the asm
             if( i.asm_string is None ):
                 i.asm_string,i.instruction = vdb.asm.get_single_tuple( i.pc[0], extra_filter="r",do_flow=False)
             alen = len( vdb.color.colors.strip_color(i.asm_string ) )
@@ -283,6 +285,8 @@ def xi( num, filter, full, events, flow ):
             ist.current_flags=r._flags("eflags",r.rflags,vdb.register.flag_info,False,False,True,None)
             if( flow ):
                 ist.asm_string,ist.instruction = vdb.asm.get_single_tuple( pc[0], extra_filter="r",do_flow=flow)
+            # XXX Doing the whole flow thing is rather expensive, all we need is access to the register values of the
+            # previous instructions output really to evaluate which memory was touched.
 #        print(f"{ist.instruction.arguments=}")
 #        print(f"{ist.instruction.args=}")
 
@@ -334,11 +338,13 @@ def xi_show( argv ):
     vdb.util.print_table(xlst.as_table())
 
 def xi_list( ):
-    xtbl = [ ["ID", "Size", "Begin", "End" ] ]
+    xtbl = [ ["ID", "Time", "Size", "Begin", "End" ] ]
     for xid,xlst in xi_db.items():
         line = []
         xtbl.append(line)
         line.append(xid)
+        dt = datetime.datetime.fromtimestamp(xlst.time)
+        line.append(dt)
         line.append(xlst.size())
         b,e = xlst.addresses()
         line.append(f"{int(b):#0x}")

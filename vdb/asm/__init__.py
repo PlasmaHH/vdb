@@ -63,8 +63,9 @@ pre_colors_dot = [
 @vdb.event.start()
 def invalidate_cache( c ):
     global parse_cache
+    if( len(parse_cache) ):
+        vdb.log("Invalidating disassembler parse cache",level=4)
     parse_cache = {}
-    vdb.log("Invalidating disassembler parse cache",level=4)
 
 bp_marker = vdb.config.parameter("vdb-asm-breakpoint-marker", "⬤" )
 bp_marker_disabled = vdb.config.parameter("vdb-asm-breakpoint-disabled-marker", "◯" )
@@ -2611,7 +2612,7 @@ def info_line( addr ):
 
 def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached = True, do_flow = True ):
 
-    vdb.log(f"parse_from_gdb(arg={arg}, fakedata, {arch=}, {fakeframe=}, {cached=}, {do_flow=})",level=4)
+    vdb.log(f"parse_from_gdb(arg={arg}, fakedata, {arch=}, {fakeframe=}, {cached=}, {do_flow=})",level=5)
     global parse_cache
 #    print(f"{len(parse_cache)=}")
 
@@ -3576,6 +3577,8 @@ dis/+<N>    - Have N Instructions of context after the marker
 dis/-<N>    - Have N Instructions of context before the marker
 dis/<N>,<M> - Have N Instructions of context before and M after the Marker
 dis/F       - Flushes some internal caches
+dis/c <CG>  - Loads callgrind information from file <CG>
+dis/v       - dis/v argv r1 99 tells the disassembler to assume that the variable argv is stored in register r1 with value 99
 
 All further parameters are handled like for the built in disasemble command with the exception of addresses that are not
 part of a function, unlike the disassemble command those are right away disassembled vdb-asm-nonfunction-bytes (default

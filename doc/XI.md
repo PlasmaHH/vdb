@@ -21,6 +21,23 @@ maybe also flags). For many cases we can figure out that some memory has changed
 
 All of the flags can be combined.
 
+## Assembler output
+`xi` uses the assembler output from the asm module, which itself uses the `xi` information from the previous xi run (if
+any). This can cause the assembler instructions to be prefixed with the index of the instruction in that run.
+
+## Subcommands
+
+`xi` saves each list of executions internally, you can access those lists with the following commands:
+
+### `xi list`
+Outputs a table of previous xi runs with their timestamp, number of executed instructions and first and last recorded
+instruction.
+
+![](img/xi.1.png)
+
+### `xi show <ID>`
+Using the ID from the list output, this shows the output of that run again as if it just happened.
+
 ## Limitations
 Only for instructions where this is explicitly coded the change of memory will be recorded, and there we do not have a
 look at the number of bytes changed.

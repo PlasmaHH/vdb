@@ -947,7 +947,8 @@ def memoize( reset_events = [] ):
                 re.connect( self.reset )
 
         def reset( self, xxx = None ):
-            log(f"Resetting memoize cache for {self.func.__module__}.{self.func.__qualname__} due to {xxx}",level=4)
+            if( len(self.cache) ):
+                log(f"Resetting memoize cache for {self.func.__module__}.{self.func.__qualname__} due to {xxx}",level=4)
 #            print("RESET")
 #            traceback.print_stack()
 

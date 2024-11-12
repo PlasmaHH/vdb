@@ -269,6 +269,11 @@ There is also a special `dis/v <varname> <register> <value>` command that you ca
 association to a variable) of a register at the start of the currently selected frames function. Use this mostly when
 core gdb itself was unable to provide the information about that variable (i.e. it is not part of `info locals`)
 
+### `xi` integration
+
+The xi command saves the index of its last executed instructions in this module, which will then be shown as its own xi
+column, if available. Running xi again will overwrite that data.
+
 ### callgrind
 
 Using the `c` showspec and loading a callgrind output file via `dis/c callgrind.xxxx.out` will try to read in the
