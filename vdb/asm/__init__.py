@@ -159,6 +159,7 @@ arch_aliases = {
                 "i386" : "x86",
                 "i386:x86-64" : "x86",
                 "aarch64" : "arm",
+                "armv7" : "arm",
                 "armv7-m" : "arm",
                 "armv7-m.main" : "arm",
                 "armv8-m" : "arm",
@@ -1979,7 +1980,7 @@ def configure_arch( arch = None ):
             archname = arch
         else:
             # might throw "no frame currently selected" when not running
-            archname = gdb.selected_frame().architecture().name()
+            archname = gdb.selected_inferior().architecture().name()
 #            print(f"gdb frame arch {archname}")
 
         origarch = archname
@@ -2000,7 +2001,9 @@ def configure_arch( arch = None ):
 #    print(f"dealiased {archname=}")
     if( archname.startswith("armv") ):
         vdb.log(f"Architecture {archname} prefix mapped to arm, you might want to add it to aliases",level=3)
+        arch_aliases[archname] = "arm"
         archname = "arm"
+#    traceback.print_stack()
 
     global current_arch
     if( current_arch is not None and archname == current_arch.name ): # already setup

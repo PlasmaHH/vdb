@@ -340,9 +340,19 @@ def is_blacklisted( raddr ):
 
     # register string e.g. DBGMCU.CR.TRACE_EN
     if( isinstance( addr, str ) ):
-        val,mmp = registers.get_reg( addr )
+        if( registers is None ):
+            update()
+        rres = registers.get_reg( addr )
+        if( rres is None ):
+            # The register is not present, we assume that this from a generic setup and if that register doesnt exist,
+            # the "bad" memory area doesn't depend on it either and is accesssible
+            return False
+        else:
+            val,mmp = rres
     else:
+        # XXX We don't do anything with it here, like compare, we should probably also somehow specify the size
         data = vdb.memory.read_uncached( addr, 1 )
+        return ( val != data )
 
 #    print(f"{val=}")
 #    print(f"{expected=}")
@@ -364,8 +374,9 @@ class Registers():
         self.type_indices = {}
         self.next_type_index = 1
 
+        self.frame = None
         try:
-            gdb.selected_frame()
+            self.frame = gdb.selected_frame()
         except:
             return
         thread=gdb.selected_thread()
@@ -394,16 +405,22 @@ class Registers():
         return False
 
     def collect_registers( self ):
-        frame=gdb.selected_frame()
-        for grp in frame.architecture().register_groups():
+
+        # XXX Can be made even faster by caching those groups, they won't change when the arch doesn't change
+        for grp in self.frame.architecture().register_groups():
 #            print("grp = '%s'" % (grp,) )
-            for reg in frame.architecture().registers(grp.name):
+            for reg in self.frame.architecture().registers(grp.name):
                 self.groups.setdefault(reg.name,set()).add( grp.name )
 #                print(f"{grp} : {reg}")
+#        sw = vdb.util.stopwatch()
 #        print(f"registers we don't know where to put them yet (archsize {self.archsize}):")
-        for reg in frame.architecture().registers():
+#        cnt = 0
+        for reg in self.frame.architecture().registers():
             self.all[reg.name] = reg
-            v = frame.read_register(reg)
+#            cnt += 1
+#            sw.start()
+            v = self.frame.read_register(reg)
+#            sw.pause()
             self.all_values[reg] = ( v, v.type )
             # try to figure out which register type this is by first sorting according to its type
             if( reg.name in possible_flags ):
@@ -428,6 +445,9 @@ class Registers():
                 self.regs[reg] = ( v, v.type )
             else:
                 self.others[reg] = ( v, v.type )
+#        sw.stop()
+#        print(f"{sw.get()=}")
+#        print(f"{cnt=}")
 
 
 
@@ -1519,6 +1539,19 @@ def reset( self ):
     global registers
     registers = None
 
+def update( ):
+#        print("Updating registers...",file=sys.stderr)
+#        with open("register.log","a") as f:
+#            traceback.print_stack(file=f)
+    try:
+        nrr = Registers()
+        global registers
+        registers = nrr
+    except Exception as e:
+        print("When trying to make sense out of registers, we encountered an exception: %s" % e )
+        vdb.print_exc()
+
+
 class cmd_registers(vdb.command.command):
     """Show the registers nicely (default is /e)
 
@@ -1538,26 +1571,17 @@ We recommend having an alias reg = registers in your .gdbinit
     def __init__ (self):
         super (cmd_registers, self).__init__ ("registers", gdb.COMMAND_DATA)
 
-    def update( self ):
-#        print("Updating registers...",file=sys.stderr)
-#        with open("register.log","a") as f:
-#            traceback.print_stack(file=f)
-        try:
-            nrr = Registers()
-            global registers
-            registers = nrr
-        except Exception as e:
-            print("When trying to make sense out of registers, we encountered an exception: %s" % e )
-            vdb.print_exc()
 
     def maybe_update( self ):
+        # XXX We always update, do we really need to do that? Should only ever change after stop? Or whats in nonstop
+        # mode?
 #        global registers
 #        print("registers = '%s'" % registers )
 #        if( registers is not None ):
 #            print("registers.thread = '%s'" % registers.thread )
 #        if( registers is None or registers.thread == 0 ):
 #            print("Need to call update")
-        self.update()
+        update()
 
     def usage( self ):
         super().usage()

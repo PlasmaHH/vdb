@@ -34,6 +34,9 @@ def ifset( s, p ):
         return s.format(p)
     return ""
 
+
+# XXX All of these do something similar, might make sense to unify that
+
 def gint( s ):
     try:
         val = gdb.parse_and_eval(s)

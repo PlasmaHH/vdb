@@ -36,6 +36,8 @@ def uint( sz: int ) -> gdb.Type:
 
 @vdb.event.new_objfile()
 def gather_info( ):
+    print(f"{gdb.selected_inferior().architecture()=}")
+    print(f"{gdb.selected_inferior().architecture().name()=}")
     global pointer_size
     pointer_size = gdb.lookup_type("void").pointer().sizeof*8
 
