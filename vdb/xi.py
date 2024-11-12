@@ -57,11 +57,12 @@ def diff_mmaps( r0, r1 ):
 class instruction_state:
 
     def __init__( self ):
-        self.pc = None
+        self.pc = (0,0)
         self.asm_string = None
-        self.changed_registers = None
+        self.changed_registers = {}
         self.current_flags = None
         self.changed_memory = []
+        self.executed = False
         # Get from the asm module the instruction object with its arguments and targets that will sort this out for the
         # active architecture
         self.accessible_memory = None
@@ -179,6 +180,9 @@ class xi_listing:
                 i.asm_string,i.instruction = vdb.asm.get_single_tuple( i.pc[0], extra_filter="r",do_flow=False)
             alen = len( vdb.color.colors.strip_color(i.asm_string ) )
             line.append( ( i.asm_string,alen) )
+            if( not i.executed ):
+                line.append(vdb.color.colorl("Execution not captured","#cc2222") )
+                continue
             for cr,cv in i.changed_registers.items():
                 if( cr == "eflags" ):
                     ff=i.current_flags
@@ -237,7 +241,11 @@ def xi( num, filter, full, events, flow ):
 #        print("===========")
             ist = instruction_state()
             xilist.add(ist)
+            pc = oldr.get_value(pcname)
+            ist.pc = pc
+
             gdb.execute("si",False,True)
+            ist.executed = True
             if( debug.value ):
                 ist.si_time = time.time()
 
@@ -261,7 +269,6 @@ def xi( num, filter, full, events, flow ):
                 ist.mmap_registers = dm
 
             # Depending on the arch chose the right register
-            pc = oldr.get_value(pcname)
 #        fr_pc = gdb.selected_frame().pc()
 #        print(f"{str(pc[0])=}")
 #        print(f"{fr_pc=}")
@@ -271,7 +278,6 @@ def xi( num, filter, full, events, flow ):
             ist.changed_registers = dr
             # XXX Needs arch independence. Check for complete list of possible flags from registers.py ?
             ist.current_flags=r._flags("eflags",r.rflags,vdb.register.flag_info,False,False,True,None)
-            ist.pc = pc
             if( flow ):
                 ist.asm_string,ist.instruction = vdb.asm.get_single_tuple( pc[0], extra_filter="r",do_flow=flow)
 #        print(f"{ist.instruction.arguments=}")
@@ -297,6 +303,9 @@ def xi( num, filter, full, events, flow ):
 #            arg._dump()
 #            print(f"{arg=}")
             oldr = r
+        except gdb.error as e:
+            print(f"xi aborted due to gdb error: {e}")
+            break
         except KeyboardInterrupt:
             print("Aborting xi")
             break
@@ -311,6 +320,9 @@ def xi( num, filter, full, events, flow ):
 
 
 def xi_show( argv ):
+    if( len(argv) == 0 ):
+        print("Need to specify id to show")
+        return
     xid = int(argv[0])
     xlst = xi_db.get(xid)
     if( xlst is None ):
