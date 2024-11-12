@@ -158,6 +158,7 @@ class xi_listing:
             otbl.append(["Time","SI Time", "PTime", "Rest", "Addr","asm","regs"])
         else:
             otbl.append(["Addr","asm","regs"])
+        pcname = get_pc_name()
         for ix,i in enumerate(self.listing):
             line : List = []
             otbl.append(line)
@@ -184,6 +185,8 @@ class xi_listing:
                 line.append(vdb.color.colorl("Execution not captured","#cc2222") )
                 continue
             for cr,cv in i.changed_registers.items():
+                if( cr == pcname ):
+                    continue
                 if( cr == "eflags" ):
                     ff=i.current_flags
                     ff=ff[0][2]
