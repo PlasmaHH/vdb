@@ -327,6 +327,11 @@ Additionally we have (the same way as kcachegrind) synthesized events:
 In case the jumps are recorded, they will be displayed when the `c` showspec for disassembly is active as well as the
 `vdb-asm-callgrind-show-jumps` setting is enabled.
 
+### `dis/s` source code
+
+Using the `s` flag will try to add to each instruction the source code as known by gdb. If you want to do it with the
+usual range you have do use `dis/s5` instead of `dis/5s`.
+
 ## Troubleshooting
 
 ### Slow output with lots of jumparrows

@@ -3579,6 +3579,7 @@ dis/<N>,<M> - Have N Instructions of context before and M after the Marker
 dis/F       - Flushes some internal caches
 dis/c <CG>  - Loads callgrind information from file <CG>
 dis/v       - dis/v argv r1 99 tells the disassembler to assume that the variable argv is stored in register r1 with value 99
+dis/s       - Tries to output the source code location where possible
 
 All further parameters are handled like for the built in disasemble command with the exception of addresses that are not
 part of a function, unlike the disassemble command those are right away disassembled vdb-asm-nonfunction-bytes (default
