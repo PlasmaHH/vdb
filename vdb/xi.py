@@ -362,14 +362,15 @@ xi/e       execute a "step" hook/event on each step for other plugins
             filter = None
             flow = False
 
-            match argv[0]:
-                case "show":
-                    argv = argv[1:]
-                    xi_show(argv)
-                    return
-                case "list":
-                    xi_list()
-                    return
+            if( len(argv) ):
+                match argv[0]:
+                    case "show":
+                        argv = argv[1:]
+                        xi_show(argv)
+                        return
+                    case "list":
+                        xi_list()
+                        return
 
 
             nargv = []

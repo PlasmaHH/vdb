@@ -317,7 +317,7 @@ class os_embos( ):
             pc = frame.read_register("pc")
             rt = vdb.util.format_table(tbl).split("\n")
             char_ptr = gdb.lookup_type("char").pointer()
-            void_ptr_ptr = gdb.lookup_type("void").pointer().pointer()
+
             header = True
             cnt=0
 #            print("rt = '%s'" % (rt,) )
@@ -338,7 +338,7 @@ class os_embos( ):
 #                        unwinder.enabled = True
                         else:
                             tsp = t.stack.cast(char_ptr)
-                            vlr= t.stack.cast(void_ptr_ptr)
+                            vlr= t.stack.cast(vdb.arch.void_ptr_ptr_t)
 #                            gdb.execute(f"hd/p {int(tsp)} 96")
                             tcand = None
                             for i in range(0,128):

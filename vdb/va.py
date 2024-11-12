@@ -170,13 +170,13 @@ def intformat( val, fmt ):
 #    print("val = '%s'" % (val,) )
 #    print("fmt = '%s'" % (fmt,) )
     if( fmt == "i" ): # 32bit signed integer
-        val = val.cast(gdb.lookup_type("int32_t"))
+        val = val.cast(vdb.arch.sint(32))
     elif( fmt == "l" ): # 64bit signed integer
-        val = val.cast(gdb.lookup_type("int64_t"))
+        val = val.cast(vdb.arch.sint(64))
     elif( fmt == "u" ): # 32bit unsinged integer
-        val = val.cast(gdb.lookup_type("uint32_t"))
+        val = val.cast(vdb.arch.uint(32))
     elif( fmt == "j" ): # 64bit unsigned integer
-        val = val.cast(gdb.lookup_type("uint64_t"))
+        val = val.cast(vdb.arch.uint(64))
 #    print("val = '%s'" % (val,) )
 #    print("type(val) = '%s'" % (type(val),) )
 #    print("val.type = '%s'" % (val.type,) )

@@ -19,14 +19,17 @@ void_ptr_ptr_t = None
 
 need_update = True
 need_uint_update = True
+need_sint_update = True
 
 @vdb.event.new_objfile()
 @vdb.event.new_thread()
 def reset_info():
     global need_update
     global need_uint_update
+    global need_sint_update
     need_update = True
     need_uint_update = True
+    need_sint_update = True
 
 uint_cache: Dict[int,gdb.Type] = {}
 def uint( sz: int ) -> gdb.Type:
@@ -40,6 +43,20 @@ def uint( sz: int ) -> gdb.Type:
                 pass
         need_uint_update = False
     return uint_cache.get(sz,None)
+
+sint_cache: Dict[int,gdb.Type] = {}
+def sint( sz: int ) -> gdb.Type:
+    global need_sint_update
+    if( need_sint_update or len(sint_cache) == 0 ):
+        for bits in [ 0,8,16,24,32,64,128 ]:
+            try:
+                ty=_active_arch.integer_type( bits, True )
+                sint_cache[int(ty.sizeof)*8] = ty
+            except gdb.error:
+                pass
+        need_sint_update = False
+    return sint_cache.get(sz,None)
+
 
 _active_arch_name = None
 _active_arch = None
@@ -55,7 +72,7 @@ def gather_info( ):
     # Nothing to be done here
     if( now_arch.name() == _active_arch_name ):
         return
-    print(f"GATHERING UPDATED INFO ABOUT NEW ARCH {now_arch.name()}, replacing previous {_active_arch_name}")
+#    print(f"GATHERING UPDATED INFO ABOUT NEW ARCH {now_arch.name()}, replacing previous {_active_arch_name}")
     _active_arch_name = now_arch.name()
     _active_arch = now_arch
 
