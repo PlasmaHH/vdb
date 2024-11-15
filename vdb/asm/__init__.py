@@ -2945,6 +2945,8 @@ def register_flow( lng, frame : "gdb frame" ):
                     rset = register_set()
                     rset.fill( xi.final_registers, origin = "xi" )
                     npregisters.append( rset )
+                    # This is so the next instruction gets us as input
+                    possible_registers = rset
             if( len(npregisters) ):
                 ins.possible_out_register_sets = npregisters
 
