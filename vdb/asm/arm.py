@@ -346,7 +346,7 @@ class instruction( vdb.asm.instruction_base ):
                 self.return_ = True
 
         # "generic" pop like instructions
-        if( self.mnemonic.startswith("ldm") ):
+        if( self.mnemonic.startswith("ldm") or self.mnemonic.startswith("pop") ):
             for a in self.arguments:
                 if( a.register == "pc" ):
                     self.return_ = True
