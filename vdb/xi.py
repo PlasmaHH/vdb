@@ -63,6 +63,7 @@ class instruction_state:
         self.pc = (0,0)
         self.asm_string = None
         self.changed_registers = {}
+        self.final_registers = None
         self.current_flags = None
         self.changed_memory = []
         self.executed = False
@@ -81,6 +82,7 @@ class instruction_state:
         print(f"{self.pc=}")
         print(f"{self.asm_string=}")
         print(f"{self.changed_registers=}")
+        print(f"{self.final_registers=}")
         print(f"{self.current_flags=}")
         print(f"{self.changed_memory=}")
         print(f"{self.executed=}")
@@ -150,7 +152,7 @@ class xi_listing:
     def get_history( self ):
         xi_history = {}
         for ix,i in enumerate(self.listing):
-            xi_history.setdefault(int(i.pc[0]),[]).append(ix)
+            xi_history.setdefault(int(i.pc[0]),[]).append( (ix,i) )
         return xi_history
 
     def as_table( self ):
@@ -286,6 +288,7 @@ def xi( num, filter, full, events, flow ):
 #        print(f"{r.regs=}")
             dr = diff_regs(oldr,r)
             ist.changed_registers = dr
+            ist.final_registers = r
             # XXX Needs arch independence. Check for complete list of possible flags from registers.py ?
             ist.current_flags=r._flags("eflags",r.rflags,vdb.register.flag_info,False,False,True,None)
             if( flow ):
@@ -418,6 +421,5 @@ xi/e       execute a "step" hook/event on each step for other plugins
 cmd_xi()
 # TODO
 # optional output of the function/context/symbol in one column
-# While we "xi" through everything we could save all the registers (or maybe provide access to the xi objects per
-# address?) This way the asm module does not need to guess
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

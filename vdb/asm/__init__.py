@@ -410,6 +410,11 @@ class register_set:
         ret.values = self.values.copy()
         return ret
 
+    def fill( self, registers, origin = "fill"  ):
+        # We do similar stuff all over the place, maybe it makes sense to unify stuff  a bit more
+        for reg in vdb.arch.active().registers():
+            self.set( reg.name, registers.get_value(reg.name)[0], origin= origin )
+ 
     # Sets the value of a register, possible removing all alternative names that may be present
     # XXX We need to be able to handle in an easy way specifcations like %al and %ah, best would be through some extra
     # layer that can easily expanded for other archs
@@ -1594,7 +1599,7 @@ ascii mockup:
                 prejump += 1
                 if( ( xilist := xi_history.get(i.address,None) ) is not None ):
                     entry = ""
-                    for xi in xilist:
+                    for xi,_ in xilist:
                         entry = f"{entry},{xi}"
                     entry = entry[1:]
                     line += [ entry ]
@@ -2856,6 +2861,7 @@ def register_flow( lng, frame : "gdb frame" ):
         # XXX Better would be to check (additionally?) if the register and flag sets are the same as in previous runs
         ins.passes += 1
 
+
         # Assumes the last one is the target, might be different for different archs
 #        print(f"{ins.args=}")
         # XXX x86 relies on this while arm parses them for the instruction already. Unify that.
@@ -2924,8 +2930,22 @@ def register_flow( lng, frame : "gdb frame" ):
                 ins.unhandled = True
 
         if( ins.unhandled ):
-            ins.possible_in_register_sets.append( possible_registers.clone() )
-            ins.possible_in_flag_sets.append( possible_flags.clone() )
+            ins.possible_out_register_sets.append( possible_registers.clone() )
+            ins.possible_out_flag_sets.append( possible_flags.clone() )
+
+        # Do that only on the first pass
+        # XXX This possibly overrides all the stuff above, maybe in that case we should skip it for speed?
+        if( ins.passes == 1 ):
+            xilist = xi_history.get(ins.address,None)
+            npregisters = []
+            if( xilist is not None ):
+                for _,xi in xilist:
+                    ins.add_extra(f"XI: {str(xi)}")
+                    rset = register_set()
+                    rset.fill( xi.final_registers, origin = "xi" )
+                    npregisters.append( rset )
+            if( len(npregisters) ):
+                ins.possible_out_register_sets = npregisters
 
         if( len(ins.targets) > 0 ):
 #            print("ins.targets = '%s'" % (ins.targets,) )
