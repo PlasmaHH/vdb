@@ -3545,10 +3545,10 @@ def get_single_tuple( bpos, showspec_filter = "abomjhHcdtT", extra_filter = "", 
     rets="<??>"
     reti=None
     try:
-        da=gdb.selected_frame().architecture().disassemble(int(bpos),count=1)
+        da=vdb.arch.active().disassemble(int(bpos),count=1)
         da=da[0]
         fake = f"{da['addr']:#0x} <+0>: {da['asm']}"
-        li = parse_from_gdb("",fake,do_flow=do_flow)
+        li = parse_from_gdb("?",fake,do_flow=do_flow)
         sspec = asm_showspec.value
         showspec_filter += extra_filter
         for x in showspec_filter:
