@@ -2940,7 +2940,8 @@ def register_flow( lng, frame : "gdb frame" ):
             npregisters = []
             if( xilist is not None ):
                 for _,xi in xilist:
-                    ins.add_extra(f"XI: {str(xi)}")
+                    if( debug_all(ins) ):
+                        ins.add_extra(f"XI: {str(xi)}")
                     rset = register_set()
                     rset.fill( xi.final_registers, origin = "xi" )
                     npregisters.append( rset )
