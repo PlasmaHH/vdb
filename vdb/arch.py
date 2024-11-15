@@ -101,7 +101,9 @@ def gather_info( ):
     void_ptr_ptr_t = void_ptr_t.pointer()
 
     # All we don't now about are "pc"
+    global pc_name
     pc_name = pc_name_map.get(_active_arch_name,"pc")
+    print(f"Setting {pc_name=}")
 #    print("pointer_size = '%s'" % pointer_size )
 
 pc_name_map = {

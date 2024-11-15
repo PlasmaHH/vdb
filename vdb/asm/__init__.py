@@ -3446,65 +3446,40 @@ def add_variable( argv ):
     invalidate_cache(None)
 
 
-def disassemble( argv ):
+def disassemble( argv, flags, context ):
     dotty = False
-    context = None
     fakedata = None
     source = False
     arch = None
 
-#    print(f"disassemble start: {len(parse_cache)=}")
+    vdb.util.log(f"disassemble({argv=}, {flags=}, {context=} )",level = 3)
 
-    # XXX Change to argv/flags "api"
-    if( len(argv) > 0 ):
-        if( argv[0][0] == "/" ):
-            argv0 = argv[0][1:]
-            argv=argv[1:]
+    if( "c" in flags ):
+        return load_callgrind( argv )
 
-            while( len(argv0) > 0 ):
-                vdb.util.log("argv0={argv0}",argv0 = argv0, level = 4)
-                if( argv0[0] == "d" ):
-                    dotty = True
-                    argv0 = argv0[1:]
-                elif( argv0[0] == "c" ):
-                    load_callgrind( argv )
-                    return None
-                elif( argv0[0] == "f" ):
-                    with open (argv[0], 'r') as fakefile:
-                        fakedata = fakefile.read()
-                    if( len(argv) > 1 ):
-                        arch = argv[1]
-                    argv=["fake"]
-                    break
-                elif( argv0[0] == "r" ):
-                    gdb.execute("disassemble/r " + " ".join(argv))
-                    return None
-                elif( argv0[0] == "F" ):
-                    invalidate_cache(None)
-                    print("Flushed disassembler parse cache")
-                    return None
-                elif( argv0[0] == "s" ):
-                    source = True
-                    argv0 = argv0[1:]
-                elif( argv0[0] == "+" and argv0[1:].isdigit() ):
-                    context = ( None, int(argv0[1:]) )
-                    break
-                elif( argv0[0] == "-" and argv0[1:].isdigit() ):
-                    context = ( int(argv0[1:]), None )
-                    break
-                elif( argv0[0:].isdigit() ):
-                    context = int(argv0[0:])
-                    context = ( context, context )
-                    break
-                elif( argv0.find(",") != -1 ):
-                    context = argv0[0:].split(",")
-                    context = ( int(context[0]), int(context[1]) )
-                    break
-                elif( argv0[0] == "v" ):
-                    add_variable( argv )
-                    return None
-                else:
-                    break
+    if( "r" in flags ):
+        return gdb.execute("disassemble/r " + " ".join(argv))
+
+    if( "F" in flags ):
+        print("Flushed disassembler parse cache")
+        return invalidate_cache(None)
+
+    if( "v" in flags ):
+        return add_variable( argv )
+
+    if( "d" in flags ):
+        dotty = True
+
+    if( "s" in flags ):
+        source = True
+
+    if( "f" in flags ):
+        with open (argv[0], 'r') as fakefile:
+            fakedata = fakefile.read()
+        if( len(argv) > 1 ):
+            arch = argv[1]
+        argv=["fake"]
+
 
 #    print("context = '%s'" % (context,) )
 #    print("argv = '%s'" % (argv,) )
@@ -3594,7 +3569,10 @@ part of a function, unlike the disassemble command those are right away disassem
         try:
             global from_tty
             from_tty = self.from_tty
-            disassemble( argv )
+            argv,flags = self.flags(argv)
+            context = self.context( flags )
+            print(f"{context=}")
+            disassemble( argv, flags, context )
         except gdb.error as e:
             print("asm: %s" % e)
 #        except:
@@ -3628,6 +3606,7 @@ if __name__ == "__main__":
 # parameter passed in a register. Figure out a way that this is displayed and distinguishable from a variable that lives
 # e.g. on the stack ( maybe again @ vs. = ? )
 # context should still display header
+# If ther are "alt" references, check if they are the same, and if yes suppress them
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

@@ -77,10 +77,16 @@ class instruction_state:
             self.point_time = None
 
     def _dump( self ):
-#        print(f"{self.pc=}")
-#        print(f"{self.changed_registers=}")
-#        print(f"{self.asm_string=}")
-        print(f"{int(self.pc[0]):#0x}  {self.asm_string}   {self.changed_registers}")
+        print(f"{self.pc=}")
+        print(f"{self.asm_string=}")
+        print(f"{self.changed_registers=}")
+        print(f"{self.current_flags=}")
+        print(f"{self.changed_memory=}")
+        print(f"{self.executed=}")
+        print(f"{self.accessible_memory=}")
+        print(f"{self.instruction=}")
+        print(f"{self.mmap_registers=}")
+#        print(f"{int(self.pc[0]):#0x}  {self.asm_string}   {self.changed_registers}")
 
 
 
@@ -168,11 +174,13 @@ class xi_listing:
                 line.append( i.si_time - i.time  )
                 line.append( i.point_time - i.si_time )
                 line.append( tdif - (i.si_time - i.time) - (i.point_time - i.si_time) )
-            pv,_,_,_,pl = vdb.pointer.color(i.pc[0],vdb.arch.pointer_size)
+
+            ipc = i.pc[0]
+            pv,_,_,_,pl = vdb.pointer.color(ipc,vdb.arch.pointer_size)
             line.append( (pv,pl) )
             # Then flow was not active and we delayed getting the asm
             if( i.asm_string is None ):
-                i.asm_string,i.instruction = vdb.asm.get_single_tuple( i.pc[0], extra_filter="r",do_flow=False)
+                i.asm_string,i.instruction = vdb.asm.get_single_tuple( ipc, extra_filter="r",do_flow=False)
             alen = len( vdb.color.colors.strip_color(i.asm_string ) )
             line.append( ( i.asm_string,alen) )
             if( not i.executed ):
