@@ -372,7 +372,7 @@ class instruction( vdb.asm.instruction_base ):
         return self
 
 # for the "according to the result" flags
-def set_flags_result( flag_set, result, arg = None ):
+def set_flags_result( flag_set, result, arg = None, val = None ):
     #  So far this is a copy of x86 and obviously wrong. Before we can do anything we need to figure out a good way to
     #  make vdb.register more architecture independent as things like the register size are not handled that way yet.
 #    print(f"set_flags_result( {flag_set}, {result}, {arg} )")
@@ -386,13 +386,7 @@ def set_flags_result( flag_set, result, arg = None ):
     if( arg is not None and ( bs := arg.bitsize ) is not None ):
         sbit = ( 1 << (bs-1) )
         flag_set.set("N", int( (result & sbit) != 0  ))
-        mask = ( 1 << bs ) - 1
-#            print(f"mask = {int(mask):#0x}")
-#            print("bs = '%s'" % (bs,) )
-        r = result & mask
-        # XXX really not sure about this one in case of signs and all
-        flag_set.set("V", int(r != result) )
-        flag_set.set("C", int(r != result) )
+        flag_set.set("V", int( (result & sbit) != (val & sbit) ) )
 
 def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
     val,addr = ins.arguments[1].value( possible_registers )
@@ -406,9 +400,11 @@ def vt_flow_str( ins, frame, possible_registers, possible_flags ):
 
 def vt_flow_add( ins, frame, possible_registers, possible_flags ):
     if( len(ins.arguments) == 2 ):
+        sumlarg = ins.arguments[0]
         suml,_ = ins.arguments[0].value( possible_registers )
         sumr,_ = ins.arguments[1].value( possible_registers )
     else: # 3
+        sumlarg = ins.arguments[1]
         suml,_ = ins.arguments[1].value( possible_registers )
         sumr,_ = ins.arguments[2].value( possible_registers )
 
@@ -422,7 +418,8 @@ def vt_flow_add( ins, frame, possible_registers, possible_flags ):
         sumv = suml + sumr
         possible_registers.set( ins.arguments[0].register, sumv,origin="flow_add" )
         if( ins.mnemonic == "adds" ):
-            set_flags_result( possible_flags, sumv, ins.arguments[0] )
+            set_flags_result( possible_flags, sumv, sumlarg, suml )
+            possible_flags.set( "C", int(sumv > sumr) )
             filtered = possible_flags.subset( { "Z","N","C","V" } )
             extext += f" to {filtered}"
     else:
