@@ -375,9 +375,9 @@ class instruction( vdb.asm.instruction_base ):
         oldins = self
         return self
 
-bit_counts = bytes(bin(x).count("1") for x in range(256))  
+bit_counts = bytes(bin(x).count("1") for x in range(256))
 # for the "according to the result" flags
-def set_flags_result( flag_set, result, arg = None ):
+def set_flags_result( flag_set, result, arg = None, val = None ):
 #        vdb.util.bark() # print("BARK")
     if( result < 0 ):
         if( arg is not None and ( bs := arg.bitsize ) is not None ):
@@ -389,15 +389,11 @@ def set_flags_result( flag_set, result, arg = None ):
     flag_set.set("PF", int( bcnt & 1 == 0 ) )
     flag_set.set("ZF", int(result == 0) )
     if( arg is not None and ( bs := arg.bitsize ) is not None ):
+        # SF = sign bit of result
         sbit = ( 1 << (bs-1) )
         flag_set.set("SF", int( (result & sbit) != 0  ))
-        mask = ( 1 << bs ) - 1
-#            print(f"mask = {int(mask):#0x}")
-#            print("bs = '%s'" % (bs,) )
-        r = result & mask
-        # XXX really not sure about this one in case of signs and all
-        flag_set.set("OF", int(r != result) )
-        flag_set.set("CF", int(r != result) )
+        # OF sign bit of arg/val != sign bit of result
+        flag_set.set("OF", int( (result & sbit) != (val & sbit) ) )
 
 def vt_flow_j( ins, frame, possible_registers, possible_flags ):
     if( not vdb.asm.annotate_jumps.value ):
@@ -556,7 +552,7 @@ def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     if( tgtv is not None and sub is not None):
         nv = tgtv - sub
         possible_registers.set( ins.arguments[1].register, nv, origin="flow_sub" )
-        set_flags_result( possible_flags, nv, ins.arguments[1] )
+        set_flags_result( possible_flags, nv, ins.arguments[1], tgtv )
         possible_flags.set( "CF", int(tgtv > sub) )
     else:
         ins.arguments[0].argspec = ""
@@ -580,7 +576,7 @@ def vt_flow_add( ins, frame, possible_registers, possible_flags ):
     if( tgtv is not None and add is not None):
         nv = tgtv + add
         possible_registers.set( ins.arguments[1].register, nv,origin="flow_add" )
-        set_flags_result( possible_flags, nv, ins.arguments[1] )
+        set_flags_result( possible_flags, nv, ins.arguments[1], tgtv )
         possible_flags.set( "CF", int(tgtv > add) )
     else:
         possible_registers.set( ins.arguments[1].register, None )
@@ -599,7 +595,7 @@ def vt_flow_test( ins, frame, possible_registers, possible_flags ):
     possible_flags.unset( [ "SF","ZF","AF","PF"] )
     if( a0 is not None and a1 is not None ):
         t = a0 & a1
-        set_flags_result( possible_flags,t,ins.arguments[1])
+        set_flags_result( possible_flags,t,ins.arguments[1],a1)
         # XXX add SF and PF support as soon as some other place needs it
 #        ins.possible_flag_sets.append( possible_flags )
     possible_flags.set("OF",0)
@@ -670,14 +666,14 @@ def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
         if( v0 is not None and v1 is not None ):
             t = v0 ^ v1
             possible_registers.set( args[1].register, t,origin="flow_xor" )
-            set_flags_result( possible_flags,t)
+            set_flags_result( possible_flags,t,args[1],v1)
         else: # no idea about the outcome, don't set it
             possible_registers.set( args[1].register, None )
         if( len(args) == 2 ):
             # xor zeroeing out a register
             if( args[0].register == args[1].register ):
                 possible_registers.set( args[1].register ,0,origin="flow_xor")
-                set_flags_result( possible_flags,0)
+                set_flags_result( possible_flags,0,args[1],v1)
                 args[0].specfilter(None)
 
     possible_flags.set("OF",0)
@@ -699,7 +695,7 @@ def vt_flow_and( ins, frame, possible_registers, possible_flags ):
         if( v0 is not None and v1 is not None ):
             t = v0 & v1
             possible_registers.set( args[1].register, t ,origin="flow_and")
-            set_flags_result( possible_flags,t)
+            set_flags_result( possible_flags,t,args[1],v1)
         else: # no idea about the outcome, don't set it
             possible_registers.set( args[1].register, None )
 
@@ -815,9 +811,9 @@ def vt_flow_cmp( ins, frame, possible_registers, possible_flags ):
     possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
     if( v0 is not None and v1 is not None ):
         t = v1-v0
-        possible_flags.set( "ZF", int( v0 == v1 ) )
+#        possible_flags.set( "ZF", int( v0 == v1 ) )
         possible_flags.set( "CF", int( v0 > v1 ) ) # XXX revisit for accurate signed/unsigned 32/64 bit stuff (and the other flags)
-        set_flags_result( possible_flags, t,a1 )
+        set_flags_result( possible_flags, t,a1,v1 )
 
     return ( possible_registers, possible_flags )
 
