@@ -45,7 +45,7 @@ jconditions = {
 
         } # All others not supported yet due to no support for these flags yet
 
-prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd", "cs", "ss", "ds", "es", "fs", "gs" ])
+prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd", "cs", "ss", "ds", "es", "fs", "gs", "notrack", "data16" ])
 return_mnemonics = set (["ret","retq","iret"])
 conditional_jump_mnemonics = set([ "jo", "jno", "js", "jns", "je", "jz", "jne", "jnz", "jb", "jnae", "jc", "jnb","jae","jnc","jbe","jna","ja","jnbe","jl","jng","jge","jnl","jle","jng","jg","jnle","jp","jnle","jp","jpe","jnp","jpo","jcxz","jecxz" ])
 unconditional_jump_mnemonics = set([ "jmp", "jmpq" ] )
@@ -225,8 +225,8 @@ class instruction( vdb.asm.instruction_base ):
 
         tpos = 0
         # instruction is menmonic or prefix + mnemonic, easiest way is to know about all prefixes and check if its one
-        if( tokens[tpos] in prefixes ):
-            self.prefix = tokens[tpos]
+        while( tokens[tpos] in prefixes ):
+            self.prefixes.append( tokens[tpos] )
             tpos += 1
         # Next the mnemonic
         self.mnemonic = tokens[tpos]
@@ -540,7 +540,7 @@ def vt_flow_shr( ins, frame, possible_registers, possible_flags ):
     shifts,_ = ins.arguments[0].value( possible_registers )
     tgtv,_ = ins.arguments[1].value( possible_registers )
 
-    if( tgtv is not None ):
+    if( tgtv is not None and shifts is not None ):
         nv = tgtv >> shifts
         # XXX Sign extend?
         # XXX CF setting is not handled (as it depends on the size of the used register)
@@ -560,7 +560,7 @@ def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
         possible_flags.set( "CF", int(tgtv > sub) )
     else:
         ins.arguments[0].argspec = ""
-    
+
     if( vdb.asm.asm_explain.value ):
         nvs=""
         tvs=""

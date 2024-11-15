@@ -49,10 +49,15 @@ asm_colors_dot = [
         ( "nop.*" ,"#303080" ),
         ]
 
+# XXX These are not yet architecture independent
 pre_colors = [
         ( "lock.*","#f0f" ),
         ( "rep.*","#f29" ),
-        ( "bnd.*","#f08" )
+        ( "bnd.*","#f08" ),
+        ( "data16", "#f44" ),
+        ( "cs|ss|ds|es|fs|gs", "#99f" ),
+        ( "notrack", "#303080" ),
+        ( ".*","#f00" )
         ]
 
 pre_colors_dot = [
@@ -704,7 +709,7 @@ class instruction_base( abc.ABC ):
         self.marked = False             # Is marked by gdbs "next to be executed" marker
         self.xmarked = False            # marked by a user defined marker
         self.rmarked = False            # marked by the "possibly current position" heuristic
-        self.prefix = ""
+        self.prefixes = []
         self.infix = ""
         self.jumparrows = ""
         self.arrowwidth = 0
@@ -956,11 +961,14 @@ class listing( ):
         return s
 
 
-    def color_prefix( self, prefix ):
-        if( len(color_prefix.value) > 0 ):
-            return vdb.color.color(prefix,color_prefix.value)
-        else:
-            return self.color_relist(prefix,pre_colors)
+    def color_prefix( self, prefixes ):
+        ret = []
+        for pf in prefixes:
+            if( len(color_prefix.value) > 0 ):
+                ret.append( vdb.color.color(pf,color_prefix.value) )
+            else:
+                ret.append( self.color_relist(pf,pre_colors) )
+        return " ".join(ret)
     """
 ascii mockup:
     For styles we should have special chars for every possible utf8 char and then replace them? or single variables that are filled by the style?
@@ -1632,11 +1640,12 @@ ascii mockup:
 #            print(xline)
             if( "n" in showspec ):
                 postjump += 1
-                pre = self.color_prefix(i.prefix)
+                pre = self.color_prefix(i.prefixes)
 #                mne = self.color_mnemonic(i.mnemonic)
                 mne = i.color_mnemonic()
                 mxe = pre + i.infix + mne
-                mlen = len(i.prefix) + len(i.infix) + len(i.mnemonic)
+
+                mlen = len(" ".join(i.prefixes)) + len(i.infix) + len(i.mnemonic)
 #                aslen += mlen
 #                if( i.args is not None ):
 #                    mlen = self.maxmnemoic - mlen
@@ -1951,9 +1960,9 @@ ascii mockup:
         self.maxoffset = max(self.maxoffset,len(ins.offset))
         self.maxbytes = max(self.maxbytes,len(ins.bytes))
         if( ins.args is not None ):
-            self.maxmnemoic = max(self.maxmnemoic,len(ins.prefix) + 1 + len(ins.mnemonic) )
             self.maxargs = max(self.maxargs,len(ins.args_string))
-        if( len(ins.prefix) > 0 ):
+        # Is this really the right place? Do we want some generic instruction parsing thing but at a nicer place?
+        if( len(ins.prefixes) > 0 ):
             ins.infix = " "
         self.by_addr[ins.address] = ins
         # "up" jumping part of the target_of, the "down" jumping part is done in finish()
@@ -3452,7 +3461,7 @@ def disassemble( argv, flags, context ):
     source = False
     arch = None
 
-    vdb.util.log(f"disassemble({argv=}, {flags=}, {context=} )",level = 3)
+    vdb.util.log(f"disassemble({argv=}, {flags=}, {context=} )",level = 4)
 
     if( "c" in flags ):
         return load_callgrind( argv )
@@ -3473,6 +3482,8 @@ def disassemble( argv, flags, context ):
     if( "s" in flags ):
         source = True
 
+    # XXX We might want to support /f25,5 or /sf245,4 or so too, maybe context parsing could include that by skipping
+    # non numeric stuff?
     if( "f" in flags ):
         with open (argv[0], 'r') as fakefile:
             fakedata = fakefile.read()
@@ -3571,7 +3582,7 @@ part of a function, unlike the disassemble command those are right away disassem
             from_tty = self.from_tty
             argv,flags = self.flags(argv)
             context = self.context( flags )
-            print(f"{context=}")
+#            print(f"{context=}")
             disassemble( argv, flags, context )
         except gdb.error as e:
             print("asm: %s" % e)

@@ -216,8 +216,8 @@ class instruction( vdb.asm.instruction_base ):
             del tokens[0]
         self.bytes = ibytes
 
-        if( tokens[0] in prefixes ):
-            self.prefix = tokens[0]
+        while( tokens[0] in prefixes ):
+            self.prefixes.append( tokens[0] )
             del tokens[0]
 
         self.mnemonic = tokens[0]

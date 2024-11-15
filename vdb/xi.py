@@ -9,6 +9,7 @@ import vdb.util
 import vdb.pointer
 import vdb.event
 import vdb.register
+import vdb.asm
 
 from itertools import chain
 
@@ -239,7 +240,11 @@ def xi( num, filter, full, events, flow ):
     xilist = xi_listing()
     xi_db[xilist.id] = xilist
 
+    prog = vdb.util.progress_bar(num_completed = True, spinner = True)
+    pt = prog.add_task(f"Executing {num} single steps", total = num )
+    prog.start()
     for ui in range(0,num):
+        prog.update( pt, completed = ui )
         try:
             if( breakpoint_hit ):
                 break
@@ -317,6 +322,7 @@ def xi( num, filter, full, events, flow ):
             print("Aborting xi")
             break
 
+    prog.stop()
     print(regs)
 
 #            line.append(str(addr))
@@ -412,4 +418,6 @@ xi/e       execute a "step" hook/event on each step for other plugins
 cmd_xi()
 # TODO
 # optional output of the function/context/symbol in one column
+# While we "xi" through everything we could save all the registers (or maybe provide access to the xi objects per
+# address?) This way the asm module does not need to guess
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
