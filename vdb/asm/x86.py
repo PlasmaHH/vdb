@@ -393,7 +393,8 @@ def set_flags_result( flag_set, result, arg = None, val = None ):
         sbit = ( 1 << (bs-1) )
         flag_set.set("SF", int( (result & sbit) != 0  ))
         # OF sign bit of arg/val != sign bit of result
-        flag_set.set("OF", int( (result & sbit) != (val & sbit) ) )
+        if( val is not None ):
+            flag_set.set("OF", int( (result & sbit) != (val & sbit) ) )
 
 def vt_flow_j( ins, frame, possible_registers, possible_flags ):
     if( not vdb.asm.annotate_jumps.value ):

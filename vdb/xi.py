@@ -255,8 +255,8 @@ def xi( num, filter, full, events, flow ):
             xilist.add(ist)
             pc = oldr.get_value(pcname)
             ist.pc = pc
-
-            gdb.execute("si",False,True)
+            with( vdb.util.silence() ):
+                gdb.execute("si",False,True)
             ist.executed = True
             if( debug.value ):
                 ist.si_time = time.time()

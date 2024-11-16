@@ -639,45 +639,24 @@ def parse_vars( argv ):
 class silence:
 
     def __init__( self ):
-        self.redirect = None
-        self.file = None
-        self.logging = None
+        self.stdout_fd = None
+        self.dev_null = None
 
     def __enter__( self ):
-        if( gdb.parameter("logging redirect") ):
-            self.redirect = "on"
-        else:
-            self.redirect = "off"
-        self.file = gdb.parameter("logging file")
-        self.logging = "off"
-
-#        print("ABOUT TO DISABLE OUTPUT")
-#        print("sys.stdout.fileno() = '%s'" % (sys.stdout.fileno(),) )
-#        gdb.execute("set logging redirect on")
-#        gdb.execute("set logging file si.txt")
-#        gdb.execute("set logging enabled on")
-
+        # Try to flush everything that should have been output before going silent
         sys.stdout.flush()
-#        self.stdout_fd = os.dup( sys.stdout.fileno() )
-        self.stdout_fd = os.dup( 1 )
-        self.dev_null = open("/dev/null","w")
-##        os.dup2( self.dev_null.fileno(), self.stdout.fileno() )
-        os.dup2( self.dev_null.fileno(), 1 )
-#        print("DISABLED OUTPUT")
-        sys.stdout.flush()
-
+        gdb.flush( gdb.STDOUT )
+        self.stdout_fd = os.dup( 1 ) # 1 is stdout, give it a second number
+        self.dev_null = open("/dev/null","w") # /dev/null swallows everything
+        os.dup2( self.dev_null.fileno(), 1 ) # Make 1 an alias of /dev/nulls fd now
 
     def __exit__( self, type, value, traceback ):
-#        gdb.execute(f"set logging off")#,False,True)
+        # Try to flush everything that should have been suppressed while being silent
         sys.stdout.flush()
-##        os.dup2( self.stdout_fd, self.stdout.fileno() )
-        os.dup2( self.stdout_fd, 1 )
-#        gdb.execute(f"set logging off",False,False)
-#        gdb.execute(f"set logging redirect {self.redirect}",False,True)
-#        gdb.execute(f"set logging file {self.file}",False,True)
-#        print("ENABLED OUTPUT")
-        sys.stdout.flush()
-
+        gdb.flush( gdb.STDOUT )
+        os.dup2( self.stdout_fd, 1 ) # Take the saved duplicated fd and duplicated it back on 1 (stdout)
+        self.dev_null.close() # close the now not anymore used /dev/null
+        os.close(self.stdout_fd) # Close the previous duplicate of stdout as we will not need it anymore
 
 def gdb_numeric( val ):
     if( type(val) != gdb.Value ):

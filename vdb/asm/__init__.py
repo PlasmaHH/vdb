@@ -3641,6 +3641,8 @@ if __name__ == "__main__":
 # e.g. on the stack ( maybe again @ vs. = ? )
 # context should still display header
 # If ther are "alt" references, check if they are the same, and if yes suppress them
+# Testing: Create a functiont that single steps and then lets it predict the next registers and flags and then compares
+# to the self calculated ones
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
