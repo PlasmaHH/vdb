@@ -223,8 +223,8 @@ class xi_listing:
 
 
 def xi( num, filter, full, events, flow ):
-    print("############################################")
-    vdb.util.bark() # print("BARK")
+#    print("############################################")
+#    vdb.util.bark() # print("BARK")
     regs = gdb.execute("registers",False,True)
 
     oldr = vdb.register.Registers()
@@ -421,5 +421,6 @@ xi/e       execute a "step" hook/event on each step for other plugins
 cmd_xi()
 # TODO
 # optional output of the function/context/symbol in one column
+# Option /v ? to include vector registers in comparison(s). Respect aliasing and use concise display
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

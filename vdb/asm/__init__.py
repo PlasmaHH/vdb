@@ -446,6 +446,11 @@ class register_set:
     def empty( self ):
         return len(self.values) == 0
 
+    # To be compatible with the frame interface
+    def read_register( self, reg ):
+        ret,_,_ = self.get( reg )
+        return ret
+
     def get( self, name, altval = None ):
         for rname in reg_alts(name):
             rv,origin = self.values.get(rname,(None,None) )
@@ -2938,6 +2943,7 @@ def register_flow( lng, frame : "gdb frame" ):
         if( ins.passes == 1 ):
             xilist = xi_history.get(ins.address,None)
             npregisters = []
+            npflags = []
             if( xilist is not None ):
                 for _,xi in xilist:
                     if( debug_all(ins) ):
@@ -2947,6 +2953,8 @@ def register_flow( lng, frame : "gdb frame" ):
                     npregisters.append( rset )
                     # This is so the next instruction gets us as input
                     possible_registers = rset
+                    nf = current_arch.current_flags( rset )
+                    npflags.append(nf)
             if( len(npregisters) ):
                 ins.possible_out_register_sets = npregisters
 
