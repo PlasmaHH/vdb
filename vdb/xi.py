@@ -26,6 +26,7 @@ from typing import List
 # Use the same mechanism for disassembler to also display the variable names if we know about them?
 
 debug = vdb.config.parameter("vdb-xi-debug", False )
+silence = vdb.config.parameter("vdb-xi-silence", True )
 # Support showspec like the registers command
 def diff_regs( r0, r1 ):
     ret = {}
@@ -253,8 +254,13 @@ def xi( num, filter, full, events, flow ):
     prog.start()
     inferior = gdb.selected_inferior()
     oldpid = inferior.pid
+    next_update = 0
     for ui in range(0,num):
         prog.update( pt, completed = ui )
+        now = time.time()
+        if( now > next_update ):
+            next_update = now + 0.1
+            prog.refresh()
         try:
             if( breakpoint_hit ):
                 print("Breakpoint hit")
@@ -264,7 +270,7 @@ def xi( num, filter, full, events, flow ):
             xilist.add(ist)
             pc = oldr.get_value(pcname)
             ist.pc = pc
-            with( vdb.util.silence(False) ):
+            with( vdb.util.silence(silence.value) ):
                 gdb.execute("si",False,True)
             if( oldpid != inferior.pid ):
                 print("Stopping xi, inferior has died")
@@ -446,5 +452,7 @@ cmd_xi()
 # TODO
 # optional output of the function/context/symbol in one column
 # Option /v ? to include vector registers in comparison(s). Respect aliasing and use concise display
+# Even if we don't know the address of -0x8(%rbp) we could store it at the symbol to later get it back. But how do we
+# handle if on loading we have to chose between two different ones?
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
