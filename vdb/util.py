@@ -13,6 +13,7 @@ import logging
 import logging.handlers
 import rich.console
 import rich.progress
+import rich.table
 
 from enum import Enum,auto
 import os
@@ -512,9 +513,43 @@ def format_table( tbl, padbefore = " ", padafter = " ", as_list = False ):
             ret += "\n"
         return ret
 
-def print_table ( tbl, padbefore = " ", padafter = " " ):
-    ret = format_table( tbl, padbefore, padafter )
-    print(ret)
+class rich_wrap:
+    def __init__( self, cell ):
+        self.cell = cell
+        if( isinstance(cell,tuple) ):
+            self.text = cell[0]
+            self.len  = cell[1]
+        else:
+            self.text = cell
+            self.len  = len(cell)
+
+#    def __rich__( self ):
+#        bark() # print("BARK")
+#        return "__rich__"#self.cell
+
+    def __rich_console__( self, console: rich.console.Console, options: rich.console.ConsoleOptions ) -> rich.console.RenderResult:
+        yield rich.console.Segment(self.text)
+
+    def __rich_measure__( self, console: rich.console.Console, options: rich.console.ConsoleOptions ) -> rich.console.Measurement:
+        return rich.console.Measurement( self.len, options.max_width )
+
+
+def print_table ( tbl, padbefore = " ", padafter = " ", use_rich = False ):
+    ret = None
+    if( use_rich ):
+        table = rich.table.Table(expand=False)
+        for col in tbl[0]:
+            table.add_column(col)
+        for row in tbl[1:]:
+            nrow = []
+            for r in row:
+                print(f"{r=}")
+                nrow.append(rich_wrap(r))
+            table.add_row( *nrow )
+        console.print(table)
+    else:
+        ret = format_table( tbl, padbefore, padafter )
+        print(ret)
     return ret
 
 class stopwatch:

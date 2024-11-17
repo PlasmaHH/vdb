@@ -360,7 +360,7 @@ def xi( num, filter, full, events, flow ):
 
 #            line.append(str(addr))
 #        i._dump()
-    vdb.util.print_table(xilist.as_table())
+    vdb.util.print_table(xilist.as_table(),use_rich=False)
     if( vdb.enabled("asm") ):
         vdb.asm.xi_history = xilist.get_history()
 
