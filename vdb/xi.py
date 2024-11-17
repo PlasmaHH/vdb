@@ -269,10 +269,11 @@ def xi( num, filter, full, events, flow ):
             if( oldpid != inferior.pid ):
                 print("Stopping xi, inferior has died")
                 break
-            sig = gdb.convenience_variable("_siginfo")
-            if( sig is not None and sig["si_signo"] != 5 ): # TRAP
-                print("Stopping xi, non trap signal detected")
-                break
+            if( True ): # This costs ~100µs on my system, out of ~700 total for each instruction
+                sig = gdb.convenience_variable("_siginfo")
+                if( sig is not None and sig["si_signo"] != 5 ): # TRAP
+                    print("Stopping xi, non trap signal detected")
+                    break
 
             ist.executed = True
             if( debug.value ):
@@ -280,7 +281,7 @@ def xi( num, filter, full, events, flow ):
 
             r = vdb.register.Registers()
 
-            if( debug.value ):
+            if( debug.value ): # Move this point for debugging timings
                 ist.point_time = time.time()
             if( events ):
                 vdb.event.exec_hook("step")
