@@ -413,7 +413,11 @@ class register_set:
     def fill( self, registers, origin = "fill"  ):
         # We do similar stuff all over the place, maybe it makes sense to unify stuff  a bit more
         for reg in vdb.arch.active().registers():
-            self.set( reg.name, registers.get_value(reg.name)[0], origin= origin )
+            rval = registers.get_value(reg.name)
+            if( rval is not None ):
+                self.set( reg.name, rval[0], origin= origin )
+            else:
+                print(f"{reg.name} is None")
  
     # Sets the value of a register, possible removing all alternative names that may be present
     # XXX We need to be able to handle in an easy way specifcations like %al and %ah, best would be through some extra

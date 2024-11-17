@@ -638,11 +638,14 @@ def parse_vars( argv ):
 
 class silence:
 
-    def __init__( self ):
+    def __init__( self, execute = True ):
         self.stdout_fd = None
         self.dev_null = None
+        self.execute = execute
 
     def __enter__( self ):
+        if( not self.execute ):
+            return
         # Try to flush everything that should have been output before going silent
         sys.stdout.flush()
         gdb.flush( gdb.STDOUT )
@@ -651,6 +654,8 @@ class silence:
         os.dup2( self.dev_null.fileno(), 1 ) # Make 1 an alias of /dev/nulls fd now
 
     def __exit__( self, type, value, traceback ):
+        if( not self.execute ):
+            return
         # Try to flush everything that should have been suppressed while being silent
         sys.stdout.flush()
         gdb.flush( gdb.STDOUT )

@@ -631,7 +631,7 @@ class Registers():
         print("self.thread = '%s'" % self.thread )
         print("self.type_indices = '%s'" % self.type_indices )
         print("self.next_type_index = '%s'" % self.next_type_index )
-        print("self.archsize = '%s'" % self.archsize )
+#        print("self.archsize = '%s'" % self.archsize )
 #        print("self.eflags = '%s'" % self.eflags )
 #        print("self.mxcsr = '%s'" % self.mxcsr )
 
@@ -661,6 +661,7 @@ class Registers():
 #        print("val.type = '%s'" % val.type )
 #        print("val.type.tag = '%s'" % val.type.tag )
 #        print("val.type.code = '%s'" % vdb.util.gdb_type_code(val.type.code) )
+#        print("vdb.arch.gdb_uintptr_t = '%s'" % vdb.arch.gdb_uintptr_t )
         if( vdb.arch.uintptr_t is not None ):
             val=int( val.cast(vdb.arch.uintptr_t) )
         else:

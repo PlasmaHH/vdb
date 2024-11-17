@@ -31,6 +31,9 @@ def diff_regs( r0, r1 ):
     ret = {}
     for rname,rval0 in chain(r0.regs.items(),r0.rflags.items()):
         rval1 = r1.get_value(rname)
+#        if( rval0 is None or rval1 is None ):
+#            print(f"diff_regs has no value for {rname} in both frames: {rval0=}, {rval1=}")
+#            continue
 #        print(f"{str(rname)=}")
 #        print(f"{rval1=}")
         rval0 = int(rval0[0])
@@ -125,8 +128,9 @@ breakpoint_hit = False
 def bp_stop( bpev ):
     global breakpoint_hit
     if( isinstance( bpev, gdb.BreakpointEvent ) ):
+        print(f"{breakpoint_hit=} => True")
         breakpoint_hit = True
-#    print(f"{bpev=}")
+    print(f"{bpev=}")
 
 # ID, Data
 xi_db = {}
@@ -173,10 +177,12 @@ class xi_listing:
                     line.append(tdif)
                 else:
                     line.append( i.time )
-
-                line.append( i.si_time - i.time  )
-                line.append( i.point_time - i.si_time )
-                line.append( tdif - (i.si_time - i.time) - (i.point_time - i.si_time) )
+                if( i.si_time is not None ):
+                    line.append( i.si_time - i.time  )
+                    line.append( i.point_time - i.si_time )
+                    line.append( tdif - (i.si_time - i.time) - (i.point_time - i.si_time) )
+                else:
+                    line += ["","","" ]
 
             ipc = i.pc[0]
             pv,_,_,_,pl = vdb.pointer.color(ipc,vdb.arch.pointer_size)
@@ -245,23 +251,35 @@ def xi( num, filter, full, events, flow ):
     prog = vdb.util.progress_bar(num_completed = True, spinner = True)
     pt = prog.add_task(f"Executing {num} single steps", total = num )
     prog.start()
+    inferior = gdb.selected_inferior()
+    oldpid = inferior.pid
     for ui in range(0,num):
         prog.update( pt, completed = ui )
         try:
             if( breakpoint_hit ):
+                print("Breakpoint hit")
                 break
-#        print("===========")
+
             ist = instruction_state()
             xilist.add(ist)
             pc = oldr.get_value(pcname)
             ist.pc = pc
-            with( vdb.util.silence() ):
+            with( vdb.util.silence(False) ):
                 gdb.execute("si",False,True)
+            if( oldpid != inferior.pid ):
+                print("Stopping xi, inferior has died")
+                break
+            sig = gdb.convenience_variable("_siginfo")
+            if( sig is not None and sig["si_signo"] != 5 ): # TRAP
+                print("Stopping xi, non trap signal detected")
+                break
+
             ist.executed = True
             if( debug.value ):
                 ist.si_time = time.time()
 
             r = vdb.register.Registers()
+
             if( debug.value ):
                 ist.point_time = time.time()
             if( events ):
@@ -322,6 +340,11 @@ def xi( num, filter, full, events, flow ):
             print(f"xi aborted due to gdb error: {e}")
             break
         except KeyboardInterrupt:
+            print("Aborting xi")
+            break
+        except:
+            print("Aborting xi")
+            vdb.print_exc()
             print("Aborting xi")
             break
 
