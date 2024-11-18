@@ -543,8 +543,9 @@ def print_table ( tbl, padbefore = " ", padafter = " ", use_rich = False ):
         for row in tbl[1:]:
             nrow = []
             for r in row:
-                print(f"{r=}")
-                nrow.append(rich_wrap(r))
+                if isinstance(r,tuple):
+                    r = r[0]
+                nrow.append(rich.text.Text.from_ansi(r))
             table.add_row( *nrow )
         console.print(table)
     else:

@@ -358,8 +358,6 @@ def xi( num, filter, full, events, flow ):
     prog.stop()
     print(regs)
 
-#            line.append(str(addr))
-#        i._dump()
     vdb.util.print_table(xilist.as_table(),use_rich=False)
     if( vdb.enabled("asm") ):
         vdb.asm.xi_history = xilist.get_history()
