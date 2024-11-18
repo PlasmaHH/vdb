@@ -51,6 +51,17 @@ This command will help you search the stack for return pointers that originated 
 frame. It will mark the most likely call, but otherwise output all valid code fragments that things on the stack point
 to.
 
+
+### Paramters
+
+#### `unwind hint +<number>`
+Will use `<number>` pointers context instead of the default/configured (default 64).
+
+#### `unwind hint <expression>`
+Will use the expression that is passed to gdb as the start point instead of the ususal stack pointer. You can use this
+if the stack pointer is improperly aligned.
+
+### Configuration
 You can change its behaviour by the following configurations
 
 ```
@@ -75,6 +86,15 @@ vdb-unwind-colors-hint-start
 ```
 
 This is how the highlighting of a new hint match start message is done.
+
+```
+vdb-unwind-hint-default-range
+```
+
+The default is `-8,64`  meaning it will look 8 down and 64 pointers up in the stack to try finding some pointers. Extend
+this to possibly find more (especially if there is a lot of stack usage happening) but you will get also much more
+noise.
+
 ## Example
 ![](img/unwind.2.png)
 For the above example of the frame 7, we do the `unwind hint` there. As you can see the heuristics tell us about the

@@ -361,12 +361,16 @@ def hint( argv ):
     range_stop = hint_default_range.elements[1]
 
     stack_base="$sp"
+    # XXX We might want to allow both? +,- and base?
     if( len(argv) > 0 ):
         if( argv[0].startswith("+") ):
             range_stop = int(argv[0])
         else:
             stack_base = argv[0]
 
+#    print(f"{range_start=}")
+#    print(f"{range_stop=}")
+#    print(f"{stack_base=}")
     vptype = gdb.lookup_type("void").pointer()
     isym = gdb.execute("info symbol $pc",False,True)
     m=re.search(".*(\+ [0-9]*) in section.*",isym)
@@ -389,7 +393,7 @@ def hint( argv ):
     # $rsp-16 is kinda the default position
     # for other archs we might search differently?
 #    for i in range(-8,64):
-    for i in range(-8,range_stop):
+    for i in range(range_start,range_stop):
         pos = f"{stack_base}+({vptype.sizeof}*{i})"
         mem=vdb.memory.read(pos,vptype.sizeof)
         val=gdb.Value(mem,vptype)
