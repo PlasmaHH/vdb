@@ -497,7 +497,7 @@ class Registers():
             return ( None, None )
 
     def set_reg_at( self, mmp, val, part = None ):
-#        print("mmp = '%s'" % (mmp,) )
+#        print(f"set_reg_at( {mmp=}, {val=}, {part=}")
         rname,raddr,rbit,rtype = mmp
         val = int(val)
 #            print("raddr = '%s'" % (raddr,) )
@@ -541,6 +541,9 @@ class Registers():
                     data = newval.to_bytes(rbit//8,"little")
                     msgval = newval
                     break
+            else:
+                print(f"{mmp[0]}.{part} could not be found, not touching the register")
+                return
 
 
         print(f"set {{uint{rbit}_t}}{raddr:#0x}={msgval:#0x}")

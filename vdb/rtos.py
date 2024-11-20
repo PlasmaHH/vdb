@@ -271,8 +271,11 @@ class os_embos( ):
 
 
 
-#            t.lr = t.stack["Base"]["OS_REG_LR"]
-                t.lr = t.stack["Base"]["OS_REG_R14"]
+                try:
+                    t.lr = t.stack["Base"]["OS_REG_LR"]
+                except gdb.error:
+                    t.lr = t.stack["Base"]["OS_REG_R14"]
+
                 t.lr = gdb.parse_and_eval(f"(void*){t.lr}")
             except gdb.error:
                 vdb.print_exc()

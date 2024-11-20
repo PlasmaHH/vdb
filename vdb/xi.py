@@ -255,6 +255,7 @@ def xi( num, filter, full, events, flow ):
     inferior = gdb.selected_inferior()
     oldpid = inferior.pid
     next_update = 0
+    try_si = True
     for ui in range(0,num):
         prog.update( pt, completed = ui )
         now = time.time()
@@ -275,11 +276,15 @@ def xi( num, filter, full, events, flow ):
             if( oldpid != inferior.pid ):
                 print("Stopping xi, inferior has died")
                 break
-            if( True ): # This costs ~100µs on my system, out of ~700 total for each instruction
-                sig = gdb.convenience_variable("_siginfo")
-                if( sig is not None and sig["si_signo"] != 5 ): # TRAP
-                    print("Stopping xi, non trap signal detected")
-                    break
+            if( try_si ): # This costs ~100µs on my system, out of ~700 total for each instruction
+                try:
+                    sig = gdb.convenience_variable("_siginfo")
+                    if( sig is not None and sig["si_signo"] != 5 ): # TRAP
+                        print("Stopping xi, non trap signal detected")
+                        break
+                except gdb.error as e:
+                    try_si = False
+                    pass
 
             ist.executed = True
             if( debug.value ):
