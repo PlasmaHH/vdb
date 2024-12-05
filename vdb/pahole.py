@@ -29,7 +29,7 @@ def resolve_typedefs( gdb_type ):
 
 class pahole:
     def __init__( self ):
-        self.last_used_bit = 0
+        self.last_used_bit = -1
         self.current_color_index = -1
         self.table = []
         self.current_line : list[str] = []
