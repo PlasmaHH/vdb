@@ -14,6 +14,7 @@ import logging.handlers
 import rich.console
 import rich.progress
 import rich.table
+import vdb
 
 from enum import Enum,auto
 import os
@@ -271,7 +272,7 @@ def gdb_type_code( code ):
 def fixup_intparam( ip ):
     return ip.group(1)
 
-fxre = re.compile("([0-9]+)ul")
+fxre = re.compile("([0-9]+)ul?")
 
 def fixup_type( t ):
     t = t.replace(">>","> >")

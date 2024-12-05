@@ -195,7 +195,7 @@ pahole/e - expanded output, showing each byte on one line (the default)
                 ptype = stype.strip_typedefs()
 #            vdb.print_exc()
 
-        if ptype.code not in { gdb.TYPE_CODE_STRUCT, gdb.TYPE_CODE_UNION }:
+        if ptype.code not in { gdb.TYPE_CODE_STRUCT, gdb.TYPE_CODE_UNION, gdb.TYPE_CODE_REF }:
             raise gdb.GdbError('%s is not a struct/union type: %s' % (" ".join(argv), vdb.util.gdb_type_code(ptype.code)))
         try:
             xl = vdb.layout.object_layout(stype,sobj)
@@ -204,4 +204,8 @@ pahole/e - expanded output, showing each byte on one line (the default)
             vdb.print_exc()
 
 cmd_pahole()
+
+# TODO: print (configurable?) summary at the end: x/y bytes or a/b bits (depending on if we detect bitfields) as well as
+# a percentage. Add suggestion if the type can be made smaller based on alignment:
+# "13/20 bytes used (65%), might be condensed to 16/20 (80%)"
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

@@ -457,5 +457,7 @@ cmd_xi()
 # Option /v ? to include vector registers in comparison(s). Respect aliasing and use concise display
 # Even if we don't know the address of -0x8(%rbp) we could store it at the symbol to later get it back. But how do we
 # handle if on loading we have to chose between two different ones?
+# Add an optional column showing the stackframe number as well as the function name (without signature), maybe indented
+# too
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
