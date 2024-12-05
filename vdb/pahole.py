@@ -19,6 +19,7 @@ default_condensed = vdb.config.parameter("vdb-pahole-default-condensed",True)
 color_list = vdb.config.parameter("vdb-pahole-colors-members", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
 color_empty = vdb.config.parameter("vdb-pahole-color-empty", "#444" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
 color_type = vdb.config.parameter("vdb-pahole-color-type", "#cc4400" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
+print_summary = vdb.config.parameter("vdb-pahole-summary", True )
 
 
 def resolve_typedefs( gdb_type ):
@@ -35,6 +36,9 @@ class pahole:
         self.current_line : list[str] = []
         self.table.append(self.current_line)
         self.condensed = False
+        self.gap_bits = 0
+        self.total_bits = 0
+        self.bitfields = False
 
     def next_color( self ):
         self.current_color_index += 1
@@ -47,6 +51,26 @@ class pahole:
 
     def print( self ):
         vdb.util.print_table( self.table, "", "" )
+        if( not print_summary.value ):
+            return
+        used_bits = self.total_bits - self.gap_bits
+        perc = 100 * ( used_bits / self.total_bits )
+        extra = ""
+        if( self.bitfields ):
+            minbits = (used_bits + 31) & ~31
+            if( minbits < self.total_bits ):
+                nperc = 100 * ( used_bits / minbits )
+                extra = f", could condense to {used_bits}/{minbits}({nperc:.1f}%)"
+            print(f"{used_bits}/{self.total_bits} bits used ({perc:.1f}%){extra}")
+        else:
+            used_bytes = used_bits//8
+            total_bytes = self.total_bits//8
+            minbytes = (used_bytes + 3) & ~3
+            if( minbytes < total_bytes ):
+                nperc = 100 * ( used_bytes / minbytes )
+                extra = f", could condense to {used_bytes}/{minbytes}({nperc:.1f}%)"
+            print(f"{used_bytes}/{total_bytes} bytes used ({perc:.1f}%){extra}")
+
 
     def append( self, cell ):
         self.current_line.append(cell)
@@ -70,6 +94,7 @@ class pahole:
         self.append((vdb.util.Align.RIGHT,str(frmbyte),color))
         if( frmbit != 0  or (to-frm) % 8  != 7 ):
             self.append((":"+str(frmbit),color))
+            self.bitfields = True
             force_bitend = True
         else:
             self.append(None)
@@ -79,6 +104,7 @@ class pahole:
             self.append((vdb.util.Align.RIGHT,str(tobyte),color))
             if( force_bitend or tobit != 7 ):
                 self.append((":"+str(tobit),color))
+                self.bitfields = True
             else:
                 self.append(None)
         else:
@@ -122,6 +148,7 @@ class pahole:
 #        self.append(" ")
 
     def print_gap( self, next_bit ):
+        self.gap_bits += (next_bit - self.last_used_bit )
         if( self.condensed ):
             self.print_range( self.last_used_bit+1, next_bit, color_empty.get(), "", "<unused>" )
         else:
@@ -146,6 +173,7 @@ class pahole:
                 self.print_range( o.bit_offset, o.bit_offset + bsize - 1, col, self.get_type(o.type),subname )
             else:
                 self.print_range_extended( o.bit_offset, o.bit_offset + bsize - 1, col, self.get_type(o.type),subname )
+            self.total_bits = max(self.total_bits,o.bit_offset + bsize)
 
 
         self.print()
@@ -193,9 +221,13 @@ pahole/e - expanded output, showing each byte on one line (the default)
                 sobj = sobj.dereference()
                 stype = ptype.target()
                 ptype = stype.strip_typedefs()
+            if( ptype.code == gdb.TYPE_CODE_REF ):
+#                sobj = sobj.dereference()
+                stype = ptype.target()
+                ptype = stype.strip_typedefs()
 #            vdb.print_exc()
 
-        if ptype.code not in { gdb.TYPE_CODE_STRUCT, gdb.TYPE_CODE_UNION, gdb.TYPE_CODE_REF }:
+        if ptype.code not in { gdb.TYPE_CODE_STRUCT, gdb.TYPE_CODE_UNION }:
             raise gdb.GdbError('%s is not a struct/union type: %s' % (" ".join(argv), vdb.util.gdb_type_code(ptype.code)))
         try:
             xl = vdb.layout.object_layout(stype,sobj)
@@ -205,7 +237,4 @@ pahole/e - expanded output, showing each byte on one line (the default)
 
 cmd_pahole()
 
-# TODO: print (configurable?) summary at the end: x/y bytes or a/b bits (depending on if we detect bitfields) as well as
-# a percentage. Add suggestion if the type can be made smaller based on alignment:
-# "13/20 bytes used (65%), might be condensed to 16/20 (80%)"
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
