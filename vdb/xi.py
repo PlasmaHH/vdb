@@ -27,6 +27,9 @@ from typing import List
 
 debug = vdb.config.parameter("vdb-xi-debug", False )
 silence = vdb.config.parameter("vdb-xi-silence", True )
+location = vdb.config.parameter("vdb-xi-location", False )
+show_frame = vdb.config.parameter("vdb-xi-frame",False )
+
 # Support showspec like the registers command
 def diff_regs( r0, r1 ):
     ret = {}
@@ -76,6 +79,7 @@ class instruction_state:
         self.accessible_memory = None
         self.instruction = None
         self.mmap_registers = {}
+        self.frameno = None
         if( debug.value ):
             self.time = time.time()
             self.si_time = None
@@ -142,6 +146,7 @@ class xi_listing:
         self.id = vdb.util.next_id("xi")
         self.time = time.time()
         self.listing = []
+        self.minframe = 4096
 
     def add( self, xi ):
         self.listing.append(xi)
@@ -165,7 +170,13 @@ class xi_listing:
         if( debug.value ):
             otbl.append(["Time","SI Time", "PTime", "Rest", "Addr","asm","regs"])
         else:
-            otbl.append(["Addr","asm","regs"])
+            header = ["Addr"]
+            if( show_frame.value ):
+                header.append("Fr")
+            if( location.value ):
+                header.append("function")
+            header += [ "asm", "regs" ]
+            otbl.append(header)
         pcname = vdb.arch.get_pc_name()
         for ix,i in enumerate(self.listing):
             line : List = []
@@ -188,6 +199,16 @@ class xi_listing:
             ipc = i.pc[0]
             pv,_,_,_,pl = vdb.pointer.color(ipc,vdb.arch.pointer_size)
             line.append( (pv,pl) )
+            
+            indent = ""
+            if( show_frame.value ):
+                line.append(i.frameno)
+                if( i.frameno is not None ):
+                    indent = "  " * (i.frameno - self.minframe)
+            if( location.value ):
+                syms = vdb.memory.get_symbols( ipc, 1 )
+                sym = min(syms)
+                line.append(f"{indent}{sym.data}")
             # Then flow was not active and we delayed getting the asm
             if( i.asm_string is None ):
                 i.asm_string,i.instruction = vdb.asm.get_single_tuple( ipc, extra_filter="r",do_flow=False)
@@ -256,6 +277,12 @@ def xi( num, filter, full, events, flow ):
     oldpid = inferior.pid
     next_update = 0
     try_si = True
+
+    older = gdb.selected_frame()
+    while older:
+        first_frame = older
+        older = older.older()
+
     for ui in range(0,num):
         prog.update( pt, completed = ui )
         now = time.time()
@@ -276,6 +303,7 @@ def xi( num, filter, full, events, flow ):
             if( oldpid != inferior.pid ):
                 print("Stopping xi, inferior has died")
                 break
+
             if( try_si ): # This costs ~100µs on my system, out of ~700 total for each instruction
                 try:
                     sig = gdb.convenience_variable("_siginfo")
@@ -291,6 +319,11 @@ def xi( num, filter, full, events, flow ):
                 ist.si_time = time.time()
 
             r = vdb.register.Registers()
+
+            if( show_frame.value ):
+                # ~0.15ms per instruction
+                ist.frameno = first_frame.level()
+                xilist.minframe = min(xilist.minframe,ist.frameno)
 
             if( debug.value ): # Move this point for debugging timings
                 ist.point_time = time.time()
