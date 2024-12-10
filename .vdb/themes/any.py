@@ -173,6 +173,11 @@ vdb-va-colors-vararg-int            #c43
 # vmmap fallback colours
 vdb-vmmap-colors-executable         #e0e
 vdb-vmmap-colors-readonly           #f03
+vdb-asm-breakpoint-numbers "🯰🯱🯲🯳🯴🯵🯶🯷🯸🯹"
+vdb-asm-breakpoint-numbers-disabled "🯰🯱🯲🯳🯴🯵🯶🯷🯸🯹"
+
+vdb-asm-colors-breakpoint-marker "#e45"
+vdb-asm-colors-breakpoint-disabled-marker "#111,#400"
 # reset printing of options while loading
 vdb-config-verbosity default
 """)
