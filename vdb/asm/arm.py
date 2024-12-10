@@ -419,7 +419,7 @@ def vt_flow_add( ins, frame, possible_registers, possible_flags ):
         possible_registers.set( ins.arguments[0].register, sumv,origin="flow_add" )
         if( ins.mnemonic == "adds" ):
             set_flags_result( possible_flags, sumv, sumlarg, suml )
-            possible_flags.set( "C", int(sumv > sumr) )
+            possible_flags.set( "C", int(sumv > 2**32) )
             filtered = possible_flags.subset( { "Z","N","C","V" } )
             extext += f" to {filtered}"
     else:
