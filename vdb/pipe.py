@@ -26,7 +26,7 @@ def call( cmd, data, argv ):
 
 
 class cmd_external(vdb.command.command):
-    """Executes a some command"""
+    """Executes an external command"""
 
     def __init__ (self,cmdname):
 #        print("cmdname = '%s'" % (cmdname,) )
@@ -100,7 +100,7 @@ class cmd_external(vdb.command.command):
         self.dont_repeat()
 
 class cmd_wrap(vdb.command.command):
-    """Executes a some command"""
+    """Executes a wrapped command"""
 
     def __init__ (self,cmdname):
         self.cmdname = cmdname

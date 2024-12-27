@@ -298,6 +298,12 @@ def xi( num, filter, full, events, flow ):
             xilist.add(ist)
             pc = oldr.get_value(pcname)
             ist.pc = pc
+
+            mem = vdb.memory.read( ist.pc[0], 2 )
+            if( mem is None ):
+                print( f"Cannot read address {int(ist.pc[0]):#0x}, refusing to execute it" )
+                break
+
             with( vdb.util.silence(silence.value) ):
                 gdb.execute("si",False,True)
             if( oldpid != inferior.pid ):
@@ -426,6 +432,14 @@ def xi_list( ):
         line.append(f"{int(e):#0x}")
     vdb.util.print_table(xtbl)
 
+def xi_del( argv ):
+    xid = int(argv[0])
+    try:
+        del xi_db[xid]
+        print(f"Deleted ID {xid} from list")
+    except KeyError:
+        print(f"Could not find ID {xid}")
+
 class cmd_xi (vdb.command.command):
     """
 eXecute Instructions ( and save data along the way )
@@ -450,6 +464,10 @@ xi/e       execute a "step" hook/event on each step for other plugins
                     case "show":
                         argv = argv[1:]
                         xi_show(argv)
+                        return
+                    case "del":
+                        argv = argv[1:]
+                        xi_del(argv)
                         return
                     case "list":
                         xi_list()

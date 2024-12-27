@@ -189,10 +189,11 @@ flag_info = {
             "control"   : ( "",  2, control_descriptions, None ),
             "fpscr"     : ( "", 31, fpscr_descriptions, None ),
             "xPSR"      : ( "", 31, apsr_descriptions | ipsr_descriptions | epsr_descriptions , None ),
+            "xpsr"      : ( "", 31, apsr_descriptions | ipsr_descriptions | epsr_descriptions , None ),
             }
 possible_flags = [
         "eflags", "flags", "mxcsr", "bndcfgu", "bndstatus", "apsr", "ipsr", "epsr", "primask", 
-        "faultmask", "basepri", "control", "fpscr", "xPSR"
+        "faultmask", "basepri", "control", "fpscr", "xPSR", "xpsr"
         ]
 
 abbrflags = [ 
