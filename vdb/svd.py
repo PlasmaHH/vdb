@@ -211,6 +211,8 @@ class svd_device:
                         name = n.text
                     case "description":
                         desc = n.text
+                        if( desc is not None ):
+                            desc = re.sub(r"\s+", " ", desc )
                     case "bitOffset":
                         pos = vdb.util.rxint(n.text)
                     case "bitWidth":
