@@ -928,6 +928,8 @@ def get_gdb_sym( addr ):
 #    print(f"{addr=}")
 
     addr = int(addr)
+    if( addr < 2 ): # sometimes garbage collected symbols debug information gets just mapped to 0 instead of removed
+        return (None,None,None)
     global sym_cache
     xs = sym_cache[addr]
     if( len(xs) > 0 ):
