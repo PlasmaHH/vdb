@@ -6,6 +6,7 @@ import vdb.color
 import vdb.config
 import vdb.subcommands
 import vdb.util
+import vdb.event
 
 
 import re

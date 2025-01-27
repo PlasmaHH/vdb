@@ -10,11 +10,13 @@ import re
 import colors
 import argparse
 import shutil
+import pickle
 
 sys.path.insert(0,'..')
 import vdb.color
 import vdb.util
 import vdb.config
+import vdb.asm
 
 goodcolor = "#080"
 failcolor = "#f00"
@@ -272,6 +274,18 @@ def run_tests( tests ):
         n = test.get("name", "unnamed test" )
         en = test.get("enabled",None)
         op = test.get("output",args.debug)
+
+        mems = test.get("memory")
+        if( mems is not None ):
+            print("Preparing fake memory")
+            for addr, data in mems.items():
+                md = bytes(data)
+#                print(f"{id(vdb.asm.fakemem)=}")
+                vdb.asm.add_fake_memory( addr, md )
+
+        with open("fakememory", "wb") as ppf:
+            pickle.dump( vdb.asm.fakemem, ppf )
+
         print("Test '%s' :" % n)
         if( en is not None and en == False ):
             skip("Skipping, not enabled")
@@ -380,7 +394,10 @@ tests = [
                     ],
                 "hash" : "f3b0222bf815ec12765f06a1fa14c646",
                 "expect" : "mock_disassemble.exp",
-                "enabled" : True
+                "enabled" : True,
+                "memory" : {
+                            0x7fb330236e33 : [ 0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88 ],
+                            }
             },
             {
                     "name": "hexdump",

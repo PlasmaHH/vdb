@@ -87,6 +87,7 @@ class events:
     before_prompt = mock_event
     memory_changed = mock_event
     inferior_call = mock_event
+    new_inferior = mock_event
 
 class mock_type:
 
@@ -115,6 +116,18 @@ def execute( *args, **kwargs ):
 
 def selected_thread( ):
     return None
+
+
+class Architecture:
+    def name( self ):
+        return "x86"
+
+class Inferior:
+    def architecture( self ):
+        return Architecture()
+
+def selected_inferior( ):
+    return Inferior()
 
 class Value:
     def __init__( self, x ):

@@ -18,6 +18,7 @@ import importlib
 
 import re
 import traceback
+import pickle
 import sys
 import os
 import time
@@ -3515,6 +3516,28 @@ def add_variable( argv ):
 
     invalidate_cache(None)
 
+fakemem = {}
+
+def fake_read( addr, num ):
+    if( len(fakemem) == 0 ):
+        try:
+            with open("fakememory","rb") as f:
+                fakemem.update( pickle.load(f) )
+        except FileNotFoundError:
+            pass
+#    print(f"fake_read({addr=:#0x}, {num=})")
+    if( addr < 4096 ):
+        return None
+
+    dd = fakemem.get(addr)
+    if( dd is not None ):
+        ddd = dd.get(num)
+        if( ddd is not None ):
+            return memoryview(ddd)
+    return memoryview(b"" * num)
+
+def add_fake_memory( addr, data ):
+    fakemem.setdefault(addr,{})[len(data)] = data
 
 def disassemble( argv, flags, context ):
     dotty = False
@@ -3557,10 +3580,6 @@ def disassemble( argv, flags, context ):
 #    print("argv = '%s'" % (argv,) )
 
     old_read = vdb.memory.read
-    def fake_read( addr, num ):
-        if( addr < 4096 ):
-            return None
-        return memoryview(b"" * num)
     try:
         vdb.memory.read = fake_read
         asm_listing = parse_from(" ".join(argv),fakedata,context,arch)
