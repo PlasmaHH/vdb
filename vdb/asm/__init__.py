@@ -2863,7 +2863,9 @@ def register_flow( lng, frame : "gdb frame" ):
     # XXX make it perhaps possible to pre-populate it by an option so we can disable handling this way?
     unhandled_mnemonics = set()
 
-    
+    # XXX Just need to figure out how to figure out best
+    thumb_mode = True
+
     # at the end we advance to the next instruction or get one from a stack of conditional jump points (flowstack)
     while ins is not None:
 #        print("ins = '%s'" % (ins,) )
@@ -2877,10 +2879,33 @@ def register_flow( lng, frame : "gdb frame" ):
         # XXX x86 relies on this while arm parses them for the instruction already. Unify that.
         # As per convention, rip on x86 as an argument is the next instruction
         if( current_arch.name == "arm" ):
-            if( ins.next is not None ):
-                possible_registers.set( "pc", ins.next.address, origin="ins.next" )
-            elif( len(ins.bytes) > 0 ):
-                possible_registers.set( "pc", ins.address + len(ins.bytes),origin="len(ins.bytes)" )
+            # arm is a bit tricky here, especially in thumb mode where there can be multiple instruction lengths
+            # Thumb:
+            # Cases (for ldr, [r0,label](2 or 4 bytes); nop(2), label: bx lr;)
+            #    * 2 byte aligned, 4 byte instruction, offset 4, total offset to ins.addr = 6, pc offset 2
+            #    * 4 byte aligned, 2 byte instruction, offset 0, total offset to ins.addr = 4, pc offset 4
+            # Cases (for ldr, [r0,label](2 or 4 bytes); label: bx lr;)
+            #    * 2 byte aligned, 2 byte instruction, offset 0, total offset to ins.addr = 2, pc offset 2
+            #    * 4 byte aligned, 4 byte instruction, offset 0, total offset to ins.addr = 4, pc offset 4
+            # ARM:
+            # Cases (for ldr, [r0,label](4 bytes); nop(4), label: bx lr;)
+            #    * 4 byte aligned, 4 byte instruction, offset 0, total offset to ins.addr = 8, pc offset 8
+            #    * 8 byte aligned, 4 byte instruction, offset 0, total offset to ins.addr = 8, pc offset 8
+            # Cases (for ldr, [r0,label](4 bytes); label: bx lr;)
+            #    * 4 byte aligned, 4 byte instruction, offset -4, total offset to ins.addr = 4, pc offset 8
+            #    * 8 byte aligned, 4 byte instruction, offset -4, total offset to ins.addr = 4, pc offset 8
+
+            # It seems that there is really some extra special handling for PC because PC is always ins.address+2 but
+            # all instructions using it will align it before using it, as such this alignment hack here helps them,
+            # otherwise we would need special handling at each and every place where an instruction does that.
+
+            if( thumb_mode ):
+                if( ins.address & 0x2 ): # Aligned to only 2 bytes
+                    possible_registers.set( "pc", ins.address + 2,origin="len(ins.bytes)" )
+                else: # 0 so aligned to 4 bytes (can't be 1 or 3 )
+                    possible_registers.set( "pc", ins.address + 4,origin="len(ins.bytes)" )
+            else:
+                possible_registers.set( "pc", ins.address + 8,origin="len(ins.bytes)" )
         else:
             if( ins.next is not None ):
                 possible_registers.set( "pc", ins.next.address, origin="ins.next" )
