@@ -38,4 +38,5 @@ std::less<std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)2>*>
 std::remove_reference<std::ios_base::<enum> >
 s0<(end)1, void>
 xtree::str::<union>::_M_allocated_capacity
+xtree::str::<union>::_M_local_buf
 Exiting vdb...
