@@ -9,6 +9,7 @@ import sys
 import re
 import colors
 import argparse
+import shutil
 
 sys.path.insert(0,'..')
 import vdb.color
@@ -185,6 +186,7 @@ def compile( fn ):
 def run_binary( binary, cmds ):
     cmdsx = [ "set confirm off", "dash null log", None ] + cmds + [ "q" ]
     gdb="/home/plasmahh/opt/bin/gdb"
+    gdb = shutil.which("gdb")
     if( binary is not None ):
         cmdlist = [ gdb, binary ]
     else:
@@ -342,7 +344,7 @@ tests = [
             {
                 "name" : "pahole types",
                 "file" : "paholetest.cxx",
-                "commands" : [ "start", None, "pahole/c morev", "pahole/c f3", "pahole/c u", "pahole/c oax", "pahole/c xv" ],
+                "commands" : [ "start", None, "pahole/c morev", "pahole/c f3", "pahole/c u", "pahole/c oax", "pahole/c xv", "pahole/c bftest" ],
                 "enabled" : True,
                 "expect" : "pahole_types.exp"
             },

@@ -359,6 +359,10 @@ class object_layout:
         return ret
 
     def flatten( self, obj = None, prefix = ""):
+        ret = self._flatten(obj,prefix)
+        return ( ret, self.type.sizeof * 8 )
+
+    def _flatten( self, obj , prefix ):
         if( obj is None ):
             obj = self.object
             prefix = obj.name + "::"
@@ -371,7 +375,7 @@ class object_layout:
                         name = "<union>"
                     else:
                         name = "???"
-                ret += self.flatten( o,prefix + name + "::" )
+                ret += self._flatten( o,prefix + name + "::" )
                 continue
             # If it is final and a base class its an empty base, leave it out
             if( o.is_base_class ):

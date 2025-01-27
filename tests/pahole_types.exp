@@ -1,38 +1,47 @@
 [  0-  7] int (**)(void) morev::_vptr.morev
-[  8- 15]  unsigned long morev::y
-[ 16- 17] unsigned short morev::p
+[  8- 15]       uint64_t morev::y
+[ 16- 17]       uint16_t morev::p
 [ 18- 18]           char morev::u
 [ 19- 19]                <unused> 1
 [ 20- 20]           char morev::small::c
 [ 21- 21]                <unused> 1
-[ 22- 23] unsigned short morev::small::x
+[ 22- 23]       uint16_t morev::small::x
 [ 24- 24]           char morev::small::h
 [ 25- 31]                <unused> 7
-[ 32- 39]  unsigned long morev::big::n
+[ 32- 39]       uint64_t morev::big::n
 [ 40- 43]            int morev::innerst::i
 [ 44- 47]                <unused> 4
 [ 48- 55]         double morev::innerst::po
+
+
+43/56 bytes used (76.8%), could condense to 43/44(97.7%)
 [  0-  7] int (**)(void) f3::f2<X<43, 42> >::f1::f0::_vptr.f0
 [  8-  8]           char f3::f2<X<43, 42> >::f1::f0::c
 [  9- 11]                <unused> 3
-[ 12- 15]   unsigned int f3::f2<X<43, 42> >::f1::f0::x
+[ 12- 15]       uint32_t f3::f2<X<43, 42> >::f1::f0::x
 [ 16- 16]           char f3::f2<X<43, 42> >::f1::c
 [ 17- 19]                <unused> 3
-[ 20- 23]   unsigned int f3::f2<X<43, 42> >::f1::x
+[ 20- 23]       uint32_t f3::f2<X<43, 42> >::f1::x
 [ 24- 31] int (**)(void) f3::f2<X<43, 42> >::f0::_vptr.f0
 [ 32- 32]           char f3::f2<X<43, 42> >::f0::c
 [ 33- 35]                <unused> 3
-[ 36- 39]   unsigned int f3::f2<X<43, 42> >::f0::x
+[ 36- 39]       uint32_t f3::f2<X<43, 42> >::f0::x
 [ 40- 40]           char f3::f2<X<43, 42> >::c
 [ 41- 43]                <unused> 3
-[ 44- 47]   unsigned int f3::f2<X<43, 42> >::x
+[ 44- 47]       uint32_t f3::f2<X<43, 42> >::x
 [ 48- 48]           char f3::f2<X<43, 42> >::o
 [ 49- 51]                <unused> 3
 [ 52- 55]            int f3::m
-[  0-  3]    int u::x
-[  4-  7]        <unused> 4
-[  8- 11]    int u::n.a
-[ 12- 15] double u::n.b
+
+
+41/56 bytes used (73.2%), could condense to 41/44(93.2%)
+[ 0-  3]    int u::x
+[ 4-  7]        <unused> 4
+[ 8- 11]    int u::n::a
+[ 8- 15] double u::n::b
+
+
+12/16 bytes used (75.0%), could condense to 12/12(100.0%)
 [  0-  7] int (**)(void) oax::_vptr.oax
 [  8- 11]            int oax::b0::x0
 [ 12- 12]           char oax::b0::c0
@@ -40,14 +49,19 @@
 [ 16- 19]            int oax::g0::x0
 [ 20- 20]           char oax::g0::c0
 [ 21- 23]                <unused> 3
-[ 24- 31]  unsigned long oax::g0::g0
-[ 32- 35]            int oax::b00::x00
-[ 36- 36]           char oax::b00::c00
-[ 37- 39]                <unused> 3
-[ 40- 43]            int oax::g00::x00
-[ 44- 44]           char oax::g00::c00
-[ 45- 47]                <unused> 3
-[ 48- 55]  unsigned long oax::g00::g00
+[ 24- 31]       uint64_t oax::g0::g0
+[ 32- 32]        uint8_t oax::g0::bop
+[ 33- 35]                <unused> 3
+[ 36- 39]            int oax::b00::x00
+[ 40- 40]           char oax::b00::c00
+[ 41- 47]                <unused> 7
+[ 48- 51]            int oax::g00::x00
+[ 52- 52]           char oax::g00::c00
+[ 53- 55]                <unused> 3
+[ 56- 63]       uint64_t oax::g00::g00
+
+
+45/64 bytes used (70.3%), could condense to 45/48(93.8%)
 [  0-  7] int (**)(void) xv::_vptr.xv
 [  8- 11]            int xv::b00::x00
 [ 12- 12]           char xv::b00::c00
@@ -58,7 +72,28 @@
 [ 24- 27]            int xv::g0::x0
 [ 28- 28]           char xv::g0::c0
 [ 29- 31]                <unused> 3
-[ 32- 39]  unsigned long xv::g0::g0
+[ 32- 39]       uint64_t xv::g0::g0
+[ 40- 40]        uint8_t xv::g0::bop
+[ 41- 47]                <unused> 7
+
+
+32/48 bytes used (66.7%), could condense to 32/32(100.0%)
+[  0:0-  0:2]     bool bftest::x
+[  0:3-  1:7]          <unused> 5.1._
+[  2  -  2  ]     bool bftest::z
+[  3  -  7  ]          <unused> 5
+[  8  - 11  ] uint32_t bftest::xx
+[ 12  - 13  ] uint16_t bftest::abc
+[ 14  - 15  ]          <unused> 2
+[ 16  - 19  ] uint32_t bftest::xx7
+[ 20  - 20  ]  uint8_t bftest::okz
+[ 21  - 21  ]          <unused> 1
+[ 22  - 23  ] uint16_t bftest::adbc
+[ 24:0- 24:3]     bool bftest::u
+[ 24:4- 27:7]          <unused> 4.3._
+
+
+119/224 bits used (53.1%), could condense to 119/128(93.0%)
 Lazy typedef loading is disabled. To manually load typedefs for shortening, do vdb load shorten
 
 

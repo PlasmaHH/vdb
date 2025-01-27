@@ -84,11 +84,15 @@ class pahole:
         self.current_line = []
         self.table.append(self.current_line)
 
-    def print_range( self, frm, to, color,etype,ename ):
+    def print_range( self, frm, to, color,etype,ename, print_size = False ):
 #        print(f"print_range({frm=},{to=},{etype=},{ename=})")
         frmbyte, frmbit = self.split_range(frm)
         tobyte, tobit = self.split_range(to)
         force_bitend = False
+
+        bitsbefore = None
+        fullbytes = tobyte - frmbyte - 1
+        bitsafter = None
 
         self.append(( "[ ", color ))
         self.append((vdb.util.Align.RIGHT,str(frmbyte),color))
@@ -96,7 +100,12 @@ class pahole:
             self.append((":"+str(frmbit),color))
             self.bitfields = True
             force_bitend = True
+            bitsbefore = 8 - frmbit
+            if( bitsbefore == 8 ):
+                bitsbefore = "_"
+                fullbytes += 1
         else:
+            fullbytes += 1
             self.append(None)
 
         if( self.condensed or frm % 8 != 0 or to-frm != 7 ):
@@ -105,7 +114,12 @@ class pahole:
             if( force_bitend or tobit != 7 ):
                 self.append((":"+str(tobit),color))
                 self.bitfields = True
+                bitsafter = tobit+1
+                if( bitsafter == 8 ):
+                    bitsafter = "_"
+                    fullbytes += 1
             else:
+                fullbytes += 1
                 self.append(None)
         else:
             self.append("")
@@ -116,7 +130,14 @@ class pahole:
         self.last_used_bit = to
         self.append( ( vdb.util.Align.RIGHT, etype, color_type.get() ) )
         self.append(" ")
-        self.append( ename )
+        if( print_size ):
+            if( bitsbefore is None and bitsafter is None ):
+                szs = f"{fullbytes}"
+            else:
+                szs = f"{bitsbefore}.{fullbytes}.{bitsafter}"
+            self.append( f"{ename} {szs}" )
+        else:
+            self.append( ename )
         self.new_line()
 
     def print_range_extended( self, frm, to, color,etype,ename ):
@@ -150,12 +171,12 @@ class pahole:
     def print_gap( self, next_bit ):
         self.gap_bits += (next_bit - self.last_used_bit )
         if( self.condensed ):
-            self.print_range( self.last_used_bit+1, next_bit, color_empty.get(), "", "<unused>" )
+            self.print_range( self.last_used_bit+1, next_bit, color_empty.get(), "", "<unused>" , True)
         else:
             self.print_range_extended( self.last_used_bit+1, next_bit, color_empty.get(), "", "<unused>" )
 
     def print_layout( self, layout ):
-        flat = layout.flatten()
+        flat,size = layout.flatten()
 
         for _,subname,o in sorted(flat):
             subname = vdb.shorten.symbol(subname)
@@ -174,6 +195,10 @@ class pahole:
             else:
                 self.print_range_extended( o.bit_offset, o.bit_offset + bsize - 1, col, self.get_type(o.type),subname )
             self.total_bits = max(self.total_bits,o.bit_offset + bsize)
+
+        if( self.last_used_bit+1 < size ):
+            self.print_gap( size - 1 )
+        self.total_bits = max(self.total_bits,size)
 
 
         self.print()

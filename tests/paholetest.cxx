@@ -19,6 +19,18 @@ struct innerst
 	double po;
 };
 
+struct bftest
+{
+	bool x : 3;
+	bool z : 17;
+	uint32_t xx;
+	uint16_t abc;
+	uint32_t xx7;
+	uint8_t okz;
+	uint16_t adbc;
+	bool u : 4;
+};
+
 struct gnah
 {
 	char c;
@@ -87,6 +99,7 @@ struct g0
 	int x0 = 0xbabababa;
 	char c0 = 'X';
 	uint64_t g0 = 0x1f1f1f1f1f1f1f1f;
+	uint8_t bop;
 };
 
 
@@ -188,6 +201,7 @@ f0* fe0 = (f0*)&fe;
 f3 fd;
 sx s;
 
+bftest bft;
 struct u
 {
 	int x;
