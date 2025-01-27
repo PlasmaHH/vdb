@@ -290,8 +290,11 @@ def va_print( arg ):
         olvl = nf.level()
         nf = nf.older()
 
-    va_list = get_va_list( arg, frame )
-
+    try:
+        va_list = get_va_list( arg, frame )
+    except RuntimeError:
+        print("Cannot print va list, possibly no debug info loaded")
+        va_list = None
 
     allprovided = False
 
@@ -356,7 +359,7 @@ def va_print( arg ):
         l_gp_offset = int(gp_offset)
         l_fp_offset = int(fp_offset)
 
-        ptrtype = vdb.arch.gdb_uintptr_t.pointer()
+        ptrtype = vdb.arch.uintptr_t.pointer()
         ireg_save = reg_save_area.cast(ptrtype)
         ireg_over = overflow_arg_area.cast(ptrtype)
 
@@ -547,10 +550,15 @@ def wait(arg ):
 
     arg, argdict = vdb.util.parse_vars( arg )
     frame = gdb.selected_frame()
-    va_list = get_va_list( arg, frame )
+
+    try:
+        va_list = get_va_list( arg, frame )
+    except RuntimeError:
+        va_list = None
 
     if( va_list is None ):
-        print("Cannot wait for change of va_list, couldn't find it")
+        print("Cannot wait for change of va_list, couldn't find it (possibly no debug info loaded)")
+        return
 
 
     va_list_val = frame.read_var(va_list)

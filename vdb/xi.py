@@ -133,9 +133,9 @@ breakpoint_hit = False
 def bp_stop( bpev ):
     global breakpoint_hit
     if( isinstance( bpev, gdb.BreakpointEvent ) ):
-        print(f"{breakpoint_hit=} => True")
+#        print(f"{breakpoint_hit=} => True")
         breakpoint_hit = True
-    print(f"{bpev=}")
+#    print(f"{bpev=}")
 
 # ID, Data
 xi_db = {}
