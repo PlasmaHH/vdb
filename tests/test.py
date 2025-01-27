@@ -213,7 +213,6 @@ class fake_config:
         self.value = v
         self.elements = None
 
-
 def run_tests( tests ):
 
     parser = argparse.ArgumentParser(description='run vdb tests.')

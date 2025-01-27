@@ -2082,7 +2082,7 @@ class fake_frame:
         pass
 
     def read_register(self,reg):
-        return None
+        return 42
 
     def function( self ):
         return self.fake_function()
@@ -3556,31 +3556,42 @@ def disassemble( argv, flags, context ):
 #    print("context = '%s'" % (context,) )
 #    print("argv = '%s'" % (argv,) )
 
-    asm_listing = parse_from(" ".join(argv),fakedata,context,arch)
-    if( asm_sort.value ):
-        asm_listing.sort()
-    marked = None
+    old_read = vdb.memory.read
+    def fake_read( addr, num ):
+        if( addr < 4096 ):
+            return None
+        return memoryview(b"" * num)
+    try:
+        vdb.memory.read = fake_read
+        asm_listing = parse_from(" ".join(argv),fakedata,context,arch)
+        if( asm_sort.value ):
+            asm_listing.sort()
+        marked = None
 
-    try:
-        marked = int(gdb.parse_and_eval(" ".join(argv)))
-    except:
-        pass
-    try:
-        if( marked is None and len(argv) == 0 ):
-            marked = int(gdb.parse_and_eval("$pc"))
-    except:
-        pass
+        try:
+            marked = int(gdb.parse_and_eval(" ".join(argv)))
+        except:
+            pass
+        try:
+            if( marked is None and len(argv) == 0 ):
+                marked = int(gdb.parse_and_eval("$pc"))
+        except:
+            pass
 
-    try:
-        asm_listing.print(asm_showspec.value, context,marked, source)
-        if( dotty ):
-            g = asm_listing.to_dot(asm_showspec_dot.value)
-            oid = id(asm_listing)
-            g.write(f"dis.{oid}.dot")
-            os.system(f"nohup dot -Txlib dis.{oid}.dot &")
-    except:
-        vdb.print_exc()
-        pass
+        try:
+            asm_listing.print(asm_showspec.value, context,marked, source)
+            if( dotty ):
+                g = asm_listing.to_dot(asm_showspec_dot.value)
+                oid = id(asm_listing)
+                g.write(f"dis.{oid}.dot")
+                os.system(f"nohup dot -Txlib dis.{oid}.dot &")
+        except:
+            vdb.print_exc()
+            pass
+#    except:
+#        raise
+    finally:
+        vdb.memory.read = old_read
     return None
 
 

@@ -36,6 +36,8 @@ TYPE_CODE_DECFLOAT = None
 TYPE_CODE_INTERNAL_FUNCTION = None
 
 
+class Type:
+    pass
 
 class Parameter:
     def __init__( self, *args, **kwargs ):
