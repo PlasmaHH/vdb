@@ -250,7 +250,7 @@ def run_tests( tests ):
             otbl.append(line)
         print(vdb.util.format_table(otbl))
         return None
-
+    failset = set()
     failed = 0
     passed = 0
     skipped = 0
@@ -290,6 +290,7 @@ def run_tests( tests ):
                     fail("hash failed")
                     print("Expected: %s, result %s" % (h0,h) )
                     failed += 1
+                    failset.add( f"{n} hash")
         else:
             g,h = run_binary( None, c )
         e = test.get("expect",None)
@@ -309,6 +310,7 @@ def run_tests( tests ):
                 with open(ofn,"w") as o:
                     o.write(g)
                 failed += 1
+                failset.add( f"{n} expect")
             else:
                 good("expect passed")
                 passed += 1
@@ -323,6 +325,7 @@ def run_tests( tests ):
     print(vdb.color.color(f"Passed: {passed}",goodcolor),end="")
     print(vdb.color.color(f", Failed: {failed}",fc),end="")
     print(vdb.color.color(f", Skipped: {skipped}",sk))
+    print(f"The following tests failed: {','.join(failset)}")
 
 
 
