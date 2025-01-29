@@ -1878,11 +1878,11 @@ ascii mockup:
         if( "n" in showspec ):
             tr.td_raw("&nbsp;")
             txt = ""
-            if( len(i.prefix) > 0 ):
+            if( len(i.prefixes) > 0 ):
                 if( len(color_prefix_dot.value) > 0 ):
-                    pcol = vdb.dot.color(i.prefix,color_prefix_dot.value)
+                    pcol = vdb.dot.color(" ".join(i.prefixes),color_prefix_dot.value)
                 else:
-                    pcol = self.color_dot_relist(i.prefix,pre_colors_dot)
+                    pcol = self.color_dot_relist(" ".join(i.prefixes),pre_colors_dot)
                 txt += pcol
                 txt += "&nbsp;"
 
