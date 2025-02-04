@@ -1256,7 +1256,7 @@ class Registers():
             iflags = int(flags)
 
         ftbl = []
-        ftbl.append( ["Bit","Mask","Abrv","Description","Val","Meaning"] )
+        ftbl.append( ["Bit",(vdb.util.Align.RIGHT,"Mask"),"Abrv","Description","Val","Meaning"] )
 
         bit = 0
         con_start = 0
@@ -1290,7 +1290,7 @@ class Registers():
                         con_tbit = f"{con_start:02x}-{con_end:02x}"
                     scon_mask = f"0x{con_mask:04x}"
 #                    vdb.util.bark() # print("BARK")
-                    ftbl.append( [ con_tbit, scon_mask, short, text, "", meaning ] )
+                    ftbl.append( [ con_tbit, (vdb.util.Align.RIGHT,scon_mask), short, text, "", meaning ] )
                     con_mask = 0
 
                 short = desc[1]
@@ -1328,7 +1328,7 @@ class Registers():
                 if( ex > 9 ):
                     ex=f"{ex:#0{sz//4}x}"
 #                vdb.util.bark() # print("BARK")
-                ftbl.append( [ tbit, mask, short, text, ex, meaning ] )
+                ftbl.append( [ tbit, (vdb.util.Align.RIGHT,mask), short, text, ex, meaning ] )
                 for w in wraprest:
                     ftbl.append( [ None, None, None, w, None, None ] )
                 bit += sz
