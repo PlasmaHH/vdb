@@ -526,7 +526,7 @@ def parse_fragment( frag, obj, level = 0 ):
 
 
 def parse_function( fun, silent = False ):
-#    print("fun = '%s'" % fun )
+#    print(f"parse_function( {fun=}, {silent=} )")
     func = type_or_function()
     rest = fun
     sub = func
@@ -901,6 +901,7 @@ def symbol(fname,silent = False):
         symbol_cache = {}
 
     fun = parse_function(fname,silent)
+
     if( debug.value ):
         import vdb.dot as vdot
         g = vdot.graph("function")

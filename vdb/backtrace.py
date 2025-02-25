@@ -301,8 +301,7 @@ class BacktraceDecorator(gdb.FrameDecorator.FrameDecorator):
         if( name is None ):
             return address + "<unknown>"
         name = str(name)
-        name = vdb.shorten.symbol(name)
-
+        name = vdb.shorten.symbol(name,silent=True) # be silent to not pollute the backtrace output
 
         cpos = len(name)
         tparamstart=0

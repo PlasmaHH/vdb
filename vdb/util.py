@@ -228,8 +228,13 @@ def log( fmt, *posargs, **kwargs):
         level = level.value
     try:
         xpfmt=fmt.format(*posargs,**kwargs)
-    except:
-        xpfmt=fmt.format_map(kw_dict(**kwargs))
+    except KeyError:
+        try:
+            xpfmt=fmt.format_map(kw_dict(**kwargs))
+        # This happens when there is an invalid format specifier, which can happen if this thing wasn't really meant as
+        # such. In this case we don't replace anything and return the original one
+        except ValueError:
+            xpfmt = fmt
     maybe_logprint(level,xpfmt)
 
 def indent( i, fmt, *posargs, **more ):

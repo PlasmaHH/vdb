@@ -282,7 +282,9 @@ def annotate_var( addr,gval, gtype, name ):
     ol = vdb.layout.object_layout( gtype, gval )
 
     addr = int(addr)
-    for _,oname,obj in ol.flatten():
+    abc = ol.flatten()
+    print(f"{len(abc)=}")
+    for _,oname,obj in ol.flatten()[0]:
 #        print(f"{obj=}")
 #        print(f"{type(addr)=}")
 #        print(f"{type(obj.byte_offset)=}")
@@ -385,8 +387,37 @@ def call_hexdump( argv, flags ):
         addr = None
         xlen = None
         if( len(argv) == 1 ):
-            addr = vdb.util.gint("(void*)" + argv[0])
-            hexdump(addr,pointers=pointers,chaindepth=chainlen,values=values,align=align,uncached=uncached)
+
+            oaddr = None
+            olen = -1
+            # Try to detect if its a variable or a pointer
+            obj = gdb.parse_and_eval(argv[0])
+#            print(f"{obj=}")
+            otype = obj.type
+#            print(f"{otype=}")
+            ptype = otype.strip_typedefs()
+#            print(f"{ptype=}")
+            dtype = ptype
+            if( ptype.code == gdb.TYPE_CODE_PTR ):
+#                print("PTR")
+                oaddr = vdb.util.gint("(void*)" + argv[0])
+                dtype = ptype.target()
+            elif( ptype.code == gdb.TYPE_CODE_REF ):
+#                print("REF")
+                oaddr = int(obj.address)
+                dtype = ptype.target()
+            else: # just some object/variable
+#                print("ELSE")
+                oaddr = int(obj.address)
+#            print(f"{oaddr=:#0x}")
+#            print(f"{dtype=}")
+#            print(f"{olen=}")
+            # in case its a (ptr/ref) struct we hexdump that one only
+            if( dtype.code == gdb.TYPE_CODE_STRUCT ):
+                olen = dtype.sizeof
+#            print(f"{olen=}")
+
+            hexdump(oaddr,olen,pointers=pointers,chaindepth=chainlen,values=values,align=align,uncached=uncached)
         elif( len(argv) == 2 ):
             addr = vdb.util.gint("(void*)" + argv[0])
             xlen = vdb.util.gint(argv[1])

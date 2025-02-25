@@ -1787,6 +1787,7 @@ def interval( iv, nti ):
 
 
 # FIXME
+# deleting a tracking point does not remove the _vdb_bp_conditional from the breakpoint
 # interval tracking someimes stops the process a significant amount of time. We might want to experiment with gathering
 # the data, continuing and then processing it in a different thread. If we are not set finished due to whatever, then we
 # can stall a configurable amount of times
