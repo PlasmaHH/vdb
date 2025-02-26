@@ -406,6 +406,8 @@ def call_hexdump( argv, flags ):
 #                print("REF")
                 oaddr = int(obj.address)
                 dtype = ptype.target()
+            elif( ptype.code == gdb.TYPE_CODE_INT ):
+                oaddr = vdb.util.gint("(void*)" + argv[0])
             else: # just some object/variable
 #                print("ELSE")
                 oaddr = int(obj.address)

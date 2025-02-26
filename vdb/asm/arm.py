@@ -508,7 +508,10 @@ def vt_flow_push( ins, frame, possible_registers, possible_flags ):
 
 
 def current_flags( frame ):
-    return vdb.asm.current_flags(frame,"fpscr")
+    try:
+        return vdb.asm.current_flags(frame,"fpscr")
+    except:
+        return vdb.asm.current_flags(frame,"xPSR")
 
 
 
