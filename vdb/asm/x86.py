@@ -30,18 +30,18 @@ jaliases = {
 # FLAG, FLAG, bool => (FLAG == FLAG) == bool
 
 jconditions = {
-        "e"  : ( False, [ ( "ZF", 1, True ) ] ),
-        "ne" : ( False, [ ( "ZF", 0, True ) ] ),
-        "b"  : ( False, [ ( "CF", 1, True ) ] ),
-        "nb" : ( False, [ ( "CF", 0, True ) ] ),
-        "a"  : ( False, [ ( "ZF", 0, True ), ( "CF", 0, True ) ] ),
-        "na" : ( True,  [ ( "CF", 1, True ), ( "ZF", 1, True ) ] ),
-        "l"  : ( False, [ ( "SF","OF", False ) ] ),
-        "ge" : ( False, [ ( "SF","OF", True ) ] ),
-        "le" : ( True,  [ ( "ZF", 1, True ), ( "SF","OF", False ) ] ),
-        "g"  : ( False, [ ( "ZF", 0, True ), ( "SF","OF", True ) ] ),
-        "p"  : ( False, [ ( "PF", 1, True ) ] ),
-        "np" : ( False, [ ( "PF", 0, True ) ] ),
+        "e"  : ( False, [ ( "ZF", 1, True ) ], "" ),
+        "ne" : ( False, [ ( "ZF", 0, True ) ], "" ),
+        "b"  : ( False, [ ( "CF", 1, True ) ], "" ),
+        "nb" : ( False, [ ( "CF", 0, True ) ], "" ),
+        "a"  : ( False, [ ( "ZF", 0, True ), ( "CF", 0, True ) ], "" ),
+        "na" : ( True,  [ ( "CF", 1, True ), ( "ZF", 1, True ) ], "" ),
+        "l"  : ( False, [ ( "SF","OF", False ) ], "" ),
+        "ge" : ( False, [ ( "SF","OF", True ) ], "" ),
+        "le" : ( True,  [ ( "ZF", 1, True ), ( "SF","OF", False ) ], "" ),
+        "g"  : ( False, [ ( "ZF", 0, True ), ( "SF","OF", True ) ], "" ),
+        "p"  : ( False, [ ( "PF", 1, True ) ], "" ),
+        "np" : ( False, [ ( "PF", 0, True ) ], "" ),
 
         } # All others not supported yet due to no support for these flags yet
 

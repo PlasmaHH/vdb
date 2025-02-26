@@ -14,22 +14,24 @@ stack_pointer = "sp" # msp/psp should be handled by gdb itself
 
 # ( use_or, list_of_flags )
 flag_conditions = {
-        "eq"  : ( False, [ ( "Z", 1, True ) ] ),
-        "ne"  : ( False, [ ( "Z", 0, True ) ] ),
-        "cs"  : ( False, [ ( "C", 1, True ) ] ),
-        "hs"  : ( False, [ ( "C", 1, True ) ] ),
-        "cc"  : ( False, [ ( "C", 0, True ) ] ),
-        "lo"  : ( False, [ ( "C", 0, True ) ] ),
-        "mi"  : ( False, [ ( "N", 1, True ) ] ),
-        "pl"  : ( False, [ ( "N", 0, True ) ] ),
-        "vs"  : ( False, [ ( "V", 1, True ) ] ),
-        "vc"  : ( False, [ ( "V", 0, True ) ] ),
-        "hi"  : ( False, [ ( "C", 1, True ), ( "Z", 0, True ) ] ),
-        "ls"  : ( True,  [ ( "C", 0, True ), ( "Z", 1, True ) ] ),
-        "ge"  : ( False, [ ( "N", "V", True ) ] ),
-        "lt"  : ( False, [ ( "N", "V", False ) ] ),
-        "gt"  : ( False, [ ( "Z", 0, True ), ( "N", "V", True ) ] ),
-        "le"  : ( True,  [ ( "Z", 1, True ), ( "N", "V", False ) ] ),
+        "eq"  : ( False, [ ( "Z", 1, True ) ], "equal" ),
+        "z"   : ( False, [ ( "Z", 1, True ) ], "zero" ),
+        "ne"  : ( False, [ ( "Z", 0, True ) ], "not equal" ),
+        "nz"  : ( False, [ ( "Z", 0, True ) ], "not zero" ),
+        "cs"  : ( False, [ ( "C", 1, True ) ], "carry" ),
+        "hs"  : ( False, [ ( "C", 1, True ) ], "unsigned higher or same" ),
+        "cc"  : ( False, [ ( "C", 0, True ) ], "carry clear" ),
+        "lo"  : ( False, [ ( "C", 0, True ) ], "unsinged lower" ),
+        "mi"  : ( False, [ ( "N", 1, True ) ], "minus" ),
+        "pl"  : ( False, [ ( "N", 0, True ) ], "plus" ),
+        "vs"  : ( False, [ ( "V", 1, True ) ], "overflow" ),
+        "vc"  : ( False, [ ( "V", 0, True ) ], "no overflow" ),
+        "hi"  : ( False, [ ( "C", 1, True ), ( "Z", 0, True ) ], "unsigned higher" ),
+        "ls"  : ( True,  [ ( "C", 0, True ), ( "Z", 1, True ) ], "unsigned lower or same" ),
+        "ge"  : ( False, [ ( "N", "V", True ) ], "signed greater or equal" ),
+        "lt"  : ( False, [ ( "N", "V", False ) ], "signed less" ),
+        "gt"  : ( False, [ ( "Z", 0, True ), ( "N", "V", True ) ], "signed greater" ),
+        "le"  : ( True,  [ ( "Z", 1, True ), ( "N", "V", False ) ], "signed less or equal" ),
         } # All others not supported yet due to no support for these flags yet
 
 
@@ -459,10 +461,25 @@ def vt_flow_bl( ins, frame, possible_registers, possible_flags ):
             ins.add_explanation(f"Branch to {ins.targets} and put return address {ins.next.address:#0x} in lr register (branch and link)")
     return (possible_registers,possible_flags)
 
+def vt_flow_cb( ins, frame, possible_registers, possible_flags ):
+    if( vdb.asm.asm_explain.value ):
+        if( ins.conditional_jump ):
+            fsub = extract_conditional( ins.mnemonic )
+            _,_,ex = flag_conditions.get(fsub,(0,0,fsub))
+            ins.add_explanation(f"Compare and branch on {ex}")
+        else:
+            ins.add_explanation("Compare and branch unconditionally? that exists?")
+
+    possible_flags.unset( [ "N", "Z", "C", "V" ] )
+    # XXX And now figure out how to set them
+    return (possible_registers,possible_flags)
+
 def vt_flow_b( ins, frame, possible_registers, possible_flags ):
     if( vdb.asm.asm_explain.value ):
         if( ins.conditional_jump ):
-            ins.add_explanation("Branch conditionally")
+            fsub = extract_conditional( ins.mnemonic )
+            _,_,ex = flag_conditions.get(fsub,"??")
+            ins.add_explanation(f"Branch conditionally if {ex}")
         else:
             ins.add_explanation("Branch unconditionally")
 
@@ -511,7 +528,10 @@ def current_flags( frame ):
     try:
         return vdb.asm.current_flags(frame,"fpscr")
     except:
-        return vdb.asm.current_flags(frame,"xPSR")
+        try:
+            return vdb.asm.current_flags(frame,"xPSR")
+        except:
+            return vdb.asm.current_flags(frame,"apsr")
 
 
 

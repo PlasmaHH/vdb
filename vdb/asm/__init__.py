@@ -349,7 +349,7 @@ def current_flags( frame, flagregister ):
 def flag_check( suffix, flagset, condset ):
 #    print(f"flag_check( {suffix=}, {flagset=}, {len(condset)=} )")
 
-    use_or,exflags = condset.get(suffix,(None, None))
+    use_or,exflags,_ = condset.get(suffix,(None, None))
     if( exflags is None ):
         return (None,f"Unhandled conditional suffix {suffix}")
     else:
@@ -377,6 +377,7 @@ def flag_check( suffix, flagset, condset ):
                     cmp = "=="
                     ncmp = "=="
                 else:
+                    cmp = "!="
                     ncmp = "!="
                 # We should compare the values
                 matches = ( flag0 == flag1 ) == cresult
