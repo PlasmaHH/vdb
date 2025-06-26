@@ -16,6 +16,7 @@ import concurrent.futures
 import atexit
 import inspect
 import re
+import subprocess
 
 from typing import Dict
 from types import ModuleType
@@ -71,12 +72,20 @@ honor_sp        = vdb.config.parameter( "vdb-plugin-honor-safe-path",True)
 max_threads     = vdb.config.parameter( "vdb-max-threads",4)
 inithome_first  = vdb.config.parameter( "vdb-init-home-first",True)
 initsearch_down = vdb.config.parameter( "vdb-init-search-down",True)
+
+# Since these two are required before start, we cannot currently set them, we leave them here as-is for the case where
+# we find a better way to achieve the same purpose (maybe gdb one day allows us to set configs it doesnt know yet about)
 rich_tracebacks = vdb.config.parameter( "vdb-rich-traceback",True)
+simulate_venv   = vdb.config.parameter( "vdb-simulate-venv",True)
 
 # enabling as early as possible gives the most value
 if( rich_tracebacks.value ):
     import rich.traceback
     rich.traceback.install(show_locals=True)
+
+if( simulate_venv.value ):
+    paths = subprocess.check_output('python -c "import os,sys;print(os.linesep.join(sys.path).strip())"',shell=True).decode("utf-8").split()
+    sys.path.extend(paths)
 
 def print_exc( ):
     if( rich_tracebacks.value ):
