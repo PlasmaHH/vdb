@@ -84,8 +84,13 @@ if( rich_tracebacks.value ):
     rich.traceback.install(show_locals=True)
 
 if( simulate_venv.value ):
-    paths = subprocess.check_output('python -c "import os,sys;print(os.linesep.join(sys.path).strip())"',shell=True).decode("utf-8").split()
-    sys.path.extend(paths)
+    for python in [ f"python{sys.version_info[0]}.{sys.version_info[1]}", "python3", "python" ]:
+        try:
+            paths = subprocess.check_output(f'{python} -c "import os,sys;print(os.linesep.join(sys.path).strip())"',shell=True).decode("utf-8").split()
+            sys.path.extend(paths)
+            break
+        except subprocess.CalledProcessError:
+            continue
 
 def print_exc( ):
     if( rich_tracebacks.value ):
