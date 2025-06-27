@@ -164,13 +164,13 @@ def visual( argv, regions = None ):
         memsum = 0
         for x in sorted(xr):
             x = x[2]
-            print("========")
-            print("psp = '0x%x'" % (psp,) )
-            print("(psp+res) = '0x%x'" % ((psp+res),) )
-            print("x.start = '0x%x'" % (x.start,) )
-            print("x.end = '0x%x'" % (x.end,) )
-            print("(x.end-x.start) = '%s'" % ((x.end-x.start),) )
-            print("len(rep) = '%s'" % (len(rep),) )
+#            print("========")
+#            print("psp = '0x%x'" % (psp,) )
+#            print("(psp+res) = '0x%x'" % ((psp+res),) )
+#            print("x.start = '0x%x'" % (x.start,) )
+#            print("x.end = '0x%x'" % (x.end,) )
+#            print("(x.end-x.start) = '%s'" % ((x.end-x.start),) )
+#            print("len(rep) = '%s'" % (len(rep),) )
 
             if( (psp+res) < x.start ):
 #                print(f"next page but partial bytes {pbytes}")
@@ -182,7 +182,7 @@ def visual( argv, regions = None ):
                 pbytes = 0
 
             while( (psp+res) <= x.start ):
-                print(f"GAP {psp:#0x} - {psp+res:#0x}")
+#                print(f"GAP {psp:#0x} - {psp+res:#0x}")
                 psp += res
                 rep += fill_char(0,res)
 #                rep += "G"
@@ -190,14 +190,14 @@ def visual( argv, regions = None ):
 #            print("(psp+res) = '0x%x'" % ((psp+res),) )
             # a subsection that is part of a bigger section we have seen already
             if( x.end <= psp ):
-#                pass
-                print(f"{x.start:#0x} - {x.end:#0x} IGNORED (within previous segment)")
+                pass
+#                print(f"{x.start:#0x} - {x.end:#0x} IGNORED (within previous segment)")
 
             # The section started below or at our region of interest
             elif( x.start <= psp ):
                 # mark all those pages that are completely filled due to this segment
                 while( (psp + res) <= x.end ):
-                    print(f"{psp:x} - {psp+res:x} FULL")
+#                    print(f"{psp:x} - {psp+res:x} FULL")
 #                    rep += "F"
                     rep += fill_char( res, res )
                     psp += res
@@ -209,7 +209,7 @@ def visual( argv, regions = None ):
             # The section starts after our region of interest (there is a possibility for a gap)
             else:
                 if( pbytes and (psp+res) < x.start ):
-                    print(f"partial filled:  {pbytes}")
+#                    print(f"partial filled:  {pbytes}")
                     memsum += pbytes
 #                    rep += "P"
 #                    rep += f"{{{pbytes}}}"
@@ -219,11 +219,11 @@ def visual( argv, regions = None ):
                 # The end of our region is within the end of this segment
                 if( (psp+res) <= x.end ):
                     pbytes += (psp+res)-x.start
-                    print(f"partial {pbytes}")
+#                    print(f"partial {pbytes}")
                     psp += res
                     rep += fill_char( pbytes, res )
                 while( (psp + res) <= x.end ):
-                    print(f"{psp:x} - {psp+res:x} FULL")
+#                    print(f"{psp:x} - {psp+res:x} FULL")
 #                    rep += "F"
                     rep += fill_char( res, res )
                     psp += res
@@ -231,7 +231,7 @@ def visual( argv, regions = None ):
                     pbytes = 0
                 # The end (and start) are within the segment and more could follow
                 else:
-                    print(f"pbytes+= {x.end-x.start}")
+#                    print(f"pbytes+= {x.end-x.start}")
                     pbytes += (x.end-x.start)
 #            print("pbytes = '%s'" % (pbytes,) )
         if( pbytes > 0 ):
@@ -242,8 +242,9 @@ def visual( argv, regions = None ):
 
 #            rep += "X"
         rep += "\n"
+        rep = ""
 
-        rep += "CREP:\n"
+#        rep += "CREP:\n"
 
         for ri in range(sp,ep):
             cnt+=1 
@@ -287,6 +288,7 @@ def visual( argv, regions = None ):
 
         print(rep)
         print()
+        rep = ""
 #        break
 
         pages = memsum / res

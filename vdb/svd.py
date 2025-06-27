@@ -632,7 +632,7 @@ class svd_device:
             reg = svd_device.register()
 
             fields = []
-            
+
             # XXX Should we delay parsing of them until we have all normal registers to allow for different order? Possibly
             # need to loop through them when one derived depends on another derived....
             if( der is not None ):
@@ -718,6 +718,8 @@ class svd_device:
         reset_value = ctx.reset_value
         bit_size = ctx.bit_size
 
+        address_blocks = []
+
         for tag in node:
             match(tag.tag):
                 case "registers":
@@ -743,9 +745,19 @@ class svd_device:
                     group = tag.text
                 case "resetValue":
                     reset_value = vdb.util.rxint(tag.text)
+                case "addressBlock":
+                    x=tag.find("size")
+                    address_blocks.append(x.text)
                 case _:
-                    if( tag.tag not in {"disableCondition","version","addressBlock","description","interrupt","size","access","headerStructName","resetMask","alternatePeripheral" } ):
+                    if( tag.tag not in {"disableCondition","version","description","interrupt","size","access","headerStructName","resetMask","alternatePeripheral" } ):
                         print(f"Never before seen peripheral tag <{tag.tag}>{tag.text}</{tag.tag}>")
+
+        print(f"{base_address=:#0x} : {address_blocks=}")
+        print(f"{derived=}")
+        for r in self.registers:
+            print(f"{r.peripheral_name}")
+            if( r.name == derived ):
+                print(f"{r}")
 
         ctx = ctx.clone()
 
