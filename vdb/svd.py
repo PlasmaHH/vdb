@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import vdb.command
+import vdb.cache
 import vdb.color
 import vdb.config
 import vdb.util
@@ -19,6 +20,7 @@ import copy
 import lzma
 import time
 import concurrent.futures
+import json
 
 
 
@@ -40,46 +42,6 @@ try:
 except:
     import xml.etree.ElementTree as ET
 #    from xml.etree.ElementTree import parse
-
-
-def svd_load(idname,keep):
-    d = devices.get(idname,None)
-    if( d is None ):
-        d = dev_queue.get(idname,None)
-        if( d is None ):
-            print(f"Uncrecognized µC name '{idname}', list of known ones:")
-            svd_list()
-            return
-        svd_load_file(d,None)
-        d = devices.get(idname,None)
-    d.load(not keep)
-
-amap = {
-        "read-write" : "RW",
-        "write-only" : "W",
-        "read-only" : "R",
-        None : "",
-#        "RW" : "RW",
-#        "W" : "W",
-#        "R" : "R"
-        }
-
-def access_map( am ):
-#    if( am not in amap ):
-#        print("am = '%s'" % (am,) )
-    return amap.get(am,am)
-
-_identity_pool = {}
-# In order to save memory for strings that exist often we try to redirect them to one that lives in the dict instead of
-# duplicating it. This makes parsing slower but in the end we can save memory.
-# TODO: test with guppy etc. how much we save
-def pool_get( k  ):
-    global _identity_pool
-    r = _identity_pool.get(k,None)
-    if( r is None ):
-        _identity_pool[k] = k
-        r = k
-    return r
 
 devices = {}
 class svd_device:
@@ -164,13 +126,13 @@ class svd_device:
                 attr = getattr(self,s)
                 if( attr is not None ):
                     if( isinstance(attr,str) ):
-                        setattr( self, s, pool_get(attr) )
+                        setattr( self, s, vdb.cache.pool_get(attr) )
             for f in self.fields:
                 desc = None
                 if( f.description is not None ):
                     desc = f.description.replace("\n"," ")
-                    desc = pool_get(desc)
-                f.name = pool_get(f.name)
+                    desc = vdb.cache.pool_get(desc)
+                f.name = vdb.cache.pool_get(f.name)
                 # see registery.py for the layout#
                 # TODO In case we have "enums" add them here too instead of the None
                 # TODO add to the register format there also something for the access specifier in order to support
@@ -328,6 +290,8 @@ class svd_device:
         self.memory_estimation = None
         self.derive_registers = {}
         self.version = None
+        self.file_size = None
+        self.hash = None
 
     def load( self, unload = True ):
         print(f"Loading {len(self.registers)} register descriptions")
@@ -870,6 +834,54 @@ class svd_device:
         # Save some memory by removing the references to the xml tree
         self.peripherals = None
 
+    def to_json( self ):
+        ret = {
+                "name" : self.name,
+                "cpu"  : self.cpu.get_name(),
+                "num_registers" : len(self.registers),
+                "origin" : self.origin,
+                "size" : self.file_size,
+                "hash" : self.hash,
+                }
+        return ret
+
+class device_stub:
+    def __init__( self ):
+        pass
+
+    def load( self, unload = True ):
+        pass
+        # parse the svd file mentioned here
+
+def svd_load(idname,keep):
+    d = devices.get(idname,None)
+    if( d is None ):
+        d = dev_queue.get(idname,None)
+        if( d is None ):
+            print(f"Uncrecognized µC name '{idname}', list of known ones:")
+            svd_list()
+            return
+        svd_load_file(d,None)
+        d = devices.get(idname,None)
+    d.load(not keep)
+
+amap = {
+        "read-write" : "RW",
+        "write-only" : "W",
+        "read-only" : "R",
+        None : "",
+#        "RW" : "RW",
+#        "W" : "W",
+#        "R" : "R"
+        }
+
+def access_map( am ):
+#    if( am not in amap ):
+#        print("am = '%s'" % (am,) )
+    return amap.get(am,am)
+
+
+
 def parse_device(xml):
     membefore = vdb.util.memory_info()
     ndev = svd_device()
@@ -978,6 +990,8 @@ def svd_load_file(fname,at):
 
         if( key_name != ndev.name ):
             print(f"Duplicate CPU {ndev.name}, renaming new to {key_name}, old to {othernewname}")
+        ndev.hash = vdb.util.hash( fname )
+        ndev.file_size = os.path.getsize( fname )
         devices[key_name] = ndev
 
 def svd_list( flt = None):
@@ -1144,6 +1158,18 @@ def do_svd_scan_one(dirname,at,filter_re):
 #    if( parse_delayed.value and at is None ):
 #        print("Done")
 
+def save_cache( ):
+    x = json.dumps(devices, default = lambda x: x.to_json() )
+    d = json.loads(x)
+    vdb.util.pprint(d)
+    vdb.cache.save_string("svd",x)
+
+# Loads from the cache file and creates stub objects
+def load_cache( ):
+    x = vdb.cache.get_string("svd")
+    data = json.loads(x)
+    vdb.util.pprint(data)
+
 def do_svd_scan(at,argv):
     filter_re = None
     if( len(argv) > 0 ):
@@ -1158,6 +1184,7 @@ def do_svd_scan(at,argv):
         except:
             vdb.print_exc()
             print(f"Failed to scan directory '{d}'")
+    save_cache( )
 
 lazy_task = None
 def svd_scan(argv, background):
@@ -1187,8 +1214,10 @@ class cmd_svd(vdb.command.command):
     """Manage SVD file loading and the interaction with the register display
 
 svd list      - Lists known CPU definitions
-svd load <ID> - Loads svd CPU definitions
+svd load <ID> - Loads svd CPU definitions, replacing everything
+svd/k load    - Loads but merges with existing ones ("keep")
 svd scan      - Scan configured list of directories and (re)reads the found svd definitions
+svd/f scan    - Do the scan in the foreground (default is set per config)
 svd/v <cmd>   - Add more information to the command
 """
 

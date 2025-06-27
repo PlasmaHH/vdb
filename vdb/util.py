@@ -8,11 +8,13 @@ import traceback
 import itertools
 import time
 import types
+import hashlib
 import functools
 import logging
 import logging.handlers
 import rich.console
 import rich.progress
+import rich.pretty
 import rich.table
 import vdb
 
@@ -1032,6 +1034,13 @@ def is_started( ):
 # Since we are wrapped rich won't detect the console capabilities directly
 console = rich.console.Console( force_terminal = True, color_system = "truecolor" )
 
+def rprint( msg ):
+    console.print(msg)
+
+def pprint( data ):
+    rich.pretty.pprint( data, console = console, expand_all = True, indent_guides = False )
+
+
 def progress_bar( bar_width = 120, complete_style = "bar.complete", style = "bar.back", spinner = None, num_completed = False, download = False, speed = False ):
     dcol = list(rich.progress.Progress.get_default_columns())
     dcol[1] = rich.progress.BarColumn( bar_width = bar_width, complete_style = complete_style, style = style )
@@ -1056,6 +1065,10 @@ def stripped_lines( string ):
             continue
         yield line
 
+
+def hash( fname, hashname = "sha256" ):
+    with open(fname, "rb" ) as f:
+        return hashlib.file_digest(f, hashname).hexdigest()
 
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

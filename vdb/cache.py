@@ -14,6 +14,20 @@ vdb.enabled_modules["cache"] = mod
 
 cumulative_time: Dict[float,float] = { }
 
+def filename( cachename ):
+    if( not cachename ):
+        raise RuntimeError("Need cache name to generate cache filename")
+    ret = f"{vdb.vdb_dir}/cache/{cachename}"
+    return ret
+
+# Loads the file as string data
+def get_string( cachename ):
+    with open(filename(cachename)) as f:
+        return f.read()
+
+def save_string( cachename, data ):
+    with open(filename(cachename),"w") as f:
+        f.write(data)
 
 def add_time( t: float, n: float ):
     ct = cumulative_time.get(n,0.0)
@@ -100,5 +114,19 @@ def dump( ):
 
     for k,v in cumulative_time.items():
         print(f"{k:<20} : {v}")
+
+_identity_pool = {}
+# In order to save memory for strings that exist often we try to redirect them to one that lives in the dict instead of
+# duplicating it. This makes parsing slower but in the end we can save memory.
+# TODO: test with guppy etc. how much we save
+# XXX theoretically we can have different types as keys too, doesn't make sense for all though
+def pool_get( k ):
+    global _identity_pool
+    r = _identity_pool.get(k,None)
+    if( r is None ):
+        _identity_pool[k] = k
+        r = k
+    return r
+
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
