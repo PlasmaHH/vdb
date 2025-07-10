@@ -3,6 +3,7 @@
 import re
 import gdb
 import vdb.asm
+import rich
 
 name = "arm"
 
@@ -89,7 +90,6 @@ _arm_class_res = [
         ( "eor.*|lsl.*|uxt.*|sxt.*|lsr.*", "bit" ),
         ( "it.*|tst.*", "cond" ),
         ]
-
 
 
 argument_registers = [ "r0","r1","r2","r3","r4","r5","r6","r7","r8" ]
@@ -391,13 +391,22 @@ def set_flags_result( flag_set, result, arg = None, val = None ):
         flag_set.set("V", int( (result & sbit) != (val & sbit) ) )
 
 def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
+    vdb.util.inspect( ins.arguments[1] )
     val,addr = ins.arguments[1].value( possible_registers )
     possible_registers.set( ins.arguments[0].register, val ,origin="flow_ldr" )
+    vals = ""
+    if( val is not None ):
+        vals = f"{val}"
+    addrs = ""
+    if( addr is not None ):
+        addrs = f"{addr:#0x}"
+    ins.add_explanation(f"Load value {vals} from memory address {addrs} into register {ins.arguments[0].register}")
     return (possible_registers,possible_flags)
 
 def vt_flow_str( ins, frame, possible_registers, possible_flags ):
     val,addr = ins.arguments[0].value( possible_registers )
     possible_registers.set( ins.arguments[1].register, val ,origin="flow_str" )
+    ins.add_explanation("Store value from register into memory address")
     return (possible_registers,possible_flags)
 
 def vt_flow_add( ins, frame, possible_registers, possible_flags ):
@@ -421,15 +430,17 @@ def vt_flow_add( ins, frame, possible_registers, possible_flags ):
         possible_registers.set( ins.arguments[0].register, sumv,origin="flow_add" )
         if( ins.mnemonic == "adds" ):
             set_flags_result( possible_flags, sumv, sumlarg, suml )
-            possible_flags.set( "C", int(sumv > 2**32) )
+            # Carry flag: 1 if result exceeds 32 bits
+            possible_flags.set("C", int( (sumv >> 32) & 1 ))
+            # Overflow flag: 1 if signed overflow
+            possible_flags.set("V", int( ( (suml ^ sumr) & (suml ^ sumv) ) & 0x80000000 ))
             filtered = possible_flags.subset( { "Z","N","C","V" } )
             extext += f" to {filtered}"
     else:
         possible_registers.set( ins.arguments[0].register, None )
         ins.arguments[0].argspec = ""
 
-    if( vdb.asm.asm_explain.value ):
-        ins.add_explanation(extext)
+    ins.add_explanation(extext)
 
     return (possible_registers,possible_flags)
 
@@ -453,12 +464,9 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     return (possible_registers,possible_flags)
 
 def vt_flow_bl( ins, frame, possible_registers, possible_flags ):
-
-
     if( ins.next is not None ):
         possible_registers.set( "lr", ins.next.address, origin = "flow_bl" )
-        if( vdb.asm.asm_explain.value ):
-            ins.add_explanation(f"Branch to {ins.targets} and put return address {ins.next.address:#0x} in lr register (branch and link)")
+        ins.add_explanation(f"Branch to {ins.targets} and put return address {ins.next.address:#0x} in lr register (branch and link)")
     return (possible_registers,possible_flags)
 
 def vt_flow_cb( ins, frame, possible_registers, possible_flags ):
@@ -470,8 +478,10 @@ def vt_flow_cb( ins, frame, possible_registers, possible_flags ):
         else:
             ins.add_explanation("Compare and branch unconditionally? that exists?")
 
+    # For ARM Cortex-M, cb is a compare and branch instruction
+    # Flags are set based on the compare
+    # This is a placeholder for actual flag setting logic
     possible_flags.unset( [ "N", "Z", "C", "V" ] )
-    # XXX And now figure out how to set them
     return (possible_registers,possible_flags)
 
 def vt_flow_b( ins, frame, possible_registers, possible_flags ):
@@ -497,12 +507,6 @@ def vt_flow_b( ins, frame, possible_registers, possible_flags ):
                     ins.add_extra(f"branch NOT taken" + extrastring)
             else:
                 ins.add_extra(f"Unhandled conditional branch: {extrastring}")
-
-#    taken,extrastring = vdb.asm.flag_check( mnemonic, possible_flags, jconditions )
-#    ins.add_extra("MNE " + str(ins.mnemonic))
-#    ins.add_extra("NEXT " + str(ins.next))
-#    ins.add_extra("TARGETS " + str(ins.targets))
-#    ins.add_extra("FLAGS " + str(possible_flags))
 
     return (possible_registers,possible_flags)
 
@@ -532,7 +536,3 @@ def current_flags( frame ):
             return vdb.asm.current_flags(frame,"xPSR")
         except:
             return vdb.asm.current_flags(frame,"apsr")
-
-
-
-# vim: tabstop=4 shiftwidth=4 expandtab ft=python

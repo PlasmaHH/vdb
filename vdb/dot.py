@@ -210,6 +210,9 @@ class graph:
 
 
 def color_raw( s, col ):
+    # dotty doesn't like empty font tags
+    if( len(s) == 0 ):
+        s = "&nbsp;"
     return f'<font color="{col}">{s}</font>'
 
 def color( s, col ):

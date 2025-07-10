@@ -315,7 +315,7 @@ def read( ptr, count = 1, partial = False ):
     return read_uncached(ptr,count,partial)
 
 def read_uncached( ptr, count = 1, partial = False ):
-
+#    print(f"read_uncached({ptr:#0x}, {count}, {partial})")
     result = None
     if( isinstance(ptr,str) ):
         addr=vdb.util.gint(ptr)

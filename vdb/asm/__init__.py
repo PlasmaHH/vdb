@@ -17,6 +17,7 @@ import colors
 import importlib
 
 import re
+import rich
 import traceback
 import pickle
 import sys
@@ -616,6 +617,7 @@ class asm_arg_base( ):
                     castto = "P"
                     if( target is None ):
                         dval = vdb.memory.read(val,vdb.arch.pointer_size//8)
+                        vdb.util.inspect(dval)
                         if( vdb.arch.pointer_size == 32 ):
                             castto = "I"
                     else:
@@ -793,8 +795,12 @@ class instruction_base( abc.ABC ):
         return vdb.color.color(self.mnemonic,col)
 
     def add_explanation( self, ex ):
-        if( len(self.explanation) > 0 ):
-            if( ex == self.explanation[0] ):
+        # Don't add if the setting isn't "on"
+        if( not asm_explain.value ):
+            return
+
+        # If the explanation is already there, don't add it again
+        if( len(self.explanation) > 0 and ex == self.explanation[0] ):
                 return
         self.explanation.append(ex)
 
@@ -1962,8 +1968,10 @@ ascii mockup:
                         e["color"] = color_jump_true_dot.value
                     else:
                         e["color"] = color_jump_dot.value
+
                     if( prefer_linear_dot.value ):
-                        e["constraint"] = "false"
+                        if( node.name > tgt ): # If jumping back it should not influence the layout
+                            e["constraint"] = "false"
                 node = None
             if( ins.return_ ):
                 node = None
@@ -3519,6 +3527,7 @@ def add_variable( argv ):
 
 fakemem = {}
 
+
 def fake_read( addr, num ):
     if( len(fakemem) == 0 ):
         try:
@@ -3546,6 +3555,7 @@ def disassemble( argv, flags, context ):
     source = False
     arch = None
 
+    # XXX Error out on unsupported flags
     vdb.util.log(f"disassemble({argv=}, {flags=}, {context=} )",level = 4)
 
     if( "c" in flags ):
