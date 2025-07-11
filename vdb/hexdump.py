@@ -32,6 +32,7 @@ row_format = vdb.config.parameter("vdb-hexdump-row-format", "{p}: {l}{t} {s}{poi
 
 
 color_list = vdb.config.parameter("vdb-hexdump-colors-symbols", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
+unknown_color = vdb.config.parameter("vdb-hexdump-colors-unknown-bytes", "#666666", gdb_type =vdb.config.PARAM_COLOUR )
 
 def print_header( ):
     #pylint: disable=possibly-unused-variable
@@ -116,7 +117,9 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
 
     olen = xlen
 
+    print(f"hexdump reads {addr:#0x}")
     data = vdb.memory.read_u(uncached,addr,xlen,partial=True)
+    print(f"{type(data)=}")
 #    if( data is not None ):
 #        print(f"{data.tobytes()=}")
 
@@ -149,7 +152,9 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
         vdb.memory.print_legend( )
     #pylint: disable=possibly-unused-variable
     while(len(data) > 0 ):
+#        print(f"{data=}")
         dc = data[:16]
+#        print(f"{dc=}")
         data = data[16:]
 #        print(f"{dc.tobytes()=}")
 #        print(f"{data.tobytes()=}")
@@ -179,6 +184,8 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
 #        print(f"{type(dc)=}")
 #        print(f"{type(dc[0])=}")
         for d in dc:
+#            vdb.util.inspect(dc)
+#            vdb.util.inspect(d)
 #            if( isinstance(d,int) ):
 #                d=d.to_bytes()
 #            print(f"{type(d)=}")
@@ -243,13 +250,19 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
                 sym_color = None
                 current_symbol = None
 
-            d = int.from_bytes(d,"little")
-            l += vdb.color.color(f"{d:02x} ",sym_color)
-            c = chr(d)
-            if( c in string.printable and not ( c in "\t\n\r\v\f") ):
-                t += vdb.color.color(c,sym_color)
+            if( d == ... ):
+                if( sym_color is None ):
+                    sym_color = unknown_color.value
+                l += vdb.color.color("?? ",sym_color)
+                t += vdb.color.color("?",sym_color)
             else:
-                t += vdb.color.color(".",sym_color)
+                d = int.from_bytes(d,"little")
+                l += vdb.color.color(f"{d:02x} ",sym_color)
+                c = chr(d)
+                if( c in string.printable and not ( c in "\t\n\r\v\f") ):
+                    t += vdb.color.color(c,sym_color)
+                else:
+                    t += vdb.color.color(".",sym_color)
             cnt += 1
             t,l = tile_format(cnt,t,l)
         cnt = (16-cnt)

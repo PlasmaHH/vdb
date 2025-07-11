@@ -9,6 +9,7 @@ import vdb
 
 import gdb
 import intervaltree
+import struct
 
 import traceback
 import colors
@@ -304,6 +305,124 @@ default_region_prefixes = [
         ( ".fini", memory_type.CODE ),
 ]
 
+overlay_memory = intervaltree.IntervalTree()
+
+class MemoryLayer:
+    def __init__( self, data ):
+        # XXX At this point convert to something compatible if necessary
+        self.data = data
+
+    def __len__( self ):
+        return len(self.data)
+
+    def __getitem__( self, key ):
+        return self.data[key]
+
+class MemoryStack:
+    def __init__( self ):
+        self.layers = []
+
+    def __getitem__( self, key ):
+#        print(f"{type(key)=}")
+#        print(f"Stack read {key}")
+        if( isinstance(key,slice) ):
+            start,stop,step = key.indices(len(self))
+            ret = []
+            contains_empty_bytes = False
+            for i in range(start,stop,step):
+                if( self[i] == ... ):
+                    contains_empty_bytes = True
+                ret.append( self[i] )
+            if( contains_empty_bytes ):
+                return MemoryLayer( ret )
+            else:
+                ret=b"".join(ret)
+                return memoryview(ret).cast("c")
+        for l in self.layers:
+            ret = l[key]
+            if( ret is not None ):
+#                vdb.util.inspect(ret)
+                if( isinstance(ret,int) ):
+#                    xx = ret.to_bytes(1)
+                    return ret.to_bytes(1)
+                else:
+                    return ret
+
+    def __len__( self ):
+        if( len(self.layers) == 0 ):
+            return 0
+        return len(self.layers[0])
+
+    def cast( self, castto ):
+        numbytes = struct.calcsize(castto)
+        print(f"{numbytes=}")
+        print(f"{castto=}")
+        print(f"{len(self)=}")
+
+
+    def add_layer( self, new_layer ):
+        if( not isinstance(new_layer,MemoryLayer) ):
+            new_layer = MemoryLayer( new_layer )
+        if( len(self.layers) > 0 ):
+            if( len(self.layers[0]) != len(new_layer) ):
+                raise RuntimeError(f"All memory layers must have the same size (existing: {len(self.layers[0])}, new: {len(new_layer)})")
+        self.layers.append( new_layer )
+
+
+def overlay_read( addr, num ):
+    print(f"overlay_read( {addr:#0x}, {num} )")
+    # lazy loading, we might want to make this filename configureable
+    if( len(overlay_memory) == 0 ):
+        try:
+            with open("overlay_memoryory","rb") as f:
+                overlay_memory.update( pickle.load(f) )
+        except FileNotFoundError:
+            pass
+
+    lower = int(addr)
+    upper = addr + int(num)
+
+    intervals = overlay_memory[lower:upper]
+
+    if( len(intervals) == 0 ):
+        return None
+
+    ret = [ None ] * num
+
+    # XXX Not sure if flattening it always is a good idea, or of building a stack is faster. Maybe we can also keep a
+    # cache of flattened ones that gets invalidated on adding overlays?
+    for i in range(lower,upper):
+        index = i - int(addr)
+        om = overlay_memory[i]
+        if( len(om) == 0 ):
+            continue
+        omd = next(iter(om))
+        if( omd.data is None ):
+            ret[index] = ...
+        else:
+            ret[index] = 42
+        print(f"{index=}")
+        print(f"{omd.begin=:#0x}")
+        print(f"{omd.end=:#0x}")
+        print(f"{omd.data}")
+        print(f"{i=:#0x}")
+        print(f"{omd=}")
+
+    return ret
+
+def add_overlay( addr, data, length = None ):
+    # If we want to set something to unreadable, use data None and give a length
+    if( length is None ):
+        length = len(data)
+
+    lower = int(addr)
+    upper = lower + length
+    # 1:3 is data at addr 1 and 2, not 3
+    overlay_memory[lower:upper] = data
+
+add_overlay( 0x8004010, None, 32 )
+
+
 def read_u( uncached, ptr, count = 1, partial = False ):
     if( uncached ):
         return read_uncached( ptr, count, partial )
@@ -314,8 +433,24 @@ def read_u( uncached, ptr, count = 1, partial = False ):
 def read( ptr, count = 1, partial = False ):
     return read_uncached(ptr,count,partial)
 
+# XXX Feature idea: dont use memoryview but our own thing (might be interval tree based) that supports "inaccessible"
+# for a byte, so that at least hexdump and maybe others can display that
 def read_uncached( ptr, count = 1, partial = False ):
-#    print(f"read_uncached({ptr:#0x}, {count}, {partial})")
+    """Reads some memory from the inferior
+
+    Args:
+        ptr: The address to start reading from.
+        count: Number of bytes to read.
+        partial: If True, allow reading partial data if the memory is not fully accessible.
+
+    Returns:
+        A memoryview object containing the data read from memory. If partial is False and the memory is not fully
+        accessible, a gdb.error will be raised. If partial is True and the memory is not fully accessible all bytes
+        accessible from the pointer on will be returned.
+
+        Memory overlays will be honoured.
+    """
+    print(f"read_uncached({ptr:#0x}, {count}, {partial})")
     result = None
     if( isinstance(ptr,str) ):
         addr=vdb.util.gint(ptr)
@@ -361,8 +496,18 @@ def read_uncached( ptr, count = 1, partial = False ):
                     return r0
             else:
                 return r0
-#        pass
-    return result
+
+    ovmem = overlay_read( addr, count )
+    print(f"{result=}")
+    print(f"{ovmem=}")
+    if( ovmem is None ):
+        ret = result
+    else:
+        ret = MemoryStack()
+        ret.add_layer( MemoryLayer(ovmem) )
+        ret.add_layer( MemoryLayer(result) )
+    print(f"{ret=}")
+    return ret
 
 def write( ptr, buf ):
     if( isinstance(ptr,str) ):

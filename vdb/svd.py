@@ -752,12 +752,12 @@ class svd_device:
                     if( tag.tag not in {"disableCondition","version","description","interrupt","size","access","headerStructName","resetMask","alternatePeripheral" } ):
                         print(f"Never before seen peripheral tag <{tag.tag}>{tag.text}</{tag.tag}>")
 
-        print(f"{base_address=:#0x} : {address_blocks=}")
-        print(f"{derived=}")
-        for r in self.registers:
-            print(f"{r.peripheral_name}")
-            if( r.name == derived ):
-                print(f"{r}")
+#        print(f"{base_address=:#0x} : {address_blocks=}")
+#        print(f"{derived=}")
+#        for r in self.registers:
+#            print(f"{r.peripheral_name}")
+#            if( r.name == derived ):
+#                print(f"{r}")
 
         ctx = ctx.clone()
 

@@ -617,7 +617,7 @@ class asm_arg_base( ):
                     castto = "P"
                     if( target is None ):
                         dval = vdb.memory.read(val,vdb.arch.pointer_size//8)
-                        vdb.util.inspect(dval)
+#                        vdb.util.inspect(dval)
                         if( vdb.arch.pointer_size == 32 ):
                             castto = "I"
                     else:
@@ -3525,29 +3525,6 @@ def add_variable( argv ):
 
     invalidate_cache(None)
 
-fakemem = {}
-
-
-def fake_read( addr, num ):
-    if( len(fakemem) == 0 ):
-        try:
-            with open("fakememory","rb") as f:
-                fakemem.update( pickle.load(f) )
-        except FileNotFoundError:
-            pass
-#    print(f"fake_read({addr=:#0x}, {num=})")
-    if( addr < 4096 ):
-        return None
-
-    dd = fakemem.get(addr)
-    if( dd is not None ):
-        ddd = dd.get(num)
-        if( ddd is not None ):
-            return memoryview(ddd)
-    return memoryview(b"" * num)
-
-def add_fake_memory( addr, data ):
-    fakemem.setdefault(addr,{})[len(data)] = data
 
 def disassemble( argv, flags, context ):
     dotty = False
@@ -3590,38 +3567,33 @@ def disassemble( argv, flags, context ):
 #    print("context = '%s'" % (context,) )
 #    print("argv = '%s'" % (argv,) )
 
-    old_read = vdb.memory.read
+    asm_listing = parse_from(" ".join(argv),fakedata,context,arch)
+    if( asm_sort.value ):
+        asm_listing.sort()
+    marked = None
+
     try:
-        vdb.memory.read = fake_read
-        asm_listing = parse_from(" ".join(argv),fakedata,context,arch)
-        if( asm_sort.value ):
-            asm_listing.sort()
-        marked = None
+        marked = int(gdb.parse_and_eval(" ".join(argv)))
+    except:
+        pass
+    try:
+        if( marked is None and len(argv) == 0 ):
+            marked = int(gdb.parse_and_eval("$pc"))
+    except:
+        pass
 
-        try:
-            marked = int(gdb.parse_and_eval(" ".join(argv)))
-        except:
-            pass
-        try:
-            if( marked is None and len(argv) == 0 ):
-                marked = int(gdb.parse_and_eval("$pc"))
-        except:
-            pass
-
-        try:
-            asm_listing.print(asm_showspec.value, context,marked, source)
-            if( dotty ):
-                g = asm_listing.to_dot(asm_showspec_dot.value)
-                oid = id(asm_listing)
-                g.write(f"dis.{oid}.dot")
-                os.system(f"nohup dot -Txlib dis.{oid}.dot &")
-        except:
-            vdb.print_exc()
-            pass
+    try:
+        asm_listing.print(asm_showspec.value, context,marked, source)
+        if( dotty ):
+            g = asm_listing.to_dot(asm_showspec_dot.value)
+            oid = id(asm_listing)
+            g.write(f"dis.{oid}.dot")
+            os.system(f"nohup dot -Txlib dis.{oid}.dot &")
+    except:
+        vdb.print_exc()
+        pass
 #    except:
 #        raise
-    finally:
-        vdb.memory.read = old_read
     return None
 
 

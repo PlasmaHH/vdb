@@ -451,10 +451,14 @@ class Registers():
 
 
     def get_pos( self, reg ):
+#        print(f"Register.get_pos( {reg=} )")
         # cut off sub-int part if necessary
         parts = reg.split(".")
         fullreg = ".".join(parts[:2])
+#        print(f"{fullreg=}")
+#        print(f"{len(mmapped_positions)=}")
         mmp = mmapped_positions.get(fullreg,None)
+#        print(f"{mmp=}")
         if( len(parts) > 2 ):
             part = parts[2]
         else:
@@ -468,6 +472,7 @@ class Registers():
         return (mmp,part)
 
     def get_reg( self, reg ):
+#        print(f"Register.get_reg( {reg=} )")
         mmp,part = self.get_pos(reg)
         return self.get_reg_at( mmp, part )
 
@@ -591,6 +596,7 @@ class Registers():
         self.set_reg_at(mmp,oval&val)
 
     def set( self, argv ):
+#        print(f"Register.set({argv=})")
 #        vdb.util.bark() # print("BARK")
 #        print(f"{argv=}")
 
@@ -1422,7 +1428,9 @@ class Registers():
             return self.item_list
 
     def get_mmapped( self, reg ):
+#        print(f"{reg=}")
         rpos = mmapped_positions.get(reg)
+#        print(f"{rpos=}")
         if( rpos is None ):
             return (None,None)
         rname,raddr,rbit,rtype = rpos
@@ -1441,6 +1449,7 @@ class Registers():
 
 
     def mmapped( self, filter, full = False, short=False, mini=False ):
+#        print(f"Register.mmapped(, {filter=},...)")
         show_address = False
         pfilter = filter
         if( filter is not None and len(filter) > 0 ):

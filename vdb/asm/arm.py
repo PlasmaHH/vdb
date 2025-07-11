@@ -391,7 +391,7 @@ def set_flags_result( flag_set, result, arg = None, val = None ):
         flag_set.set("V", int( (result & sbit) != (val & sbit) ) )
 
 def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
-    vdb.util.inspect( ins.arguments[1] )
+#    vdb.util.inspect( ins.arguments[1] )
     val,addr = ins.arguments[1].value( possible_registers )
     possible_registers.set( ins.arguments[0].register, val ,origin="flow_ldr" )
     vals = ""
@@ -529,10 +529,10 @@ def vt_flow_push( ins, frame, possible_registers, possible_flags ):
 
 
 def current_flags( frame ):
-    try:
-        return vdb.asm.current_flags(frame,"fpscr")
-    except:
+    for cand in [ "fpscr", "xpsr", "xPSR", "apsr" ]:
         try:
-            return vdb.asm.current_flags(frame,"xPSR")
+            return vdb.asm.current_flags(frame,cand)
         except:
             return vdb.asm.current_flags(frame,"apsr")
+
+# vim: tabstop=4 shiftwidth=4 expandtab ft=python
