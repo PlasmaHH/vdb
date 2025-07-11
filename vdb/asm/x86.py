@@ -173,11 +173,11 @@ class instruction( vdb.asm.instruction_base ):
 
     # line: the assembler text line
     # m: the match of the linere regular expression
-    def __init__( self, line, m, oldins ):
+    def __init__( self, line, m, oldins, function_range ):
         super().__init__()
         self.parse(line,m,oldins)
 
-    jmpre = re.compile("^\*(0x[0-9a-fA-F]*)\(.*")
+    jmpre = re.compile(r"^\*(0x[0-9a-fA-F]*)\(.*")
     last_cmp_immediate = 1
 
     @vdb.overrides
@@ -577,6 +577,7 @@ def vt_flow_add( ins, frame, possible_registers, possible_flags ):
     add,_ = ins.arguments[0].value( possible_registers )
     tgtv,_ = ins.arguments[1].value( possible_registers )
     possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
+    nv = None
     if( tgtv is not None and add is not None):
         nv = tgtv + add
         possible_registers.set( ins.arguments[1].register, nv,origin="flow_add" )
@@ -585,6 +586,12 @@ def vt_flow_add( ins, frame, possible_registers, possible_flags ):
     else:
         possible_registers.set( ins.arguments[1].register, None )
         ins.arguments[0].argspec = ""
+
+    if( vdb.asm.asm_explain.value ):
+        nvs=""
+        if( nv is not None ):
+            nvs=f"({nv:#0x})"
+        ins.add_explanation( f"Adds {ins.args[0]} to {ins.args[1]}{vdb.asm.format_unknown(tgtv,'({:#0x})','')} and stores it in {ins.args[1]}{vdb.asm.format_unknown(nv,'({:#0x})','')}" )
 
     return ( possible_registers, possible_flags )
 

@@ -24,6 +24,7 @@ import sys
 import os
 import time
 import abc
+import typing
 
 asm_class_colors = {
             "jump" : "#f0f",
@@ -193,6 +194,20 @@ def wrap_shorten( fname ):
     except:
         pass
     return fname
+
+def format_unknown( val, fmt = None, dret = "<unknown>"):
+    if( val is None ):
+        return dret
+    if( fmt is None ):
+        return f"{val}"
+    if( isinstance(val,str) or not isinstance(val,typing.Iterable) ):
+        return fmt.format(val)
+    ret = []
+    for v in val:
+        ret.append( format_unknown(v,fmt) )
+    return ",".join(ret)
+
+
 
 def get_syscall( nr ):
     if( vdb.enabled("syscall") ):
@@ -672,7 +687,7 @@ class instruction_base( abc.ABC ):
 
     bytere  = re.compile("^[0-9a-fA-F][0-9a-fA-F]$")
     bytere2 = re.compile("^[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]$")
-    cmpre  = re.compile("^\$(0x[0-9a-fA-F]*),.*")
+    cmpre  = re.compile(r"^\$(0x[0-9a-fA-F]*),.*")
 
 #    class_cache = {}
 #    class_res = []
@@ -940,7 +955,7 @@ class listing( ):
         self.maxbytes = 0
         self.maxmnemoic = 0
         self.maxargs = 0
-        self.start = 0
+        self.start = 2**64
         self.end = 0
         self.finished = False
         self.current_branch = 0
@@ -2083,6 +2098,8 @@ class fake_frame:
         def __init__( self ):
             self.name = "__fake_function__"
             self.linkage_name = self.name
+            self.print_name = self.name
+            self.symtab = None
 
     class fake_architecture:
         def registers( self ):
@@ -2090,6 +2107,9 @@ class fake_frame:
 
     def __init__( self ):
         pass
+
+    def name( self ):
+        return "???"
 
     def read_register(self,reg):
         return 42
@@ -2544,10 +2564,11 @@ def update_vars( ls, frame ):
         print(f"{ls.function == funname=}")
         print(f"{frame=}")
         print(f"{fun.symtab=}")
-        lookedup = gdb.lookup_symbol(ls.function)
-        print(f"{lookedup=}")
-        lookedup = gdb.lookup_global_symbol(ls.function)
-        print(f"{lookedup=}")
+        if( gdb.selected_thread() is not None ):
+            lookedup = gdb.lookup_symbol(ls.function)
+            print(f"{lookedup=}")
+            lookedup = gdb.lookup_global_symbol(ls.function)
+            print(f"{lookedup=}")
 
     # only extract names from the block when we disassemble the current frames function
     # XXX Can we somehow look in the backtrace for other frames that might match? What if two frames in two different
@@ -2713,6 +2734,17 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     markers = 0
     oldins = None
 
+    # Figure out roughly how "long" the function is
+    # XXX Sometimes functions are split in parts, how do we handle that?
+    for line in dis.splitlines():
+        vline = line.split()
+        try:
+            vaddr = int(vline[0],16)
+            ret.start = min(ret.start,vaddr)
+            ret.end = max(ret.end,vaddr)
+        except ValueError:
+            pass
+
     for line in dis.splitlines():
 
         if( line in set(["End of assembler dump."]) ):
@@ -2742,16 +2774,13 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
         ins = None
         if( m ):
-            ins = current_arch.instruction( line, m, oldins )
+            ins = current_arch.instruction( line, m, oldins, (ret.start,ret.end) )
 
         if ins is not None :
             if( ins.marked ):
                 markers += 1
             ret.add(ins)
-            if( ret.start == 0 ):
-                ret.start = ins.address
-            else:
-                ret.start = min(ret.start,ins.address)
+            ret.start = min(ret.start,ins.address)
             ret.end = max(ret.end,ins.address)
 
             oldins = ins

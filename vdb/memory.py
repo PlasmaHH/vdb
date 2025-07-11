@@ -355,9 +355,9 @@ class MemoryStack:
 
     def cast( self, castto ):
         numbytes = struct.calcsize(castto)
-        print(f"{numbytes=}")
-        print(f"{castto=}")
-        print(f"{len(self)=}")
+#        print(f"{numbytes=}")
+#        print(f"{castto=}")
+#        print(f"{len(self)=}")
 
 
     def add_layer( self, new_layer ):
@@ -370,7 +370,7 @@ class MemoryStack:
 
 
 def overlay_read( addr, num ):
-    print(f"overlay_read( {addr:#0x}, {num} )")
+#    print(f"overlay_read( {addr:#0x}, {num} )")
     # lazy loading, we might want to make this filename configureable
     if( len(overlay_memory) == 0 ):
         try:
@@ -401,12 +401,12 @@ def overlay_read( addr, num ):
             ret[index] = ...
         else:
             ret[index] = 42
-        print(f"{index=}")
-        print(f"{omd.begin=:#0x}")
-        print(f"{omd.end=:#0x}")
-        print(f"{omd.data}")
-        print(f"{i=:#0x}")
-        print(f"{omd=}")
+#        print(f"{index=}")
+#        print(f"{omd.begin=:#0x}")
+#        print(f"{omd.end=:#0x}")
+#        print(f"{omd.data}")
+#        print(f"{i=:#0x}")
+#        print(f"{omd=}")
 
     return ret
 
@@ -450,7 +450,7 @@ def read_uncached( ptr, count = 1, partial = False ):
 
         Memory overlays will be honoured.
     """
-    print(f"read_uncached({ptr:#0x}, {count}, {partial})")
+#    print(f"read_uncached({ptr:#0x}, {count}, {partial})")
     result = None
     if( isinstance(ptr,str) ):
         addr=vdb.util.gint(ptr)
@@ -498,15 +498,15 @@ def read_uncached( ptr, count = 1, partial = False ):
                 return r0
 
     ovmem = overlay_read( addr, count )
-    print(f"{result=}")
-    print(f"{ovmem=}")
+#    print(f"{result=}")
+#    print(f"{ovmem=}")
     if( ovmem is None ):
         ret = result
     else:
         ret = MemoryStack()
         ret.add_layer( MemoryLayer(ovmem) )
         ret.add_layer( MemoryLayer(result) )
-    print(f"{ret=}")
+#    print(f"{ret=}")
     return ret
 
 def write( ptr, buf ):

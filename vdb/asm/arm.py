@@ -4,6 +4,7 @@ import re
 import gdb
 import vdb.asm
 import rich
+import typing
 
 name = "arm"
 
@@ -159,6 +160,8 @@ class asm_arg(vdb.asm.asm_arg_base):
 #                print(f"{self.offset_shift=}")
 #                print("########################################################################..........")
         else:
+            if( arg.find("[") != -1 ):
+                raise RuntimeError("No idea how to parse")
             self.register = arg
 
         self._check(oarg,False)
@@ -202,12 +205,12 @@ class instruction( vdb.asm.instruction_base ):
     class_cache = {}
     last_cmp_immediate = 1
 
-    def __init__( self, line, m, oldins ):
+    def __init__( self, line, m, oldins, function_range ):
         super().__init__()
-        self.parse(line,m,oldins)
+        self.parse(line,m,oldins, function_range)
 
     @vdb.overrides
-    def parse( self, line, m, oldins ):
+    def parse( self, line, m, oldins, function_range ):
 #        vdb.util.bark() # print("BARK")
 
         tokens = self.parse_common( line, m, oldins )
@@ -257,9 +260,23 @@ class instruction( vdb.asm.instruction_base ):
             target = True
             while len(args) > 0:
                 arg = args[0].strip()
+                if( len(arg) == 0 ):
+                    del args[0]
+                    continue
                 if( arg[0] == "[" ):
-                    arg = ",".join(args)
-                    args = []
+                    restarg = ",".join(args).strip()
+                    # Re-parse that thing and then split again
+#                    print(f"{restarg=}")
+                    end = vdb.util.find_closing( restarg, 0, "[", "]" ) + 1
+                    arg = restarg[0:end]
+                    restarg = restarg[end:]
+#                    print(f"{restarg=}")
+                    if( len(restarg) > 0 ):
+                        args = restarg.split(",")
+                    else:
+                        args = []
+#                    print(f"{arg=}")
+#                    print(f"{args=}")
                 else:
                     del args[0]
                 aarg = asm_arg(target,arg)
@@ -338,6 +355,28 @@ class instruction( vdb.asm.instruction_base ):
         elif( self.mnemonic.startswith("cmp") ):
             instruction.last_cmp_immediate = self.arguments[1].immediate
 #            print("instruction.last_cmp_immediate = '%s'" % (instruction.last_cmp_immediate,) )
+        elif( self.mnemonic.startswith("ldr") ):
+            # Try to recover a jumptable
+            # XXX Probably others than ldr do it too?
+            if( self.args[0] == "pc" ):
+                # This could also be a way to encode a return, assume so if it reads from the stackpointer without
+                # offset
+                if( self.arguments[1].register == "sp" ):
+                    if( self.arguments[1].offset is None ):
+                        self.return_ = True
+#                print(f"{self.address=:#0x}")
+#                print(f"{line=}")
+#                print(f"{m=}")
+#                print(f"{oldins=}")
+#                print(f"{function_range[0]=:#0x}")
+#                print(f"{function_range[1]=:#0x}")
+#                startat = self.address
+#                startat |= 0b111
+#                startat += 1
+#                for i in range( startat, function_range[1], 4):
+#                    mem = int.from_bytes(vdb.memory.read( i, 4 ),"little")
+#                    if( mem > function_range[0] and mem <= function_range[1] ):
+#                        print(f"{mem=:#0x} @ {i:#0x}")
 
         if( self.mnemonic == "pop" ):
             if( "pc" in self.args ):
@@ -390,24 +429,42 @@ def set_flags_result( flag_set, result, arg = None, val = None ):
         flag_set.set("N", int( (result & sbit) != 0  ))
         flag_set.set("V", int( (result & sbit) != (val & sbit) ) )
 
+
 def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
-#    vdb.util.inspect( ins.arguments[1] )
     val,addr = ins.arguments[1].value( possible_registers )
     possible_registers.set( ins.arguments[0].register, val ,origin="flow_ldr" )
-    vals = ""
-    if( val is not None ):
-        vals = f"{val}"
-    addrs = ""
-    if( addr is not None ):
-        addrs = f"{addr:#0x}"
-    ins.add_explanation(f"Load value {vals} from memory address {addrs} into register {ins.arguments[0].register}")
+
+    post_text = ""
+    if( len(ins.arguments) == 3 ):
+#        print(f"{ins}")
+#        vdb.util.inspect( possible_registers )
+#        vdb.util.inspect( ins.arguments[0] )
+#        vdb.util.inspect( ins.arguments[1] )
+#        vdb.util.inspect( ins.arguments[2] )
+#        print(f"{len(ins.arguments)=}")
+#        print(f"{val=}")
+#        print(f"{addr=}")
+        val,addr = ins.arguments[1].value( possible_registers )
+        addval,_ = ins.arguments[2].value( possible_registers )
+        # Since its dereferencing, the addr is the one we are looking for as the value of the register
+        if( addr is None ):
+            possible_registers.set( ins.arguments[1].register, addr )
+        else:
+            possible_registers.set( ins.arguments[1].register, addr + addval )
+#        vdb.util.inspect( possible_registers )
+        post_text = f", advancing register {ins.arguments[1].register} by {ins.arguments[2].immediate}"
+
+    ins.add_explanation(f"Load value {vdb.asm.format_unknown(val)} from memory address {vdb.asm.format_unknown(addr,'{:#0x}')} into register {ins.arguments[0].register}{post_text}")
     return (possible_registers,possible_flags)
 
 def vt_flow_str( ins, frame, possible_registers, possible_flags ):
-    val,addr = ins.arguments[0].value( possible_registers )
-    possible_registers.set( ins.arguments[1].register, val ,origin="flow_str" )
-    ins.add_explanation("Store value from register into memory address")
+    val,addr = ins.arguments[1].value( possible_registers )
+    rval,_ = ins.arguments[0].value( possible_registers )
+    assert( len(ins.arguments) == 2)
+
+    ins.add_explanation(f"Store value {vdb.asm.format_unknown(val)} into memory at {vdb.asm.format_unknown(rval,'{:#0x}')}")
     return (possible_registers,possible_flags)
+
 
 def vt_flow_add( ins, frame, possible_registers, possible_flags ):
     if( len(ins.arguments) == 2 ):
@@ -419,7 +476,7 @@ def vt_flow_add( ins, frame, possible_registers, possible_flags ):
         suml,_ = ins.arguments[1].value( possible_registers )
         sumr,_ = ins.arguments[2].value( possible_registers )
 
-    extext = f"Adding {suml} and {sumr}, storing it in {ins.arguments[0]}"
+    extext = f"Adding {vdb.asm.format_unknown(suml)} and {vdb.asm.format_unknown(sumr,'{}')}, storing it in {ins.arguments[0]}"
 
     if( ins.mnemonic == "adds" ):
         possible_flags.unset( [ "N", "Z", "C", "V" ] )
@@ -466,7 +523,7 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
 def vt_flow_bl( ins, frame, possible_registers, possible_flags ):
     if( ins.next is not None ):
         possible_registers.set( "lr", ins.next.address, origin = "flow_bl" )
-        ins.add_explanation(f"Branch to {ins.targets} and put return address {ins.next.address:#0x} in lr register (branch and link)")
+        ins.add_explanation(f"Branch to {vdb.asm.format_unknown(ins.targets,'{:#0x}')} and put return address {ins.next.address:#0x} in lr register (branch and link)")
     return (possible_registers,possible_flags)
 
 def vt_flow_cb( ins, frame, possible_registers, possible_flags ):
@@ -522,7 +579,7 @@ def vt_flow_push( ins, frame, possible_registers, possible_flags ):
     for a in ins.arguments:
         a.target = False
         a.reset_argspec()
-    ins.add_explanation(f"Push registers {{{', '.join(ins.args)}}} to the stack")
+    ins.add_explanation(f"Push registers {', '.join(ins.args)} to the stack")
 
     # no flags affected
     return ( possible_registers, possible_flags )

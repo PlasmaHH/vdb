@@ -216,6 +216,19 @@ def qlog( fmt, *posargs, **kwargs):
     xpfmt=fmt.format(*posargs,**kwargs)
     maybe_logprint(level,xpfmt,queue=True)
 
+def find_closing( s, start_pos, d_start, d_end ):
+    idx = start_pos
+    level = 0
+    while( idx < len(s) ):
+        if( s[idx] == d_start ):
+            level += 1
+        elif( s[idx] == d_end ):
+            level -= 1
+        if( level == 0 ):
+            return idx
+        idx += 1
+    return None
+
 
 class kw_dict(dict):
 
