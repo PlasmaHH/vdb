@@ -516,6 +516,10 @@ class track_item_base:
     def conditional( self, now ):
         return self.invoke(now)
 
+    # This is for all other internal calls like from the intervals
+    def execute( self, now ):
+        return self.invoke(now)
+
     # This does the logic. It is either called by a stop() or by a conditional() ...
     def invoke( self, now ):
         return False
@@ -549,6 +553,7 @@ class track_item(track_item_base):
         if( self.unify ):
             # so far we only support struct packs for this
             names,_ = unpack_prepare(self.pack_expression)
+            print(f"{names=}")
             if( not "ID" in names ):
                 raise RuntimeError(f"To unify pack expressions, we need a field called ID, fields specified: {names}")
         if( self.pack_expression is not None ):
@@ -618,7 +623,7 @@ class track_item(track_item_base):
             current_address = int(val.address)
 #        gdb.execute(f"hd {current_address:#0x} {itemsize*number}")
         allrawdata = vdb.memory.read_uncached(current_address,itemsize*number)
-#        print("len(allrawdata) = '%s'" % (len(allrawdata),) )
+
         for i in range(0,number):
 #            print("i = '%s'" % (i,) )
 #            print("itemsize = '%s'" % (itemsize,) )
@@ -629,31 +634,33 @@ class track_item(track_item_base):
 #            print("type(rawdata) = '%s'" % (type(rawdata),) )
 #            print("rawdata = '%s'" % (rawdata,) )
             fields = struct.unpack(fullspec,rawdata)
-#            print("names = '%s'" % (names,) )
-#            print("fields = '%s'" % (fields,) )
+
             ret = zip(names,fields)
 #            current_address += itemsize
             if( self.unify ):
                 dret = dict(ret)
                 ret = zip(names,fields) # dict(ret) "uses" it up, need to regenerate
-                xid = dret["ID"]
+                xid = (i,dret["ID"])
                 if( xid in self.seen_ids ):
 #                    print(f"Skipping {xid} with {dret}")
                     continue
+#                else:
+#                    print(f"Using {xid}")
                 self.seen_ids.add(xid)
+                # XXX Detection of "empty data" needs to be done in a better way. 0xffff as "empty" maybe? But only
+                # early on? So we do not miss should we ever get all of them?
                 if( xid == 0 ):
                     continue
 
             for n,v in ret:
-#                print("n = '%s'" % (n,) )
-#                print("v = '%s'" % (v,) )
-#            v = f"V[{n}] = '{v}'"
+#                print(f"{n=}")
+#                print(f"{v=}")
                 if( not self.has_array ):
                     id = self.pack_ids[n]
                     self.save_data(now,v,id)
                 else:
                     retd.setdefault(n,[]).append(v)
-        return False
+#        return False
 #        print("retd = '%s'" % (retd,) )
 
         if( self.has_array ):
@@ -662,6 +669,7 @@ class track_item(track_item_base):
                 self.save_data(now,vt,id)
 
     def save_data( self, now, data, number = None ):
+#        print(f"save_data({now},{data},{number})")
         if( number is None ):
             number = self.number
         td = tracking_data.setdefault(now,{})
@@ -996,6 +1004,10 @@ data     - show the list of data collected so far
 clear    - clear all data collected so far 
 del <id> - delete the trackpoint with the given trackpoint id
 set <name>     - work with tracking sets (see documentation for them)
+
+interval trackings:
+track/i <time> <track-items>
+track/i <time>,<count> <track-items>
 
 You should have a look at the data and graph modules, which can take the data from here and draw graphics and histograms
 """
