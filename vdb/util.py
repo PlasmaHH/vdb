@@ -1085,5 +1085,17 @@ def hash( fname, hashname = "sha256" ):
     with open(fname, "rb" ) as f:
         return hashlib.file_digest(f, hashname).hexdigest()
 
+class exception_context:
+
+    def __init__( self, scope ):
+        self.scope = scope
+
+    def __enter__( self ):
+        pass
+
+    def __exit__( self, type, value, traceback ):
+        if( value is not None ):
+            value.add_note(self.scope)
+
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

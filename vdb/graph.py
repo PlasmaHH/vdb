@@ -36,6 +36,13 @@ default_hist_update = vdb.config.parameter("vdb-graph-default-histogram-updates"
 default_line_update = vdb.config.parameter("vdb-graph-default-line-updates",0.2)
 
 
+# Find ways to influence the histogram during its running. Since this is  different process with a simple queue if we
+# want to do it from within gdb we need protocol commands. What things do we want to control?
+# - Number of bins
+# - Range of values (outside is simply ignored)
+# - Good display of min/max/avg/median (not sure if this will be in subprocess or outside). Maybe with a sliding average
+# too?
+# - Value filter: clock timer gives us -1 for failed attempts, we better filter at least them out
 
 xd = [1,2,3]
 yd = [1,2,3]
@@ -121,6 +128,7 @@ class hist_process(graph_process):
         self.num_bins = default_bins.get()
         # TODO update bins dynamically, introduce limiting parameters
         self.bins = numpy.linspace(0,0,self.num_bins) # ???
+        print(f"INIT {len(self.bins)=}")
         self.bar = None
         self.axis = None
         self.range = 0
@@ -143,6 +151,9 @@ class hist_process(graph_process):
 #        self.bins = numpy.linspace(-8,8,self.num_bins) # ???
 #        _,_,self.bar = self.axis.hist(self.data,self.bins,lw=1,ec="yellow",fc="green",alpha=0.5)
 
+
+        # XXX Somehow this and the track that is feeding it should have some nice "progress like" thing going on where
+        # both can put their status into. Probably some rich grid/layout thing.
         try:
             if( len(self.data) == 0 ):
                 return
@@ -150,6 +161,11 @@ class hist_process(graph_process):
             maxy = 0
             minx = self.data.min()
             maxx = self.data.max()
+            avgx = self.data.mean()
+            medianx = numpy.median(self.data)
+
+            print(f"Stats: {minx}/{avgx}/{medianx}/{maxx}")
+
 
             minx = round(self.num_bins*minx)/self.num_bins
             maxx = round(self.num_bins*maxx)/self.num_bins
@@ -184,6 +200,7 @@ class hist_process(graph_process):
         plt.style.use( plot_style.value )
         fig, self.axis = plt.subplots(layout="tight")
 
+        print(f"{len(self.bins)=}")
         _,_,self.bar = self.axis.hist(self.data,self.bins,lw=1,ec="yellow",fc="green",alpha=0.5)
         self.axis.set_ylim(top=55)
         ani = animation.FuncAnimation( fig, self.update, interval=default_hist_update.get()*1000, repeat=False,blit=False,save_count=False)
@@ -191,7 +208,6 @@ class hist_process(graph_process):
         plt.show()
         sys.exit(0)
 
-ht = hist_process()
 
 class plot_process(graph_process):
 
@@ -526,10 +542,15 @@ def refresh_track( ):
         vdb.track.interrupt()
 #    vdb.util.bark() # print("BARK")
 
+ht = None
+
 def follow_track_histogram( tvar, relative_ts ):
     global gt
+    global ht
     global current_track_var
     current_track_var = tvar
+    if( ht is None ):
+        ht = hist_process()
     gt = ht
     ht.start()
     refresh_track()

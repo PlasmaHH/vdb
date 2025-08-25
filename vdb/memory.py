@@ -990,7 +990,8 @@ class memory_map:
                 selected_thread.switch()
             except:
                 pass
-            selected_frame.select()
+            if( selected_frame is not None ):
+                selected_frame.select()
 
 
 # XXX This is basically the vmmap implementation, maybe we move parts of it there?

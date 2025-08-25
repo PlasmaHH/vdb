@@ -444,6 +444,7 @@ def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
 #        print(f"{len(ins.arguments)=}")
 #        print(f"{val=}")
 #        print(f"{addr=}")
+        # XXX Verify these calculations
         val,addr = ins.arguments[1].value( possible_registers )
         addval,_ = ins.arguments[2].value( possible_registers )
         # Since its dereferencing, the addr is the one we are looking for as the value of the register
@@ -458,11 +459,19 @@ def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
     return (possible_registers,possible_flags)
 
 def vt_flow_str( ins, frame, possible_registers, possible_flags ):
-    val,addr = ins.arguments[1].value( possible_registers )
     rval,_ = ins.arguments[0].value( possible_registers )
-    assert( len(ins.arguments) == 2)
+    val,addr = ins.arguments[1].value( possible_registers )
 
-    ins.add_explanation(f"Store value {vdb.asm.format_unknown(val)} into memory at {vdb.asm.format_unknown(rval,'{:#0x}')}")
+    if( len(ins.arguments) == 3 ):
+        # XXX Verify these calculations
+        val,addr = ins.arguments[1].value( possible_registers )
+        addval,_ = ins.arguments[2].value( possible_registers )
+        if( addr is None ):
+            possible_registers.set( ins.arguments[1].register, addr )
+        else:
+            possible_registers.set( ins.arguments[1].register, addr + addval )
+
+    ins.add_explanation(f"Store value {vdb.asm.format_unknown(rval)} into memory at {vdb.asm.format_unknown(addr,'{:#0x}')}")
     return (possible_registers,possible_flags)
 
 

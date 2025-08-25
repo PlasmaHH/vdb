@@ -80,7 +80,7 @@ bp_marker_disabled = vdb.config.parameter("vdb-asm-breakpoint-disabled-marker", 
 bp_number = vdb.config.parameter("vdb-asm-breakpoint-use-numbers", True )
 
 bp_numbers = vdb.config.parameter("vdb-asm-breakpoint-numbers", "❶❷❸❹❺❻❼❽❾❿" )
-bp_numbers = vdb.config.parameter("vdb-asm-breakpoint-numbers", "🯰🯱🯲🯳🯴🯵🯶🯷🯸🯹")
+bp_numbers = vdb.config.parameter("vdb-asm-breakpoint-numbers", "🯱🯲🯳🯴🯵🯶🯷🯸🯹")
 bp_numbers_disabled = vdb.config.parameter("vdb-asm-breakpoint-numbers-disabled", "➀➁➂➃➄➅➆➇➈➉" )
 
 next_marker = vdb.config.parameter("vdb-asm-next-marker", "→" )

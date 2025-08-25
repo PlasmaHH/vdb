@@ -18,6 +18,8 @@ import vdb.register
 import rich.console
 
 def get_reasons( flags, val ):
+    if( val is None ):
+        return "None"
     ret = []
     val = int(val)
     for mask,txt in flags.items():

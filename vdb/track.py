@@ -19,6 +19,9 @@ import datetime
 import struct
 
 
+# Idea for "auto interval" ... check how many, then increase or reduce the interval until we get a bit less. Have a limit for max
+# and min interval, have min interval "auto" be determined by the time we detected to process the data. Per default 90%
+# of the time should be for the program.
 
 
 rel_time = vdb.config.parameter("vdb-track-time-relative",True)
@@ -624,6 +627,8 @@ class track_item(track_item_base):
 #        gdb.execute(f"hd {current_address:#0x} {itemsize*number}")
         allrawdata = vdb.memory.read_uncached(current_address,itemsize*number)
 
+        new_data = 0
+
         for i in range(0,number):
 #            print("i = '%s'" % (i,) )
 #            print("itemsize = '%s'" % (itemsize,) )
@@ -647,12 +652,13 @@ class track_item(track_item_base):
 #                else:
 #                    print(f"Using {xid}")
                 self.seen_ids.add(xid)
-                # XXX Detection of "empty data" needs to be done in a better way. 0xffff as "empty" maybe? But only
-                # early on? So we do not miss should we ever get all of them?
-                if( xid == 0 ):
-                    continue
+            new_data += 1
 
             for n,v in ret:
+                # XXX Detection of "empty data" needs to be done in a better way. 0xffff as "empty" maybe? But only
+                # early on? So we do not miss should we ever get all of them?
+                if( xid[1] == 0 and v == 0 ):
+                    continue
 #                print(f"{n=}")
 #                print(f"{v=}")
                 if( not self.has_array ):
@@ -663,6 +669,7 @@ class track_item(track_item_base):
 #        return False
 #        print("retd = '%s'" % (retd,) )
 
+        print(f"Extracted {new_data} new fields of data")
         if( self.has_array ):
             for n,vt in retd.items():
                 id = self.pack_ids[n]
@@ -1741,16 +1748,17 @@ def interrupt( ):
 def interval( iv, nti ):
     if( not vdb.util.is_started()):
         print("Program has not started yet, cannot continue")
-        return
+#        return
     max_cnt = 0
     cnt = 0
 
-    if( iv.find(",") != -1 ):
-        ivv = iv.split(",")
-        iv = float(ivv[0])
-        max_cnt = int(ivv[1])
-    else:
-        iv = float(iv)
+    with vdb.util.exception_context(f"while parsing interval timing argument '{iv}'"):
+        if( iv.find(",") != -1 ):
+            ivv = iv.split(",")
+            iv = float(ivv[0])
+            max_cnt = int(ivv[1])
+        else:
+            iv = float(iv)
 
     global next_t
     if( sync_second.value ):
@@ -1776,7 +1784,8 @@ def interval( iv, nti ):
         t1 = time.time()
         dt = t1 - t0
         print(f"Spent {dt}s processing track data")
-        gdb.execute("continue")
+        with vdb.util.silence():
+            gdb.execute("continue")
         t0 = time.time()
         si=gdb.parse_and_eval("$_siginfo")
 #        print("si = '%s'" % (si,) )

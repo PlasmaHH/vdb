@@ -24,6 +24,8 @@ def entry(_:list[str]):
         print("Unable to determine entry point")
     else:
         print(f"Setting $pc to {ep:#0x}")
+        # Do it twice because in some situations the first one triggers some error
+        gdb.execute(f"set $pc={ep:#0x}")
         gdb.execute(f"set $pc={ep:#0x}")
 
 class cmd_entry(vdb.command.command):

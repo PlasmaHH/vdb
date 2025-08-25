@@ -30,18 +30,26 @@ class FrameId(object):
 
 class fake_unwinder(gdb.unwinder.Unwinder):
     def __init__( self ):
-        self._enabled = False
+        super().__init__("vdb fake rtos")
         self._name = "rtos_fake_unwinder"
         self.fake_sp = None
         self.fake_pc = None
         self.fake_lr = None
         self.cached_ui = None
         self.level = 0
+        self.enabled = False
+
+    def enable( self ):
+        self.enabled = True
+
+    def disable( self ):
+        self.enabled = False
 
     def __call__(self,pending_frame):
+        print(f"fake_unwinder __call__, enabled? {self.enabled}, _enabled? {self._enabled}")
 #        vdb.util.bark() # print("BARK")
         try:
-            if( self._enabled ):
+            if( self.enabled ):
                 return self.do_call(pending_frame)
             else:
                 return None
@@ -325,23 +333,29 @@ class os_embos( ):
             cnt=0
 #            print("rt = '%s'" % (rt,) )
 #            gdb.execute("reg sp")
+            # Go through the table lines that would be displayed, tlist contains "in parallel" the same information as
+            # objects still but we want the table format here for output
             for r in rt:
-#                print("#############################################################")
                 print(r)
+                # First is the header, don't act on it
                 if( header ):
                     header = False
                     continue
+
                 if( cnt < len(tlist) ):
                     t = tlist[cnt]
+                    # Only print bt for those that match the filter if present
                     if( id_filter is None or id_filter == t.id ):
                         cur = t.current
+                        # If its the currently active thread, disable any fake unwinding and use the normal gcc one,
+                        # thats more stable and faster
                         if( cur ):
-                            unwinder.enabled = False
+                            unwinder.disable()
                             gdb.execute(with_bt)
-#                        unwinder.enabled = True
                         else:
+                            # Get the stack pointers as different types
                             tsp = t.stack.cast(char_ptr)
-                            vlr= t.stack.cast(vdb.arch.void_ptr_ptr_t)
+                            vlr = t.stack.cast(vdb.arch.void_ptr_ptr_t)
 #                            gdb.execute(f"hd/p {int(tsp)} 96")
                             tcand = None
                             for i in range(0,128):
@@ -382,7 +396,7 @@ class os_embos( ):
 #                        gdb.execute(f"set $psp={int(tsp)}")
 #                        gdb.execute(f"set $msp={int(tsp)}")
 #                        gdb.execute(f"set $pc={int(tpc)}")
-                            unwinder._enabled = True
+                            unwinder.enable()
 #                            for i in range(0,32):
 #                                xsp = tsp - 16*4 + i*4
 #                                unwinder.set( xsp, tpc, tlr )
@@ -400,7 +414,7 @@ class os_embos( ):
                             btdata=btdata[2:]
                             print("\n".join(btdata))
                             unwinder.reset()
-                            unwinder._enabled = False
+                            unwinder.disable()
 #                        gdb.execute("reg sp")
 #                        gdb.execute(f"set $msp={int(msp)}")
 #                        gdb.execute(f"set $psp={int(psp)}")
@@ -442,7 +456,13 @@ def rtos( argv ):
 
 class cmd_rtos(vdb.command.command):
     """
+Shows some information about some rtos functionality
+rtos         - Shows an overview over running tasks
+rtos bt <id> - Shows for each task the stacktrace (may be incomplete for non-running tasks), optionally filtered by ID
 
+Currently supported flavours:
+
+SEGGER embOS
 """
 
     def __init__ (self):
@@ -457,8 +477,9 @@ class cmd_rtos(vdb.command.command):
             vdb.print_exc()
         finally:
             global unwinder
+            # make super sure when leaving the fake unwinder is always disabled
             if( unwinder is not None ):
-                unwinder._enabled = False
+                unwinder.disable()
 
 cmd_rtos()
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

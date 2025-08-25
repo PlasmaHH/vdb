@@ -96,7 +96,7 @@ def print_exc( ):
     if( rich_tracebacks.value ):
         vdb.util.console.print_exception( show_locals = True )
     else:
-        vdb.print_exc()
+        traceback.print_exc()
 
 enabled_modules: Dict[str,ModuleType] = {}
 vdb_dir = None
