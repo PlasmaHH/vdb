@@ -168,15 +168,15 @@ class xi_listing:
     def as_table( self ):
         otbl = []
         if( debug.value ):
-            otbl.append(["Time","SI Time", "PTime", "Rest", "Addr","asm","regs"])
+            header = ["Time","SI Time", "PTime", "Rest", "Addr"]
         else:
             header = ["Addr"]
-            if( show_frame.value ):
-                header.append("Fr")
-            if( location.value ):
-                header.append("function")
-            header += [ "asm", "regs" ]
-            otbl.append(header)
+        if( show_frame.value ):
+            header.append("Fr")
+        if( location.value ):
+            header.append("function")
+        header += [ "asm", "regs" ]
+        otbl.append(header)
         pcname = vdb.arch.get_pc_name()
         for ix,i in enumerate(self.listing):
             line : List = []
@@ -207,8 +207,11 @@ class xi_listing:
                     indent = "  " * (i.frameno - self.minframe)
             if( location.value ):
                 syms = vdb.memory.get_symbols( ipc, 1 )
-                sym = min(syms)
-                line.append(f"{indent}{sym.data}")
+                if( len(syms) > 0 ):
+                    sym = min(syms)
+                    line.append(f"{indent}{sym.data}")
+                else:
+                    line.append(indent)
             # Then flow was not active and we delayed getting the asm
             if( i.asm_string is None ):
                 i.asm_string,i.instruction = vdb.asm.get_single_tuple( ipc, extra_filter="r",do_flow=False)
@@ -250,7 +253,7 @@ class xi_listing:
 
 
 
-def xi( num, filter, full, events, flow ):
+def xi( num, filter, full, events, flow, registers ):
 #    print("############################################")
 #    vdb.util.bark() # print("BARK")
     regs = gdb.execute("registers",False,True)
@@ -296,7 +299,10 @@ def xi( num, filter, full, events, flow ):
 
             ist = instruction_state()
             xilist.add(ist)
-            pc = oldr.get_value(pcname)
+            if( registers ):
+                pc = oldr.get_value(pcname)
+            else:
+                pc = ( gdb.parse_and_eval("$pc"), None )
             ist.pc = pc
 
             mem = vdb.memory.read( ist.pc[0], 2 )
@@ -324,7 +330,8 @@ def xi( num, filter, full, events, flow ):
             if( debug.value ):
                 ist.si_time = time.time()
 
-            r = vdb.register.Registers()
+            if( registers ):
+                r = vdb.register.Registers()
 
             if( show_frame.value ):
                 # ~0.15ms per instruction
@@ -355,11 +362,12 @@ def xi( num, filter, full, events, flow ):
 #        print(f"{fr_pc=}")
 #        print(f"{r.all=}")
 #        print(f"{r.regs=}")
-            dr = diff_regs(oldr,r)
-            ist.changed_registers = dr
-            ist.final_registers = r
-            # XXX Needs arch independence. Check for complete list of possible flags from registers.py ?
-            ist.current_flags=r._flags("eflags",r.rflags,vdb.register.flag_info,False,False,True,None)
+            if( registers ):
+                dr = diff_regs(oldr,r)
+                ist.changed_registers = dr
+                ist.final_registers = r
+                # XXX Needs arch independence. Check for complete list of possible flags from registers.py ?
+                ist.current_flags=r._flags("eflags",r.rflags,vdb.register.flag_info,False,False,True,None)
             if( flow ):
                 ist.asm_string,ist.instruction = vdb.asm.get_single_tuple( pc[0], extra_filter="r",do_flow=flow)
             # XXX Doing the whole flow thing is rather expensive, all we need is access to the register values of the
@@ -386,7 +394,8 @@ def xi( num, filter, full, events, flow ):
 #                print(f"{val=}")
 #            arg._dump()
 #            print(f"{arg=}")
-            oldr = r
+            if( registers ):
+                oldr = r
         except gdb.error as e:
             print(f"xi aborted due to gdb error: {e}")
             break
@@ -458,6 +467,7 @@ xi/e       execute a "step" hook/event on each step for other plugins
             events = False
             filter = None
             flow = False
+            registers = True
 
             if( len(argv) ):
                 match argv[0]:
@@ -483,6 +493,8 @@ xi/e       execute a "step" hook/event on each step for other plugins
             argv = nargv
 
 
+            if( "n" in flags ):
+                registers = False
             if( "f" in flags ):
                 full = True
             if( "F" in flags ):
@@ -495,7 +507,7 @@ xi/e       execute a "step" hook/event on each step for other plugins
 
             if( len(argv) > 0 ):
                 num = int(argv[0])
-            xi(num,filter,full,events,flow)
+            xi(num,filter,full,events,flow, registers)
 #            print (self.__doc__)
         except:
             vdb.print_exc()

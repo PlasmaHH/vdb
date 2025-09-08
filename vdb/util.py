@@ -1046,6 +1046,8 @@ def is_started( ):
 
 # Since we are wrapped rich won't detect the console capabilities directly
 console = rich.console.Console( force_terminal = True, color_system = "truecolor" )
+# XXX Do we want to make this depend on some option?
+rich._console = console
 
 def rprint( msg ):
     console.print(msg)

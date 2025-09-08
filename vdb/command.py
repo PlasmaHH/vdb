@@ -24,8 +24,13 @@ class command(gdb.Command,abc.ABC):
                 _ = gdb.execute(f"help {n}",False,True)
                 if( prefix is not True ):
                     raise RuntimeError("Cannot register command")
-                print(f"Command already exists: {n}, replacing it with vdb.{n}")
-                n = "vdb." + n
+                if( not vdb.reloading ):
+                    print(f"Command already exists: {n}, replacing it with vdb.{n}")
+                    n = "vdb." + n
+                # Problem is that in the reload phase things will overwrite each other again and we currently have no
+                # way to figure out which is supposed to be the vdb one and which is supposed to be the "real" one.
+#                else:
+#                    print(f"In reload phase, registering again {n}")
             except gdb.error:
                 pass
 #                print(f"No such command: {n}")

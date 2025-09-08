@@ -8,18 +8,18 @@ import vdb.util
 
 import gdb
 
-import sys
-import os
-import importlib
-import traceback
-import concurrent.futures
 import atexit
+import concurrent.futures
+import importlib
 import inspect
+import os
 import re
 import subprocess
+import sys
+import traceback
 
 from typing import Dict
-from types import ModuleType
+from types import ModuleType, TracebackType
 
 
 
@@ -60,10 +60,11 @@ enable_list      = vdb.config.parameter( "vdb-enable-list",True)
 enable_time      = vdb.config.parameter( "vdb-enable-time",True)
 enable_swo       = vdb.config.parameter( "vdb-enable-swo",True)
 enable_hardfault = vdb.config.parameter( "vdb-enable-hardfault",True)
+enable_reload    = vdb.config.parameter( "vdb-enable-reload",True)
 
 configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,xi,pahole,ftree,dashboard,hashtable,ssh,track"
                                                                     ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos,xi,list"
-                                                                    ",time,swo,hardfault" )
+                                                                    ",time,swo,hardfault,reload" )
 
 
 home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)
@@ -97,6 +98,26 @@ def print_exc( ):
         vdb.util.console.print_exception( show_locals = True )
     else:
         traceback.print_exc()
+
+def pretty_stack( depth = 1):
+    tb = None
+    while True:
+        try:
+            frame = sys._getframe(depth)
+            depth += 1
+        except ValueError as exc:
+            break
+        tb = TracebackType(tb, frame, frame.f_lasti, frame.f_lineno)
+    ex = Exception('')
+    stack = rich.traceback.Traceback.extract(type(ex), ex, tb, show_locals=False)
+    return stack
+
+def print_stack( stack = None, depth = 1 ):
+    if( stack is None ):
+        depth += 1
+        stack = pretty_stack( depth = depth)
+    print()
+    vdb.util.console.print(rich.traceback.Traceback(stack, show_locals=False))
 
 enabled_modules: Dict[str,ModuleType] = {}
 vdb_dir = None
@@ -214,6 +235,9 @@ def load_init( vdb_init_file ):
     except FileNotFoundError:
         pass
 
+imported_plugins = []
+plugin = ModuleType("plugin")
+
 def load_plugins( plugindir ):
     try:
         oldpath = []
@@ -234,7 +258,22 @@ def load_plugins( plugindir ):
                     try:
                         vdb.util.log(f"Loading plugin {plugindir}/{pt}/{fn}", level=vdb.util.Loglevel.info)
                         importname = f"{pt}.{fn[:-3]}"
-                        importlib.import_module(importname)
+#                        mod = import_module_into_namespace( importname, f"vdb.plugin.{importname}")
+                        mod = importlib.import_module(importname)
+                        imported_plugins.append(mod)
+
+                        pp = plugin
+                        for modpath in importname.split(".")[:-1]:
+                            npp = getattr( pp, modpath, None )
+                            if( npp is None ):
+                                npp = ModuleType(modpath)
+                                setattr( pp, modpath, npp )
+                            pp = npp
+#                            print(f"{modpath=}")
+#                        print(f"{pp=}")
+                        lastname = importname.split(".")[-1]
+                        setattr( pp, lastname, mod )
+#                        setattr( plugin, importname, mod )
                     except ModuleNotFoundError as e:
                         vdb.util.log(f"Could not load plugin {plugindir}/{pt}/{fn}. {e}", level=vdb.util.Loglevel.warn)
                     except:
@@ -384,6 +423,7 @@ def exit( ):
 atexit.register(exit)
 
 log = vdb.util.log
+reloading = False
 
 def rich_theme( ts ):
     theme = {}

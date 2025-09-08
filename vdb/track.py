@@ -17,6 +17,7 @@ import traceback
 import time
 import datetime
 import struct
+import rich
 
 
 # Idea for "auto interval" ... check how many, then increase or reduce the interval until we get a bit less. Have a limit for max
@@ -553,6 +554,7 @@ class track_item(track_item_base):
         self.pack_expression = pack_expression
         self.pack_ids = {}
         self.seen_ids = set()
+        self.pseudo_items = []
         if( self.unify ):
             # so far we only support struct packs for this
             names,_ = unpack_prepare(self.pack_expression)
@@ -565,7 +567,9 @@ class track_item(track_item_base):
             for n in names:
                 nn = track_item.get_next_number()
                 self.pack_ids[n] = nn
-                trackings_by_number[nn] = pseudo_item(n,self.expression,nn)
+                pi = pseudo_item(n,self.expression,nn)
+                trackings_by_number[nn] = pi
+                self.pseudo_items.append(pi)
 
         if( self.python_eval ):
             self.expression = self.expression.replace( "$(", "gdb.parse_and_eval(" )
@@ -914,6 +918,11 @@ def show( ):
 def clear( ):
     global tracking_data
     tracking_data = {}
+
+    tbn = list( trackings_by_number.values() )
+    for n in tbn:
+        if( isinstance(n,pseudo_item) ):
+            del trackings_by_number[n.number]
     # TODO Also clear the unification cache
     print("Cleared all tracking data")
 
@@ -924,7 +933,7 @@ def auto_clear( ):
         clear()
 
 
-def data( ):
+def get_data( ):
     first = 0
     datatable = []
 
@@ -964,7 +973,11 @@ def data( ):
 
 
         datatable.append( line )
+    return datatable
 
+def print_data( ):
+    rich.inspect( trackings_by_number )
+    datatable = get_data()
     dt = vdb.util.format_table(datatable)
     print(dt)
 
@@ -1051,7 +1064,7 @@ You should have a look at the data and graph modules, which can take the data fr
             elif( argv[0] == "show" ):
                 show()
             elif( argv[0] == "data" ):
-                data()
+                print_data()
             elif( argv[0] == "del" ):
                 do_del(argv[1:])
             elif( argv[0] == "clear" ):
@@ -1804,6 +1817,10 @@ def interval( iv, nti ):
             next_t += iv
         cnt += 1
     print("Terminating interval tracking...")
+    rich.inspect(trackings_by_number)
+    for n in nti:
+        del trackings_by_number[n.number]
+    rich.inspect(trackings_by_number)
     prompt()
 
 
