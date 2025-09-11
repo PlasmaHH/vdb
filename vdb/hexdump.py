@@ -117,9 +117,9 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
 
     olen = xlen
 
-    print(f"hexdump reads {addr:#0x}")
+#    print(f"hexdump reads {addr:#0x}")
     data = vdb.memory.read_u(uncached,addr,xlen,partial=True)
-    print(f"{type(data)=}")
+#    print(f"{type(data)=}")
 #    if( data is not None ):
 #        print(f"{data.tobytes()=}")
 

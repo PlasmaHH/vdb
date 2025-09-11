@@ -12,6 +12,10 @@ class events(Enum):
     first_prompt = auto()
     step = auto()
 
+
+# XXX Add own synthetic events along with a way to trigger them and possibly even trigger gdb events.
+# First application: detect architecture changes easier, reconfigure all kinds of stuff for it
+
 def on_event( gdbreg, darg ):
     def decorator( func ):
         def wrapper(*arg):

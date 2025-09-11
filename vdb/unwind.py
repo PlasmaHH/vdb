@@ -374,6 +374,8 @@ def hint( argv ):
     vptype = gdb.lookup_type("void").pointer()
     isym = gdb.execute("info symbol $pc",False,True)
     m=re.search(".*(\+ [0-9]*) in section.*",isym)
+    print(f"{isym=}")
+    print(f"{m=}")
     funcstart = None
     if( m is not None ):
 #        print("m = '%s'" % (m,) )
@@ -385,9 +387,12 @@ def hint( argv ):
 #        print("offset = '%s'" % (offset,) )
     archname = gdb.selected_frame().architecture().name()
     if( archname.startswith("arm") ):
+        alignmask = ~1
+        print(f"{alignmask=}")
         callre = re.compile("bl (0x[0-9a-f]*)")
         ccallre = re.compile("bl \*%") # computed calls
     else:
+        alignmask = None
         callre = re.compile("call (0x[0-9a-f]*)")
         ccallre = re.compile("call \*%") # computed calls
     # $rsp-16 is kinda the default position
@@ -400,7 +405,11 @@ def hint( argv ):
 
         at = vdb.memory.mmap.get_atype(val)
         if( at == vdb.memory.access_type.ACCESS_EX ):
-            cmd=f"dis/{hint_context.value} {int(val)}"
+            dval = int(val)
+            if( alignmask is not None ):
+                dval = dval & alignmask
+            cmd=f"dis/{hint_context.value} {dval}"
+#            print(f"{cmd=}")
             try:
                 dis=gdb.execute(cmd,False,True)
             except:
@@ -417,6 +426,7 @@ def hint( argv ):
                 for d in dis:
                     pd = colors.strip_color(d)
                     m = callre.search(pd)
+                    print(f"{m=}")
                     if( m is None ):
                         m = ccallre.search(pd)
                         if( m is not None ):

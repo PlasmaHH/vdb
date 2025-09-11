@@ -4,6 +4,7 @@
 import vdb.event
 
 import gdb
+import rich
 from typing import Dict
 
 pointer_size = 0
@@ -125,4 +126,35 @@ def maybe_gather_info():
         need_update = False
 
 gather_info()
+
+def info( ):
+    table = rich.table.Table(
+            "Member",
+            "Value",
+            "Bits",
+            "Comment"
+            )
+    table.add_row( "pointer_size", str(pointer_size), "", "Default register size too" )
+    table.add_row( "pc_name", pc_name, "", "Instruction pointer register name" )
+    table.add_row( "void_t", void_t.name, "", "gdb.Type" )
+    table.add_row( "uintptr_t", str(uintptr_t.strip_typedefs()), str(8*uintptr_t.sizeof), "gdb.Type" )
+    table.add_row( "void_ptr_t", str(void_ptr_t), str(8*void_ptr_t.sizeof), "gdb.Type" )
+    table.add_row( "void_ptr_ptr_t", str(void_ptr_ptr_t), str(8*void_ptr_ptr_t.sizeof), "gdb.Type" )
+
+    # Cause caches to possibly update
+    sint(0)
+    uint(0)
+
+    for bits,t in uint_cache.items():
+        tc = vdb.util.gdb_type_code(t.code)
+        table.add_row( f"uint{bits}_t", str(t.strip_typedefs()), str(8*t.sizeof), f"Accessible via vdb.arch.uint({bits})")
+    for bits,t in sint_cache.items():
+        tc = vdb.util.gdb_type_code(t.code)
+        table.add_row( f"sint{bits}_t", str(t.strip_typedefs()), str(8*t.sizeof), f"Accessible via vdb.arch.sint({bits})")
+
+    table.add_row( "name()", name(), "", "Active arch name" )
+    table.add_row( "active()", str(active()), "", "Active arch gdb.Architecture object")
+
+    vdb.util.console.print(table)
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

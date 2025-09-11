@@ -254,7 +254,13 @@ def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = N
         ret += f"   {ascstring}"
     try:
         nptr,gvalue = dereference( ptr )
-        if( nptr == gvalue ):
+
+#        print(f"{nptr.type=}")
+#        print(f"{nptr.bytes=}")
+#        print(f"{gvalue.type=}")
+#        print(f"{gvalue.bytes=}")
+
+        if( int(nptr) == int(gvalue) ):
             ret += arrow_infinity.value + color(gvalue,archsize)[0]
             pure = False
         else:

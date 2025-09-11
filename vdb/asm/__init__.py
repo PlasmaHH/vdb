@@ -80,7 +80,7 @@ bp_marker_disabled = vdb.config.parameter("vdb-asm-breakpoint-disabled-marker", 
 bp_number = vdb.config.parameter("vdb-asm-breakpoint-use-numbers", True )
 
 bp_numbers = vdb.config.parameter("vdb-asm-breakpoint-numbers", "❶❷❸❹❺❻❼❽❾❿" )
-bp_numbers = vdb.config.parameter("vdb-asm-breakpoint-numbers", "🯱🯲🯳🯴🯵🯶🯷🯸🯹")
+#bp_numbers = vdb.config.parameter("vdb-asm-breakpoint-numbers", "🯱🯲🯳🯴🯵🯶🯷🯸🯹")
 bp_numbers_disabled = vdb.config.parameter("vdb-asm-breakpoint-numbers-disabled", "➀➁➂➃➄➅➆➇➈➉" )
 
 next_marker = vdb.config.parameter("vdb-asm-next-marker", "→" )
@@ -165,6 +165,7 @@ xi_history = {}
 color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
 valid_archs = [ "x86", "arm" ]
+# XXX Move to vdb.arch
 arch_aliases = {
                 "i386" : "x86",
                 "i386:x86-64" : "x86",
@@ -442,6 +443,7 @@ class register_set:
     # XXX We need to be able to handle in an easy way specifcations like %al and %ah, best would be through some extra
     # layer that can easily expanded for other archs
     def set( self, name, value, remove_alts = True, origin = None ):
+#        assert origin is not None
         if( remove_alts ):
             for rname in reg_alts(name):
                 self.values.pop(rname,None)
@@ -475,13 +477,19 @@ class register_set:
         return ret
 
     def get( self, name, altval = None ):
+#        vdb.util.bark() # print("BARK")
+#        print(f"{name=}")
+#        print(f"{altval=}")
         for rname in reg_alts(name):
             rv,origin = self.values.get(rname,(None,None) )
             if( rv is not None ):
                 rs = vdb.register.register_size(name)
+#                print(f"{rv=}")
+#                print(f"{rs=}")
                 if( rs is not None ):
                     mask = ( 1 << rs ) - 1
                     rv &= mask
+#                print(f"{rv=}")
                 return ( rv, rname, origin )
         return ( altval, name, None )
 
@@ -510,6 +518,18 @@ class register_set:
 
     def __repr__( self ):
         return str(self)
+
+    def dump( self ):
+        table = rich.table.Table(
+                "Register",
+                "Value",
+                "Type",
+                "Origin"
+                                 )
+        for n,v in self.values.items():
+            table.add_row( n, f"{v[0]:#0x}", type(v[0]).__name__, v[1] )
+        vdb.util.console.print(table)
+
 
 
 
@@ -606,9 +626,9 @@ class asm_arg_base( ):
         if( self.register is not None ):
 #            vdb.util.bark() # print("BARK")
 #            vdb.util.bark(-1) # print("BARK")
-#            print(f"{registers=}")
-#            print(f"{type(registers)=}")
+#            registers.dump()
 #            print(f"{self.register=}")
+
             val,_,_ = registers.get( self.register )
 #            print(f"{val=}")
 #            print("self.prefix = '%s'" % (self.prefix,) )
@@ -2814,7 +2834,7 @@ def gen_vtable( ):
             fun = getattr( current_arch, funname )
             funname = funname[len(start):]
             flow_vtable[funname] = fun
-#    print("flow_vtable = '%s'" % (flow_vtable,) )
+#    print(f"{flow_vtable=}")
 
 
 def short_color( symbol ):
@@ -2906,6 +2926,7 @@ def register_flow( lng, frame : "gdb frame" ):
     thumb_mode = True
 
     # at the end we advance to the next instruction or get one from a stack of conditional jump points (flowstack)
+#    print(f"while ins {possible_registers=}")
     while ins is not None:
 #        print("ins = '%s'" % (ins,) )
         # Simple protection against any kinds of endless loops
@@ -2959,6 +2980,8 @@ def register_flow( lng, frame : "gdb frame" ):
             #   →  0x0000000000401152 0  <+12>:           48 83 7d f8 04    cmpq  $0x4,-0x8(%rbp) %=0x4,x@-0x8(%rbp),x@@0x7fffffffccc8,x@=0x1
             #                                                               cmpq $0x4,-0x8(%rbp) %=0x4,x@-0x8(%rbp)
 
+#        print(f"BIM ...")
+#        possible_registers.dump()
         if( ins.marked ):
             cf = current_arch.current_flags(frame)
             if( cf is not None ):
@@ -2969,12 +2992,15 @@ def register_flow( lng, frame : "gdb frame" ):
                     ov,an,origin = possible_registers.get(r)
                     if( ov is not None and v != ov ):
                         ins.add_extra( f"Real register {r} has real value {v:#0x} from {o} but we deduced {ov:#0x} for {an} from {origin}")
+#                        print( f"Real register {r} has real value {v:#0x} from {o} but we deduced {ov:#0x} for {an} from {origin}")
+#                        possible_registers.dump()
             possible_registers.merge(cr)
             ins.last_seen_registers = possible_registers.clone()
 
         # XXX Refactor to have the register setting etc. just once
         # Check if we have a special function handling more than the basics
         fun = flow_vtable.get(ins.mnemonic,None)
+
         if( fun is not None ):
             ins.possible_in_register_sets.append( possible_registers.clone() )
             ins.possible_in_flag_sets.append( possible_flags.clone() )
@@ -2986,20 +3012,29 @@ def register_flow( lng, frame : "gdb frame" ):
         # There is none, check if there is any that can be synthesized from the table
         else:
             if( ins.mnemonic not in unhandled_mnemonics ):
+                best_candidate = None
                 for mn,fun in flow_vtable.items():
                     if( ins.mnemonic.startswith(mn) ):
-                        vdb.log(f"Synthesized mnemonic {ins.mnemonic} from {mn}, if their flow is not handled the same, create an additional one for {ins.mnemonic}",level=4)
-                        flow_vtable[ins.mnemonic] = fun
-                        ins.possible_in_register_sets.append( possible_registers.clone() )
-                        ins.possible_in_flag_sets.append( possible_flags.clone() )
-                        (possible_registers, possible_flags) = fun( ins, frame, possible_registers, possible_flags )
-                        ins.possible_out_register_sets.append( possible_registers.clone() )
-                        ins.possible_out_flag_sets.append( possible_flags.clone() )
-                        break
-                else:
+                        if( best_candidate is None ):
+                            best_candidate = mn
+                        elif( len(best_candidate) == len(mn) ):
+                            # Should not happen, this now would mean both are the same
+                            pass
+                        elif( len(mn) > len(best_candidate) ):
+                            best_candidate = mn
+                if( best_candidate is None ):
                     ins.unhandled = True
                     # Store for later to be quicker
                     unhandled_mnemonics.add( ins.mnemonic )
+                else:
+                    fun = flow_vtable[best_candidate]
+                    vdb.log(f"Synthesized mnemonic {ins.mnemonic} from {best_candidate}, if their flow is not handled the same, create an additional one for {ins.mnemonic}",level=4)
+                    flow_vtable[ins.mnemonic] = fun
+                    ins.possible_in_register_sets.append( possible_registers.clone() )
+                    ins.possible_in_flag_sets.append( possible_flags.clone() )
+                    (possible_registers, possible_flags) = fun( ins, frame, possible_registers, possible_flags )
+                    ins.possible_out_register_sets.append( possible_registers.clone() )
+                    ins.possible_out_flag_sets.append( possible_flags.clone() )
             else:
                 ins.unhandled = True
 
@@ -3635,6 +3670,7 @@ def get_single_tuple( bpos, showspec_filter = "abomjhHcdtT", extra_filter = "", 
     reti=None
     try:
         da=vdb.arch.active().disassemble(int(bpos),count=1)
+#        print(f"{da=}")
         da=da[0]
         fake = f"{da['addr']:#0x} <+0>: {da['asm']}"
         li = parse_from_gdb("?",fake,do_flow=do_flow)

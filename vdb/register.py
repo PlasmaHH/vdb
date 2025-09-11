@@ -222,7 +222,7 @@ possible_registers = [
 		]
 
 register_sizes = {
-        64 : [ "rax","rbx","rcx","rdx","rsi","rdi","rbp","rsp","rip", 
+        64 : [ "rax","rbx","rcx","rdx","rsi","rdi","rbp","rsp","rip",
                 "r0","r1","r2","r3","r4","r5","r6","r7", # other than x86
                 "r8" , "r9" , "r10", "r11",
                 "r12", "r13", "r14", "r15",
@@ -231,7 +231,7 @@ register_sizes = {
                 "r24", "r25", "r26", "r27",
                 "r28", "r29", "r30", "r31",
                 ],
-        32 : [ "eax","ebx","ecx","edx","esi","edi","ebp","esp","eip", 
+        32 : [ "eax","ebx","ecx","edx","esi","edi","ebp","esp","eip",
                 "r0d","r1d","r2d","r3d","r4d","r5d","r6d","r7d", # other than x86
                 "r8d" , "r9d" , "r10d", "r11d",
                 "r12d", "r13d", "r14d", "r15d",
@@ -240,7 +240,7 @@ register_sizes = {
                 "r24d", "r25d", "r26d", "r27d",
                 "r28d", "r29d", "r30d", "r31d",
                 ],
-        16 : [ "ax","bx","cx","dx","si","di","bp","sp","ip", 
+        16 : [ "ax","bx","cx","dx","si","di","bp","sp","ip",
                 "r0w","r1w","r2w","r3w","r4w","r5w","r6w","r7w", # other than x86
                 "r8w" , "r9w" , "r10w", "r11w",
                 "r12w", "r13w", "r14w", "r15w",
@@ -291,6 +291,10 @@ def gen_size_per_reg( ):
             size_per_reg[rn] = sz
 
 def register_size( name ):
+    # XXX Quick hack to get arm to work, the real fix will be to split up all kinds of informations by arch
+    if( vdb.arch.name().startswith("arm") ):
+        return vdb.arch.pointer_size
+
     if( len(size_per_reg) == 0 ):
         gen_size_per_reg()
     return size_per_reg.get(name,None)

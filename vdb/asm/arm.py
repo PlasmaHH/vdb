@@ -70,7 +70,9 @@ def extract_conditional( mnemonic ):
     return None
 
 # XXX This is just copied from x86, we need to go through things and add them here
+# The order is sometimes important
 _arm_class_res = [
+        ( "bic.*", "bit" ),
         ( "j.*|b.*|cb.*", "jump" ),
         ( "[vp]*mov.*|xchg.*|stos", "mem" ),
         ( "[vp]*cmp.*|test.*|cmov.*|[cp]*comisd", "cond" ),
@@ -429,6 +431,19 @@ def set_flags_result( flag_set, result, arg = None, val = None ):
         flag_set.set("N", int( (result & sbit) != 0  ))
         flag_set.set("V", int( (result & sbit) != (val & sbit) ) )
 
+def vt_flow_bic( ins, frame, possible_registers, possible_flags ):
+
+    val0,addr = ins.arguments[1].value( possible_registers )
+    val1,addr = ins.arguments[2].value( possible_registers )
+
+    if( val0 is not None and val1 is not None ):
+        res = val0 & ~val1
+        possible_registers.set( ins.arguments[0].register, res, origin = "flow_bic" )
+        ins.add_explanation(f"Bitwise bit clear {val0} & ~{val1} => {res}")
+    else:
+        ins.add_explanation("Bitwise bit clear (and not)")
+
+    return (possible_registers,possible_flags)
 
 def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
     val,addr = ins.arguments[1].value( possible_registers )
@@ -515,7 +530,8 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     to  = ins.arguments[0]
 
     frmval,_ = frm.value( possible_registers )
-    possible_registers.set( to.register, frmval )
+#    possible_registers.dump()
+    possible_registers.set( to.register, frmval, origin = "flow_mov" )
 
     if( vdb.asm.asm_explain.value ):
         if( frm.immediate is not None ):
@@ -583,7 +599,7 @@ def vt_flow_push( ins, frame, possible_registers, possible_flags ):
         vl = int(vl) - nargs*( vdb.arch.pointer_size // 8 )
         possible_registers.set(rname,vl,origin="flow_push")
     else:
-        possible_registers.set(rname,None)
+        possible_registers.set(rname,None,origin = "flow_push")
 
     for a in ins.arguments:
         a.target = False
