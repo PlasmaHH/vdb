@@ -47,7 +47,7 @@ class fake_unwinder(gdb.unwinder.Unwinder):
 
     def __call__(self,pending_frame):
         print(f"fake_unwinder __call__, enabled? {self.enabled}, _enabled? {self._enabled}")
-#        vdb.util.bark() # print("BARK")
+
         try:
             if( self.enabled ):
                 return self.do_call(pending_frame)
@@ -75,15 +75,18 @@ class fake_unwinder(gdb.unwinder.Unwinder):
             ui.add_saved_register( l, pf.read_register(l) )
 
     def do_call(self,pending_frame):
-#        print()
-#        print("======================")
-#        vdb.util.bark() # print("BARK")
-#        print("pending_frame.level() = '%s'" % (pending_frame.level(),) )
-#        print("self.level = '%s'" % (self.level,) )
+        print()
+        print("======================")
+        vdb.util.bark() # print("BARK")
+        print("pending_frame.level() = '%s'" % (pending_frame.level(),) )
+        print("self.level = '%s'" % (self.level,) )
+
+        # We only really have to set level 0 as for all others gdb should follow
 #        if( self.level == 1):
 #            self.level += 1
 #            return self.cached_ui
 #            return None
+        # Read initial values for the case we don't have fake ones to set
         sp = pending_frame.read_register("sp")
         pc = pending_frame.read_register("pc")
         try:
@@ -91,23 +94,28 @@ class fake_unwinder(gdb.unwinder.Unwinder):
             int(lr)
         except gdb.error:
             lr = None
-#        print("sp = '%s'" % (sp,) )
-#        print("pc = '%s'" % (pc,) )
+
+
+        print("PFrame sp = '%s'" % (sp,) )
+        print("PFrame pc = '%s'" % (pc,) )
 #        print("type(lr) = '%s'" % (type(lr),) )
 #        if( lr is not None ):
 #            print("lr.is_lazy = '%s'" % (lr.is_lazy,) )
 #            print(f"{int(lr)=:#0x}")
 #            gdb.execute(f"p (void*){lr}")
-#        print("self.fake_sp = '%s'" % (self.fake_sp,) )
-#        print("self.fake_pc = '%s'" % (self.fake_pc,) )
-#        print("self.fake_lr = '%s'" % (self.fake_lr,) )
+        print(f"Fake SP {int(self.fake_sp):#0x}")
+        print(f"Fake PC {self.fake_pc}")
+        print(f"Fake LR {self.fake_lr}")
 
         if( self.level >= 1 ):
             return None
+
+        pc = self.fake_pc
+        sp = self.fake_sp
         # the frame id must be the one of the current ones sp/pc
         fid = FrameId(sp,pc)
-#        print("fid = '%s'" % (fid,) )
-        ui = pending_frame.create_unwind_info(FrameId(sp,pc))
+        print("fid = '%s'" % (fid,) )
+        ui = pending_frame.create_unwind_info( fid )
 
         # Fake a different 0th frame by using for this frame recovered pc and sp that will then in the next call be used
         # for the FrameId
@@ -130,8 +138,10 @@ class fake_unwinder(gdb.unwinder.Unwinder):
 
         ui.add_saved_register( "pc", pc )
 
+
         self.take_over( pending_frame, ui, [ "xpsr" ] )
 
+        print(f"Returning {ui=} {ui}")
 #        regs = pending_frame.architecture().registers()
 #        for r in regs:
 #            print("r = '%s'" % (r,) )
@@ -158,19 +168,238 @@ class task:
     Generic task that has certain things just not set when the OS does not support it
     """
     def __init__( self ):
+        # If the OS supports it, this is a name, otherwise just empty
         self.name = None
-        self.id = None
+        # Most OSs have some kind of ID
+        self.id = -1
         self.priority = None
         self.status = None
-        self.stack = None
+        self.stack = 0
         self.stack_start = None
         self.stack_position = None
         self.stack_size = None
         self.stack_usage = None
         self.current = False
+        self.entry = None
         self.pc = None
+        self.lr = None
 
-class os_embos( ):
+
+
+class os:
+    def __init__( self ):
+        pass
+
+    def version( self ):
+        return self.ver
+
+    def name( self ):
+        return self._name
+
+    def print_task_list( self, tlist, with_bt = None, id_filter = None ):
+        tbl = []
+        tbl.append( [ "ID","Name","Stack","Usage","Prio","Status","Entry","pc","lr" ] )
+        global unwinder
+        if( with_bt is not None and unwinder is None ):
+            unwinder = fake_unwinder()
+            gdb.unwinder.register_unwinder(None,unwinder,replace=True)
+
+        for t in tlist:
+            # XXX status can optionally refer to a wait object
+            col=None
+            if( t.current ):
+                col = color_active_task.value
+            if( id_filter == t.id ):
+                col = color_marked_task.value
+            usage = f"{t.stack_usage}/{t.stack_size}"
+            tbl.append( [ vdb.color.colorl(f"{int(t.id):#0x}",col), t.name, f"{int(t.stack):#0x}", usage, t.priority, self._status_string(t.status), t.entry, t.pc, t.lr ] )
+
+        if( with_bt is not None ):
+#            print("unwinder.enabled = '%s'" % (unwinder.enabled,) )
+            frame = gdb.selected_frame()
+            psp = frame.read_register("psp")
+            msp = frame.read_register("msp")
+            pc = frame.read_register("pc")
+            rt = vdb.util.format_table(tbl).split("\n")
+            char_ptr = gdb.lookup_type("char").pointer()
+
+            header = True
+            cnt=0
+#            print("rt = '%s'" % (rt,) )
+#            gdb.execute("reg sp")
+            # Go through the table lines that would be displayed, tlist contains "in parallel" the same information as
+            # objects still but we want the table format here for output
+            for r in rt:
+                print(r)
+                # First is the header, don't act on it
+                if( header ):
+                    header = False
+                    continue
+
+                if( cnt < len(tlist) ):
+                    t = tlist[cnt]
+                    # Only print bt for those that match the filter if present
+                    if( id_filter is None or id_filter == t.id ):
+                        cur = t.current
+                        # If its the currently active thread, disable any fake unwinding and use the normal gcc one,
+                        # thats more stable and faster
+                        if( cur ):
+                            unwinder.disable()
+                            gdb.execute(with_bt)
+                        else:
+                            # Get the stack pointers as different types
+                            tsp = t.stack.cast(char_ptr)
+                            vlr = t.stack.cast(vdb.arch.void_ptr_ptr_t)
+#                            gdb.execute(f"hd/p {int(tsp)} 96")
+                            tcand = None
+                            for i in range(0,128):
+                                vcand = vlr + i
+                                cdif = vcand.dereference() - t.lr
+                                if( cdif == 0 ):
+                                    tcand = vcand.cast(char_ptr)
+                                    if( False ):
+                                        print("i = '%s'" % (i,) )
+                                        print("cdif = '%s'" % (cdif,) )
+                                        print("vcand = '%s'" % (vcand,) )
+                                        print("tsp = '%s'" % (tsp,) )
+                                        print("int(vcand)-int(tsp) = '%s'" % (int(vcand)-int(tsp),) )
+                                        gdb.execute(f"hd/p {int(tcand)}-128 256")
+                                    break
+                            # try to recover a better stack pointer by searching for the pushed lr
+                            if( tcand is not None ):
+                                tsp = tcand
+                                # thats for three other parameters, I guess we have to somehow figure out how many 
+                                tsp += 12
+#                                tsp += 20
+                            else:
+                                tsp += 40
+                                tsp += 32
+#                            gdb.execute(f"hd/p {int(tsp)} 32")
+#                        add=int(time.time()) % 100
+#                        print("add = '%s'" % (add,) )
+#                        tsp += add
+                            tpc = t.pc
+                            tlr = t.lr
+                            tsp = t.stack_position
+#                            tsp = gdb.Value( int(tsp) + 12 ).cast( t.stack_position.type )
+
+#                        print("tsp = '%s'" % (tsp,) )
+#                        print("tpc = '%s'" % (tpc,) )
+#                        print("tlr = '%s'" % (tlr,) )
+#                        print(f"frame view {int(tsp)} {int(tpc)}")
+#                        print(f"frame view {int(tsp):#0x} {int(tpc):#0x}")
+#                        gdb.execute(f"frame view {int(tsp)} {int(tpc)}")
+#                        gdb.execute(f"set $psp={int(tsp)}")
+#                        gdb.execute(f"set $msp={int(tsp)}")
+#                        gdb.execute(f"set $pc={int(tpc)}")
+                            unwinder.enable()
+#                            for i in range(0,32):
+#                                xsp = tsp - 16*4 + i*4
+#                                unwinder.set( xsp, tpc, tlr )
+#                                print(f"++++++++++++++++++++++++++++ with xsp = {xsp}")
+#                                gdb.execute("maintenance flush register-cache") # clear cache, cause to call again
+#                                gdb.execute(with_bt)
+#                                unwinder.reset()
+                            unwinder.set( tsp, tpc, tlr )
+#                        gdb.execute("fr 0")
+#                        gdb.execute("fr 1")
+                            gdb.execute("maintenance flush register-cache") # clear cache, cause to call again
+#                            print("Flushed register cache")
+                            btdata=gdb.execute(with_bt,False,True)
+                            btdata=btdata.split("\n")
+                            btdata=btdata[2:]
+                            print("\n".join(btdata))
+                            unwinder.reset()
+                            unwinder.disable()
+#                        gdb.execute("reg sp")
+#                        gdb.execute(f"set $msp={int(msp)}")
+#                        gdb.execute(f"set $psp={int(psp)}")
+#                        gdb.execute(f"set $pc={int(pc)}")
+                cnt += 1
+                break
+
+        else:
+            vdb.util.print_table(tbl)
+
+
+
+class os_zephyr( os ):
+
+    _THREAD_DUMMY      = (1 << 0)
+    _THREAD_PENDING    = (1 << 1)
+    _THREAD_SLEEPING   = (1 << 2)
+    _THREAD_DEAD       = (1 << 3)
+    _THREAD_SUSPENDED  = (1 << 4)
+    _THREAD_ABORTING   = (1 << 5)
+    _THREAD_SUSPENDING = (1 << 6)
+    _THREAD_QUEUED     = (1 << 7)
+
+    status_map = {
+                _THREAD_DUMMY:      "dummy",
+                _THREAD_PENDING:    "pending",
+                _THREAD_SLEEPING:   "sleeping",
+                _THREAD_DEAD:       "dead",
+                _THREAD_SUSPENDED:  "suspended",
+                _THREAD_ABORTING:   "aborting",
+                _THREAD_SUSPENDING: "suspending",
+                _THREAD_QUEUED:     "queued",
+            }
+
+    def __init__( self ):
+        self.ver = "<unknown>"
+        self._name = "Zephyr"
+
+    def get_task_list( self ):
+        ret = []
+
+        thread = gdb.parse_and_eval("_kernel.threads")
+        current_thread = gdb.parse_and_eval("_kernel.cpus.current")
+
+        while thread:
+            t = task()
+            ret.append(t)
+            t.name = thread["name"].string()
+            t.id = int(thread)
+
+            # The first byte of the stack array
+            t.stack = thread["stack_info"]["start"]
+            t.stack_start = t.stack
+            t.stack_size = thread["stack_info"]["size"]
+#            t.stack_usage = thread["stack_info"]["delta"]
+            t.entry = thread["entry"]["pEntry"]
+            # Threads saved (not current for active ones)
+            t.stack_position = thread["callee_saved"]["psp"]
+
+            t.lr = ""
+            rx = gdb.parse_and_eval(f"(void**){t.stack_position}")
+            t.pc = rx[6]
+            t.lr = rx[5]
+
+            t.status = thread["base"]["thread_state"]
+            t.priority = thread["base"]["prio"]
+            t.priority = int(t.priority)
+
+            if( thread == current_thread ):
+                t.current = True
+                t.stack_position = gdb.parse_and_eval("$psp")
+                t.pc = gdb.parse_and_eval("$pc")
+
+            # Or the initial size of the stack pointer + 4?
+            stack_end = int(t.stack_start) + int(t.stack_size)
+            t.stack_usage = stack_end - int(t.stack_position)
+
+            thread = thread["next_thread"]
+        return ret
+
+    def _status_string( self, st ):
+        ret = []
+        for k,v in self.status_map.items():
+            if( st & k ):
+                ret.append(v)
+
+        return "+".join(ret)
+
+class os_embos( os ):
 
     TS_READY            = (0x00 << 3)
     TS_WAIT_EVENT       = (0x01 << 3)
@@ -248,7 +477,7 @@ class os_embos( ):
                 t.name = pTask["sName"]
             except gdb.error:
                 pTask=pTask.cast(otp)
-                t.name = pTask["sName"]
+                t.name = pTask["sName"].string("iso-8859-15")
             try:
                 t.id = int(pTask)
                 t.priority = int(pTask["Priority"])
@@ -293,8 +522,6 @@ class os_embos( ):
 
         return ret
 
-    def version( self ):
-        return self.ver
 
 
     def name( self ):
@@ -302,141 +529,29 @@ class os_embos( ):
             return self.nm.string()
         except:
             return None
-
-    def print_task_list( self, tlist, with_bt = None, id_filter = None ):
-        tbl = []
-        tbl.append( [ "ID","Name","Stack","Usage","Prio","Status","pc","lr" ] )
-        global unwinder
-        if( with_bt is not None and unwinder is None ):
-            unwinder = fake_unwinder()
-            gdb.unwinder.register_unwinder(None,unwinder,replace=True)
-
-        for t in tlist:
-            # XXX status can optionally refer to a wait object
-            col=None
-            if( t.current ):
-                col = color_active_task.value
-            if( id_filter == t.id ):
-                col = color_marked_task.value
-            usage = f"{t.stack_usage}/{t.stack_size}"
-            tbl.append( [ vdb.color.colorl(f"{int(t.id):#0x}",col), t.name.string("iso-8859-15"), f"{int(t.stack):#0x}", usage, t.priority, self._status_string(t.status), t.pc, t.lr ] )
-        if( with_bt is not None ):
-#            print("unwinder.enabled = '%s'" % (unwinder.enabled,) )
-            frame = gdb.selected_frame()
-            psp = frame.read_register("psp")
-            msp = frame.read_register("msp")
-            pc = frame.read_register("pc")
-            rt = vdb.util.format_table(tbl).split("\n")
-            char_ptr = gdb.lookup_type("char").pointer()
-
-            header = True
-            cnt=0
-#            print("rt = '%s'" % (rt,) )
-#            gdb.execute("reg sp")
-            # Go through the table lines that would be displayed, tlist contains "in parallel" the same information as
-            # objects still but we want the table format here for output
-            for r in rt:
-                print(r)
-                # First is the header, don't act on it
-                if( header ):
-                    header = False
-                    continue
-
-                if( cnt < len(tlist) ):
-                    t = tlist[cnt]
-                    # Only print bt for those that match the filter if present
-                    if( id_filter is None or id_filter == t.id ):
-                        cur = t.current
-                        # If its the currently active thread, disable any fake unwinding and use the normal gcc one,
-                        # thats more stable and faster
-                        if( cur ):
-                            unwinder.disable()
-                            gdb.execute(with_bt)
-                        else:
-                            # Get the stack pointers as different types
-                            tsp = t.stack.cast(char_ptr)
-                            vlr = t.stack.cast(vdb.arch.void_ptr_ptr_t)
-#                            gdb.execute(f"hd/p {int(tsp)} 96")
-                            tcand = None
-                            for i in range(0,128):
-                                vcand = vlr + i
-                                cdif = vcand.dereference() - t.lr
-                                if( cdif == 0 ):
-                                    tcand = vcand.cast(char_ptr)
-                                    if( False ):
-                                        print("i = '%s'" % (i,) )
-                                        print("cdif = '%s'" % (cdif,) )
-                                        print("vcand = '%s'" % (vcand,) )
-                                        print("tsp = '%s'" % (tsp,) )
-                                        print("int(vcand)-int(tsp) = '%s'" % (int(vcand)-int(tsp),) )
-                                        gdb.execute(f"hd/p {int(tcand)}-128 256")
-                                    break
-                            # try to recover a better stack pointer by searching for the pushed lr
-                            if( tcand is not None ):
-                                tsp = tcand
-                                # thats for three other parameters, I guess we have to somehow figure out how many 
-                                tsp += 12
-#                                tsp += 20
-                            else:
-                                tsp += 40
-                                tsp += 32
-#                            gdb.execute(f"hd/p {int(tsp)} 32")
-#                        add=int(time.time()) % 100
-#                        print("add = '%s'" % (add,) )
-#                        tsp += add
-                            tpc = t.pc
-                            tlr = t.lr
-
-#                        print("tsp = '%s'" % (tsp,) )
-#                        print("tpc = '%s'" % (tpc,) )
-#                        print("tlr = '%s'" % (tlr,) )
-#                        print(f"frame view {int(tsp)} {int(tpc)}")
-#                        print(f"frame view {int(tsp):#0x} {int(tpc):#0x}")
-#                        gdb.execute(f"frame view {int(tsp)} {int(tpc)}")
-#                        gdb.execute(f"set $psp={int(tsp)}")
-#                        gdb.execute(f"set $msp={int(tsp)}")
-#                        gdb.execute(f"set $pc={int(tpc)}")
-                            unwinder.enable()
-#                            for i in range(0,32):
-#                                xsp = tsp - 16*4 + i*4
-#                                unwinder.set( xsp, tpc, tlr )
-#                                print(f"++++++++++++++++++++++++++++ with xsp = {xsp}")
-#                                gdb.execute("maintenance flush register-cache") # clear cache, cause to call again
-#                                gdb.execute(with_bt)
-#                                unwinder.reset()
-                            unwinder.set( tsp, tpc, tlr )
-#                        gdb.execute("fr 0")
-#                        gdb.execute("fr 1")
-                            gdb.execute("maintenance flush register-cache") # clear cache, cause to call again
-#                            print("Flushed register cache")
-                            btdata=gdb.execute(with_bt,False,True)
-                            btdata=btdata.split("\n")
-                            btdata=btdata[2:]
-                            print("\n".join(btdata))
-                            unwinder.reset()
-                            unwinder.disable()
-#                        gdb.execute("reg sp")
-#                        gdb.execute(f"set $msp={int(msp)}")
-#                        gdb.execute(f"set $psp={int(psp)}")
-#                        gdb.execute(f"set $pc={int(pc)}")
-                cnt += 1
-
-        else:
-            vdb.util.print_table(tbl)
-
-embos = None
-
-def embos_rtos( argv ):
-    global embos
-    if( embos is None ):
+# We assume it never changes during runtime
+active_rtos = None
+def rtos( argv ):
+    global active_rtos
+    if( active_rtos is None ):
         try:
-            embos = os_embos()
-        except gdb.error as e:
-            print(f"Failed to detect embOS: {e}")
-            return
-    tl=embos.get_task_list()
-    ver = embos.version()
-    name = embos.name()
+            _ = gdb.parse_and_eval("&OS_Global")
+            active_rtos = os_embos()
+        except gdb.error:
+            pass
+        try:
+            _ = gdb.parse_and_eval("&_kernel")
+            active_rtos = os_zephyr()
+        except gdb.error:
+            pass
+
+    if( active_rtos is None ):
+        print("Could not detect any RTOS")
+        return
+
+    tl=active_rtos.get_task_list()
+    ver = active_rtos.version()
+    name = active_rtos.name()
     print(f"{name} ver {ver}")
     with_bt = None
     if( len(argv) > 0 ):
@@ -446,13 +561,9 @@ def embos_rtos( argv ):
     id_filter=None
     if( len(argv) > 0 ):
         id_filter=vdb.util.gint(argv[0])
-    embos.print_task_list(tl,with_bt,id_filter)
+    active_rtos.print_task_list(tl,with_bt,id_filter)
 
 
-
-def rtos( argv ):
-    # TODO here check which flavour is being used
-    embos_rtos(argv)
 
 class cmd_rtos(vdb.command.command):
     """

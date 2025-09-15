@@ -16,10 +16,12 @@ import rich.console
 import rich.progress
 import rich.pretty
 import rich.table
+import threading
 import vdb
 
 from enum import Enum,auto
 import os
+import signal
 import sys
 
 def nstr( s ):
@@ -113,7 +115,7 @@ suffixes_bin = [ "", "ki","Mi","Gi","Ti","Pi","Ei","Zi","Yi" ]
 def bark( offset = 0 ):
     st = traceback.extract_stack()
     st = st[-2+offset]
-    print(f"{st.name}:{st.filename}:{st.lineno}")
+    print(f"{st.name}:{st.filename}:{st.lineno}",flush=True)
 
 def num_suffix( num, iso = False, factor = 1.5 ):
     if( iso ):
@@ -719,6 +721,38 @@ class silence:
         os.dup2( self.stdout_fd, 1 ) # Take the saved duplicated fd and duplicated it back on 1 (stdout)
         self.dev_null.close() # close the now not anymore used /dev/null
         os.close(self.stdout_fd) # Close the previous duplicate of stdout as we will not need it anymore
+
+
+class timeout:
+
+    def __init__( self, timeout, signal = signal.SIGINT ):
+        self.timeout = timeout
+        self.signal = signal
+        self.thread = None
+        self.exited = False
+
+    def __enter__( self ):
+        event = threading.Event()
+
+        def run_timeout():
+            event.set()
+            time.sleep(self.timeout)
+            if( self.exited ):
+                return
+            print("KILLING")
+            os.kill( os.getpid(), self.signal )
+        self.thread = threading.Thread( target = run_timeout )
+        self.thread.daemon = True
+        self.thread.start()
+        event.wait()
+
+        return self
+
+    def __exit__( self, type, value, traceback ):
+        self.exited = True
+        return False
+
+
 
 def gdb_numeric( val ):
     if( type(val) != gdb.Value ):
