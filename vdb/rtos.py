@@ -347,6 +347,19 @@ class os_zephyr( os ):
 
     def __init__( self ):
         self.ver = "<unknown>"
+        try:
+            # Not every build has this, but so far it seems to be our best bet
+            # This is really an arm implementation detail, we "parse" the binary code here. This will not always work
+            # and break, maybe we should find a way to detect that
+            ver_func = gdb.parse_and_eval("&sys_kernel_version_get")
+            vermem = vdb.memory.read(int(ver_func) + 4, 4, spec = "I")
+            major = vermem >> 24 & 0xff
+            minor = vermem >> 16 & 0xff
+            patch = vermem >>  8 & 0xff
+            self.ver = f"v{major}.{minor}.{patch}"
+        except gdb.error:
+            pass
+
         self._name = "Zephyr"
 
     def get_task_list( self ):

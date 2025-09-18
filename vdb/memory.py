@@ -430,8 +430,11 @@ def read_u( uncached, ptr, count = 1, partial = False ):
         return read( ptr, count, partial )
 
 @vdb.util.memoize( [gdb.events.stop, gdb.events.memory_changed, gdb.events.inferior_call,gdb.events.new_objfile,gdb.events.new_inferior] )
-def read( ptr, count = 1, partial = False ):
-    return read_uncached(ptr,count,partial)
+def read( ptr, count = 1, partial = False, spec = None ):
+    ret = read_uncached(ptr,count,partial)
+    if( struct is not None ):
+        ret = struct.unpack( spec, ret )[0]
+    return ret
 
 # XXX Feature idea: dont use memoryview but our own thing (might be interval tree based) that supports "inaccessible"
 # for a byte, so that at least hexdump and maybe others can display that
