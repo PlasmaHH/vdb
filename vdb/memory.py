@@ -432,7 +432,7 @@ def read_u( uncached, ptr, count = 1, partial = False ):
 @vdb.util.memoize( [gdb.events.stop, gdb.events.memory_changed, gdb.events.inferior_call,gdb.events.new_objfile,gdb.events.new_inferior] )
 def read( ptr, count = 1, partial = False, spec = None ):
     ret = read_uncached(ptr,count,partial)
-    if( struct is not None ):
+    if( spec is not None ):
         ret = struct.unpack( spec, ret )[0]
     return ret
 

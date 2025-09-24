@@ -29,6 +29,7 @@ jaliases = {
 
 # FLAG, FLAG, bool => (FLAG == FLAG) == bool
 
+# use_or, exflags, explanation
 jconditions = {
         "e"  : ( False, [ ( "ZF", 1, True ) ], "" ),
         "ne" : ( False, [ ( "ZF", 0, True ) ], "" ),
@@ -42,6 +43,10 @@ jconditions = {
         "g"  : ( False, [ ( "ZF", 0, True ), ( "SF","OF", True ) ], "" ),
         "p"  : ( False, [ ( "PF", 1, True ) ], "" ),
         "np" : ( False, [ ( "PF", 0, True ) ], "" ),
+        "s"  : ( False, [ ( "SF", 1, True ) ], "" ),
+        "ns" : ( False, [ ( "SF", 0, True ) ], "" ),
+        "o"  : ( False, [ ( "OF", 1, True ) ], "" ),
+        "no" : ( False, [ ( "OF", 0, True ) ], "" ),
 
         } # All others not supported yet due to no support for these flags yet
 

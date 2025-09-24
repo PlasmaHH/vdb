@@ -366,7 +366,7 @@ def current_flags( frame, flagregister ):
 def flag_check( suffix, flagset, condset ):
 #    print(f"flag_check( {suffix=}, {flagset=}, {len(condset)=} )")
 
-    use_or,exflags,_ = condset.get(suffix,(None, None))
+    use_or,exflags,_ = condset.get(suffix,(None, None, None))
     if( exflags is None ):
         return (None,f"Unhandled conditional suffix {suffix}")
     else:
