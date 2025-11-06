@@ -560,14 +560,17 @@ class rich_wrap:
 def print_table ( tbl, padbefore = " ", padafter = " ", use_rich = False ):
     ret = None
     if( use_rich ):
-        table = rich.table.Table(expand=False)
+        table = rich.table.Table(expand=False,row_styles = ["on #222222",""])
         for col in tbl[0]:
-            table.add_column(col)
+            table.add_column(col,overflow="fold")
         for row in tbl[1:]:
             nrow = []
             for r in row:
+                # XXX Here not all our features are mapped yet
                 if isinstance(r,tuple):
                     r = r[0]
+                if( r is None ):
+                    r = ""
                 nrow.append(rich.text.Text.from_ansi(r))
             table.add_row( *nrow )
         console.print(table)

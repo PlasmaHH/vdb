@@ -5,7 +5,7 @@ import vdb.command
 import vdb.color
 import vdb.util
 import vdb.pointer
-
+import vdb.arch
 
 import gdb
 import gdb.types
@@ -240,7 +240,7 @@ def chainlen( addr, offset, bdoffset, bidirectional ):
         ptrbytes = vdb.arch.pointer_size // 8
         naddr = addr + offset * ptrbytes
         try:
-            nval = naddr.cast(vdb.pointer.gdb_void_ptr_ptr).dereference()
+            nval = naddr.cast(vdb.arch.void_ptr_ptr_t).dereference()
             nval.fetch_lazy()
         except gdb.MemoryError:
             nval = None
@@ -251,7 +251,7 @@ def chainlen( addr, offset, bdoffset, bidirectional ):
         if( bidirectional and nval is not None ):
             baddr = nval - bdoffset * ptrbytes
             try:
-                bval = baddr.cast(vdb.pointer.gdb_void_ptr_ptr).dereference()
+                bval = baddr.cast(vdb.arch.void_ptr_ptr_t).dereference()
                 bval.fetch_lazy()
             except gdb.MemoryError:
                 bval = None

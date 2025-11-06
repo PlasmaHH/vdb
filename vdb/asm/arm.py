@@ -479,9 +479,13 @@ def vt_flow_str( ins, frame, possible_registers, possible_flags ):
 
     if( len(ins.arguments) == 3 ):
         # XXX Verify these calculations
+#        print(f"{ins.arguments[1]=}")
+#        print(f"{ins.arguments[2]=}")
         val,addr = ins.arguments[1].value( possible_registers )
         addval,_ = ins.arguments[2].value( possible_registers )
-        if( addr is None ):
+        # XXX Cannot handle yet str  r3, [r2, #16]!
+        # yes the one with the bang
+        if( addr is None  or addval is None):
             possible_registers.set( ins.arguments[1].register, addr )
         else:
             possible_registers.set( ins.arguments[1].register, addr + addval )

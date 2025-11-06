@@ -238,6 +238,11 @@ class os:
 
                 if( cnt < len(tlist) ):
                     t = tlist[cnt]
+#                    print(f"{cnt=}")
+#                    print(f"{t.name=}")
+                    if( t.name != "RealtimeThread" ):
+                        cnt += 1
+                        continue
                     # Only print bt for those that match the filter if present
                     if( id_filter is None or id_filter == t.id ):
                         cur = t.current
@@ -283,11 +288,8 @@ class os:
                             tsp = t.stack_position
 #                            tsp = gdb.Value( int(tsp) + 12 ).cast( t.stack_position.type )
 
-#                        print("tsp = '%s'" % (tsp,) )
-#                        print("tpc = '%s'" % (tpc,) )
-#                        print("tlr = '%s'" % (tlr,) )
 #                        print(f"frame view {int(tsp)} {int(tpc)}")
-#                        print(f"frame view {int(tsp):#0x} {int(tpc):#0x}")
+                            print(f"frame view sp={int(tsp):#0x} pc={int(tpc):#0x} lr={int(tlr):#0x}")
 #                        gdb.execute(f"frame view {int(tsp)} {int(tpc)}")
 #                        gdb.execute(f"set $psp={int(tsp)}")
 #                        gdb.execute(f"set $msp={int(tsp)}")
@@ -316,7 +318,7 @@ class os:
 #                        gdb.execute(f"set $psp={int(psp)}")
 #                        gdb.execute(f"set $pc={int(pc)}")
                 cnt += 1
-                break
+#                break
 
         else:
             vdb.util.print_table(tbl)
@@ -371,40 +373,64 @@ class os_zephyr( os ):
         while thread:
             t = task()
             ret.append(t)
-            t.name = thread["name"].string()
-            t.id = int(thread)
+            try:
+                t.name = thread["name"].string()
+                t.id = int(thread)
 
-            # The first byte of the stack array
-            t.stack = thread["stack_info"]["start"]
-            t.stack_start = t.stack
-            t.stack_size = thread["stack_info"]["size"]
+                # cast them all to the expected types to make gdb evaluate it as quickly as possible
+                # The first byte of the stack array
+                t.stack = thread["stack_info"]["start"]
+                t.stack_start = t.stack
+                t.stack_size = int(thread["stack_info"]["size"])
 #            t.stack_usage = thread["stack_info"]["delta"]
-            t.entry = thread["entry"]["pEntry"]
-            # Threads saved (not current for active ones)
-            t.stack_position = thread["callee_saved"]["psp"]
+                t.entry = str(thread["entry"]["pEntry"])
+                # Threads saved (not current for active ones)
+                t.stack_position = thread["callee_saved"]["psp"]
 
-            t.lr = ""
-            rx = gdb.parse_and_eval(f"(void**){t.stack_position}")
-            t.pc = rx[6]
-            t.lr = rx[5]
+                t.lr = ""
+                rx = gdb.parse_and_eval(f"(void**){t.stack_position}")
+                t.pc = rx[6]
+                t.lr = rx[5]
 
-            t.status = thread["base"]["thread_state"]
-            t.priority = thread["base"]["prio"]
-            t.priority = int(t.priority)
+                if( t.name == "RealtimeThread" ):
+                    print(f"Stack ({int(t.stack_position):#0x}):")
+                    for i in range(0,24):
+                        xp = int(rx[i])
+                        print(f"stack[{i}] = {xp:#0x}")
+                    print("callee_saved:")
+                    for i in range(1,9):
+                        cs = thread["callee_saved"][f"v{i}"]
+                        cs = int(cs)
+                        print(f"v{i} : {cs:#0x}")
 
-            if( thread == current_thread ):
-                t.current = True
-                t.stack_position = gdb.parse_and_eval("$psp")
-                t.pc = gdb.parse_and_eval("$pc")
+                # Just to test if it succeeds
+                str(t.pc)
+                str(t.lr)
 
-            # Or the initial size of the stack pointer + 4?
-            stack_end = int(t.stack_start) + int(t.stack_size)
-            t.stack_usage = stack_end - int(t.stack_position)
+                t.status = int(thread["base"]["thread_state"])
+                t.priority = int(thread["base"]["prio"])
+                t.priority = int(t.priority)
 
-            thread = thread["next_thread"]
+                if( thread == current_thread ):
+                    t.current = True
+                    t.stack_position = gdb.parse_and_eval("$psp")
+                    t.pc = gdb.parse_and_eval("$pc")
+
+                # Or the initial size of the stack pointer + 4?
+                stack_end = int(t.stack_start) + int(t.stack_size)
+                t.stack_usage = stack_end - int(t.stack_position)
+            except gdb.MemoryError:
+                pass
+
+            try:
+                thread = thread["next_thread"]
+            except gdb.MemoryError:
+                break
         return ret
 
     def _status_string( self, st ):
+        if( st is None ):
+            return "???"
         ret = []
         for k,v in self.status_map.items():
             if( st & k ):
@@ -606,4 +632,6 @@ SEGGER embOS
                 unwinder.disable()
 
 cmd_rtos()
+
+## XXX idea: on stop (or so??) check which thread is active and tell that to the prompt thing
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

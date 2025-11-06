@@ -96,6 +96,9 @@ class svd_device:
             def register_description( self ):
                 pass
 
+            def _dump( self ):
+                print(f"field {self.name=}, {self.description=}, {self.bit_pos=}, {self.bit_size=}, {self.access=}")
+
 
 
         __slots__ = "name","display_name","mmap_address","bit_size","description","reset_value","access","peripheral_name","fields","group","altname"
@@ -179,6 +182,7 @@ class svd_device:
                         pos = vdb.util.rxint(n.text)
                     case "bitWidth":
                         sz = vdb.util.rxint(n.text)
+#                        print(f"{sz=}")
                     case "access":
                         access=access_map(n.text)
                     case "enumeratedValues":
@@ -222,19 +226,24 @@ class svd_device:
                         if( n.tag not in { "modifiedWriteValues" } ):
                             print(f"Never before seen register field tag <{n.tag}>{n.text}</{n.tag}>")
 
+#            print(f"{sz=}")
             if( lsb is not None and msb is not None ):
                 pos = lsb
                 sz = (msb - lsb) + 1
+#            print(f"{sz=}")
+
             if( dim_index is not None ):
                 dim_index = dim_index.split(",")
 
             if( dim_index is not None ):
                 items = ( name % i for i in dim_index )
             elif( dim is not None ):
+                sz = int( sz / dim )
+
                 items = ( name % i for i in range(0,dim) )
             else:
                 items = [ name ]
-            
+
             if( pos is None ):
                 return
             for it in items:
@@ -246,6 +255,8 @@ class svd_device:
                 f.bit_pos = pos
                 f.bit_size = sz
                 f.access = access_map(access)
+#                if( f.name.find("SETENA") != -1 ):
+#                    f._dump()
                 self.fields.append(f)
                 pos += dim_inc
 

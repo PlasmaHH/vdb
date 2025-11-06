@@ -301,7 +301,7 @@ def do_continue( ):
     continues -= 1
 #    print("GDB EXECUTE CONTINUE")
     try:
-        vdb.print_exc()
+#        vdb.print_exc()
         gdb.execute("continue",True)
     # somehow we schedule two of them, for now just suppress the error
     except gdb.error:
@@ -975,11 +975,10 @@ def get_data( ):
         datatable.append( line )
     return datatable
 
-def print_data( ):
-    rich.inspect( trackings_by_number )
+def print_data( use_rich ):
+#    rich.inspect( trackings_by_number )
     datatable = get_data()
-    dt = vdb.util.format_table(datatable)
-    print(dt)
+    vdb.util.print_table(datatable,use_rich=use_rich)
 
 def get_track_items( argv, execute, eval_after, do_eval, as_struct, un ):
 #    vdb.util.bark() # print("BARK")
@@ -1043,7 +1042,10 @@ You should have a look at the data and graph modules, which can take the data fr
             as_struct = False
             argv,flags = self.flags(argv)
             unify = False
+            rich = False
 
+            if( "r" in flags ):
+                rich = True
             if( "u" in flags ):
                 unify = True
             if( "E" in flags ):
@@ -1064,7 +1066,7 @@ You should have a look at the data and graph modules, which can take the data fr
             elif( argv[0] == "show" ):
                 show()
             elif( argv[0] == "data" ):
-                print_data()
+                print_data(rich)
             elif( argv[0] == "del" ):
                 do_del(argv[1:])
             elif( argv[0] == "clear" ):
@@ -1073,6 +1075,8 @@ You should have a look at the data and graph modules, which can take the data fr
                init_set( argv[1:] )
             elif( argv[0] == "set.disable" ):
                del_set( argv[1:] )
+            elif( argv[0] == "set.show" ):
+               show_set( argv[1:] )
             elif( len(argv) > 1 ):
                 track(argv,execute,eval_after_execute,python_eval)
             else:
@@ -1318,8 +1322,13 @@ class data_track_action( track_action ):
         global trackings_by_number
         for dl in data_list:
             tn = track_item.get_next_number()
+
+            if( isinstance(dl,tuple) ):
+                dl,dname = dl
+            else:
+                dname = prefix + location + "." + dl
             self.data_list.append( (dl,tn) )
-            dti = display_track_item( prefix + location + "." + dl )
+            dti = display_track_item( dname )
             trackings_by_number[tn] = dti
 
     def store_data( self, ex, val, number, now ):
@@ -1403,6 +1412,8 @@ class delete_track_action(track_action):
 
 class msg_track_action( track_action ):
     def __init__( self, param, parameters ):
+        print(f"{param=}")
+        print(f"{parameters=}")
         self.msg = param.format(parameters)
 
     def action( self,now ):
@@ -1550,6 +1561,11 @@ class extended_track_item:
                 self.actions.append(ai)
         self.bp = track_breakpoint( location, self )
 
+    def show( self ):
+        print(f"{self.actions=}")
+        print(f"{self.location=}")
+        print(f"{self.bp=}")
+
     def clear( self ):
         self.bp.delete()
         self.bp = None
@@ -1685,6 +1701,18 @@ def init_set( argv ):
         eti = extended_track_item( k, v, setname + ".", parameters )
         etis.append(eti)
     print("Enabled set '%s'" % setname)
+
+def show_set( argv ):
+    fr = re.compile(".*")
+    if( len(argv) > 0 ):
+        fr = re.compile(argv[0])
+
+    for k,vl in track_storage.items():
+        if( fr.search(k) is None ):
+            continue
+        for vk,vset in vl.items():
+            print(f"{vk=}")
+            print(f"{vset=}")
 
 def del_set( argv ):
     setname = argv[0]

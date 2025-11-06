@@ -576,6 +576,7 @@ class Registers():
 #        print(f"set_reg({reg},{val})")
         mmp,part = self.get_pos(reg)
 #        print(f"{mmp=}")
+#        print(f"{part=}")
         if( mmp is not None ):
             self.set_reg_at(mmp,val,part)
 
@@ -1189,6 +1190,8 @@ class Registers():
         return "[" + ret + "]"
 
     def format_flags_short( self, flags, name, abbrval, count, descriptions, rawname ):
+#        print("UT")
+#        print(f"format_flags_short( {flags=},
 #        count,descriptions,rawname = flag_info.get(name)
         regdesc = self.get(name)
 #        print("name = '%s'" % (name,) )
@@ -1366,13 +1369,8 @@ class Registers():
         return ret
 
     def _flags( self, filter, rflags, flag_inf, extended , short , mini, addr_map ):
+#        print(f"_flags( {filter=}, {rflags=}, flag_inf, {extended=}, {short=}, {mini=}, {addr_map=}  )")
         flagtable = []
-#        return vdb.util.format_table( [
-#            ["a","b","c","d","e","f"],
-#            [("AB","#ff3"),("AB",2),("ABCDEF","#876",0),("ABCD")],
-#            [("AB","#ff3"),("AB",2),("XYZDEF","#876",6,-5),("abcd")],
-#            [("AB","#ff3"),("AB",2),("DEFLOL","#876",300,0),("abcd")],
-#            ],"_",".")
 
         if( filter is not None ):
             filter = re.compile(filter)

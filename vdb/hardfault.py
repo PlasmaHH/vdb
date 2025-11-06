@@ -69,17 +69,21 @@ def hardfault_info():
     if( len(ufsr_reasons) > 0 ):
         print(f"Usage Fault Reason: {','.join(ufsr_reasons)}")
 
+    bfarvalid = False
     bfsr,_ = registers.get_mmapped( "SCB.BFSR" )
-    bfarvalid = ( bfsr & 0x8000 ) != 0
-    bfsr_reasons = get_reasons( bfsr_flags, bfsr )
-    if( len(bfsr_reasons) > 0 ):
-        print(f"Bus Fault Reason: {','.join(bfsr_reasons)}")
+    if( bfsr is not None ):
+        bfarvalid = ( bfsr & 0x8000 ) != 0
+        bfsr_reasons = get_reasons( bfsr_flags, bfsr )
+        if( len(bfsr_reasons) > 0 ):
+            print(f"Bus Fault Reason: {','.join(bfsr_reasons)}")
 
+    mmfarvalid = False
     mmfsr,_ = registers.get_mmapped( "SCB.MMFSR" )
-    mmfarvalid = ( mmfsr & 0x80 ) != 0
-    mmfsr_reasons = get_reasons( mmfsr_flags, mmfsr )
-    if( len(mmfsr_reasons) > 0 ):
-        print(f"MemManage Fault Reason: {','.join(mmfsr_reasons)}")
+    if( mmfsr is not  None ):
+        mmfarvalid = ( mmfsr & 0x80 ) != 0
+        mmfsr_reasons = get_reasons( mmfsr_flags, mmfsr )
+        if( len(mmfsr_reasons) > 0 ):
+            print(f"MemManage Fault Reason: {','.join(mmfsr_reasons)}")
 
     if( bfarvalid ):
         bfar,_ = registers.get_mmapped("SCB.BFAR")
