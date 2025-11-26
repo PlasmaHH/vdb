@@ -485,6 +485,8 @@ class Registers():
             if( part is None ):
                 rname,raddr,rbit,rtype = mmp
                 mc = vdb.memory.read_uncached( raddr, rbit//8 )
+                if( mc is None ):
+                    raise RuntimeError(f"Accessing {raddr:#0x} for {rname} failed, maybe you need to set mem inaccessible-by-default off?")
                 val = gdb.Value(mc,rtype)
                 return ( val, mmp )
             else:

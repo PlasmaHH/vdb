@@ -63,10 +63,11 @@ enable_hardfault = vdb.config.parameter( "vdb-enable-hardfault",True)
 enable_reload    = vdb.config.parameter( "vdb-enable-reload",True)
 enable_rtt       = vdb.config.parameter( "vdb-enable-rtt",True)
 enable_table     = vdb.config.parameter( "vdb-enable-table",True)
+enable_bmp       = vdb.config.parameter( "vdb-enable-bmp",True)
 
 configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,xi,pahole,ftree,dashboard,hashtable,ssh,track"
                                                                     ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos,xi,list"
-                                                                    ",time,swo,hardfault,reload,rtt,table" )
+                                                                    ",time,swo,hardfault,reload,rtt,table,bmp" )
 
 
 home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)
@@ -95,8 +96,12 @@ if( simulate_venv.value ):
         except subprocess.CalledProcessError:
             continue
 
-def print_exc( ):
-    if( rich_tracebacks.value ):
+def print_exc( use_rich = None ):
+
+    if( use_rich is None ):
+        use_rich =  rich_tracebacks.value
+
+    if( use_rich ):
         vdb.util.console.print_exception( show_locals = True )
     else:
         traceback.print_exc()

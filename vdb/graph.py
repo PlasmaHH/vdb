@@ -135,6 +135,7 @@ class hist_process(graph_process):
         self.running = False
 
     def do_add( self, ndata ):
+#        vdb.util.bark() # print("BARK")
         self.data = numpy.concatenate( (self.data,ndata ) )
 
     def do_set( self, ndata ):
@@ -142,7 +143,6 @@ class hist_process(graph_process):
 
     def update( self, frame ):
         cnt = self.handle_queue()
-#        print("cnt = '%s'" % (cnt,) )
         if( cnt == 0 ):
             return
 #        print(f"update {cnt}")
@@ -514,11 +514,15 @@ def refresh_track( ):
     global gt
     if( gt is None or gt.process is None ):
         return
-#    vdb.util.bark() # print("BARK")
+    vdb.util.bark() # print("BARK")
+    print(f"{id(gt)=}")
+    print(f"{id(pp)=}")
     if( gt == pp ):
+        vdb.util.bark() # print("BARK")
         alldata,tsdata = extract_track( current_track_var,False,timeseries = True)
         gt.set( (alldata,tsdata) )
     else:
+        vdb.util.bark() # print("BARK")
         alldata,_ = extract_track( current_track_var,False,timeseries = False)
         gt.set(alldata)
 #    print("alldata = '%s'" % (alldata,) )
@@ -565,6 +569,9 @@ def follow_track_lines( tvar, relative_ts ):
 
 
 def extract_track( tvar, relative_ts, timeseries = False ):
+#    print(f"extract_track( {tvar=}, {relative_ts=}, {timeseries=} )")
+    # extract_track( tvar=['VALUE'], relative_ts=False, timeseries=False )
+    vdb.util.bark() # print("BARK")
     if( len(tvar) == 0 ):
         print("Well, you should tell which track data variables to plot. Do `track show` or  `track data` to check what is available")
         return

@@ -26,6 +26,7 @@ import json
 
 auto_scan = vdb.config.parameter("vdb-svd-auto-scan",True,docstring="scan configured directories on start")
 scan_dirs = vdb.config.parameter("vdb-svd-directories","~/svd/",gdb_type=vdb.config.PARAM_ARRAY )
+scan_dirs = vdb.config.parameter("vdb-svd-directories","~/git/env/svd/",gdb_type=vdb.config.PARAM_ARRAY )
 scan_recur= vdb.config.parameter("vdb-svd-scan-recursive",True,docstring="Whether to scan directories recursively")
 scan_background = vdb.config.parameter("vdb-svd-scan-background",True,docstring="Do the scan in the background")
 scan_filter = vdb.config.parameter("vdb-svd-scan-filter","",docstring="Regexp to filter file names before loading")
@@ -1099,6 +1100,7 @@ class task_pool:
 
 
 def do_svd_scan_one(dirname,at,filter_re):
+#    print(f"do_svd_scan_one( {dirname=}, {at=}, {filter_re=}")
     global keep_parsing
     keep_parsing = True
     pathlist = []
@@ -1168,7 +1170,8 @@ def do_svd_scan_one(dirname,at,filter_re):
         try:
             for f in tp.wait():
                 r = f.result()
-                prog.update( pt, completed = len(tp.completed) )
+                if( pt is not None ):
+                    prog.update( pt, completed = len(tp.completed) )
         except KeyboardInterrupt:
             prog.stop()
             tp.cancel()
@@ -1184,7 +1187,7 @@ def do_svd_scan_one(dirname,at,filter_re):
 def save_cache( ):
     x = json.dumps(devices, default = lambda x: x.to_json() )
     d = json.loads(x)
-    vdb.util.pprint(d)
+#    vdb.util.pprint(d)
     vdb.cache.save_string("svd",x)
 
 # Loads from the cache file and creates stub objects
