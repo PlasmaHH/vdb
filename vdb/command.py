@@ -10,7 +10,7 @@ import shutil
 
 import abc
 
-profile_next = vdb.config.parameter("vdb-command-next-profile",False)
+profile_next = vdb.config.parameter("vdb-command-next-profile",False, docstring = "Next command will be profiled")
 
 command_registry = {}
 
@@ -44,6 +44,7 @@ class command(gdb.Command,abc.ABC):
         self.last_commands = None
         self.repeat = True
         self.from_tty = None
+        self.needs_parameters = None
 
     def usage( self ):
         print(self.__doc__)
@@ -128,12 +129,18 @@ class command(gdb.Command,abc.ABC):
             super().dont_repeat()
 
         try:
-#            print("arg = '%s'" % (arg,) )
             argv = gdb.string_to_argv(arg)
 
             if( len(argv) == 1 and argv[0] == "/?" ):
                 self.usage()
                 return
+
+            if( len(argv) == 0 and self.needs_parameters ):
+                print(f"{self.name}: {self.__doc__}")
+                return
+
+            if( self.needs_parameters is None ):
+                vdb.log(f"WARNING: Command {self.name} does not have needs_parameters set, update the code")
 
             if( profile_next.value and from_tty ):
                 profile_next.value = False

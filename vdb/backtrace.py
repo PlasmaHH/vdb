@@ -642,13 +642,11 @@ All standard backtrace arguments (help backtrace) can be used after ours (mainly
 
     def __init__ (self):
         super (cmd_bt, self).__init__ ("bt", gdb.COMMAND_STACK, gdb.COMPLETE_EXPRESSION, replace = True)
+        self.needs_parameters = False
 
     def do_invoke (self, argv ):
-#        import cProfile
-#        cProfile.runctx("do_backtrace(argv)",globals(),locals())
         do_backtrace( argv )
         self.dont_repeat()
-
 
 cmd_bt()
 

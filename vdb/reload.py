@@ -16,6 +16,7 @@ class cmd_reload (vdb.command.command):
 
     def __init__ (self):
         super (cmd_reload, self).__init__ ("reload", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.needs_parameters = False
 
     def do_invoke (self, argv ):
         fre = re.compile(".*")
@@ -55,5 +56,6 @@ class cmd_reload (vdb.command.command):
         self.dont_repeat()
 
 cmd_reload()
+# XXX We need a way to also load properly the assembler stuff
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

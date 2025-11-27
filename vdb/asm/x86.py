@@ -50,7 +50,7 @@ jconditions = {
 
         } # All others not supported yet due to no support for these flags yet
 
-prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd", "cs", "ss", "ds", "es", "fs", "gs", "notrack", "data16" ])
+prefixes = set([ "rep","repe","repz","repne","repnz", "lock", "bnd", "cs", "ss", "ds", "es", "fs", "gs", "notrack", "data16", "rex" ])
 return_mnemonics = set (["ret","retq","iret"])
 conditional_jump_mnemonics = set([ "jo", "jno", "js", "jns", "je", "jz", "jne", "jnz", "jb", "jnae", "jc", "jnb","jae","jnc","jbe","jna","ja","jnbe","jl","jng","jge","jnl","jle","jng","jg","jnle","jp","jnle","jp","jpe","jnp","jpo","jcxz","jecxz" ])
 unconditional_jump_mnemonics = set([ "jmp", "jmpq" ] )

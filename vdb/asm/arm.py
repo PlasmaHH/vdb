@@ -613,6 +613,65 @@ def vt_flow_push( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
+def vt_flow_pop( ins, frame, possible_registers, possible_flags ):
+    vl,rname,_ = possible_registers.get("sp")
+    if( vl is not None ):
+        nargs = len(ins.args)
+        vl = int(vl) + nargs*( vdb.arch.pointer_size // 8 )
+        possible_registers.set(rname,vl,origin="flow_pop")
+    else:
+        possible_registers.set(rname,None,origin = "flow_pop")
+
+    for a in ins.arguments:
+        a.target = False
+        a.reset_argspec()
+        possible_registers.set( a.register, None )
+    ins.add_explanation(f"Pops registers {', '.join(ins.args)} from the stack")
+
+    # no flags affected
+    return ( possible_registers, possible_flags )
+
+def vt_flow_cpsid( ins, frame, possible_registers, possible_flags ):
+    arg = str(ins.arguments[0])
+    match arg:
+        case "i":
+            ins.add_explanation("Disables interrupts by setting PRIMASK")
+        case "f":
+            ins.add_explanation("Sets FAULTMASK")
+        case _:
+            ins.add_explanation(f"Unknown mask flag {arg}")
+    # XXX Change the mask registers? Guess the exact bits depend on the arch?
+    return ( possible_registers, possible_flags )
+
+def vt_flow_cpsie( ins, frame, possible_registers, possible_flags ):
+    arg = str(ins.arguments[0])
+    match arg:
+        case "i":
+            ins.add_explanation("Enables interrupts by clearing PRIMASK")
+        case "f":
+            ins.add_explanation("Clears FAULTMASK")
+        case _:
+            ins.add_explanation(f"Unknown mask flag {arg}")
+    # XXX Change the mask registers? Guess the exact bits depend on the arch?
+    return ( possible_registers, possible_flags )
+
+def vt_flow_ldm( ins, frame, possible_registers, possible_flags ):
+    mnem = ins.mnemonic.removesuffix(".w")
+    variant = mnem[3:]
+
+    src = ins.arguments[0].register
+    regs = []
+    for r in ins.arguments[1:]:
+        regs.append(r.register)
+        possible_registers.set(r.register,None)
+    regs = ",".join(regs)
+
+    ins.add_explanation(f"Loads registers {regs} from {src}")
+    if "pc" in regs:
+        ins.add_explanation("pc is in registers, this acts like a branch")
+    # XXX Do the actual functional implementation of loading
+    # handle IA/FD versions properly
+    return ( possible_registers, possible_flags )
 
 def current_flags( frame ):
     for cand in [ "fpscr", "xpsr", "xPSR", "apsr" ]:

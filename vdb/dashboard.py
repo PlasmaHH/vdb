@@ -20,7 +20,7 @@ import re
 import datetime
 
 
-"""
+r"""
 tmux new-session\; select-pane -T "disassembler" \; split-window -v\; select-pane -T "hexdump" \; split-window -h \; select-pane -T "registers"
 """
 show_stat = vdb.config.parameter("vdb-dash-show-stats",False)
@@ -396,8 +396,8 @@ def del_board( id ):
 def call_dashboard( argv ):
     # ?type: tmux,port,tty
     # subcommands: list,enable,disable,erase
-    if( len(argv) == 0 ):
-        raise gdb.error(cmd_dashboard.__doc__)
+#    if( len(argv) == 0 ):
+#        raise gdb.error(cmd_dashboard.__doc__)
 #    print("argv = '%s'" % argv )
     if( "tty".startswith(argv[0]) ):
         if( len(argv) < 3 ):
@@ -469,21 +469,15 @@ Remember that you can use dash as short as long as no other command collides wit
 
     def __init__ (self):
         super ().__init__ ("dashboard", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.needs_parameters = True
 
     def do_invoke (self, argv):
         try:
-
-#            import cProfile
-#            cProfile.runctx("call_dashboard(argv)",globals(),locals())
             call_dashboard(argv)
         except gdb.error as ge:
-#            vdb.print_exc()
+            # Shorten gdb generated errors a bit as they can happen during startup when tmux is not running or other
+            # prereqs for the dashboards are not there
             vdb.util.log(f"dashboard: {ge}", level=vdb.util.Loglevel.warn)
-
-        except:
-            vdb.print_exc()
-            raise
-            pass
         self.dont_repeat()
 
 cmd_dashboard()

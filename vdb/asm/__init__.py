@@ -835,7 +835,7 @@ class instruction_base( abc.ABC ):
             return
 
         # If the explanation is already there, don't add it again
-        if( len(self.explanation) > 0 and ex == self.explanation[0] ):
+        if( ex in self.explanation ):
                 return
         self.explanation.append(ex)
 
@@ -2812,10 +2812,11 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
     if( markers == 0 ):
         ret = fix_marker(ret,arg,frame,do_flow)
-    update_vars(ret,frame)
-
-    if( do_flow ):
-        register_flow(ret,frame)
+    else:
+        # fix_marker does the update and register flow calls too
+        update_vars(ret,frame)
+        if( do_flow ):
+            register_flow(ret,frame)
     return ret
 
 
@@ -3713,6 +3714,7 @@ part of a function, unlike the disassemble command those are right away disassem
 
     def __init__ (self):
         super ().__init__ ("dis", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION, replace = True)
+        self.needs_parameters = False
 
     def do_invoke (self, argv ):
 

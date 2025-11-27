@@ -104,7 +104,7 @@ class unwind_filter(gdb.unwinder.Unwinder):
 
     def clear( self ):
         self.vptype = gdb.lookup_type("void").pointer()
-        self.ptype = vdb.arch.gdb_uintptr_t
+        self.ptype = vdb.arch.uintptr_t
         self.cache = {}
         self.replacements = {}
 
@@ -126,6 +126,8 @@ class unwind_filter(gdb.unwinder.Unwinder):
         r = self.cache.get( frameno, None )
         if( f is None ):
             print(f"Cannot fix frame {frameno}, frame before it must be cached too")
+            if( unwinder is None or not unwinder.enabled ):
+                print("You also must enable the global unwinder")
             return
         if( r is None ):
             print(f"Cannot fix frame {frameno}, frame is not cached")
@@ -169,11 +171,12 @@ class unwind_filter(gdb.unwinder.Unwinder):
         return r
 
     def do_call(self,pending_frame):
+        # XXX We need to make this work on x86_64 and arm!!
         import vdb.asm
         sp = pending_frame.read_register("sp")
         pc = pending_frame.read_register("pc")
-        lr = pending_frame.read_register("lr")
-        print(f"{int(lr)=}")
+#        lr = pending_frame.read_register("lr")
+#        print(f"{int(lr)=}")
 
         arch=pending_frame.architecture()
         try:
@@ -373,7 +376,7 @@ def hint( argv ):
 #    print(f"{stack_base=}")
     vptype = gdb.lookup_type("void").pointer()
     isym = gdb.execute("info symbol $pc",False,True)
-    m=re.search(".*(\+ [0-9]*) in section.*",isym)
+    m=re.search(r".*(\+ [0-9]*) in section.*",isym)
     print(f"{isym=}")
     print(f"{m=}")
     funcstart = None
@@ -384,17 +387,20 @@ def hint( argv ):
         offset = m.group(1)
         funcstart = gdb.parse_and_eval(f"$pc-{offset}")
         print(f"Searching for call to {funcstart}")
+    else:
+        funcstart = gdb.parse_and_eval("$pc")
+        print(f"Searching for call to {funcstart}")
 #        print("offset = '%s'" % (offset,) )
     archname = gdb.selected_frame().architecture().name()
     if( archname.startswith("arm") ):
         alignmask = ~1
         print(f"{alignmask=}")
         callre = re.compile("bl (0x[0-9a-f]*)")
-        ccallre = re.compile("bl \*%") # computed calls
+        ccallre = re.compile(r"bl \*%") # computed calls
     else:
         alignmask = None
         callre = re.compile("call (0x[0-9a-f]*)")
-        ccallre = re.compile("call \*%") # computed calls
+        ccallre = re.compile(r"call \*%") # computed calls
     # $rsp-16 is kinda the default position
     # for other archs we might search differently?
 #    for i in range(-8,64):
@@ -426,7 +432,7 @@ def hint( argv ):
                 for d in dis:
                     pd = colors.strip_color(d)
                     m = callre.search(pd)
-                    print(f"{m=}")
+#                    print(f"{m=}")
                     if( m is None ):
                         m = ccallre.search(pd)
                         if( m is not None ):
@@ -507,12 +513,24 @@ def auto_flush():
 register()
 
 class cmd_unwind (vdb.command.command):
-    """Module holding information about memory mappings
+    """command to help gdb unwinding when things go wrong (e.g. you overwrote the stack)
 
+unwind enable        - enable the global unwinder run on each backtrace
+unwind disable       - disable the global unwinder (might fail within gdb)
+unwind hide N        - Hides frame N from being displayed
+unwind clear         - clear all settings, have the unwinder do almost nothing
+unwind fix N REG VAL - Instead of the value gdb sees, override REG in frame N with VAL. Very useful
+                       for fixing broken stacktraces that you accidentally overwrote
+unwind hint +N       - Search for unwind hints with that number of pointer contexts
+unwind hint EXPR     - Use EXPR as the stack pointer instead of the currently known value
+
+The hint command searches on the stack for various information that might help recovering partially damaged frames. Read
+the documentation for more details about how this operates.
     """
 
     def __init__ (self):
         super (cmd_unwind, self).__init__ ("unwind", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.needs_parameters = True
 
     def do_invoke (self, argv ):
         try:
@@ -535,7 +553,7 @@ class cmd_unwind (vdb.command.command):
             else:
                 raise Exception("unwind got %s arguments, expecting 0 or 1" % len(argv) )
         except:
-            vdb.print_exc()
+#            vdb.print_exc()
             raise
             pass
         self.dont_repeat()

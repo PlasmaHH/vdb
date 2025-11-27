@@ -182,6 +182,7 @@ class cmd_vdb (vdb.command.command):
 
     def __init__ (self):
         super ().__init__ ("vdb", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.needs_parameters = False
         self.dont_repeat()
 
     @overrides
