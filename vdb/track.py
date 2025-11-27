@@ -574,7 +574,7 @@ class track_item(track_item_base):
         if( self.python_eval ):
             self.expression = self.expression.replace( "$(", "gdb.parse_and_eval(" )
         elif( not self.use_execute ):
-            m = re.match("(.*)\[@([0-9]*)\](.*)",self.expression)
+            m = re.match(r"(.*)\[@([0-9]*)\](.*)",self.expression)
             if( m is not None ):
                 self.array_pre = m.group(1)
                 self.array_size = int(m.group(2))
@@ -1033,6 +1033,7 @@ You should have a look at the data and graph modules, which can take the data fr
 
     def __init__ (self):
         super (cmd_track, self).__init__ ("track", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.needs_parameters = True
 
     def do_invoke (self, argv ):
         try:

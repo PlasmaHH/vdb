@@ -32,6 +32,7 @@ class cmd_reload (vdb.command.command):
                     print(f"{name},",end="")
                     vdb.reloading = True
                     importlib.reload(mod)
+                    vdb.start_second_stage( mod, name )
                 except:
                     vdb.print_exc()
                 finally:

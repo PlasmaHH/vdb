@@ -177,9 +177,7 @@ class parameter(gdb.Parameter):
 
     def get_set_string(self):
         self.record_origin()
-#        vdb.util.bark() # print("BARK")
-#        print("self.name = '%s'" % self.name )
-#        print("self.value = '%s'" % self.value )
+
         try:
             if isinstance(self.value, str):
                 self.value = vdb.util.unquote(self.value)

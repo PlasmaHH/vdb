@@ -69,6 +69,7 @@ pre_colors_dot = [
         ]
 
 @vdb.event.start()
+@vdb.event.theme_changed()
 def invalidate_cache( c ):
     global parse_cache
     if( len(parse_cache) ):

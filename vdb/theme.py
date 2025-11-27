@@ -1,7 +1,187 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+
+import vdb.command
+import rich
+import gdb
+import sys
+import vdb.util
+import importlib
+import re
+import glob
+import tomllib
+
+# The idea is that we encapsulate all theming information into one toml structure and all the modules get filled from it
+# (if supported)
+# We also have some extra non-gdb parameter information for the disassembler mnemonic colors
+
+# Sections [xxx.colors] foo = bar will be translated to vdb-xxx-colors-foo = bar
+# and  [xxx] yyy = foo will translate to vdb-xxx-yyy = foo
+
+# In theory one can set all settings with it which should be just fine, people might have a use for that too, no need to
+# arbitrarily restrict it to things we deem "visual only". They basically can make their own settings hierarchy
+
+# We will parse themes so far as to know the basic name information but no more (There really is no point checking files
+# that will not be loaded anyways). We would probably warn about duplicate names. When the user loads a theme we will
+# parse the current file, that way the user can edit and reload while in gdb.
+
+# When a file extends another theme we will parse that and merge stuff on the toml layer, and only then feed unique
+# values to config.set().
+
+# rich is a special namespace for configuring rich, we do not forward this to config.set()
+
+# XXX We should add some synthetic event of theme changing so plugins that cache rendered data can invalidate their
+# caches
+
+# XXX For now we leave the old "~/.vdb/themes/any.py" config.set based code as-is to later replace it and check if all
+# works the same
+
+
+def show_info( flags ):
+    print(f"Current theme '{current_theme_name}' was loaded from '{current_theme_file}'")
+
+
+known_themes = {}
+
+current_theme_name = None
+current_theme_file = None
+
+def refresh( flags ):
+    global known_themes
+    known_themes = {}
+
+    print("Refreshing known toml files...")
+    for d in vdb.search_dirs:
+        for tomlfile in glob.glob(f"{d}/themes/*.toml"):
+            with open( tomlfile, "rb" ) as f:
+                data = tomllib.load(f)
+                try:
+                    tname = data["theme"]["name"]
+                except KeyError:
+                    print(f"File {tomlfile} does not have the necessary global information to be recognized das a theme configuration")
+                    continue
+                if( "v" in flags ):
+                    print(f"Found theme {tname} in {tomlfile}")
+                known_themes[tname] = tomlfile
+    print(f"Found {len(known_themes)} themes")
+
+def toml_load( tname, flags ):
+    fname = known_themes.get(tname)
+    if( fname is None ):
+        raise RuntimeError(f"Unknown theme {tname}")
+
+    with open( fname, "rb" ) as f:
+        data = tomllib.load(f)
+    vdb.log(f"Loading theme {tname} from {fname}")
+
+    extends = None
+    try:
+        extends = data["theme"]["extends"]
+    except KeyError:
+        pass
+
+    if( extends is not None ):
+        try:
+            edata = toml_load( extends , flags)
+            data = edata | data
+        except RuntimeError:
+            vdb.log(f"Warning: Could not find base theme {extends}", level = 3)
+
+    return data
+
+def set_cfg( name, value ):
+    nname = f"vdb-{name}"
+#    print(f"config.set('{nname}','{value}')")
+    try:
+        gdb.execute(f"set {nname} {value}")
+    except gdb.error as e:
+        print(f"Error setting {nname} to {value} : {e}")
+
+def load_cfg( prefix, vl ):
+    # Disable and re-enable config verbosity
+    cfg_verb = vdb.config.verbosity.value
+    vdb.config.verbosity.value = None
+    try:
+        for k,v in vl.items():
+            if( isinstance(v,dict) ):
+                load_cfg(f"{prefix}-{k}",v)
+            elif( isinstance(v,str) ):
+                set_cfg(f"{prefix}-{k}",v)
+            else:
+                raise RuntimeError(f"Unsupported type {type(v)} in toml config")
+    finally:
+        vdb.config.verbosity.value = cfg_verb
+
+
+# XXX toml syntax requires the key to be in quotes when it contains a dot. maybe we can "fix" that after the fact so the
+# user can write repr.str instead of "repr.str"
+def load_rich( vl ):
+    theme = vl
+    import rich.theme
+    vdb.util.console = rich.console.Console( force_terminal = True, color_system = "truecolor", theme = rich.theme.Theme(theme) )
+
+def theme_load( tname, flags ):
+    toml_data = toml_load( tname , flags)
+    fname = known_themes.get(tname)
+    global current_theme_file
+    current_theme_file = fname
+    global current_theme_name
+    current_theme_name = tname
+
+    for k,vl in toml_data.items():
+        match k:
+            case "theme":
+                pass
+            case "rich":
+                load_rich(vl)
+            case _:
+                load_cfg(k,vl)
+
+
+    vdb.event.exec_hook("theme")
+
+def toml_list( flags ):
+    print("This is the list of known themes and their toml files:")
+
+    table = rich.table.Table("Name", "File", expand=False,row_styles = ["","on #222222"])
+
+    for n,f in known_themes.items():
+        table.add_row( n, f )
+
+    vdb.util.console.print(table)
+
+
+# Use this mechanism to make sure everything is loaded and has their config options setup so we can then fill it
+def start( ):
+    refresh("")
+    if( vdb.cfgtheme.value ):
+        theme_load(vdb.cfgtheme.value,"")
+
+class cmd_theme (vdb.command.command):
+    """
 """
-Placeholder for some theme support
-"""
+
+    def __init__ (self):
+        super (cmd_theme, self).__init__ ("theme", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.needs_parameters = False
+
+    def do_invoke (self, argv ):
+        argv,flags = self.flags(argv)
+        if( len(argv) == 0 ):
+            show_info(flags)
+            return
+
+        match( argv[0] ):
+            case "refresh":
+                refresh(flags)
+            case "list":
+                toml_list(flags)
+            case _:
+                theme_load(argv[0],flags)
+
+
+        self.dont_repeat()
+
+cmd_theme()
+
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

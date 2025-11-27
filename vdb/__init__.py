@@ -26,7 +26,7 @@ from types import ModuleType, TracebackType
 # First setup the most important settings that configure which parts we want to have active
 
 enable = vdb.config.parameter( "vdb-enable", True )
-theme  = vdb.config.parameter( "vdb-theme",None)
+cfgtheme  = vdb.config.parameter( "vdb-theme",None)
 
 enable_prompt    = vdb.config.parameter( "vdb-enable-prompt",True)
 enable_backtrace = vdb.config.parameter( "vdb-enable-backtrace",True)
@@ -64,10 +64,11 @@ enable_reload    = vdb.config.parameter( "vdb-enable-reload",True)
 enable_rtt       = vdb.config.parameter( "vdb-enable-rtt",True)
 enable_table     = vdb.config.parameter( "vdb-enable-table",True)
 enable_bmp       = vdb.config.parameter( "vdb-enable-bmp",True)
+enable_theme     = vdb.config.parameter( "vdb-enable-theme",True)
 
 configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,xi,pahole,ftree,dashboard,hashtable,ssh,track"
                                                                     ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos,xi,list"
-                                                                    ",time,swo,hardfault,reload,rtt,table,bmp" )
+                                                                    ",time,swo,hardfault,reload,rtt,table,bmp,theme" )
 
 
 home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)
@@ -292,35 +293,15 @@ def load_plugins( plugindir ):
     finally:
         sys.path = oldpath
 
-def load_themes( vdbdir ):
-    vdb.util.log(f"load_themes({vdbdir})", level=vdb.util.Loglevel.trace)
-    if( len(theme.get()) == 0 ):
-        vdb.util.log(f"Not loading any theme", level=vdb.util.Loglevel.info)
-        return
-    tdir = f"{vdbdir}/themes/"
-    tfile = f"{tdir}{theme.value}.py"
-    if( not os.path.isdir(tdir) ):
-        return
-    if( not is_in_safe_path(tdir) ):
-        if( os.path.isfile(tfile) ):
-            vdb.util.log(f"{tdir} is not in safe path, not loading {tfile} from there", level=vdb.util.Loglevel.warn)
-        return
-    if( not os.path.isfile(tfile) ):
-        vdb.util.log(f"Theme file {tfile} not found, not loading any theme", level=vdb.util.Loglevel.warn)
-        return
+def start_second_stage( mod, name ):
+    if( hasattr(mod,"start") ):
+        print(f"Calling second stage start of {name}")
+        try:
+            mod.start()
+        except Exception as e:
+            print(f"Second stage start of {name} failed with error: {e}")
 
-    vdb.util.log(f"Trying to load theme from {tfile}", level=vdb.util.Loglevel.info)
-    try:
-        oldpath = []
-        oldpath += sys.path
-        sys.path = [tdir] + sys.path
-        importlib.import_module(theme.get())
-    except ModuleNotFoundError as e:
-        vdb.util.log(f"Could not load theme {theme.value}: {e}", level=vdb.util.Loglevel.error)
-    except:
-        vdb.print_exc()
-    finally:
-        sys.path = oldpath
+search_dirs = []
 
 def start( vdbd = None, vdbinit = None ):
     if( enable.value is False ):
@@ -405,14 +386,12 @@ def start( vdbd = None, vdbinit = None ):
     for d in plug_dirs:
         load_plugins(d)
 
-    for d in plug_dirs:
-        load_themes(d)
-
+    global search_dirs
+    search_dirs = plug_dirs
+    
 
     for name,mod in enabled_modules.items():
-        if( hasattr(mod,"start") ):
-            print(f"Calling second stage start of {name}")
-            mod.start()
+        start_second_stage( mod, name )
 
     # All done, set the variable to denote us being active
     # TODO As soon as we have versions, introduce this as a version code: XX.YY.ZZ => XXYYZZ
@@ -432,15 +411,5 @@ atexit.register(exit)
 
 log = vdb.util.log
 reloading = False
-
-def rich_theme( ts ):
-    theme = {}
-    for l in vdb.util.stripped_lines(ts):
-        name,style = l.split(maxsplit=2)
-        theme[name] = style
-    if( len(theme) > 0 ):
-        import rich.theme
-        vdb.util.console = rich.console.Console( force_terminal = True, color_system = "truecolor", theme = rich.theme.Theme(theme) )
-
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

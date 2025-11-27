@@ -11,7 +11,7 @@ class events(Enum):
     run   = auto()
     first_prompt = auto()
     step = auto()
-
+    theme = auto()
 
 # XXX Add own synthetic events along with a way to trigger them and possibly even trigger gdb events.
 # First application: detect architecture changes easier, reconfigure all kinds of stuff for it
@@ -163,6 +163,8 @@ def start( *darg ):
 def before_first_prompt( *darg ):
     return on_hook( events.first_prompt, darg )
 
+def theme_changed( *darg ):
+    return on_hook( events.theme, darg )
 
 # Functions to be called from generated gdbscript to get events into python
 
