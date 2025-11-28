@@ -26,7 +26,7 @@ import time
 import abc
 import typing
 
-asm_class_colors = {
+asm_class_colors_defaults = {
             "jump" : "#f0f",
             "mem"  : "#0ff",
             "nop"  : "#338",
@@ -40,6 +40,11 @@ asm_class_colors = {
             "vector" : "#aa6",
             "default" : "#f00"
         }
+
+asm_class_colors = {}
+
+for cl,col in asm_class_colors_defaults.items():
+    asm_class_colors[cl] = vdb.config.parameter(f"vdb-asm-colors-class-{cl}", col, gdb_type = vdb.config.PARAM_COLOUR )
 
 asm_colors_dot = [
         ( "j.*", "#f000f0" ),
@@ -827,7 +832,7 @@ class instruction_base( abc.ABC ):
             return self.color_mnemonic_class()
 
     def color_mnemonic_class( self ):
-        col = asm_class_colors.get(self.iclass)
+        col = asm_class_colors.get(self.iclass).value
         return vdb.color.color(self.mnemonic,col)
 
     def add_explanation( self, ex ):

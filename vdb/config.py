@@ -204,7 +204,8 @@ class parameter(gdb.Parameter):
         if( verbosity.value is None or verbosity.value < 2 ):
             return ""
         if( self.is_colour ):
-            return f'Set {self.showstring} to {vdb.color.color(pval,self.value)}'
+            vshow = self.get_vdb_show_string()[0][0]
+            return f'Set {self.showstring} to {vshow}'
         else:
             return f'Set {self.showstring} to {repr(pval)}'
 
