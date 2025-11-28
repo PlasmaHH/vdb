@@ -465,8 +465,10 @@ def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
         # Since its dereferencing, the addr is the one we are looking for as the value of the register
         if( addr is None ):
             possible_registers.set( ins.arguments[1].register, addr )
-        else:
+        elif( addval is not None ):
             possible_registers.set( ins.arguments[1].register, addr + addval )
+        else:
+            possible_registers.set( ins.arguments[1].register, None )
 #        vdb.util.inspect( possible_registers )
         post_text = f", advancing register {ins.arguments[1].register} by {ins.arguments[2].immediate}"
 

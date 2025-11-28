@@ -1249,6 +1249,7 @@ svd/v <cmd>   - Add more information to the command
 
     def __init__ (self):
         super (cmd_svd, self).__init__ ("svd", gdb.COMMAND_DATA)
+        self.needs_parameters = False
 
     def complete( self, text, word ):
         if( text.startswith("/v ") or text.startswith("/k ")):

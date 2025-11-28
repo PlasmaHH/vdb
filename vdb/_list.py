@@ -255,6 +255,7 @@ list code
 
     def __init__ (self):
         super ().__init__ ("List", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.needs_parameters = False
 
     def do_invoke (self, argv ):
         try:

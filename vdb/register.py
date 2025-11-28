@@ -1585,6 +1585,7 @@ We recommend having an alias reg = registers in your .gdbinit
 
     def __init__ (self):
         super (cmd_registers, self).__init__ ("registers", gdb.COMMAND_DATA)
+        self.needs_parameters = False
 
 
     def maybe_update( self ):
