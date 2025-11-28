@@ -1,0 +1,115 @@
+[theme]
+name = "gray"
+
+[asm.colors]
+addr            = "None"
+args            = "#999"
+#bytes           = "#000"
+bytes           = "#999"
+function        = "#999"
+jumps           = "#fff;#aaa;#777;#333"
+mnemonic        = "None"
+namespace       = "#ddd"
+next-marker     = "#000"
+offset          = "#444"
+prefix          = "None"
+addr-dot        = "#000"
+args-dot        = "#333"
+#bytes-dot       = "#000"
+bytes-dot       = "#999"
+call-dot        = "#666"
+function-dot    = "#999"
+jump-dot        = "#000"
+jump-false-dot  = "#fff"
+jump-true-dot   = "#000"
+mnemonic-dot    = "None"
+namespace-dot   = "#ddd"
+next-marker-dot = "#000"
+offset-dot      = "#999"
+prefix-dot      = "None"
+
+
+[asm]
+showspec-dot = "maobnptr"
+showspec = "maodbnptrjHcx"
+callgrind-events = "Ir,CEst"
+header-repeat = "50"
+breakpoint-numbers = "🯱🯲🯳🯴🯵🯶🯷🯸🯹"
+breakpoint-numbers-disabled = "🯱🯲🯳🯴🯵🯶🯷🯸🯹"
+
+[asm.colors.class]
+jump    = "#fff"
+mem     = "#000"
+nop     = "#333"
+bit     = "#ddd"
+math    = "#999"
+sys     = "#aaa"
+ret     = "#888"
+call    = "#666"
+stack   = "#000"
+cond    = "#fff"
+vector  = "#aaa"
+default = "#fff"
+
+
+[bt]
+address-colorspec = "ma"
+showspec = "naFPS"
+
+[bt.colors]
+address               = "None"
+default-object        = "#fff"
+filename              = "#fff"
+function              = "#999"
+namespace             = "#ddd"
+object-file           = "#fff"
+rtti-warning          = "#ccc"
+selected-frame-marker = "#000"
+
+[ftree.colors]
+arrows            = "#fff"
+blacklist-member  = "#333"
+blacklist-pointer = "#fff"
+down-cast         = "#aaa"
+invalid           = "#fff"
+limited           = "#888"
+pretty-print      = "#777"
+union             = "#fff"
+variable-name     = "None"
+virtual-cast      = "#ccc"
+
+
+[hexdump.colors]
+header = "#fff"
+symbols = "#fff"
+
+[memory.colors]
+ascii         = "#aaa"
+bss           = "#666"
+code          = "#aaa"
+executable    = "#ddd"
+heap          = "#555"
+inaccessible  = "#fff"
+invalid       = "#111"
+mmap          = "#111"
+nullpage      = "#fff"
+readonly      = "#999"
+readwrite     = "None"
+shared        = "#111"
+stack-foreign = "#fff"
+stack-own     = "#000"
+unknown       = ",,underline"
+writeonly     = "#fff"
+
+[pahole.colors]
+members = "#fff"
+
+[register.colors]
+names = "#444"
+
+[shorten.colors]
+templates = "#fff"
+
+[rich]
+
+# = "vim: tabstop=4 shiftwidth=4 expandtab ft=python

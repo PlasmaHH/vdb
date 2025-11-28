@@ -1,0 +1,114 @@
+[theme]
+name = "any"
+extends = "default"
+
+[asm.colors]
+addr            = "None"
+args            = "#99f"
+#bytes           = "#059"
+bytes           = "#99f"
+function        = "#99f"
+jumps           = "#f00;#0f0;#00f;#ff0;#f0f;#0ff"
+mnemonic        = "None"
+namespace       = "#ddf"
+next-marker     = "#0f0"
+offset          = "#444"
+prefix          = "None"
+addr-dot        = "#0000c0"
+args-dot        = "#3030a0"
+#bytes-dot       = "#005090"
+bytes-dot       = "#9090f0"
+call-dot        = "#6600ff"
+function-dot    = "#9090f0"
+jump-dot        = "#000088"
+jump-false-dot  = "#ff0000"
+jump-true-dot   = "#00ff00"
+mnemonic-dot    = "None"
+namespace-dot   = "#d0d0f0"
+next-marker-dot = "#008000"
+offset-dot      = "#909090"
+prefix-dot      = "None"
+
+[asm]
+showspec-dot = "maobnptr"
+showspec = "maodbnptrjHcx"
+callgrind-events = "Ir,CEst"
+header-repeat = "50"
+breakpoint-numbers = "🯱🯲🯳🯴🯵🯶🯷🯸🯹"
+breakpoint-numbers-disabled = "🯱🯲🯳🯴🯵🯶🯷🯸🯹"
+
+[asm.colors.class]
+jump    = "#f0f"
+mem     = "#0ff"
+nop     = "#338"
+bit     = "#da4"
+math    = "#909"
+sys     = "#a11"
+ret     = "#8f9"
+call    = "#66f"
+stack   = "#080"
+cond    = "#f99"
+vector  = "#aa6"
+default = "#f00"
+
+[bt]
+address-colorspec = "ma"
+showspec = "naFPS"
+
+[bt.colors]
+address               = "None"
+default-object        = "#ffbbff"
+filename              = "#ffff99"
+function              = "#99f"
+namespace             = "#ddf"
+object-file           = "#ffbbbb"
+rtti-warning          = "#c00"
+selected-frame-marker = "#0f0"
+
+[ftree.colors]
+arrows            = "#ff0000;#00ff00;#0000ff;#ff8000;#ff00ff;#00ffff"
+blacklist-member  = "#334400"
+blacklist-pointer = "#ff9900"
+down-cast         = "#aaffaa"
+invalid           = "#ff2222"
+limited           = "#88aaff"
+pretty-print      = "#76d7c4"
+union             = "#ffff66"
+variable-name     = "None"
+virtual-cast      = "#ccaaff"
+
+
+[hexdump.colors]
+header = "#ffa"
+symbols = "#f00;#0f0;#00f;#ff0;#f0f;#0ff"
+
+[memory.colors]
+ascii         = "#aa0"
+bss           = "#609"
+code          = "#a0a"
+executable    = "#d4f"
+heap          = "#55b"
+inaccessible  = "#f33"
+invalid       = "#16f"
+mmap          = "#11c"
+nullpage      = "#f33"
+readonly      = "#99f"
+readwrite     = "None"
+shared        = "#15c"
+stack-foreign = "#f70"
+stack-own     = "#070"
+unknown       = ",,underline"
+writeonly     = "#ff5"
+
+[pahole.colors]
+members = "#f00;#0f0;#00f;#ff0;#f0f;#0ff"
+
+[register.colors]
+names = "#4c0"
+
+[shorten.colors]
+templates = "#f60"
+
+[rich]
+
+# = "vim: tabstop=4 shiftwidth=4 expandtab ft=python
