@@ -169,7 +169,7 @@ from_tty = None
 xi_history = {}
 
 
-color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" ,gdb_type = vdb.config.PARAM_COLOUR_LIST )
+color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#ffaa00;#f0f;#0ff;#8B0000;#008000;#00008B;#008080;#8B008B;#ff6699;#66ff99;#3333ff" ,gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
 valid_archs = [ "x86", "arm" ]
 # XXX Move to vdb.arch
