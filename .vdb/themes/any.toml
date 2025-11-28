@@ -28,6 +28,8 @@ namespace-dot   = "#d0d0f0"
 next-marker-dot = "#008000"
 offset-dot      = "#909090"
 prefix-dot      = "None"
+variable        = "#fc8"
+location        = "#08a"
 
 [asm]
 showspec-dot = "maobnptr"
