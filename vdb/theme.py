@@ -88,13 +88,29 @@ def toml_load( tname, flags ):
 
     return data
 
+all_touched_configs = set()
+
 def set_cfg( name, value ):
     nname = f"vdb-{name}"
 #    print(f"config.set('{nname}','{value}')")
     try:
+        all_touched_configs.add( nname )
         gdb.execute(f"set {nname} {value}")
     except gdb.error as e:
         print(f"Error setting {nname} to {value} : {e}")
+
+
+def load_default(flags):
+    over = vdb.config.verbosity.value
+    vdb.config.verbosity.value = 0
+    for cfg in all_touched_configs:
+        co = vdb.config.get( cfg )
+        if( co is not None ):
+            co.set_default()
+        else:
+            print(f"Now known default value for {cfg}")
+    vdb.config.verbosity.value = over
+    print("Loaded default settings for all vdb settings touched by previous themes")
 
 def load_cfg( prefix, vl ):
     # Disable and re-enable config verbosity
@@ -120,21 +136,25 @@ def load_rich( vl ):
     vdb.util.console = rich.console.Console( force_terminal = True, color_system = "truecolor", theme = rich.theme.Theme(theme) )
 
 def theme_load( tname, flags ):
-    toml_data = toml_load( tname , flags)
-    fname = known_themes.get(tname)
-    global current_theme_file
-    current_theme_file = fname
-    global current_theme_name
-    current_theme_name = tname
 
-    for k,vl in toml_data.items():
-        match k:
-            case "theme":
-                pass
-            case "rich":
-                load_rich(vl)
-            case _:
-                load_cfg(k,vl)
+    if( tname == "default" ):
+        load_default(flags)
+    else:
+        toml_data = toml_load( tname , flags)
+        fname = known_themes.get(tname)
+        global current_theme_file
+        current_theme_file = fname
+        global current_theme_name
+        current_theme_name = tname
+
+        for k,vl in toml_data.items():
+            match k:
+                case "theme":
+                    pass
+                case "rich":
+                    load_rich(vl)
+                case _:
+                    load_cfg(k,vl)
 
 
     vdb.event.exec_hook("theme")
@@ -156,6 +176,8 @@ def start( ):
     if( vdb.cfgtheme.value ):
         theme_load(vdb.cfgtheme.value,"")
 
+# XXX Add a save command (use /f to overwrite). It will probably not support multiple files, its thought of as a
+# starting point. How to figure what to write? All colors configs plus a few that are specially marked by plugins?
 class cmd_theme (vdb.command.command):
     """
 """

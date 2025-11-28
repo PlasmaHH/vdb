@@ -175,8 +175,21 @@ class parameter(gdb.Parameter):
                 break
 #            print("st[%s] = '%s'" % (i,st[i],) )
 
-    def get_set_string(self):
+    def set_default( self ):
+        self.set(self.default)
+
+    def set( self, new_value ):
+        ret = self.get_set_string(new_value)
+        # emulate gdb behaviour as good as we can
+        if( ret is not None and len(ret) > 0 ):
+            print(ret)
+
+    def get_set_string(self, new_value = None):
         self.record_origin()
+
+        # gdb sets self.value before calling us, but sometimes we want to call this function from within our code too
+        if( new_value is not None ):
+            self.value = new_value
 
         try:
             if isinstance(self.value, str):
@@ -409,6 +422,9 @@ def show_config( argv ):
             otbl.append( line )
 
     print( vdb.util.format_table(otbl) )
+
+def get( cname ):
+    return registry.get(cname)
 
 def append( argv ):
 #    vdb.util.bark() # print("BARK")
