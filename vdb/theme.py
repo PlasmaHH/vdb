@@ -159,6 +159,10 @@ def theme_load( tname, flags ):
 
     vdb.event.exec_hook("theme")
 
+
+def toml_save( name, file, flags ):
+    pass
+
 def toml_list( flags ):
     print("This is the list of known themes and their toml files:")
 
@@ -197,6 +201,8 @@ class cmd_theme (vdb.command.command):
                 refresh(flags)
             case "list":
                 toml_list(flags)
+            case "save":
+                toml_save( argv[0], argv[1], flags )
             case _:
                 theme_load(argv[0],flags)
 
