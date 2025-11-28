@@ -11,10 +11,10 @@ def color( s, cs ):
     if( not isinstance(cs,list) ):
         cs = cs.split(",")
     if( len(cs) == 1 ):
-        return colors.color(s,cs[0])
+        return colors.color(s,cs[0].strip())
     else:
         cs += ["","",""]
-        return colors.color(s,fg=cs[0],bg=cs[1],style=cs[2])
+        return colors.color(s,fg=cs[0].strip(),bg=cs[1].strip(),style=cs[2].strip())
 
 @vdb.util.memoize()
 def mcolor( s, cs ):

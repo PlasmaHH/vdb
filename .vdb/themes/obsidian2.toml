@@ -1,0 +1,163 @@
+[theme]
+name = "Obsidian2"
+
+[prompt.colors]
+0 = "#a0c4ff"  # Light blue
+1 = "#a0c4ff"
+2 = "#a0c4ff"
+3 = "#a0c4ff"
+4 = "#a0c4ff"
+5 = "#a0c4ff"
+6 = "#a0c4ff"
+7 = "#a0c4ff"
+8 = "#a0c4ff"
+9 = "#a0c4ff"
+start = "#66b2ff"  # Bright blue
+end = "#66b2ff"
+git = "#66ff99"  # Green
+thread = "#ffcc66"  # Yellow
+time = "#cccccc"  # Gray
+frame = "#ff99cc"  # Pink
+host = "#ffcc99"  # Orange
+progress = "#99ccff"  # Light blue
+
+[shorten.colors]
+templates = "#ffff66"  # Yellow
+
+[bt.colors]
+namespace = "#66ccff"  # Cyan
+address = "#cccccc"  # Gray
+function = "#66ffcc"  # Light cyan
+selected-frame-marker = "#ff6666"  # Red
+filename = "#cccccc"
+object-file = "#cccccc"
+default-object = "#cccccc"
+rtti-warning = "#ff9966"  # Orange
+argument = "#cccccc"
+argvalue = "#ffffff"
+numvalue = "#66ccff"
+optimized-out = "#ff99cc"  # Magenta
+
+[memory.colors]
+nullpage = "#ffffff"
+unknown = ",,underline"  # Underline for unknown
+ascii = "#ffffff"
+stack-own = "#66ccff"  # Cyan
+stack-foreign = "#66ffcc"  # Light cyan
+heap = "#ff99cc"  # Magenta
+mmap = "#ffcc66"  # Orange
+shared = "#cc99ff"  # Purple
+code = "#66ccff"  # Cyan
+bss = "#ffcc99"  # Light orange
+readonly = "#99ccff"  # Light blue
+writeonly = "#ff9999"  # Light red
+readwrite = "#ffffff"
+executable = "#66ccff"  # Cyan
+inaccessible = "#999999"  # Dark gray
+invalid = "#ff6666"  # Red
+
+[vmmap.colors]
+executable = "#66ccff"  # Cyan
+readonly = "#99ccff"  # Light blue
+
+[asm.colors]
+class-jump = "#ff6666"  # Red
+class-mem = "#ff9966"  # Orange
+class-nop = "#cccccc"  # Gray
+class-bit = "#66ccff"  # Cyan
+class-math = "#66ffcc"  # Light cyan
+class-sys = "#ffcc66"  # Orange
+class-ret = "#ff99cc"  # Magenta
+class-call = "#66ccff"  # Cyan
+class-stack = "#ffcc99"  # Light orange
+class-cond = "#ff9966"  # Orange
+class-vector = "#66ffcc"  # Light cyan
+class-default = "#cccccc"  # Gray
+namespace = "#66ccff"  # Cyan
+function = "#66ffcc"  # Light cyan
+next-marker = "#ff6666"  # Red
+next2-marker = "#ff9966"  # Orange
+marker = "#ffcc66"  # Orange
+breakpoint-marker = "#ff6666"  # Red
+breakpoint-disabled-marker = "#cccccc"  # Gray
+addr = "#ffffff"
+offset = "#ffffff"
+bytes = "#ffffff"
+prefix = "#ffffff"
+args = "#ffffff"
+variable = "#ffffff"
+location = "#ffffff"
+explanation = "#888888"  # Gray
+unhandled = "#ff6666"  # Red
+namespace-dot = "#66ccff"  # Cyan
+function-dot = "#66ffcc"  # Light cyan
+bytes-dot = "#ffffff"
+next-marker-dot = "#ff6666"  # Red
+addr-dot = "#ffffff"
+offset-dot = "#ffffff"
+prefix-dot = "#ffffff"
+args-dot = "#ffffff"
+jump-false-dot = "#ff6666"  # Red
+jump-true-dot = "#66ff66"  # Green
+jump-dot = "#ffcc66"  # Orange
+call-dot = "#ff99cc"  # Magenta
+jumps = "#ff6666;#66ccff;#ff9966;#66ffcc;#ffcc66;#ff99cc"  # Red, Cyan, Orange, Light cyan, Orange, Magenta
+
+[register.colors]
+names = "#66ccff"  # Cyan
+flags = "#ff9966"  # Orange
+
+[hexdump.colors]
+header = "#66ccff"  # Cyan
+symbols = "#66ccff;#66ffcc;#ffcc66;#ff99cc;#66ccff;#66ffcc"  # Cyan, Light cyan, Orange, Magenta, Cyan, Light cyan
+
+[pahole.colors]
+members = "#66ccff;#66ffcc;#ffcc66;#ff99cc;#66ccff;#66ffcc"  # Same as symbols
+
+[ftree.colors]
+invalid = "#ff6666"  # Red
+union = "#ff9966"  # Orange
+virtual-cast = "#66ccff"  # Cyan
+down-cast = "#66ffcc"  # Light cyan
+blacklist-pointer = "#ffcc66"  # Orange
+blacklist-member = "#ff99cc"  # Magenta
+limited = "#cccccc"  # Gray
+pretty-print = "#66ccff"  # Cyan
+variable-name = "#ffffff"
+arrows = "#66ccff;#66ffcc;#ffcc66;#ff99cc;#66ccff;#66ffcc"  # Same as jumps
+
+[unwind.colors]
+hint = "#66ffcc"  # Light cyan
+hint-start = "#66ccff"  # Cyan
+
+[history.colors]
+marker = "#ff6666"  # Red
+background = "#000000"  # Black
+statistics = "#cccccc"  # Gray
+prompt = "#a0c4ff"  # Light blue
+match = "#66ccff"  # Cyan
+
+[va.colors]
+fixed-float = "#ff9966"  # Orange
+vararg-float = "#ffcc66"  # Orange
+fixed-int = "#66ccff"  # Cyan
+vararg-int = "#66ffcc"  # Light cyan
+
+[rtos.colors]
+active-task = "#66ff66"  # Green
+marked-task = "#ffcc66"  # Orange
+
+[list.colors]
+marker = "#ff6666"  # Red
+
+[swo.colors]
+0 = "#a0c4ff"
+1 = "#a0c4ff"
+2 = "#a0c4ff"
+3 = "#a0c4ff"
+4 = "#a0c4ff"
+5 = "#a0c4ff"
+6 = "#a0c4ff"
+7 = "#a0c4ff"
+8 = "#a0c4ff"
+9 = "#a0c4ff"

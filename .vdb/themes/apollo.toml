@@ -1,0 +1,203 @@
+[theme]
+name = "apollo"
+
+[prompt.colors]
+0 = "#00bfff"   # Deep Sky Blue
+1 = "#00ffff"   # Cyan
+2 = "#0066cc"   # Steel Blue
+3 = "#66ccff"   # Light Sky Blue
+4 = "#00ccff"   # Electric Blue
+5 = "#3399ff"   # Cornflower Blue
+6 = "#0099cc"   # Medium Blue
+7 = "#33ccff"   # Light Blue
+8 = "#0066cc"   # Steel Blue
+9 = "#00bfff"   # Deep Sky Blue
+start = "#00ffff" # Cyan
+end = "#0066cc"  # Steel Blue
+git = "#00ccff"  # Electric Blue
+thread = "#3399ff" # Cornflower Blue
+time = "#00bfff"  # Deep Sky Blue
+frame = "#0066cc" # Steel Blue
+host = "#00ffff"  # Cyan
+progress = "#0099cc" # Medium Blue
+
+[shorten.colors]
+templates = "#00ffff" # Cyan
+
+[bt.colors]
+namespace = "#00bfff" # Deep Sky Blue
+address = "#cccccc"    # Light Gray
+function = "#00ffff"   # Cyan
+selected-frame-marker = "#ff69b4" # Hot Pink
+filename = "#3399ff"   # Cornflower Blue
+object-file = "#0066cc" # Steel Blue
+default-object = "#0099cc" # Medium Blue
+rtti-warning = "#ff4500" # Orange Red
+argument = "#00ccff"  # Electric Blue
+argvalue = "#0066cc"  # Steel Blue
+numvalue = "#00bfff"  # Deep Sky Blue
+optimized-out = "#ff69b4" # Hot Pink
+
+[memory.colors]
+nullpage = "#ffff00" # Yellow
+unknown = ",,underline" # Underline with default
+ascii = "#00ff00"     # Lime Green
+stack-own = "#0066cc"  # Steel Blue
+stack-foreign = "#00bfff" # Deep Sky Blue
+heap = "#ff69b4"       # Hot Pink
+mmap = "#9932cc"       # Dark Orchid
+shared = "#00ffff"      # Cyan
+code = "#00ccff"       # Electric Blue
+bss = "#3399ff"        # Cornflower Blue
+readonly = "#0066cc"   # Steel Blue
+writeonly = "#ff4500"   # Orange Red
+readwrite = "#00bfff"   # Deep Sky Blue
+executable = "#00ffff"   # Cyan
+inaccessible = "#9932cc" # Dark Orchid
+invalid = "#ff69b4"     # Hot Pink
+section-_interp = "#0066cc" # Steel Blue
+section-_note_ABI-tag = "#00bfff" # Deep Sky Blue
+section-_hash = "#00ccff" # Electric Blue
+section-_gnu_hash = "#00ffff" # Cyan
+section-_dynsym = "#3399ff" # Cornflower Blue
+section-_dynstr = "#0066cc" # Steel Blue
+section-_gnu_version = "#ff4500" # Orange Red
+section-_gnu_version_r = "#ff69b4" # Hot Pink
+section-_rela_dyn = "#00bfff" # Deep Sky Blue
+section-_rela_plt = "#00ffff" # Cyan
+section-_init = "#00ccff" # Electric Blue
+section-_plt = "#0066cc" # Steel Blue
+section-_text = "#00bfff" # Deep Sky Blue
+section-_fini = "#00ffff" # Cyan
+section-_rodata = "#00ccff" # Electric Blue
+section-_stapsdt_base = "#3399ff" # Cornflower Blue
+section-_eh_frame_hdr = "#0066cc" # Steel Blue
+section-_eh_frame = "#00bfff" # Deep Sky Blue
+section-_gcc_except_table = "#00ffff" # Cyan
+section-_tdata = "#00ccff" # Electric Blue
+section-_tbss = "#0066cc" # Steel Blue
+section-_init_array = "#00bfff" # Deep Sky Blue
+section-_fini_array = "#00ffff" # Cyan
+section-_data_rel_ro = "#3399ff" # Cornflower Blue
+section-_dynamic = "#0066cc" # Steel Blue
+section-_got = "#00bfff" # Deep Sky Blue
+section-_got_plt = "#00ffff" # Cyan
+section-_data = "#00ccff" # Electric Blue
+section-_bss = "#0066cc" # Steel Blue
+section-_comment = "#00bfff" # Deep Sky Blue
+section-_GCC_command_line = "#00ffff" # Cyan
+section-_note_stapsdt = "#3399ff" # Cornflower Blue
+section-_debug_aranges = "#0066cc" # Steel Blue
+section-_debug_info = "#00bfff" # Deep Sky Blue
+section-_debug_abbrev = "#00ffff" # Cyan
+section-_debug_line = "#00ccff" # Electric Blue
+section-_debug_str = "#0066cc" # Steel Blue
+section-_debug_loc = "#00bfff" # Deep Sky Blue
+section-_debug_ranges = "#00ffff" # Cyan
+section-_debug_macro = "#3399ff" # Cornflower Blue
+
+[vmmap.colors]
+executable = "#00bfff" # Deep Sky Blue
+readonly = "#0066cc"  # Steel Blue
+
+[asm.colors]
+class-jump = "#ff4500"
+class-mem = "#00ffff"
+class-nop = "#00ff00"
+class-bit = "#ff69b4"
+class-math = "#00ffff"
+class-sys = "#0066cc"
+class-ret = "#ff4500"
+class-call = "#00ffff"
+class-stack = "#00ff00"
+class-cond = "#ff69b4"
+class-vector = "#00ffff"
+class-default = "#0066cc"
+namespace = "#00bfff" # Deep Sky Blue
+function = "#00ffff" # Cyan
+next-marker = "#ff4500" # Orange Red
+next2-marker = "#ff69b4" # Hot Pink
+marker = "#ff1493" # Dark Magenta
+breakpoint-marker = "#ff6347" # Tomato
+breakpoint-disabled-marker = "#ff8c00" # Dark Orange
+addr = "#cccccc" # Light Gray
+offset = "#00bfff" # Deep Sky Blue
+bytes = "#00ff00" # Lime Green
+prefix = "#0066cc" # Steel Blue
+args = "#00ffff" # Cyan
+variable = "#00ccff" # Electric Blue
+location = "#0099cc" # Medium Blue
+explanation = "#0066cc" # Steel Blue
+unhandled = "#ff4500" # Orange Red
+namespace-dot = "#00bfff" # Deep Sky Blue
+function-dot = "#00ffff" # Cyan
+bytes-dot = "#00ff00" # Lime Green
+next-marker-dot = "#ff4500" # Orange Red
+addr-dot = "#cccccc" # Light Gray
+offset-dot = "#00bfff" # Deep Sky Blue
+prefix-dot = "#0066cc" # Steel Blue
+args-dot = "#00ffff" # Cyan
+jump-false-dot = "#ff69b4" # Hot Pink
+jump-true-dot = "#ff1493" # Dark Magenta
+jump-dot = "#ff6347" # Tomato
+call-dot = "#ff8c00" # Dark Orange
+jumps = "#ff4500;#ff69b4;#ff1493;#ff6347;#ff8c00;#ffa500;#ff4500;#ff69b4;#ff1493;#ff6347;#ff8c00;#ffa500" # Orange Red, Hot Pink, Dark Magenta, Tomato, Dark Orange, Gold
+
+[register.colors]
+names = "#00bfff" # Deep Sky Blue
+flags = "#00ffff" # Cyan
+
+[hexdump.colors]
+header = "#0066cc" # Steel Blue
+symbols = "#00ffff;#00ccff;#00bfff;#0099cc;#0066cc;#0033cc;#00ffff;#00ccff;#00bfff;#0099cc;#0066cc;#0033cc" # Cyan, Electric Blue, Deep Sky Blue, Medium Blue, Steel Blue, Dark Blue
+
+[pahole.colors]
+members = "#00ffff;#00ccff;#00bfff;#0099cc;#0066cc;#0033cc;#00ffff;#00ccff;#00bfff;#0099cc;#0066cc;#0033cc" # Cyan, Electric Blue, Deep Sky Blue, Medium Blue, Steel Blue, Dark Blue
+
+[ftree.colors]
+invalid = "#0066cc" # Steel Blue
+union = "#00bfff" # Deep Sky Blue
+virtual-cast = "#00ffff" # Cyan
+down-cast = "#00ccff" # Electric Blue
+blacklist-pointer = "#0099cc" # Medium Blue
+blacklist-member = "#0066cc" # Steel Blue
+limited = "#00bfff" # Deep Sky Blue
+pretty-print = "#00ffff" # Cyan
+variable-name = "#00ccff" # Electric Blue
+arrows = "#0066cc;#0099cc;#00bfff;#00ccff;#00ffff;#3399ff;#0066cc;#0099cc;#00bfff;#00ccff;#00ffff;#3399ff" # Steel Blue, Medium Blue, Deep Sky Blue, Electric Blue, Cyan, Cornflower Blue
+
+[unwind.colors]
+hint = "#ff69b4" # Hot Pink
+hint-start = "#ff1493" # Dark Magenta
+
+[history.colors]
+marker = "#ff4500" # Orange Red
+background = "#000000" # Black
+statistics = "#00bfff" # Deep Sky Blue
+prompt = "#00ffff" # Cyan
+match = "#0066cc" # Steel Blue
+
+[va.colors]
+fixed-float = "#00ccff" # Electric Blue
+vararg-float = "#00bfff" # Deep Sky Blue
+fixed-int = "#00ffff" # Cyan
+vararg-int = "#0066cc" # Steel Blue
+
+[rtos.colors]
+active-task = "#00bfff" # Deep Sky Blue
+marked-task = "#00ffff" # Cyan
+
+[list.colors]
+marker = "#ff4500" # Orange Red
+
+[swo.colors]
+0 = "#00bfff"   # Deep Sky Blue
+1 = "#00ffff"   # Cyan
+2 = "#0066cc"   # Steel Blue
+3 = "#0099cc"   # Medium Blue
+4 = "#00ccff"   # Electric Blue
+5 = "#0033cc"   # Dark Blue
+6 = "#3399ff"   # Cornflower Blue
+7 = "#0066cc"   # Steel Blue
+8 = "#00bfff"   # Deep Sky Blue
+9 = "#00ffff"   # Cyan

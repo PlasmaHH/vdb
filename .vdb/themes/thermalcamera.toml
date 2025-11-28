@@ -1,0 +1,203 @@
+[theme]
+name = "ThermalCamera"
+
+[prompt.colors]
+0 = "#ff4500"   # Red-Orange (hot)
+1 = "#ffa500"   # Orange (warm)
+2 = "#ff8c00"   # Dark Orange (medium)
+3 = "#ffd700"   # Gold (highlight)
+4 = "#ff6347"   # Tomato (accent)
+5 = "#ff4757"   # Coral (warm)
+6 = "#ff69b4"   # Hot Pink (distinct)
+7 = "#ff1493"   # Deep Pink (strong)
+8 = "#ff00ff"   # Magenta (vivid)
+9 = "#ff0000"   # Red (intense)
+start = "#ff4500"   # Hot start marker
+end = "#ffa500"     # Warm end marker
+git = "#6a0dad"     # Dark Purple for Git
+thread = "#800080"  # Purple for thread
+time = "#ff6347"    # Tomato for time
+frame = "#ff4757"   # Coral for frame
+host = "#ff69b4"    # Hot Pink for host
+progress = "#ff1493" # Deep Pink for progress
+
+[shorten.colors]
+templates = "#6a0dad"  # Dark Purple for templates
+
+[bt.colors]
+namespace = "#ff4500"   # Red-Orange
+address = "#ffffff"       # White for address
+function = "#ff6347"     # Tomato
+selected-frame-marker = "#ffff00"  # Yellow (highlight)
+filename = "#ff8c00"     # Dark Orange
+object-file = "#ffd700"  # Gold
+default-object = "#ff69b4" # Hot Pink
+rtti-warning = "#ff4757" # Coral
+argument = "#ff1493"     # Deep Pink
+argvalue = "#ffffff"      # White
+numvalue = "#ff00ff"     # Magenta
+optimized-out = "#ff6347" # Tomato
+
+[memory.colors]
+nullpage = "#ff4500"     # Red-Orange
+unknown = ",,underline"  # Underline for unknown
+ascii = "#6a0dad"        # Dark Purple
+stack-own = "#800080"    # Purple
+stack-foreign = "#ff6347" # Tomato
+heap = "#ff4757"         # Coral
+mmap = "#ff69b4"         # Hot Pink
+shared = "#ff1493"       # Deep Pink
+code = "#ff00ff"         # Magenta
+bss = "#6a0dad"          # Dark Purple
+readonly = "#ff6347"    # Tomato
+writeonly = "#ff4500"    # Red-Orange
+readwrite = "#ffd700"    # Gold
+executable = "#ff8c00"   # Dark Orange
+inaccessible = "#ff4757"  # Coral
+invalid = "#ff69b4"       # Hot Pink
+section-_interp = "#ff1493" # Deep Pink
+section-_note_ABI-tag = "#ff00ff" # Magenta
+section-_hash = "#ff4500" # Red-Orange
+section-_gnu_hash = "#6a0dad" # Dark Purple
+section-_dynsym = "#800080" # Purple
+section-_dynstr = "#ff6347" # Tomato
+section-_gnu_version = "#ff4757" # Coral
+section-_gnu_version_r = "#ff69b4" # Hot Pink
+section-_rela_dyn = "#ff1493" # Deep Pink
+section-_rela_plt = "#ff00ff" # Magenta
+section-_init = "#ff4500" # Red-Orange
+section-_plt = "#6a0dad" # Dark Purple
+section-_text = "#800080" # Purple
+section-_fini = "#ff6347" # Tomato
+section-_rodata = "#ff4757" # Coral
+section-_stapsdt_base = "#ff69b4" # Hot Pink
+section-_eh_frame_hdr = "#ff1493" # Deep Pink
+section-_eh_frame = "#ff00ff" # Magenta
+section-_gcc_except_table = "#ff4500" # Red-Orange
+section-_tdata = "#6a0dad" # Dark Purple
+section-_tbss = "#800080" # Purple
+section-_init_array = "#ff6347" # Tomato
+section-_fini_array = "#ff4757" # Coral
+section-_data_rel_ro = "#ff69b4" # Hot Pink
+section-_dynamic = "#ff1493" # Deep Pink
+section-_got = "#ff00ff" # Magenta
+section-_got_plt = "#ff4500" # Red-Orange
+section-_data = "#6a0dad" # Dark Purple
+section-_bss = "#800080" # Purple
+section-_comment = "#ff6347" # Tomato
+section-_GCC_command_line = "#ff4757" # Coral
+section-_note_stapsdt = "#ff69b4" # Hot Pink
+section-_debug_aranges = "#ff1493" # Deep Pink
+section-_debug_info = "#ff00ff" # Magenta
+section-_debug_abbrev = "#ff4500" # Red-Orange
+section-_debug_line = "#6a0dad" # Dark Purple
+section-_debug_str = "#800080" # Purple
+section-_debug_loc = "#ff6347" # Tomato
+section-_debug_ranges = "#ff4757" # Coral
+section-_debug_macro = "#ff69b4" # Hot Pink
+
+[vmmap.colors]
+executable = "#ff4500"   # Red-Orange
+readonly = "#6a0dad"    # Dark Purple
+
+[asm.colors]
+class-jump = "#6a0dad"   # Dark Purple
+class-mem = "#800080"     # Purple
+class-nop = "#ff6347"      # Tomato
+class-bit = "#ff4757"      # Coral
+class-math = "#ff69b4"     # Hot Pink
+class-sys = "#ff1493"      # Deep Pink
+class-ret = "#ff00ff"      # Magenta
+class-call = "#ff4500"     # Red-Orange
+class-stack = "#6a0dad"   # Dark Purple
+class-cond = "#800080"     # Purple
+class-vector = "#ff6347"   # Tomato
+class-default = "#ff4757"  # Coral
+namespace = "#ff4500"      # Red-Orange
+function = "#ff6347"       # Tomato
+next-marker = "#ffff00"    # Yellow
+next2-marker = "#ffcc00"   # Light Yellow
+marker = "#6a0dad"         # Dark Purple
+breakpoint-marker = "#ff00ff" # Magenta
+breakpoint-disabled-marker = "#808080" # Gray
+addr = "#ffffff"           # White
+offset = "#6a0dad"        # Dark Purple
+bytes = "#ff4500"          # Red-Orange
+prefix = "#ffffff"         # White
+args = "#ff6347"          # Tomato
+variable = "#ff1493"       # Deep Pink
+location = "#ff69b4"      # Hot Pink
+explanation = "#808080"    # Gray (subtle)
+unhandled = "#ff4757"     # Coral
+namespace-dot = "#6a0dad" # Dark Purple
+function-dot = "#800080"  # Purple
+bytes-dot = "#ff6347"      # Tomato
+next-marker-dot = "#ffcc00" # Light Yellow
+addr-dot = "#ffffff"       # White
+offset-dot = "#6a0dad"     # Dark Purple
+prefix-dot = "#ffffff"     # White
+args-dot = "#ff6347"      # Tomato
+jump-false-dot = "#ff4500" # Red-Orange
+jump-true-dot = "#6a0dad"  # Dark Purple
+jump-dot = "#800080"       # Purple
+call-dot = "#ff6347"       # Tomato
+jumps = "#ff4500;#ff8c00;#ffd700;#ff6347;#ff4757;#ff69b4;#ff1493;#ff00ff;#ffcc00;#ffff00;#6a0dad;#800080"  # 12 thermal hues
+
+[register.colors]
+names = "#ff4500"   # Red-Orange
+flags = "#ffffff"    # White
+
+[hexdump.colors]
+header = "#6a0dad"   # Dark Purple
+symbols = "#ff4500;#ff8c00;#ffd700;#ff6347;#ff4757;#ff69b4;#ff1493;#ff00ff;#ffcc00;#ffff00;#6a0dad;#800080"  # 12 thermal hues
+
+[pahole.colors]
+members = "#ff4500;#ff8c00;#ffd700;#ff6347;#ff4757;#ff69b4;#ff1493;#ff00ff;#ffcc00;#ffff00;#6a0dad;#800080"  # 12 thermal hues
+
+[ftree.colors]
+invalid = "#ff4757"     # Coral
+union = "#ff69b4"        # Hot Pink
+virtual-cast = "#ff1493" # Deep Pink
+down-cast = "#ff00ff"    # Magenta
+blacklist-pointer = "#6a0dad" # Dark Purple
+blacklist-member = "#800080"  # Purple
+limited = "#ff6347"      # Tomato
+pretty-print = "#ff4500"  # Red-Orange
+variable-name = "#ffffff" # White
+arrows = "#ff4500;#ff8c00;#ffd700;#ff6347;#ff4757;#ff69b4;#ff1493;#ff00ff;#ffcc00;#ffff00;#6a0dad;#800080"  # 12 thermal hues
+
+[unwind.colors]
+hint = "#6a0dad"     # Dark Purple
+hint-start = "#800080" # Purple
+
+[history.colors]
+marker = "#ff4500"    # Red-Orange
+background = "#000000" # Black
+statistics = "#ffffff" # White
+prompt = "#6a0dad"    # Dark Purple
+match = "#ff6347"      # Tomato
+
+[va.colors]
+fixed-float = "#ff4500"   # Red-Orange
+vararg-float = "#ff8c00"   # Dark Orange
+fixed-int = "#ffd700"      # Gold
+vararg-int = "#ff6347"     # Tomato
+
+[rtos.colors]
+active-task = "#ff4500"   # Red-Orange
+marked-task = "#6a0dad"   # Dark Purple
+
+[list.colors]
+marker = "#ff4500"   # Red-Orange
+
+[swo.colors]
+0 = "#ff4500"   # Red-Orange
+1 = "#ff8c00"   # Dark Orange
+2 = "#ffd700"   # Gold
+3 = "#ff6347"   # Tomato
+4 = "#ff4757"   # Coral
+5 = "#ff69b4"   # Hot Pink
+6 = "#ff1493"   # Deep Pink
+7 = "#ff00ff"   # Magenta
+8 = "#ffcc00"   # Light Yellow
+9 = "#ffff00"    # Yellow

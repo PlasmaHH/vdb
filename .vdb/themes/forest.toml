@@ -1,0 +1,203 @@
+[theme]
+name = "Forest"
+
+[prompt.colors]
+0 = "#b2d69a"  # Soft green
+1 = "#88b378"   # Sage
+2 = "#6e915f"   # Forest green
+3 = "#54704a"   # Dark forest
+4 = "#3a5536"   # Deep green
+5 = "#2f432b"   # Dark olive
+6 = "#1f321c"   # Black forest
+7 = "#13220f"   # Shadow green
+8 = "#0a1507"   # Dark shadow
+9 = "#000000"   # Black
+start = "#b2d69a"
+end = "#54704a"
+git = "#88b378"
+thread = "#6e915f"
+time = "#3a5536"
+frame = "#2f432b"
+host = "#1f321c"
+progress = "#0a1507"
+
+[shorten.colors]
+templates = "#6e915f"  # Forest green
+
+[bt.colors]
+namespace = "#88b378"
+address = "#54704a"
+function = "#b2d69a"
+selected-frame-marker = "#88b378"
+filename = "#6e915f"
+object-file = "#54704a"
+default-object = "#3a5536"
+rtti-warning = "#b2d69a"
+argument = "#88b378"
+argvalue = "#54704a"
+numvalue = "#6e915f"
+optimized-out = "#3a5536"
+
+[memory.colors]
+nullpage = "#6e915f"
+unknown = ",,underline"
+ascii = "#b2d69a"
+stack-own = "#88b378"
+stack-foreign = "#54704a"
+heap = "#6e915f"
+mmap = "#3a5536"
+shared = "#88b378"
+code = "#b2d69a"
+bss = "#54704a"
+readonly = "#6e915f"
+writeonly = "#3a5536"
+readwrite = "#88b378"
+executable = "#b2d69a"
+inaccessible = "#54704a"
+invalid = "#3a5536"
+section-_interp = "#6e915f"
+section-_note_ABI-tag = "#88b378"
+section-_hash = "#54704a"
+section-_gnu_hash = "#3a5536"
+section-_dynsym = "#6e915f"
+section-_dynstr = "#88b378"
+section-_gnu_version = "#54704a"
+section-_gnu_version_r = "#3a5536"
+section-_rela_dyn = "#6e915f"
+section-_rela_plt = "#88b378"
+section-_init = "#54704a"
+section-_plt = "#3a5536"
+section-_text = "#6e915f"
+section-_fini = "#88b378"
+section-_rodata = "#54704a"
+section-_stapsdt_base = "#3a5536"
+section-_eh_frame_hdr = "#6e915f"
+section-_eh_frame = "#88b378"
+section-_gcc_except_table = "#54704a"
+section-_tdata = "#3a5536"
+section-_tbss = "#6e915f"
+section-_init_array = "#88b378"
+section-_fini_array = "#54704a"
+section-_data_rel_ro = "#3a5536"
+section-_dynamic = "#6e915f"
+section-_got = "#88b378"
+section-_got_plt = "#54704a"
+section-_data = "#3a5536"
+section-_bss = "#6e915f"
+section-_comment = "#88b378"
+section-_GCC_command_line = "#54704a"
+section-_note_stapsdt = "#3a5536"
+section-_debug_aranges = "#6e915f"
+section-_debug_info = "#88b378"
+section-_debug_abbrev = "#54704a"
+section-_debug_line = "#3a5536"
+section-_debug_str = "#6e915f"
+section-_debug_loc = "#88b378"
+section-_debug_ranges = "#54704a"
+section-_debug_macro = "#3a5536"
+
+[vmmap.colors]
+executable = "#b2d69a"
+readonly = "#6e915f"
+
+[asm.colors]
+class-jump = "#54704a"  # Dark forest
+class-mem = "#88b378"   # Sage
+class-nop = "#6e915f"   # Forest green
+class-bit = "#3a5536"   # Deep green
+class-math = "#b2d69a"  # Soft green
+class-sys = "#54704a"   # Dark forest
+class-ret = "#88b378"   # Sage
+class-call = "#6e915f"  # Forest green
+class-stack = "#3a5536" # Deep green
+class-cond = "#b2d69a"  # Soft green
+class-vector = "#54704a" # Dark forest
+class-default = "#88b378" # Sage
+namespace = "#6e915f"
+function = "#b2d69a"
+next-marker = "#54704a"
+next2-marker = "#88b378"
+marker = "#3a5536"
+breakpoint-marker = "#6e915f"
+breakpoint-disabled-marker = "#54704a"
+addr = "#88b378"
+offset = "#b2d69a"
+bytes = "#6e915f"
+prefix = "#3a5536"
+args = "#54704a"
+variable = "#88b378"
+location = "#b2d69a"
+explanation = "#88b378"  # Subtle green
+unhandled = "#3a5536"
+namespace-dot = "#54704a"
+function-dot = "#6e915f"
+bytes-dot = "#88b378"
+next-marker-dot = "#b2d69a"
+addr-dot = "#3a5536"
+offset-dot = "#54704a"
+prefix-dot = "#6e915f"
+args-dot = "#88b378"
+jump-false-dot = "#b2d69a"
+jump-true-dot = "#54704a"
+jump-dot = "#6e915f"
+call-dot = "#3a5536"
+jumps = "#54704a;#88b378;#6e915f;#3a5536;#b2d69a;#54704a;#88b378;#6e915f;#3a5536;#b2d69a;#54704a;#88b378"
+
+[register.colors]
+names = "#6e915f"
+flags = "#3a5536"
+
+[hexdump.colors]
+header = "#88b378"
+symbols = "#54704a;#6e915f;#3a5536;#b2d69a;#88b378;#54704a;#6e915f;#3a5536;#b2d69a;#88b378;#54704a;#6e915f"
+
+[pahole.colors]
+members = "#54704a;#6e915f;#3a5536;#b2d69a;#88b378;#54704a;#6e915f;#3a5536;#b2d69a;#88b378;#54704a;#6e915f"
+
+[ftree.colors]
+invalid = "#88b378"
+union = "#6e915f"
+virtual-cast = "#54704a"
+down-cast = "#3a5536"
+blacklist-pointer = "#b2d69a"
+blacklist-member = "#88b378"
+limited = "#6e915f"
+pretty-print = "#54704a"
+variable-name = "#3a5536"
+arrows = "#54704a;#88b378;#6e915f;#3a5536;#b2d69a;#54704a;#88b378;#6e915f;#3a5536;#b2d69a;#54704a;#88b378"
+
+[unwind.colors]
+hint = "#6e915f"
+hint-start = "#3a5536"
+
+[history.colors]
+marker = "#54704a"
+background = "#1f321c"
+statistics = "#88b378"
+prompt = "#b2d69a"
+match = "#6e915f"
+
+[va.colors]
+fixed-float = "#54704a"
+vararg-float = "#88b378"
+fixed-int = "#3a5536"
+vararg-int = "#6e915f"
+
+[rtos.colors]
+active-task = "#88b378"
+marked-task = "#54704a"
+
+[list.colors]
+marker = "#3a5536"
+
+[swo.colors]
+0 = "#54704a"
+1 = "#88b378"
+2 = "#6e915f"
+3 = "#3a5536"
+4 = "#b2d69a"
+5 = "#54704a"
+6 = "#88b378"
+7 = "#6e915f"
+8 = "#3a5536"
+9 = "#b2d69a"

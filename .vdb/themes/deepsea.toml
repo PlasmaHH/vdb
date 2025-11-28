@@ -1,0 +1,164 @@
+[theme]
+name = "DeepSea"
+
+[prompt.colors]
+0 = "#00bfff"    # Deep sky blue
+1 = "#00bfff"
+2 = "#00bfff"
+3 = "#00bfff"
+4 = "#00bfff"
+5 = "#00bfff"
+6 = "#00bfff"
+7 = "#00bfff"
+8 = "#00bfff"
+9 = "#00bfff"
+start = "#00bfff"
+end = "#00bfff"
+git = "#00ffff"   # Cyan
+thread = "#00ffff"
+time = "#00ffff"
+frame = "#00ffff"
+host = "#00ffff"
+progress = "#00ffff"
+
+[shorten.colors]
+templates = "#00bfff"  # Deep blue for templates
+
+[bt.colors]
+namespace = "#00bfff"     # Deep blue
+address = "#00ffff"         # Cyan
+function = "#00bfff"       # Deep blue
+selected-frame-marker = "#ffcc00"  # Yellow for emphasis
+filename = "#00bfff"
+object-file = "#00bfff"
+default-object = "#00bfff"
+rtti-warning = "#ff69b4"  # Hot pink
+argument = "#00bfff"
+argvalue = "#00ffff"
+numvalue = "#00bfff"
+optimized-out = "#808080"  # Gray
+
+[memory.colors]
+nullpage = "#00bfff"
+unknown = ",,underline"
+ascii = "#00bfff"
+stack-own = "#00bfff"
+stack-foreign = "#00bfff"
+heap = "#00bfff"
+mmap = "#00bfff"
+shared = "#00bfff"
+code = "#00bfff"
+bss = "#00bfff"
+readonly = "#00bfff"
+writeonly = "#00bfff"
+readwrite = "#00bfff"
+executable = "#00bfff"
+inaccessible = "#ff69b4"    # Hot pink
+invalid = "#ff69b4"
+
+[vmmap.colors]
+executable = "#00bfff"
+readonly = "#00bfff"
+
+[asm.colors]
+class-jump = "#ff69b4"    # Hot pink
+class-mem = "#00ffff"      # Cyan
+class-nop = "#00bfff"      # Deep blue
+class-bit = "#00ffff"      # Cyan
+class-math = "#00bfff"     # Deep blue
+class-sys = "#00bfff"      # Deep blue
+class-ret = "#00bfff"      # Deep blue
+class-call = "#00ffff"      # Cyan
+class-stack = "#00bfff"     # Deep blue
+class-cond = "#00bfff"      # Deep blue
+class-vector = "#00bfff"    # Deep blue
+class-default = "#00bfff"  # Deep blue
+namespace = "#00bfff"
+function = "#00bfff"
+next-marker = "#00bfff"
+next2-marker = "#00bfff"
+marker = "#00bfff"
+breakpoint-marker = "#ffcc00"  # Yellow
+breakpoint-disabled-marker = "#808080"  # Gray
+addr = "#00bfff"
+offset = "#00bfff"
+bytes = "#00bfff"
+prefix = "#00bfff"
+args = "#00bfff"
+variable = "#00bfff"
+location = "#00bfff"
+explanation = "#00bfff"   # Subtle deep blue
+unhandled = "#ff69b4"       # Hot pink
+namespace-dot = "#00bfff"
+function-dot = "#00bfff"
+bytes-dot = "#00bfff"
+next-marker-dot = "#00bfff"
+addr-dot = "#00bfff"
+offset-dot = "#00bfff"
+prefix-dot = "#00bfff"
+args-dot = "#00bfff"
+jump-false-dot = "#ff69b4"  # Hot pink
+jump-true-dot = "#00ffff"   # Cyan
+jump-dot = "#00bfff"
+call-dot = "#00ffff"       # Cyan
+jumps = "#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff"
+
+[register.colors]
+names = "#00bfff"
+flags = "#00ffff"
+
+[hexdump.colors]
+header = "#00bfff"
+symbols = "#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff"
+unknown-bytes = "#808080"
+
+[pahole.colors]
+members = "#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff"
+
+[ftree.colors]
+invalid = "#ff69b4"       # Hot pink
+union = "#00bfff"
+virtual-cast = "#00ffff"   # Cyan
+down-cast = "#00bfff"
+blacklist-pointer = "#ff69b4"
+blacklist-member = "#ff69b4"
+limited = "#00bfff"
+pretty-print = "#00bfff"
+variable-name = "#00bfff"
+arrows = "#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff;#00bfff;#00ffff"
+
+[unwind.colors]
+hint = "#00bfff"
+hint-start = "#00bfff"
+
+[history.colors]
+marker = "#00bfff"
+background = "#000000"    # Black
+statistics = "#00bfff"
+prompt = "#00bfff"
+match = "#00bfff"
+
+[va.colors]
+fixed-float = "#00bfff"
+vararg-float = "#00ffff"
+fixed-int = "#00bfff"
+vararg-int = "#00ffff"
+
+[rtos.colors]
+active-task = "#00bfff"
+marked-task = "#00ffff"
+
+[list.colors]
+marker = "#00bfff"
+
+[swo.colors]
+0 = "#00bfff"
+1 = "#00ffff"
+2 = "#00bfff"
+3 = "#00ffff"
+4 = "#00bfff"
+5 = "#00ffff"
+6 = "#00bfff"
+7 = "#00ffff"
+8 = "#00bfff"
+9 = "#00ffff"

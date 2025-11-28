@@ -1,0 +1,203 @@
+[theme]
+name = "MidnightEclipse"
+
+[prompt.colors]
+0 = "#00ffff"   # Cyan
+1 = "#ff00ff"   # Magenta
+2 = "#00ff00"   # Lime
+3 = "#ffff00"   # Yellow
+4 = "#0000ff"   # Blue
+5 = "#ff8800"   # Orange
+6 = "#8800ff"   # Violet
+7 = "#00ffff"   # Cyan (reused for variety)
+8 = "#ff00ff"   # Magenta (reused)
+9 = "#00ff00"   # Lime (reused)
+start = "#00ffff"   # Cyan
+end = "#ff00ff"     # Magenta
+git = "#ffff00"     # Yellow
+thread = "#00ff00"  # Lime
+time = "#0000ff"    # Blue
+frame = "#ff8800"   # Orange
+host = "#8800ff"    # Violet
+progress = "#00ffff" # Cyan
+
+[shorten.colors]
+templates = "#00ffff"  # Cyan
+
+[bt.colors]
+namespace = "#00ffff"   # Cyan
+address = "#888888"      # Gray
+function = "#00ff00"    # Lime
+selected-frame-marker = "#ff0000"  # Red
+filename = "#00ffff"     # Cyan
+object-file = "#ff8800"   # Orange
+default-object = "#888888" # Gray
+rtti-warning = "#ff00ff" # Magenta
+argument = "#ff8800"    # Orange
+argvalue = "#00ffff"     # Cyan
+numvalue = "#00ff00"     # Lime
+optimized-out = "#888888" # Gray
+
+[memory.colors]
+nullpage = "#00ffff"     # Cyan
+unknown = ",,underline"  # Underlined default
+ascii = "#00ff00"        # Lime
+stack-own = "#00ffff"     # Cyan
+stack-foreign = "#ff00ff" # Magenta
+heap = "#ff8800"          # Orange
+mmap = "#00ffff"          # Cyan
+shared = "#00ff00"        # Lime
+code = "#ffff00"          # Yellow
+bss = "#ff00ff"          # Magenta
+readonly = "#00ffff"     # Cyan
+writeonly = "#ff8800"     # Orange
+readwrite = "#00ff00"     # Lime
+executable = "#00ffff"     # Cyan
+inaccessible = "#888888"   # Gray
+invalid = "#ff0000"       # Red
+section-_interp = "#888888"
+section-_note_ABI-tag = "#888888"
+section-_hash = "#888888"
+section-_gnu_hash = "#888888"
+section-_dynsym = "#888888"
+section-_dynstr = "#888888"
+section-_gnu_version = "#888888"
+section-_gnu_version_r = "#888888"
+section-_rela_dyn = "#888888"
+section-_rela_plt = "#888888"
+section-_init = "#888888"
+section-_plt = "#888888"
+section-_text = "#888888"
+section-_fini = "#888888"
+section-_rodata = "#888888"
+section-_stapsdt_base = "#888888"
+section-_eh_frame_hdr = "#888888"
+section-_eh_frame = "#888888"
+section-_gcc_except_table = "#888888"
+section-_tdata = "#888888"
+section-_tbss = "#888888"
+section-_init_array = "#888888"
+section-_fini_array = "#888888"
+section-_data_rel_ro = "#888888"
+section-_dynamic = "#888888"
+section-_got = "#888888"
+section-_got_plt = "#888888"
+section-_data = "#888888"
+section-_bss = "#888888"
+section-_comment = "#888888"
+section-_GCC_command_line = "#888888"
+section-_note_stapsdt = "#888888"
+section-_debug_aranges = "#888888"
+section-_debug_info = "#888888"
+section-_debug_abbrev = "#888888"
+section-_debug_line = "#888888"
+section-_debug_str = "#888888"
+section-_debug_loc = "#888888"
+section-_debug_ranges = "#888888"
+section-_debug_macro = "#888888"
+
+[vmmap.colors]
+executable = "#ff0000"   # Red
+readonly = "#00ffff"     # Cyan
+
+[asm.colors]
+class-jump = "#ff00ff"   # Magenta
+class-mem = "#00ffff"     # Cyan
+class-nop = "#00ff00"     # Lime
+class-bit = "#ff8800"     # Orange
+class-math = "#0000ff"    # Blue
+class-sys = "#ff0000"     # Red
+class-ret = "#00ffff"      # Cyan
+class-call = "#00ff00"     # Lime
+class-stack = "#ff8800"    # Orange
+class-cond = "#ff00ff"     # Magenta
+class-vector = "#0000ff"  # Blue
+class-default = "#888888"  # Gray
+namespace = "#00ffff"      # Cyan
+function = "#00ff00"      # Lime
+next-marker = "#ff0000"    # Red
+next2-marker = "#ff8800"   # Orange
+marker = "#00ffff"         # Cyan
+breakpoint-marker = "#ff00ff" # Magenta
+breakpoint-disabled-marker = "#888888" # Gray
+addr = "#00ffff"           # Cyan
+offset = "#00ff00"         # Lime
+bytes = "#ff00ff"          # Magenta
+prefix = "#888888"         # Gray
+args = "#ff8800"           # Orange
+variable = "#00ffff"       # Cyan
+location = "#00ff00"       # Lime
+explanation = "#888888"    # Gray (subtle)
+unhandled = "#ff0000"      # Red
+namespace-dot = "#00ffff"   # Cyan
+function-dot = "#00ff00"    # Lime
+bytes-dot = "#ff00ff"       # Magenta
+next-marker-dot = "#ff0000" # Red
+addr-dot = "#00ffff"        # Cyan
+offset-dot = "#00ff00"      # Lime
+prefix-dot = "#888888"      # Gray
+args-dot = "#ff8800"       # Orange
+jump-false-dot = "#ff0000"  # Red
+jump-true-dot = "#00ff00"   # Lime
+jump-dot = "#00ffff"        # Cyan
+call-dot = "#ff8800"        # Orange
+jumps = "#ff00ff;#00ffff;#00ff00;#ff8800;#0000ff;#ff0000"  # 6 distinct colors
+
+[register.colors]
+names = "#00ffff"   # Cyan
+flags = "#ff00ff"   # Magenta
+
+[hexdump.colors]
+header = "#0000ff"     # Blue
+symbols = "#00ffff;#00ff00;#ff0000;#ff8800;#0000ff;#ffff00"  # 6 colors
+
+[pahole.colors]
+members = "#00ffff;#00ff00;#ff00ff;#ff8800;#0000ff;#ffff00"  # 6 colors
+
+[ftree.colors]
+invalid = "#ff0000"     # Red
+union = "#00ffff"         # Cyan
+virtual-cast = "#00ff00" # Lime
+down-cast = "#ff8800"    # Orange
+blacklist-pointer = "#ff00ff" # Magenta
+blacklist-member = "#0000ff"  # Blue
+limited = "#ffff00"       # Yellow
+pretty-print = "#00ffff"   # Cyan
+variable-name = "#888888" # Gray
+arrows = "#00ffff;#00ff00;#ff00ff;#ff8800;#0000ff;#ffff00"  # 6 colors
+
+[unwind.colors]
+hint = "#00ffff"     # Cyan
+hint-start = "#ff0000" # Red
+
+[history.colors]
+marker = "#ff0000"   # Red
+background = "#000000" # Black
+statistics = "#00ffff" # Cyan
+prompt = "#00ff00"    # Lime
+match = "#ff8800"      # Orange
+
+[va.colors]
+fixed-float = "#00ffff"   # Cyan
+vararg-float = "#00ff00"   # Lime
+fixed-int = "#ff00ff"      # Magenta
+vararg-int = "#ff8800"     # Orange
+
+[rtos.colors]
+active-task = "#00ffff"   # Cyan
+marked-task = "#ff0000"    # Red
+
+[list.colors]
+marker = "#00ff00"   # Lime
+
+[swo.colors]
+0 = "#00ffff"   # Cyan
+1 = "#00ff00"   # Lime
+2 = "#ff00ff"   # Magenta
+3 = "#ff8800"   # Orange
+4 = "#0000ff"   # Blue
+5 = "#ffff00"   # Yellow
+6 = "#ff0000"   # Red
+7 = "#888888"   # Gray
+8 = "#00ffff"   # Cyan (reused)
+9 = "#00ff00"   # Lime (reused)

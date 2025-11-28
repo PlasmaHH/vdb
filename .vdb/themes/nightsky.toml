@@ -1,0 +1,204 @@
+[theme]
+name = "NightSky"
+
+[prompt.colors]
+0 = "#00FFFF"   # Cyan for prompt
+1 = "#00FFFF"
+2 = "#00FFFF"
+3 = "#00FFFF"
+4 = "#00FFFF"
+5 = "#00FFFF"
+6 = "#00FFFF"
+7 = "#00FFFF"
+8 = "#00FFFF"
+9 = "#00FFFF"
+start = "#00FFFF"
+end = "#00FFFF"
+git = "#4B0082"  # Indigo for Git info
+thread = "#00FFFF"
+time = "#00FFFF"
+frame = "#00FFFF"
+host = "#00FFFF"
+progress = "#00FFFF"
+
+[shorten.colors]
+templates = "#00FFFF"  # Cyan for template markers
+
+[bt.colors]
+namespace = "#003366"   # Dark blue
+address = "#00FFFF"      # Cyan
+function = "#00FFFF"     # Cyan
+selected-frame-marker = "#FFD700"  # Gold for focus
+filename = "#00FFFF"
+object-file = "#00FFFF"
+default-object = "#00FFFF"
+rtti-warning = "#FF4500"  # Orange for warnings
+argument = "#00FFFF"
+argvalue = "#00FFFF"
+numvalue = "#00FFFF"
+optimized-out = "#808080"  # Gray for optimized-out
+
+[memory.colors]
+nullpage = "#003366"
+unknown = ",,underline"
+ascii = "#00FFFF"
+stack-own = "#00FFFF"
+stack-foreign = "#00FFFF"
+heap = "#00FFFF"
+mmap = "#00FFFF"
+shared = "#00FFFF"
+code = "#00FFFF"
+bss = "#00FFFF"
+readonly = "#00FFFF"
+writeonly = "#00FFFF"
+readwrite = "#00FFFF"
+executable = "#00FFFF"
+inaccessible = "#808080"
+invalid = "#FF4500"
+section-_interp = "#00FFFF"
+section-_note_ABI-tag = "#00FFFF"
+section-_hash = "#00FFFF"
+section-_gnu_hash = "#00FFFF"
+section-_dynsym = "#00FFFF"
+section-_dynstr = "#00FFFF"
+section-_gnu_version = "#00FFFF"
+section-_gnu_version_r = "#00FFFF"
+section-_rela_dyn = "#00FFFF"
+section-_rela_plt = "#00FFFF"
+section-_init = "#00FFFF"
+section-_plt = "#00FFFF"
+section-_text = "#00FFFF"
+section-_fini = "#00FFFF"
+section-_rodata = "#00FFFF"
+section-_stapsdt_base = "#00FFFF"
+section-_eh_frame_hdr = "#00FFFF"
+section-_eh_frame = "#00FFFF"
+section-_gcc_except_table = "#00FFFF"
+section-_tdata = "#00FFFF"
+section-_tbss = "#00FFFF"
+section-_init_array = "#00FFFF"
+section-_fini_array = "#00FFFF"
+section-_data_rel_ro = "#00FFFF"
+section-_dynamic = "#00FFFF"
+section-_got = "#00FFFF"
+section-_got_plt = "#00FFFF"
+section-_data = "#00FFFF"
+section-_bss = "#00FFFF"
+section-_comment = "#00FFFF"
+section-_GCC_command_line = "#00FFFF"
+section-_note_stapsdt = "#00FFFF"
+section-_debug_aranges = "#00FFFF"
+section-_debug_info = "#00FFFF"
+section-_debug_abbrev = "#00FFFF"
+section-_debug_line = "#00FFFF"
+section-_debug_str = "#00FFFF"
+section-_debug_loc = "#00FFFF"
+section-_debug_ranges = "#00FFFF"
+section-_debug_macro = "#00FFFF"
+
+[vmmap.colors]
+executable = "#00FFFF"
+readonly = "#00FFFF"
+
+[asm.colors]
+class-jump = "#4B0082"   # Indigo
+class-mem = "#003366"      # Dark blue
+class-nop = "#00FFFF"       # Cyan
+class-bit = "#00FFFF"       # Cyan
+class-math = "#00FFFF"      # Cyan
+class-sys = "#00FFFF"       # Cyan
+class-ret = "#00FFFF"       # Cyan
+class-call = "#00FFFF"      # Cyan
+class-stack = "#00FFFF"     # Cyan
+class-cond = "#00FFFF"      # Cyan
+class-vector = "#00FFFF"    # Cyan
+class-default = "#00FFFF"
+namespace = "#00FFFF"
+function = "#00FFFF"
+next-marker = "#FFD700"    # Gold
+next2-marker = "#FFA500"   # Orange
+marker = "#FF4500"         # Orange
+breakpoint-marker = "#FF4500"
+breakpoint-disabled-marker = "#808080"
+addr = "#00FFFF"
+offset = "#00FFFF"
+bytes = "#00FFFF"
+prefix = "#00FFFF"
+args = "#00FFFF"
+variable = "#00FFFF"
+location = "#00FFFF"
+explanation = "#CCCCCC"   # Light gray
+unhandled = "#FF4500"
+namespace-dot = "#003366"
+function-dot = "#003366"
+bytes-dot = "#003366"
+next-marker-dot = "#003366"
+addr-dot = "#003366"
+offset-dot = "#003366"
+prefix-dot = "#003366"
+args-dot = "#003366"
+jump-false-dot = "#003366"
+jump-true-dot = "#003366"
+jump-dot = "#003366"
+call-dot = "#003366"
+jumps = "#00FFFF;#003366;#4B0082;#00FFFF;#003366;#4B0082;#00FFFF;#003366;#4B0082;#00FFFF;#003366;#4B0082"
+
+[register.colors]
+names = "#00FFFF"   # Cyan
+flags = "#FF4500"    # Orange
+
+[hexdump.colors]
+header = "#00FFFF"
+symbols = "#00FFFF;#003366;#4B0082;#00FFFF;#003366;#4B0082;#00FFFF;#003366;#4B0082;#00FFFF;#003366;#4B0082"
+unknown-bytes = "#808080"
+
+[pahole.colors]
+members = "#00FFFF;#003366;#4B0082;#00FFFF;#003366;#4B0082;#00FFFF;#003366;#4B0082;#00FFFF;#003366;#4B0082"
+
+[ftree.colors]
+invalid = "#1E1E2F"   # Dark background for white
+union = "#1E1E2F"
+virtual-cast = "#1E1E2F"
+down-cast = "#1E1E2F"
+blacklist-pointer = "#1E1E2F"
+blacklist-member = "#1E1E2F"
+limited = "#1E1E2F"
+pretty-print = "#1E1E2F"
+variable-name = "#00FFFF"
+arrows = "#00FFFF;#003366;#4B0082;#00FFFF;#003366;#4B0082;#00FFFF;#003366;#4B0082;#00FFFF;#003366;#4B0082"
+
+[unwind.colors]
+hint = "#00FFFF"
+hint-start = "#00FFFF"
+
+[history.colors]
+marker = "#00FFFF"
+background = "#003366"
+statistics = "#00FFFF"
+prompt = "#00FFFF"
+match = "#00FFFF"
+
+[va.colors]
+fixed-float = "#00FFFF"
+vararg-float = "#00FFFF"
+fixed-int = "#00FFFF"
+vararg-int = "#00FFFF"
+
+[rtos.colors]
+active-task = "#00FFFF"
+marked-task = "#FFD700"
+
+[list.colors]
+marker = "#00FFFF"
+
+[swo.colors]
+0 = "#00FFFF"
+1 = "#003366"
+2 = "#4B0082"
+3 = "#00FFFF"
+4 = "#003366"
+5 = "#4B0082"
+6 = "#00FFFF"
+7 = "#003366"
+8 = "#4B0082"
+9 = "#00FFFF"

@@ -1,0 +1,164 @@
+[theme]
+name = "WarZone"
+
+[prompt.colors]
+0 = "#ff4444"   # Red for prompt
+1 = "#44ff44"   # Green for prompt
+2 = "#4444ff"   # Blue for prompt
+3 = "#ffff44"   # Yellow for prompt
+4 = "#ff44ff"   # Magenta for prompt
+5 = "#44ffff"   # Cyan for prompt
+6 = "#ffffff"   # White for prompt
+7 = "#888888"   # Gray for prompt
+8 = "#ff8800"   # Orange for prompt
+9 = "#00ff88"   # Teal for prompt
+start = "#ff0000" # Red start marker
+end = "#00ff00"   # Green end marker
+git = "#ff8800"   # Orange for Git
+thread = "#ffffff" # White for thread
+time = "#00ffff"  # Cyan for time
+frame = "#ff00ff"  # Magenta for frame
+host = "#ffff00"  # Yellow for host
+progress = "#00ff00" # Green progress
+
+[shorten.colors]
+templates = "#ff4444" # Red for templates
+
+[bt.colors]
+namespace = "#00ffff" # Cyan
+address = "#ffffff"   # White
+function = "#ff00ff"  # Magenta
+selected-frame-marker = "#ff4400" # Orange
+filename = "#00ffff"   # Cyan
+object-file = "#44ff44" # Lime
+default-object = "#888888" # Gray
+rtti-warning = "#ff0000" # Red
+argument = "#ffffff"  # White
+argvalue = "#00ffff"   # Cyan
+numvalue = "#ff8800"   # Orange
+optimized-out = "#888888" # Gray
+
+[memory.colors]
+nullpage = "#ff4400" # Dark orange
+unknown = ",,underline" # Underline
+ascii = "#00ffff"    # Cyan
+stack-own = "#44ff44" # Lime
+stack-foreign = "#ff4444" # Red
+heap = "#00ffff"      # Cyan
+mmap = "#ff8800"     # Orange
+shared = "#4444ff"    # Dark blue
+code = "#00ff00"     # Green
+bss = "#ff00ff"      # Magenta
+readonly = "#00ffff"  # Cyan
+writeonly = "#ff4400" # Dark orange
+readwrite = "#44ff44" # Lime
+executable = "#ff0000" # Red
+inaccessible = "#888888" # Gray
+invalid = "#ff4444"  # Red
+
+[vmmap.colors]
+executable = "#00ff00" # Green
+readonly = "#00ffff"   # Cyan
+
+[asm.colors]
+class-jump = "#ff0000" # Red
+class-mem = "#00ffff"   # Cyan
+class-nop = "#888888"  # Gray
+class-bit = "#ff8800"  # Orange
+class-math = "#44ff44" # Lime
+class-sys = "#ff4400"  # Dark orange
+class-ret = "#00ffff"  # Cyan
+class-call = "#ff00ff" # Magenta
+class-stack = "#ffff00" # Yellow
+class-cond = "#ff8800" # Orange
+class-vector = "#00ff00" # Green
+class-default = "#888888" # Gray
+namespace = "#00ffff"  # Cyan
+function = "#ff00ff"  # Magenta
+next-marker = "#ffff00" # Yellow
+next2-marker = "#ff8800" # Orange
+marker = "#ff4400"    # Dark orange
+breakpoint-marker = "#ff0000" # Red
+breakpoint-disabled-marker = "#888888" # Gray
+addr = "#ffffff"      # White
+offset = "#00ffff"    # Cyan
+bytes = "#ff00ff"     # Magenta
+prefix = "#ffffff"    # White
+args = "#00ffff"      # Cyan
+variable = "#44ff44"  # Lime
+location = "#ff8800" # Orange
+explanation = "#00ff00" # Green
+unhandled = "#ff4444" # Red
+namespace-dot = "#00ffff" # Cyan
+function-dot = "#ff00ff" # Magenta
+bytes-dot = "#ff0000" # Red
+next-marker-dot = "#ffff00" # Yellow
+addr-dot = "#ffffff"   # White
+offset-dot = "#00ffff" # Cyan
+prefix-dot = "#ffffff" # White
+args-dot = "#00ffff"  # Cyan
+jump-false-dot = "#ff4400" # Dark orange
+jump-true-dot = "#ff8800" # Orange
+jump-dot = "#ff0000" # Red
+call-dot = "#ff00ff" # Magenta
+jumps = "#ff0000;#ff4400;#ff8800;#ffcc00;#ffff00;#ffcc00;#ff8800;#ff4400;#ff0000;#ff0044;#ff0088;#ff00cc" # 12 jump colors
+
+[register.colors]
+names = "#00ffff" # Cyan
+flags = "#ff0000" # Red
+
+[hexdump.colors]
+header = "#ff4400" # Dark orange
+symbols = "#ff0000;#ff4400;#ff8800;#ffcc00;#ffff00;#ffcc00;#ff8800;#ff4400;#ff0000;#ff0044;#ff0088;#ff00cc" # 12 symbol colors
+unknown-bytes = "#888888" # Gray
+
+[pahole.colors]
+members = "#ff0000;#ff4400;#ff8800;#ffcc00;#ffff00;#ffcc00;#ff8800;#ff4400;#ff0000;#ff0044;#ff0088;#ff00cc" # 12 member colors
+
+[ftree.colors]
+invalid = "#ff0000" # Red
+union = "#00ffff" # Cyan
+virtual-cast = "#ff00ff" # Magenta
+down-cast = "#00ff00" # Green
+blacklist-pointer = "#ff8800" # Orange
+blacklist-member = "#ff4400" # Dark orange
+limited = "#ffff00" # Yellow
+pretty-print = "#00ffff" # Cyan
+variable-name = "#ffffff" # White
+arrows = "#ff0000;#ff4400;#ff8800;#ffcc00;#ffff00;#ffcc00;#ff8800;#ff4400;#ff0000;#ff0044;#ff0088;#ff00cc" # 12 arrow colors
+
+[unwind.colors]
+hint = "#00ffff" # Cyan
+hint-start = "#ff00ff" # Magenta
+
+[history.colors]
+marker = "#ff0000" # Red
+background = "#000000" # Black
+statistics = "#00ffff" # Cyan
+prompt = "#ffffff" # White
+match = "#ff8800" # Orange
+
+[va.colors]
+fixed-float = "#00ffff" # Cyan
+vararg-float = "#ff00ff" # Magenta
+fixed-int = "#00ff00" # Green
+vararg-int = "#ff0000" # Red
+
+[rtos.colors]
+active-task = "#00ffff" # Cyan
+marked-task = "#ff00ff" # Magenta
+
+[list.colors]
+marker = "#ff0000" # Red
+
+[swo.colors]
+0 = "#ff0000" # Red
+1 = "#ff4400" # Dark orange
+2 = "#ff8800" # Orange
+3 = "#ffcc00" # Yellow-orange
+4 = "#ffff00" # Yellow
+5 = "#ffcc00" # Yellow-orange
+6 = "#ff8800" # Orange
+7 = "#ff4400" # Dark orange
+8 = "#ff0000" # Red
+9 = "#ff0044" # Red-pink

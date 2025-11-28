@@ -1,0 +1,204 @@
+[theme]
+name = "AuroraBorealis"
+
+[prompt.colors]
+0 = "#a0c4ff"   # Soft blue
+1 = "#ff99cc"   # Pink
+2 = "#ccffff"   # Cyan
+3 = "#d4a5a5"   # Light red
+4 = "#b3d9ff"   # Light blue
+5 = "#d4a5a5"   # Light red
+6 = "#a0c4ff"   # Soft blue
+7 = "#ffcc99"   # Amber
+8 = "#ccffff"   # Cyan
+9 = "#ff99cc"   # Pink
+start = "#a0c4ff"
+end = "#ff99cc"
+git = "#d4a5a5"
+thread = "#ccffff"
+time = "#ffcc99"
+frame = "#a0c4ff"
+host = "#ff99cc"
+progress = "#ccffff"
+
+[shorten.colors]
+templates = "#a0c4ff"
+
+[bt.colors]
+namespace = "#d4a5a5"   # Light red
+address = "#ffffff"     # White
+function = "#a0c4ff"    # Soft blue
+selected-frame-marker = "#ff99cc"  # Pink
+filename = "#ccffff"     # Cyan
+object-file = "#ffcc99"  # Amber
+default-object = "#d4a5a5"  # Light red
+rtti-warning = "#a0c4ff"  # Soft blue
+argument = "#ffcc99"    # Amber
+argvalue = "#ffffff"     # White
+numvalue = "#a0c4ff"    # Soft blue
+optimized-out = "#ccffff"  # Cyan
+
+[memory.colors]
+nullpage = "#ffcc99"    # Amber
+unknown = ",,underline" # Underlined
+ascii = "#a0c4ff"        # Soft blue
+stack-own = "#ccffff"    # Cyan
+stack-foreign = "#d4a5a5" # Light red
+heap = "#ff99cc"         # Pink
+mmap = "#a0c4ff"         # Soft blue
+shared = "#ccffff"       # Cyan
+code = "#ffcc99"        # Amber
+bss = "#d4a5a5"         # Light red
+readonly = "#a0c4ff"    # Soft blue
+writeonly = "#ff99cc"    # Pink
+readwrite = "#ccffff"    # Cyan
+executable = "#ffcc99"   # Amber
+inaccessible = "#d4a5a5"  # Light red
+invalid = "#a0c4ff"      # Soft blue
+section-_interp = "#ccffff"
+section-_note_ABI-tag = "#ff99cc"
+section-_hash = "#a0c4ff"
+section-_gnu_hash = "#ffcc99"
+section-_dynsym = "#d4a5a5"
+section-_dynstr = "#ccffff"
+section-_gnu_version = "#ff99cc"
+section-_gnu_version_r = "#a0c4ff"
+section-_rela_dyn = "#ffcc99"
+section-_rela_plt = "#d4a5a5"
+section-_init = "#ccffff"
+section-_plt = "#ff99cc"
+section-_text = "#a0c4ff"
+section-_fini = "#ffcc99"
+section-_rodata = "#d4a5a5"
+section-_stapsdt_base = "#ccffff"
+section-_eh_frame_hdr = "#ff99cc"
+section-_eh_frame = "#a0c4ff"
+section-_gcc_except_table = "#ffcc99"
+section-_tdata = "#d4a5a5"
+section-_tbss = "#ccffff"
+section-_init_array = "#ff99cc"
+section-_fini_array = "#a0c4ff"
+section-_data_rel_ro = "#ffcc99"
+section-_dynamic = "#d4a5a5"
+section-_got = "#ccffff"
+section-_got_plt = "#ff99cc"
+section-_data = "#a0c4ff"
+section-_bss = "#ffcc99"
+section-_comment = "#d4a5a5"
+section-_GCC_command_line = "#ccffff"
+section-_note_stapsdt = "#ff99cc"
+section-_debug_aranges = "#a0c4ff"
+section-_debug_info = "#ffcc99"
+section-_debug_abbrev = "#d4a5a5"
+section-_debug_line = "#ccffff"
+section-_debug_str = "#ff99cc"
+section-_debug_loc = "#a0c4ff"
+section-_debug_ranges = "#ffcc99"
+section-_debug_macro = "#d4a5a5"
+
+[vmmap.colors]
+executable = "#ffcc99"   # Amber
+readonly = "#a0c4ff"    # Soft blue
+
+[asm.colors]
+class-jump = "#a0c4ff"   # Soft blue
+class-mem = "#ff99cc"     # Pink
+class-nop = "#ccffff"     # Cyan
+class-bit = "#d4a5a5"     # Light red
+class-math = "#ffcc99"    # Amber
+class-sys = "#a0c4ff"     # Soft blue
+class-ret = "#ff99cc"     # Pink
+class-call = "#ccffff"    # Cyan
+class-stack = "#d4a5a5"   # Light red
+class-cond = "#ffcc99"    # Amber
+class-vector = "#a0c4ff"  # Soft blue
+class-default = "#ccffff" # Cyan
+namespace = "#a0c4ff"     # Soft blue
+function = "#ff99cc"      # Pink
+next-marker = "#d4a5a5"   # Light red
+next2-marker = "#ffcc99"  # Amber
+marker = "#ccffff"        # Cyan
+breakpoint-marker = "#a0c4ff" # Soft blue
+breakpoint-disabled-marker = "#ff99cc" # Pink
+addr = "#ffffff"          # White
+offset = "#a0c4ff"        # Soft blue
+bytes = "#ff99cc"         # Pink
+prefix = "#ffffff"        # White
+args = "#ccffff"         # Cyan
+variable = "#d4a5a5"     # Light red
+location = "#ffcc99"     # Amber
+explanation = "#888"      # Gray (subtle)
+unhandled = "#a0c4ff"     # Soft blue
+namespace-dot = "#333"    # Dark gray (white background)
+function-dot = "#555"     # Medium gray
+bytes-dot = "#777"        # Light gray
+next-marker-dot = "#999"   # Gray
+addr-dot = "#bbb"         # Light gray
+offset-dot = "#ddd"       # Very light gray
+prefix-dot = "#eee"       # Almost white
+args-dot = "#555"         # Medium gray
+jump-false-dot = "#333"    # Dark gray
+jump-true-dot = "#555"     # Medium gray
+jump-dot = "#777"          # Light gray
+call-dot = "#999"          # Gray
+jumps = "#a0c4ff;#ff99cc;#ccffff;#d4a5a5;#ffcc99;#a0c4ff;#ff99cc;#ccffff;#d4a5a5;#ffcc99;#a0c4ff;#ff99cc"  # 12 unique colors
+
+[register.colors]
+names = "#a0c4ff"   # Soft blue
+flags = "#ff99cc"   # Pink
+
+[hexdump.colors]
+header = "#ffcc99"   # Amber
+symbols = "#a0c4ff;#ff99cc;#ccffff;#d4a5a5;#ffcc99;#a0c4ff;#ff99cc;#ccffff;#d4a5a5;#ffcc99;#a0c4ff;#ff99cc"  # 12 unique colors
+unknown-bytes = "#888"  # Gray
+
+[pahole.colors]
+members = "#a0c4ff;#ff99cc;#ccffff;#d4a5a5;#ffcc99;#a0c4ff;#ff99cc;#ccffff;#d4a5a5;#ffcc99;#a0c4ff;#ff99cc"  # 12 unique colors
+
+[ftree.colors]
+invalid = "#333"         # Dark gray
+union = "#555"            # Medium gray
+virtual-cast = "#777"     # Light gray
+down-cast = "#999"        # Gray
+blacklist-pointer = "#bbb" # Light gray
+blacklist-member = "#ddd" # Very light gray
+limited = "#555"         # Medium gray
+pretty-print = "#777"     # Light gray
+variable-name = "#333"    # Dark gray
+arrows = "#333;#555;#777;#999;#bbb;#ddd;#333;#555;#777;#999;#bbb;#ddd"  # 12 unique dark colors
+
+[unwind.colors]
+hint = "#a0c4ff"   # Soft blue
+hint-start = "#ff99cc"  # Pink
+
+[history.colors]
+marker = "#ccffff"   # Cyan
+background = "#000"   # Black
+statistics = "#a0c4ff"  # Soft blue
+prompt = "#ff99cc"    # Pink
+match = "#d4a5a5"      # Light red
+
+[va.colors]
+fixed-float = "#ffcc99"   # Amber
+vararg-float = "#a0c4ff"  # Soft blue
+fixed-int = "#ccffff"     # Cyan
+vararg-int = "#ff99cc"    # Pink
+
+[rtos.colors]
+active-task = "#a0c4ff"   # Soft blue
+marked-task = "#ff99cc"   # Pink
+
+[list.colors]
+marker = "#d4a5a5"   # Light red
+
+[swo.colors]
+0 = "#a0c4ff"   # Soft blue
+1 = "#ff99cc"   # Pink
+2 = "#ccffff"   # Cyan
+3 = "#d4a5a5"   # Light red
+4 = "#ffcc99"   # Amber
+5 = "#a0c4ff"   # Soft blue
+6 = "#ff99cc"   # Pink
+7 = "#ccffff"   # Cyan
+8 = "#d4a5a5"   # Light red
+9 = "#ffcc99"   # Amber

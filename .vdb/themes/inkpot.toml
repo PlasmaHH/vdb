@@ -1,0 +1,205 @@
+[theme]
+name = "inkpot"
+
+[prompt.colors]
+0 = "#ff69b4"    # Hot pink
+1 = "#00ffff"    # Cyan
+2 = "#ff00ff"    # Magenta
+3 = "#ffff00"    # Yellow
+4 = "#00ff00"    # Lime
+5 = "#ff4500"    # OrangeRed
+6 = "#1e90ff"    # DodgerBlue
+7 = "#ff1493"    # DeepPink
+8 = "#00ced1"    # DarkTurquoise
+9 = "#dda0dd"    # Plum
+start = "#ff69b4"
+end = "#00ffff"
+git = "#ff00ff"
+thread = "#ffff00"
+time = "#00ff00"
+frame = "#ff4500"
+host = "#1e90ff"
+progress = "#ff1493"
+
+[shorten.colors]
+templates = "#00ffff"
+
+[bt.colors]
+namespace = "#ff69b4"
+address = "#00ffff"
+function = "#ff00ff"
+selected-frame-marker = "#ffff00"
+filename = "#00ff00"
+object-file = "#ff4500"
+default-object = "#1e90ff"
+rtti-warning = "#ff1493"
+argument = "#00ced1"
+argvalue = "#dda0dd"
+numvalue = "#ff69b4"
+optimized-out = "#00ffff"
+
+[memory.colors]
+nullpage = "#ff00ff"
+unknown = ",,underline"
+ascii = "#ffff00"
+stack-own = "#00ff00"
+stack-foreign = "#ff4500"
+heap = "#1e90ff"
+mmap = "#ff1493"
+shared = "#00ced1"
+code = "#dda0dd"
+bss = "#ff69b4"
+readonly = "#00ffff"
+writeonly = "#ff00ff"
+readwrite = "#ffff00"
+executable = "#00ff00"
+inaccessible = "#ff4500"
+invalid = "#1e90ff"
+section-_interp = "#ff1493"
+section-_note_ABI-tag = "#00ced1"
+section-_hash = "#dda0dd"
+section-_gnu_hash = "#ff69b4"
+section-_dynsym = "#00ffff"
+section-_dynstr = "#ff00ff"
+section-_gnu_version = "#ffff00"
+section-_gnu_version_r = "#00ff00"
+section-_rela_dyn = "#ff4500"
+section-_rela_plt = "#1e90ff"
+section-_init = "#ff1493"
+section-_plt = "#00ced1"
+section-_text = "#dda0dd"
+section-_fini = "#ff69b4"
+section-_rodata = "#00ffff"
+section-_stapsdt_base = "#ff00ff"
+section-_eh_frame_hdr = "#ffff00"
+section-_eh_frame = "#00ff00"
+section-_gcc_except_table = "#ff4500"
+section-_tdata = "#1e90ff"
+section-_tbss = "#ff1493"
+section-_init_array = "#00ced1"
+section-_fini_array = "#dda0dd"
+section-_data_rel_ro = "#ff69b4"
+section-_dynamic = "#00ffff"
+section-_got = "#ff00ff"
+section-_got_plt = "#ffff00"
+section-_data = "#00ff00"
+section-_bss = "#ff4500"
+section-_comment = "#1e90ff"
+section-_GCC_command_line = "#ff1493"
+section-_note_stapsdt = "#00ced1"
+section-_debug_aranges = "#dda0dd"
+section-_debug_info = "#ff69b4"
+section-_debug_abbrev = "#00ffff"
+section-_debug_line = "#ff00ff"
+section-_debug_str = "#ffff00"
+section-_debug_loc = "#00ff00"
+section-_debug_ranges = "#ff4500"
+section-_debug_macro = "#1e90ff"
+
+[vmmap.colors]
+executable = "#ff1493"
+readonly = "#00ced1"
+
+[asm.colors]
+class-jump = "#ff69b4"
+class-mem = "#00ffff"
+class-nop = "#ff00ff"
+class-bit = "#ffff00"
+class-math = "#00ff00"
+class-sys = "#ff4500"
+class-ret = "#1e90ff"
+class-call = "#ff1493"
+class-stack = "#00ced1"
+class-cond = "#dda0dd"
+class-vector = "#ff69b4"
+class-default = "#00ffff"
+namespace = "#ff00ff"
+function = "#ffff00"
+next-marker = "#00ff00"
+next2-marker = "#ff4500"
+marker = "#1e90ff"
+breakpoint-marker = "#ff1493"
+breakpoint-disabled-marker = "#00ced1"
+addr = "#00ffff"
+offset = "#ff69b4"
+bytes = "#ff00ff"
+prefix = "#ffff00"
+
+args = "#ff4500"
+variable = "#1e90ff"
+location = "#ff1493"
+explanation = "#00ced1"
+unhandled = "#dda0dd"
+namespace-dot = "#ff69b4"
+function-dot = "#00ffff"
+bytes-dot = "#ff00ff"
+next-marker-dot = "#ffff00"
+addr-dot = "#00ff00"
+offset-dot = "#ff4500"
+prefix-dot = "#1e90ff"
+
+args-dot = "#00ced1"
+jump-false-dot = "#dda0dd"
+jump-true-dot = "#ff69b4"
+jump-dot = "#00ffff"
+call-dot = "#ff00ff"
+jumps = "#ff69b4;#00ffff;#ff00ff;#ffff00;#00ff00;#ff4500;#1e90ff;#ff1493;#00ced1;#dda0dd;#ff69b4;#00ffff"
+
+[register.colors]
+names = "#ff00ff"
+flags = "#ffff00"
+
+[hexdump.colors]
+header = "#00ffff"
+symbols = "#ff69b4;#00ffff;#ff00ff;#ffff00;#00ff00;#ff4500;#1e90ff;#ff1493;#00ced1;#dda0dd;#ff69b4;#00ffff"
+
+[pahole.colors]
+members = "#ff69b4;#00ffff;#ff00ff;#ffff00;#00ff00;#ff4500;#1e90ff;#ff1493;#00ced1;#dda0dd;#ff69b4;#00ffff"
+
+[ftree.colors]
+invalid = "#ff69b4"
+union = "#00ffff"
+virtual-cast = "#ff00ff"
+down-cast = "#ffff00"
+blacklist-pointer = "#00ff00"
+blacklist-member = "#ff4500"
+limited = "#1e90ff"
+pretty-print = "#ff1493"
+variable-name = "#00ced1"
+arrows = "#ff69b4;#00ffff;#ff00ff;#ffff00;#00ff00;#ff4500;#1e90ff;#ff1493;#00ced1;#dda0dd;#ff69b4;#00ffff"
+
+[unwind.colors]
+hint = "#ff00ff"
+hint-start = "#ffff00"
+
+[history.colors]
+marker = "#00ff00"
+background = "#000000"
+statistics = "#ff69b4"
+prompt = "#ff4500"
+match = "#1e90ff"
+
+[va.colors]
+fixed-float = "#ff1493"
+vararg-float = "#00ced1"
+fixed-int = "#dda0dd"
+vararg-int = "#ff69b4"
+
+[rtos.colors]
+active-task = "#00ffff"
+marked-task = "#ff00ff"
+
+[list.colors]
+marker = "#ffff00"
+
+[swo.colors]
+0 = "#ff69b4"
+1 = "#00ffff"
+2 = "#ff00ff"
+3 = "#ffff00"
+4 = "#00ff00"
+5 = "#ff4500"
+6 = "#1e90ff"
+7 = "#ff1493"
+8 = "#00ced1"
+9 = "#dda0dd"

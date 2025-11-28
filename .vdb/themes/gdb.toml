@@ -1,0 +1,204 @@
+[theme]
+name = "gdb"
+
+[prompt.colors]
+0 = "#00f"       # Blue for prompt
+1 = "#0f0"       # Green
+2 = "#f00"       # Red
+3 = "#ff0"       # Yellow
+4 = "#0ff"       # Cyan
+5 = "#f0f"       # Magenta
+6 = "#888"       # Gray
+7 = "#000"       # Black
+8 = "#0ff"       # Cyan
+9 = "#f00"       # Red
+start = "#00f"    # Blue
+end = "#0f0"     # Green
+git = "#00f"     # Blue
+thread = "#f00"  # Red
+time = "#ff0"    # Yellow
+frame = "#0ff"   # Cyan
+host = "#f0f"    # Magenta
+progress = "#888" # Gray
+
+[shorten.colors]
+templates = "#0ff"  # Cyan
+
+[bt.colors]
+namespace = "#00f"     # Blue
+address = "#0ff"        # Cyan
+function = "#0f0"      # Green
+selected-frame-marker = "#f00"  # Red
+filename = "#00f"       # Blue
+object-file = "#0f0"    # Green
+default-object = "#0ff"  # Cyan
+rtti-warning = "#f00"  # Red
+argument = "#ff0"      # Yellow
+argvalue = "#0ff"       # Cyan
+numvalue = "#00f"       # Blue
+optimized-out = "#888"  # Gray
+
+[memory.colors]
+nullpage = "#0ff"       # Cyan
+unknown = "#ff0,#000,underline"  # Yellow on black with underline
+ascii = "#0f0"          # Green
+stack-own = "#00f"      # Blue
+stack-foreign = "#0ff"   # Cyan
+heap = "#f00"           # Red
+mmap = "#f0f"           # Magenta
+shared = "#0ff"         # Cyan
+code = "#0f0"           # Green
+bss = "#00f"            # Blue
+readonly = "#0ff"       # Cyan
+writeonly = "#f00"      # Red
+readwrite = "#ff0"      # Yellow
+executable = "#0f0"      # Green
+inaccessible = "#888"    # Gray
+invalid = "#f00"         # Red
+section-_interp = "#888"  # Gray
+section-_note_ABI-tag = "#888"  # Gray
+section-_hash = "#888"   # Gray
+section-_gnu_hash = "#888"  # Gray
+section-_dynsym = "#888"  # Gray
+section-_dynstr = "#888"  # Gray
+section-_gnu_version = "#888"  # Gray
+section-_gnu_version_r = "#888"  # Gray
+section-_rela_dyn = "#888"  # Gray
+section-_rela_plt = "#888"  # Gray
+section-_init = "#888"   # Gray
+section-_plt = "#888"    # Gray
+section-_text = "#0f0"   # Green
+section-_fini = "#888"   # Gray
+section-_rodata = "#00f" # Blue
+section-_stapsdt_base = "#888"  # Gray
+section-_eh_frame_hdr = "#888"  # Gray
+section-_eh_frame = "#888"  # Gray
+section-_gcc_except_table = "#888"  # Gray
+section-_tdata = "#888"  # Gray
+section-_tbss = "#888"   # Gray
+section-_init_array = "#888"  # Gray
+section-_fini_array = "#888"  # Gray
+section-_data_rel_ro = "#888"  # Gray
+section-_dynamic = "#888"  # Gray
+section-_got = "#888"    # Gray
+section-_got_plt = "#888"  # Gray
+section-_data = "#0f0"   # Green
+section-_bss = "#00f"    # Blue
+section-_comment = "#888"  # Gray
+section-_GCC_command_line = "#888"  # Gray
+section-_note_stapsdt = "#888"  # Gray
+section-_debug_aranges = "#888"  # Gray
+section-_debug_info = "#888"  # Gray
+section-_debug_abbrev = "#888"  # Gray
+section-_debug_line = "#888"  # Gray
+section-_debug_str = "#888"  # Gray
+section-_debug_loc = "#888"  # Gray
+section-_debug_ranges = "#888"  # Gray
+section-_debug_macro = "#888"  # Gray
+
+[vmmap.colors]
+executable = "#0f0"  # Green
+readonly = "#00f"    # Blue
+
+[asm.colors]
+class-jump = "#f00"       # Red
+class-mem = "#00f"         # Blue
+class-nop = "#ff0"         # Yellow
+class-bit = "#0ff"         # Cyan
+class-math = "#0f0"        # Green
+class-sys = "#f0f"         # Magenta
+class-ret = "#ff0"         # Yellow
+class-call = "#f00"        # Red
+class-stack = "#0ff"       # Cyan
+class-cond = "#00f"        # Blue
+class-vector = "#0f0"     # Green
+class-default = "#888"    # Gray
+namespace = "#00f"        # Blue
+function = "#0f0"         # Green
+next-marker = "#f00"      # Red
+next2-marker = "#0ff"      # Cyan
+marker = "#ff0"           # Yellow
+breakpoint-marker = "#f00" # Red
+breakpoint-disabled-marker = "#888" # Gray
+addr = "#0ff"              # Cyan
+offset = "#00f"            # Blue
+bytes = "#0f0"             # Green
+prefix = "#0ff"            # Cyan
+args = "#ff0"              # Yellow
+variable = "#00f"          # Blue
+location = "#0f0"          # Green
+explanation = "#888"       # Gray
+unhandled = "#f00"         # Red
+namespace-dot = "#00f"     # Blue
+function-dot = "#0f0"      # Green
+bytes-dot = "#0ff"         # Cyan
+next-marker-dot = "#f00"   # Red
+addr-dot = "#0ff"           # Cyan
+offset-dot = "#00f"         # Blue
+prefix-dot = "#0ff"         # Cyan
+args-dot = "#ff0"          # Yellow
+jump-false-dot = "#f00"    # Red
+jump-true-dot = "#0f0"     # Green
+jump-dot = "#ff0"          # Yellow
+call-dot = "#00f"          # Blue
+jumps = "#f00;#0f0;#00f;#ff0;#0ff;#f0f;#0f0;#f00;#00f;#ff0;#0ff;#f0f"  # 12 distinct colors
+
+[register.colors]
+names = "#00f"   # Blue
+flags = "#0ff"    # Cyan
+
+[hexdump.colors]
+header = "#0ff"   # Cyan
+symbols = "#f00;#0f0;#00f;#ff0;#0ff;#f0f;#f00;#0f0;#00f;#ff0;#0ff;#f0f"  # 12 distinct colors
+unknown-bytes = "#888"  # Gray
+
+[pahole.colors]
+members = "#f00;#0f0;#00f;#ff0;#0ff;#f0f;#f00;#0f0;#00f;#ff0;#0ff;#f0f"  # 12 distinct colors
+
+[ftree.colors]
+invalid = "#f00"       # Red
+union = "#0f0"          # Green
+virtual-cast = "#00f"  # Blue
+down-cast = "#ff0"     # Yellow
+blacklist-pointer = "#f0f"  # Magenta
+blacklist-member = "#0ff"    # Cyan
+limited = "#888"        # Gray
+pretty-print = "#00f"   # Blue
+variable-name = "#0ff"  # Cyan
+arrows = "#f00;#0f0;#00f;#ff0;#0ff;#f0f;#f00;#0f0;#00f;#ff0;#0ff;#f0f"  # 12 distinct colors
+
+[unwind.colors]
+hint = "#0ff"   # Cyan
+hint-start = "#00f"  # Blue
+
+[history.colors]
+marker = "#f00"    # Red
+background = "#000" # Black
+statistics = "#0ff" # Cyan
+prompt = "#00f"    # Blue
+match = "#0f0"      # Green
+
+[va.colors]
+fixed-float = "#0ff"    # Cyan
+vararg-float = "#00f"   # Blue
+fixed-int = "#0f0"       # Green
+vararg-int = "#ff0"     # Yellow
+
+[rtos.colors]
+active-task = "#0f0"    # Green
+marked-task = "#f00"    # Red
+
+[list.colors]
+marker = "#f00"    # Red
+
+[swo.colors]
+0 = "#f00"       # Red
+1 = "#0f0"       # Green
+2 = "#00f"       # Blue
+3 = "#ff0"       # Yellow
+4 = "#0ff"       # Cyan
+5 = "#f0f"       # Magenta
+6 = "#888"       # Gray
+7 = "#f00"       # Red
+8 = "#0f0"       # Green
+9 = "#00f"       # Blue

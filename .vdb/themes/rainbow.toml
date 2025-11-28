@@ -1,0 +1,203 @@
+[theme]
+name = "rainbow"
+
+[prompt.colors]
+0 = "#ff6b6b"   # Red
+1 = "#f9a825"   # Orange
+2 = "#f9c74f"   # Yellow
+3 = "#6ab04c"   # Green
+4 = "#4a90e2"   # Blue
+5 = "#9b59b6"   # Indigo
+6 = "#e74c3c"   # Red (accent)
+7 = "#2ecc71"   # Green (accent)
+8 = "#3498db"   # Blue (accent)
+9 = "#8e44ad"   # Indigo (accent)
+start = "#ecf0f1"  # Light gray
+end = "#2c3e50"    # Dark blue
+git = "#f1c40f"    # Yellow (accent)
+thread = "#e67e22" # Orange (accent)
+time = "#3498db"   # Blue
+frame = "#27ae60"   # Green
+host = "#e74c3c"   # Red
+progress = "#f39c12" # Orange
+
+[shorten.colors]
+templates = "#f1c40f"  # Yellow
+
+[bt.colors]
+namespace = "#4a90e2"   # Blue
+address = "#f9a825"      # Orange
+function = "#27ae60"     # Green
+selected-frame-marker = "#e74c3c"  # Red
+filename = "#3498db"     # Blue
+object-file = "#8e44ad"   # Indigo
+default-object = "#f39c12" # Orange
+rtti-warning = "#f1c40f"  # Yellow
+argument = "#2ecc71"     # Green
+argvalue = "#34495e"      # Dark gray
+numvalue = "#4a90e2"      # Blue
+optimized-out = "#e67e22" # Orange
+
+[memory.colors]
+nullpage = "#e74c3c"     # Red
+unknown = ",,underline"    # Underline only
+ascii = "#2ecc71"          # Green
+stack-own = "#3498db"      # Blue
+stack-foreign = "#f1c40f"  # Yellow
+heap = "#8e44ad"           # Indigo
+mmap = "#f9a825"           # Orange
+shared = "#27ae60"         # Green
+code = "#4a90e2"           # Blue
+bss = "#e67e22"            # Orange
+readonly = "#34495e"       # Dark gray
+writeonly = "#f39c12"      # Orange
+readwrite = "#2ecc71"       # Green
+executable = "#27ae60"      # Green
+inaccessible = "#e74c3c"   # Red
+invalid = "#f1c40f"         # Yellow
+section-_interp = "#34495e" # Dark gray
+section-_note_ABI-tag = "#8e44ad" # Indigo
+section-_hash = "#f9a825" # Orange
+section-_gnu_hash = "#4a90e2" # Blue
+section-_dynsym = "#27ae60" # Green
+section-_dynstr = "#f1c40f" # Yellow
+section-_gnu_version = "#e67e22" # Orange
+section-_gnu_version_r = "#3498db" # Blue
+section-_rela_dyn = "#8e44ad" # Indigo
+section-_rela_plt = "#f39c12" # Orange
+section-_init = "#2ecc71" # Green
+section-_plt = "#e74c3c" # Red
+section-_text = "#4a90e2" # Blue
+section-_fini = "#f1c40f" # Yellow
+section-_rodata = "#27ae60" # Green
+section-_stapsdt_base = "#34495e" # Dark gray
+section-_eh_frame_hdr = "#f9a825" # Orange
+section-_eh_frame = "#8e44ad" # Indigo
+section-_gcc_except_table = "#4a90e2" # Blue
+section-_tdata = "#27ae60" # Green
+section-_tbss = "#f1c40f" # Yellow
+section-_init_array = "#e67e22" # Orange
+section-_fini_array = "#3498db" # Blue
+section-_data_rel_ro = "#8e44ad" # Indigo
+section-_dynamic = "#f39c12" # Orange
+section-_got = "#2ecc71" # Green
+section-_got_plt = "#e74c3c" # Red
+section-_data = "#4a90e2" # Blue
+section-_bss = "#f1c40f" # Yellow
+section-_comment = "#34495e" # Dark gray
+section-_GCC_command_line = "#8e44ad" # Indigo
+section-_note_stapsdt = "#f9a825" # Orange
+section-_debug_aranges = "#27ae60" # Green
+section-_debug_info = "#3498db" # Blue
+section-_debug_abbrev = "#e67e22" # Orange
+section-_debug_line = "#f1c40f" # Yellow
+section-_debug_str = "#8e44ad" # Indigo
+section-_debug_loc = "#4a90e2" # Blue
+section-_debug_ranges = "#27ae60" # Green
+section-_debug_macro = "#f39c12" # Orange
+
+[vmmap.colors]
+executable = "#27ae60" # Green
+readonly = "#34495e"   # Dark gray
+
+[asm.colors]
+class-jump = "#e74c3c"       # Red
+class-mem = "#f9a825"         # Orange
+class-nop = "#f1c40f"         # Yellow
+class-bit = "#27ae60"         # Green
+class-math = "#4a90e2"        # Blue
+class-sys = "#8e44ad"         # Indigo
+class-ret = "#e67e22"         # Orange
+class-call = "#3498db"        # Blue
+class-stack = "#2ecc71"        # Green
+class-cond = "#f39c12"         # Orange
+class-vector = "#8e44ad"      # Indigo
+class-default = "#34495e"     # Dark gray
+namespace = "#4a90e2"         # Blue
+function = "#27ae60"          # Green
+next-marker = "#f1c40f"       # Yellow
+next2-marker = "#e74c3c"       # Red
+marker = "#f9a825"            # Orange
+breakpoint-marker = "#e67e22"  # Orange
+breakpoint-disabled-marker = "#f39c12" # Orange
+addr = "#34495e"              # Dark gray
+offset = "#4a90e2"            # Blue
+bytes = "#27ae60"             # Green
+prefix = "#34495e"            # Dark gray
+args = "#f1c40f"              # Yellow
+variable = "#8e44ad"          # Indigo
+location = "#2ecc71"          # Green
+explanation = "#34495e"        # Dark gray
+unhandled = "#e74c3c"          # Red
+namespace-dot = "#4a90e2"      # Blue
+function-dot = "#27ae60"       # Green
+bytes-dot = "#f9a825"          # Orange
+next-marker-dot = "#f1c40f"    # Yellow
+addr-dot = "#8e44ad"           # Indigo
+offset-dot = "#3498db"         # Blue
+prefix-dot = "#34495e"         # Dark gray
+args-dot = "#e67e22"           # Orange
+jump-false-dot = "#f39c12"     # Orange
+jump-true-dot = "#2ecc71"     # Green
+jump-dot = "#e74c3c"          # Red
+call-dot = "#f1c40f"          # Yellow
+jumps = "#e74c3c;#f9a825;#f1c40f;#27ae60;#4a90e2;#8e44ad;#e67e22;#3498db;#2ecc71;#f39c12;#8e44ad;#4a90e2" # 12 unique rainbow colors
+
+[register.colors]
+names = "#4a90e2"   # Blue
+flags = "#34495e"    # Dark gray
+
+[hexdump.colors]
+header = "#f1c40f"    # Yellow
+symbols = "#e74c3c;#f9a825;#f1c40f;#27ae60;#4a90e2;#8e44ad;#e67e22;#3498db;#2ecc71;#f39c12;#8e44ad;#4a90e2" # 12 unique colors
+
+[pahole.colors]
+members = "#e74c3c;#f9a825;#f1c40f;#27ae60;#4a90e2;#8e44ad;#e67e22;#3498db;#2ecc71;#f39c12;#8e44ad;#4a90e2" # 12 unique colors
+
+[ftree.colors]
+invalid = "#f39c12"      # Orange
+union = "#2ecc71"         # Green
+virtual-cast = "#8e44ad" # Indigo
+down-cast = "#4a90e2"     # Blue
+blacklist-pointer = "#e67e22" # Orange
+blacklist-member = "#f1c40f" # Yellow
+limited = "#3498db"      # Blue
+pretty-print = "#27ae60"  # Green
+variable-name = "#34495e"   # Dark gray
+arrows = "#e74c3c;#f9a825;#f1c40f;#27ae60;#4a90e2;#8e44ad;#e67e22;#3498db;#2ecc71;#f39c12;#8e44ad;#4a90e2" # 12 unique colors
+
+[unwind.colors]
+hint = "#f1c40f"      # Yellow
+hint-start = "#27ae60" # Green
+
+[history.colors]
+marker = "#e74c3c"     # Red
+background = "#2c3e50"  # Dark blue
+statistics = "#3498db" # Blue
+prompt = "#f9a825"     # Orange
+match = "#2ecc71"       # Green
+
+[va.colors]
+fixed-float = "#4a90e2"   # Blue
+vararg-float = "#8e44ad"   # Indigo
+fixed-int = "#27ae60"       # Green
+vararg-int = "#f1c40f"     # Yellow
+
+[rtos.colors]
+active-task = "#2ecc71"   # Green
+marked-task = "#e74c3c"   # Red
+
+[list.colors]
+marker = "#f39c12"       # Orange
+
+[swo.colors]
+0 = "#e74c3c"     # Red
+1 = "#f9a825"     # Orange
+2 = "#f1c40f"     # Yellow
+3 = "#27ae60"     # Green
+4 = "#4a90e2"     # Blue
+5 = "#8e44ad"     # Indigo
+6 = "#e67e22"     # Orange
+7 = "#3498db"     # Blue
+8 = "#2ecc71"     # Green
+9 = "#f39c12"     # Orange

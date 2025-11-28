@@ -1,0 +1,166 @@
+[theme]
+name = "Nebula2"
+
+[prompt.colors]
+0 = "#00ffff"
+1 = "#00ffff"
+2 = "#00ffff"
+3 = "#00ffff"
+4 = "#00ffff"
+5 = "#00ffff"
+6 = "#00ffff"
+7 = "#00ffff"
+8 = "#00ffff"
+9 = "#00ffff"
+start = "#00ffff"
+end = "#00ffff"
+git = "#00ffff"
+thread = "#00ffff"
+time = "#00ffff"
+frame = "#00ffff"
+host = "#00ffff"
+progress = "#00ffff"
+
+[shorten.colors]
+templates = "#ffcc00"
+
+[bt.colors]
+namespace = "#00ffff"
+address = "#ffffff"
+function = "#ff6600"
+selected-frame-marker = "#ff0000"
+filename = "#00ff00"
+object-file = "#ff00ff"
+default-object = "#ffff00"
+rtti-warning = "#ffcc00"
+argument = "#00ffff"
+argvalue = "#ffffff"
+numvalue = "#00ffff"
+optimized-out = "#ff6600"
+
+[memory.colors]
+nullpage = "#00ffff"
+unknown = ",,underline"
+ascii = "#00ff00"
+stack-own = "#00ffff"
+stack-foreign = "#ff00ff"
+heap = "#ffcc00"
+mmap = "#ff6600"
+shared = "#00ffff"
+code = "#00ff00"
+bss = "#ff00ff"
+readonly = "#00ffff"
+writeonly = "#ffcc00"
+readwrite = "#00ff00"
+executable = "#00ffff"
+inaccessible = "#ff0000"
+invalid = "#ff6600"
+
+[vmmap.colors]
+executable = "#00ffff"
+readonly = "#ff6600"
+
+[asm.colors]
+class-jump = "#ff0000"
+class-mem = "#00ffff"
+class-nop = "#ffcc00"
+class-bit = "#00ff00"
+class-math = "#ff6600"
+class-sys = "#ff00ff"
+class-ret = "#00ff00"
+class-call = "#ff0000"
+class-stack = "#ffff00"
+class-cond = "#0000ff"
+class-vector = "#ff9900"
+class-default = "#ffffff"
+namespace = "#00ffff"
+function = "#ff6600"
+next-marker = "#ff0000"
+next2-marker = "#00ffff"
+marker = "#ffcc00"
+breakpoint-marker = "#ff00ff"
+breakpoint-disabled-marker = "#0000ff"
+addr = "#00ff00"
+offset = "#00ffff"
+bytes = "#ffcc00"
+prefix = "#ffffff"
+
+args = "#00ffff"
+variable = "#ff00ff"
+location = "#00ff00"
+explanation = "#aaaaaa"
+unhandled = "#ff0000"
+namespace-dot = "#0000ff"
+function-dot = "#00ff00"
+bytes-dot = "#ffcc00"
+next-marker-dot = "#ff0000"
+addr-dot = "#00ff00"
+offset-dot = "#00ffff"
+prefix-dot = "#ffffff"
+
+args-dot = "#00ffff"
+jump-false-dot = "#ff0000"
+jump-true-dot = "#00ff00"
+jump-dot = "#ffcc00"
+call-dot = "#ff00ff"
+jumps = "#ff0000;#00ffff;#00ff00;#ffcc00;#ff6600;#ff00ff"
+
+[register.colors]
+names = "#00ffff"
+flags = "#ff0000"
+
+[hexdump.colors]
+header = "#00ffff"
+symbols = "#ff0000;#00ff00;#0000ff;#ffff00;#ff00ff;#00ffff"
+unknown-bytes = "#ffffff"
+
+[pahole.colors]
+members = "#ff0000;#00ff00;#0000ff;#ffff00;#ff00ff;#00ffff"
+
+[ftree.colors]
+invalid = "#ff0000"
+union = "#00ff00"
+virtual-cast = "#0000ff"
+down-cast = "#ffcc00"
+blacklist-pointer = "#ff6600"
+blacklist-member = "#00ffff"
+limited = "#ff00ff"
+pretty-print = "#00ff00"
+variable-name = "#ffffff"
+arrows = "#ff0000;#00ffff;#00ff00;#ffcc00;#ff6600;#ff00ff"
+
+[unwind.colors]
+hint = "#00ffff"
+hint-start = "#ff0000"
+
+[history.colors]
+marker = "#ff0000"
+background = "#000000"
+statistics = "#00ffff"
+prompt = "#ffffff"
+match = "#00ff00"
+
+[va.colors]
+fixed-float = "#00ffff"
+vararg-float = "#ff0000"
+fixed-int = "#00ff00"
+vararg-int = "#ff6600"
+
+[rtos.colors]
+active-task = "#00ff00"
+marked-task = "#ff0000"
+
+[list.colors]
+marker = "#ff0000"
+
+[swo.colors]
+0 = "#00ffff"
+1 = "#00ff00"
+2 = "#ff0000"
+3 = "#ffcc00"
+4 = "#0000ff"
+5 = "#ff6600"
+6 = "#ff00ff"
+7 = "#00ffff"
+8 = "#00ff00"
+9 = "#ff0000"

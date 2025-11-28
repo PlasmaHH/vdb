@@ -1,0 +1,203 @@
+[theme]
+name = "StarTrek"
+
+[prompt.colors]
+0 = "#003366"   # Dark Blue
+1 = "#0055A5"    # Midnight Blue
+2 = "#007FFF"    # Deep Sky Blue
+3 = "#00BFFF"    # Light Sky Blue
+4 = "#00FFFF"    # Cyan
+5 = "#00FF00"    # Lime Green
+6 = "#FFD700"    # Gold
+7 = "#FFA500"    # Orange
+8 = "#FF4500"    # Orange Red
+9 = "#FF00FF"    # Magenta
+start = "#00FFFF" # Cyan
+end = "#FFD700"  # Gold
+git = "#007FFF"   # Deep Sky Blue
+thread = "#FF4500" # Orange Red
+time = "#00FFFF" # Cyan
+frame = "#FF00FF" # Magenta
+host = "#007FFF" # Deep Sky Blue
+progress = "#00FF00" # Lime Green
+
+[shorten.colors]
+templates = "#00FFFF" # Cyan
+
+[bt.colors]
+namespace = "#00BFFF"   # Light Sky Blue
+address = "#FFD700"       # Gold
+function = "#00FFFF"     # Cyan
+selected-frame-marker = "#FF00FF" # Magenta
+filename = "#007FFF"      # Deep Sky Blue
+object-file = "#0055A5"   # Midnight Blue
+default-object = "#003366" # Dark Blue
+rtti-warning = "#FFA500" # Orange
+argument = "#00FFFF"     # Cyan
+argvalue = "#FFD700"     # Gold
+numvalue = "#00BFFF"     # Light Sky Blue
+optimized-out = "#FF4500" # Orange Red
+
+[memory.colors]
+nullpage = "#00FFFF"     # Cyan
+unknown = ",,underline"  # Underlined default
+ascii = "#00FF00"        # Lime Green
+stack-own = "#007FFF"     # Deep Sky Blue
+stack-foreign = "#0055A5"  # Midnight Blue
+heap = "#FF4500"         # Orange Red
+mmap = "#FFA500"         # Orange
+shared = "#00FFFF"       # Cyan
+code = "#00BFFF"         # Light Sky Blue
+bss = "#003366"          # Dark Blue
+readonly = "#0055A5"     # Midnight Blue
+writeonly = "#FFD700"    # Gold
+readwrite = "#00FFFF"     # Cyan
+executable = "#007FFF"    # Deep Sky Blue
+inaccessible = "#FF00FF"  # Magenta
+invalid = "#FF4500"       # Orange Red
+section-_interp = "#003366" # Dark Blue
+section-_note_ABI-tag = "#0055A5" # Midnight Blue
+section-_hash = "#007FFF" # Deep Sky Blue
+section-_gnu_hash = "#00BFFF" # Light Sky Blue
+section-_dynsym = "#00FFFF" # Cyan
+section-_dynstr = "#FFD700" # Gold
+section-_gnu_version = "#FFA500" # Orange
+section-_gnu_version_r = "#FF4500" # Orange Red
+section-_rela_dyn = "#003366" # Dark Blue
+section-_rela_plt = "#0055A5" # Midnight Blue
+section-_init = "#007FFF" # Deep Sky Blue
+section-_plt = "#00BFFF" # Light Sky Blue
+section-_text = "#00FFFF" # Cyan
+section-_fini = "#FFD700" # Gold
+section-_rodata = "#0055A5" # Midnight Blue
+section-_stapsdt_base = "#003366" # Dark Blue
+section-_eh_frame_hdr = "#007FFF" # Deep Sky Blue
+section-_eh_frame = "#00BFFF" # Light Sky Blue
+section-_gcc_except_table = "#00FFFF" # Cyan
+section-_tdata = "#FFD700" # Gold
+section-_tbss = "#FFA500" # Orange
+section-_init_array = "#FF4500" # Orange Red
+section-_fini_array = "#003366" # Dark Blue
+section-_data_rel_ro = "#0055A5" # Midnight Blue
+section-_dynamic = "#007FFF" # Deep Sky Blue
+section-_got = "#00BFFF" # Light Sky Blue
+section-_got_plt = "#00FFFF" # Cyan
+section-_data = "#FFD700" # Gold
+section-_bss = "#003366" # Dark Blue
+section-_comment = "#0055A5" # Midnight Blue
+section-_GCC_command_line = "#007FFF" # Deep Sky Blue
+section-_note_stapsdt = "#00BFFF" # Light Sky Blue
+section-_debug_aranges = "#00FFFF" # Cyan
+section-_debug_info = "#FFD700" # Gold
+section-_debug_abbrev = "#FFA500" # Orange
+section-_debug_line = "#FF4500" # Orange Red
+section-_debug_str = "#003366" # Dark Blue
+section-_debug_loc = "#0055A5" # Midnight Blue
+section-_debug_ranges = "#007FFF" # Deep Sky Blue
+section-_debug_macro = "#00BFFF" # Light Sky Blue
+
+[vmmap.colors]
+executable = "#007FFF" # Deep Sky Blue
+readonly = "#0055A5" # Midnight Blue
+
+[asm.colors]
+class-jump = "#FFD700" # Gold
+class-mem = "#00FFFF" # Cyan
+class-nop = "#00BFFF" # Light Sky Blue
+class-bit = "#FFA500" # Orange
+class-math = "#007FFF" # Deep Sky Blue
+class-sys = "#FF4500" # Orange Red
+class-ret = "#003366" # Dark Blue
+class-call = "#00FFFF" # Cyan
+class-stack = "#0055A5" # Midnight Blue
+class-cond = "#FFD700" # Gold
+class-vector = "#00BFFF" # Light Sky Blue
+class-default = "#007FFF" # Deep Sky Blue
+namespace = "#00FFFF" # Cyan
+function = "#00BFFF" # Light Sky Blue
+next-marker = "#FF00FF" # Magenta
+next2-marker = "#FFA500" # Orange
+marker = "#FF4500" # Orange Red
+breakpoint-marker = "#00FFFF" # Cyan
+breakpoint-disabled-marker = "#0055A5" # Midnight Blue
+addr = "#FFD700" # Gold
+offset = "#00BFFF" # Light Sky Blue
+bytes = "#007FFF" # Deep Sky Blue
+prefix = "#FFA500" # Orange
+args = "#00FFFF" # Cyan
+variable = "#003366" # Dark Blue
+location = "#0055A5" # Midnight Blue
+explanation = "#AAAAAA" # Light Gray
+unhandled = "#FF4500" # Orange Red
+namespace-dot = "#00BFFF" # Light Sky Blue
+function-dot = "#00FFFF" # Cyan
+bytes-dot = "#007FFF" # Deep Sky Blue
+next-marker-dot = "#FF00FF" # Magenta
+addr-dot = "#FFD700" # Gold
+offset-dot = "#00BFFF" # Light Sky Blue
+prefix-dot = "#FFA500" # Orange
+args-dot = "#00FFFF" # Cyan
+jump-false-dot = "#FF4500" # Orange Red
+jump-true-dot = "#0055A5" # Midnight Blue
+jump-dot = "#007FFF" # Deep Sky Blue
+call-dot = "#00BFFF" # Light Sky Blue
+jumps = "#007FFF;#00BFFF;#00FFFF;#003366;#0055A5;#00FF00;#FFD700;#FFA500;#FF4500;#FF00FF;#00FFFF;#00BFFF"
+
+[register.colors]
+names = "#00FFFF" # Cyan
+flags = "#FFD700" # Gold
+
+[hexdump.colors]
+header = "#007FFF" # Deep Sky Blue
+symbols = "#00BFFF;#00FFFF;#003366;#0055A5;#FFD700;#FFA500;#FF4500;#FF00FF;#007FFF;#00BFFF;#00FFFF;#003366"
+
+[pahole.colors]
+members = "#007FFF;#00BFFF;#00FFFF;#003366;#0055A5;#FFD700;#FFA500;#FF4500;#FF00FF;#007FFF;#00BFFF;#00FFFF"
+
+[ftree.colors]
+invalid = "#FF4500" # Orange Red
+union = "#FFA500" # Orange
+virtual-cast = "#FFD700" # Gold
+down-cast = "#00FFFF" # Cyan
+blacklist-pointer = "#007FFF" # Deep Sky Blue
+blacklist-member = "#00BFFF" # Light Sky Blue
+limited = "#0055A5" # Midnight Blue
+pretty-print = "#003366" # Dark Blue
+variable-name = "#00FFFF" # Cyan
+arrows = "#007FFF;#00BFFF;#00FFFF;#003366;#0055A5;#FFD700;#FFA500;#FF4500;#FF00FF;#007FFF;#00BFFF;#00FFFF"
+
+[unwind.colors]
+hint = "#00FFFF" # Cyan
+hint-start = "#007FFF" # Deep Sky Blue
+
+[history.colors]
+marker = "#FFD700" # Gold
+background = "#000000" # Black
+statistics = "#00FFFF" # Cyan
+prompt = "#007FFF" # Deep Sky Blue
+match = "#FFA500" # Orange
+
+[va.colors]
+fixed-float = "#00BFFF" # Light Sky Blue
+vararg-float = "#00FFFF" # Cyan
+fixed-int = "#007FFF" # Deep Sky Blue
+vararg-int = "#0055A5" # Midnight Blue
+
+[rtos.colors]
+active-task = "#00FFFF" # Cyan
+marked-task = "#FFD700" # Gold
+
+[list.colors]
+marker = "#FF00FF" # Magenta
+
+[swo.colors]
+0 = "#007FFF" # Deep Sky Blue
+1 = "#00BFFF" # Light Sky Blue
+2 = "#00FFFF" # Cyan
+3 = "#003366" # Dark Blue
+4 = "#0055A5" # Midnight Blue
+5 = "#FFD700" # Gold
+6 = "#FFA500" # Orange
+7 = "#FF4500" # Orange Red
+8 = "#FF00FF" # Magenta
+9 = "#00FFFF" # Cyan

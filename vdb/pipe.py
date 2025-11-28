@@ -9,7 +9,7 @@ import traceback
 
 commands  = vdb.config.parameter("vdb-pipe-commands","hl:grep --color=always -C50000,grep,egrep,tee,head,tail,uniq,sort,less,cat,wc", gdb_type = vdb.config.PARAM_ARRAY )
 up_wraps  = vdb.config.parameter("vdb-pipe-wrap","python,show,info,help,x,print,set,maint,monitor", gdb_type = vdb.config.PARAM_ARRAY )
-externals = vdb.config.parameter("vdb-pipe-externals","bat,binwalk,objdump,tmux:,addr2line:-e {file} -a", gdb_type = vdb.config.PARAM_ARRAY )
+externals = vdb.config.parameter("vdb-pipe-externals","bat:,binwalk,objdump,tmux:,addr2line:-e {file} -a", gdb_type = vdb.config.PARAM_ARRAY )
 
 pipe_commands = { }
 
@@ -44,6 +44,7 @@ class cmd_external(vdb.command.command):
 #        print("self.cmdname = '%s'" % (self.cmdname,) )
 #        print("self.arglist = '%s'" % (self.arglist,) )
         super ().__init__ (self.cmdname, gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.needs_parameters = False
 
     def do_invoke (self, argv):
         try:
@@ -108,6 +109,8 @@ class cmd_wrap(vdb.command.command):
         super ().__init__ (self.wrapped_name, gdb.COMMAND_DATA)
         self.saved_arg = None
         self.saved_from_tty = None
+        # Strictly speaking we don't know
+        self.needs_parameters = False
 
     def do_invoke (self, argv):
 #        vdb.util.bark() # print("BARK")

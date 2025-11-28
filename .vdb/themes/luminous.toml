@@ -1,0 +1,206 @@
+[theme]
+name = "Luminous"
+
+[prompt.colors]
+0 = "#000000"  # Black text for prompt
+1 = "#000000"
+2 = "#000000"
+3 = "#000000"
+4 = "#000000"
+5 = "#000000"
+6 = "#000000"
+7 = "#000000"
+8 = "#000000"
+9 = "#000000"
+start = "#00008B"  # Dark blue
+end = "#00008B"
+git = "#00008B"
+thread = "#00008B"
+time = "#00008B"
+frame = "#00008B"
+host = "#00008B"
+progress = "#00008B"
+
+[shorten.colors]
+templates = "#00008B"  # Dark blue for template highlights
+
+[bt.colors]
+namespace = "#00008B"  # Dark blue
+address = "#000000"  # Black
+function = "#00008B"  # Dark blue
+selected-frame-marker = "#00008B"
+filename = "#00008B"
+object-file = "#00008B"
+default-object = "#00008B"
+rtti-warning = "#00008B"
+argument = "#000000"
+argvalue = "#000000"
+numvalue = "#00008B"
+optimized-out = "#00008B"
+
+[memory.colors]
+nullpage = "#000000"  # Black
+unknown = ",,underline"  # Underlined default
+ascii = "#000000"  # Black
+stack-own = "#00008B"  # Dark blue
+stack-foreign = "#00008B"
+heap = "#008000"  # Green
+mmap = "#008000"
+shared = "#008000"
+code = "#8B0000"  # Dark red
+bss = "#00008B"
+readonly = "#00008B"
+writeonly = "#00008B"
+readwrite = "#000000"
+executable = "#008000"
+inaccessible = "#00008B"
+invalid = "#00008B"
+section-_interp = ",,underline"
+section-_note_ABI-tag = ",,underline"
+section-_hash = ",,underline"
+section-_gnu_hash = ",,underline"
+section-_dynsym = ",,underline"
+section-_dynstr = ",,underline"
+section-_gnu_version = ",,underline"
+section-_gnu_version_r = ",,underline"
+section-_rela_dyn = ",,underline"
+section-_rela_plt = ",,underline"
+section-_init = ",,underline"
+section-_plt = ",,underline"
+section-_text = ",,underline"
+section-_fini = ",,underline"
+section-_rodata = ",,underline"
+section-_stapsdt_base = ",,underline"
+section-_eh_frame_hdr = ",,underline"
+section-_eh_frame = ",,underline"
+section-_gcc_except_table = ",,underline"
+section-_tdata = ",,underline"
+section-_tbss = ",,underline"
+section-_init_array = ",,underline"
+section-_fini_array = ",,underline"
+section-_data_rel_ro = ",,underline"
+section-_dynamic = ",,underline"
+section-_got = ",,underline"
+section-_got_plt = ",,underline"
+section-_data = ",,underline"
+section-_bss = ",,underline"
+section-_comment = ",,underline"
+section-_GCC_command_line = ",,underline"
+section-_note_stapsdt = ",,underline"
+section-_debug_aranges = ",,underline"
+section-_debug_info = ",,underline"
+section-_debug_abbrev = ",,underline"
+section-_debug_line = ",,underline"
+section-_debug_str = ",,underline"
+section-_debug_loc = ",,underline"
+section-_debug_ranges = ",,underline"
+section-_debug_macro = ",,underline"
+
+[vmmap.colors]
+executable = "#008000"  # Green
+readonly = "#00008B"  # Dark blue
+
+[asm.colors]
+class-jump = "#8B0000"  # Dark red
+class-mem = "#008000"  # Green
+class-nop = "#00008B"  # Dark blue
+class-bit = "#008000"  # Green
+class-math = "#008000"  # Green
+class-sys = "#00008B"  # Dark blue
+class-ret = "#00008B"  # Dark blue
+class-call = "#008000"  # Green
+class-stack = "#008000"  # Green
+class-cond = "#008000"  # Green
+class-vector = "#008000"  # Green
+class-default = "#000000"  # Black
+namespace = "#00008B"  # Dark blue
+function = "#00008B"  # Dark blue
+next-marker = "#00008B"  # Dark blue
+next2-marker = "#00008B"  # Dark blue
+marker = "#00008B"  # Dark blue
+breakpoint-marker = "#00008B"  # Dark blue
+breakpoint-disabled-marker = "#00008B"  # Dark blue
+addr = "#000000"  # Black
+offset = "#00008B"  # Dark blue
+bytes = "#000000"  # Black
+prefix = "#000000"  # Black
+
+args = "#000000"  # Black
+variable = "#000000"  # Black
+location = "#000000"  # Black
+explanation = "#888888"  # Gray
+unhandled = "#00008B"  # Dark blue
+namespace-dot = "#00008B"  # Dark blue
+function-dot = "#00008B"  # Dark blue
+bytes-dot = "#000000"  # Black
+next-marker-dot = "#00008B"  # Dark blue
+addr-dot = "#000000"  # Black
+offset-dot = "#00008B"  # Dark blue
+prefix-dot = "#000000"  # Black
+
+args-dot = "#000000"  # Black
+jump-false-dot = "#00008B"  # Dark blue
+jump-true-dot = "#00008B"  # Dark blue
+jump-dot = "#00008B"  # Dark blue
+call-dot = "#00008B"  # Dark blue
+jumps = "#8B0000;#008000;#00008B;#008080;#8B008B;#008B8B;#8B8B00;#8B008B;#008B00;#8B0000;#00008B;#008000"  # 12 distinct colors
+
+[register.colors]
+names = "#00008B"  # Dark blue
+flags = "#008000"  # Green
+
+[hexdump.colors]
+header = "#00008B"  # Dark blue
+symbols = "#00008B;#008000;#00008B;#008080;#8B008B;#008B8B;#8B8B00;#8B008B;#008B00;#8B0000;#00008B;#008000"  # 12 distinct colors
+unknown-bytes = "#000000"  # Black
+
+[pahole.colors]
+members = "#00008B;#008000;#00008B;#008080;#8B008B;#008B8B;#8B8B00;#8B008B;#008B00;#8B0000;#00008B;#008000"  # 12 distinct colors
+
+[ftree.colors]
+invalid = "#000000"  # Black
+union = "#000000"  # Black
+virtual-cast = "#000000"  # Black
+down-cast = "#000000"  # Black
+blacklist-pointer = "#000000"  # Black
+blacklist-member = "#000000"  # Black
+limited = "#000000"  # Black
+pretty-print = "#000000"  # Black
+variable-name = "#00008B"  # Dark blue
+arrows = "#000000;#000000;#000000;#000000;#000000;#000000;#000000;#000000;#000000;#000000;#000000;#000000"  # 12 black arrows (adjust as needed)
+
+[unwind.colors]
+hint = "#00008B"  # Dark blue
+hint-start = "#00008B"  # Dark blue
+
+[history.colors]
+marker = "#00008B"  # Dark blue
+background = "#FFFFFF"  # White
+statistics = "#00008B"  # Dark blue
+prompt = "#00008B"  # Dark blue
+match = "#00008B"  # Dark blue
+
+[va.colors]
+fixed-float = "#00008B"  # Dark blue
+vararg-float = "#00008B"  # Dark blue
+fixed-int = "#00008B"  # Dark blue
+vararg-int = "#00008B"  # Dark blue
+
+[rtos.colors]
+active-task = "#00008B"  # Dark blue
+marked-task = "#00008B"  # Dark blue
+
+[list.colors]
+marker = "#00008B"  # Dark blue
+
+[swo.colors]
+0 = "#00008B"  # Dark blue
+1 = "#008000"  # Green
+2 = "#000000"  # Black
+3 = "#008080"  # Teal
+4 = "#8B008B"  # Dark magenta
+5 = "#008B8B"  # Dark cyan
+6 = "#8B8B00"  # Olive
+7 = "#8B0000"  # Dark red
+8 = "#008B00"  # Dark green
+9 = "#00008B"  # Dark blue

@@ -1,0 +1,170 @@
+[theme]
+name = "Nebula"
+
+[prompt.colors]
+0 = "#ffff99"
+1 = "#ffff99"
+2 = "#ffff99"
+3 = "#ffff99"
+4 = "#ffff99"
+5 = "#ffff99"
+6 = "#ffff99"
+7 = "#ffff99"
+8 = "#ffff99"
+9 = "#ffff99"
+start = "#ffff99"
+end = "#ffffff"
+git = "#99ff99"
+thread = "#9999ff"
+time = "#ffffff"
+frame = "#9999ff"
+host = "#ffff4f"
+progress = "#ffbb00"
+
+[shorten.colors]
+templates = "#f60"
+
+[bt.colors]
+namespace = "#ddf"
+address = "#cccccc"
+function = "#99f"
+selected-frame-marker = "#0f0"
+filename = "#ffff99"
+object-file = "#ffbbbb"
+default-object = "#ffbbff"
+rtti-warning = "#c00"
+argument = "#008888"
+argvalue = "#888888"
+numvalue = "#f80"
+optimized-out = "#333"
+
+
+[memory.colors]
+nullpage = "#f33"
+unknown = ",,underline"
+ascii = "#aa0"
+stack-own = "#070"
+stack-foreign = "#f70"
+heap = "#55b"
+mmap = "#11c"
+shared = "#15c"
+code = "#a0a"
+bss = "#609"
+readonly = "#99f"
+writeonly = "#ff5"
+readwrite = "#00ff00"
+executable = "#d4f"
+inaccessible = "#f33"
+invalid = "#16f"
+section-_text = "#99f"
+section-_data = "#55b"
+section-_rodata = "#99f"
+section-_plt = "#00f"
+section-_eh_frame = "#080"
+
+[vmmap.colors]
+executable = "#e0e"
+readonly = "#f03"
+
+[asm.colors]
+class-jump = "#f0f"
+class-mem = "#0ff"
+class-nop = "#338"
+class-bit = "#da4"
+class-math = "#909"
+class-sys = "#a11"
+class-ret = "#8f9"
+class-call = "#66f"
+class-stack = "#080"
+class-cond = "#f99"
+class-vector = "#aa6"
+class-default = "#f00"
+namespace = "#ddf"
+function = "#99f"
+next-marker = "#0f0"
+next2-marker = "#080"
+marker = "#049"
+breakpoint-marker = "#e45"
+breakpoint-disabled-marker = "#e45"
+addr = "#00ffff"
+offset = "#444"
+bytes = "#059"
+prefix = "#aaa"
+args = "#99f"
+variable = "#fc8"
+location = "#08a"
+explanation = "#6666ff"
+unhandled = "#900"
+namespace-dot = "#d0d0f0"
+function-dot = "#9090f0"
+bytes-dot = "#005090"
+next-marker-dot = "#008000"
+addr-dot = "#0000c0"
+offset-dot = "#909090"
+prefix-dot = "#888"
+args-dot = "#3030a0"
+jump-false-dot = "#ff0000"
+jump-true-dot = "#00ff00"
+jump-dot = "#000088"
+call-dot = "#6600ff"
+jumps = "#f00;#0f0;#00f;#ff0;#f0f;#0ff;#00ff00;#ff00ff;#0000ff;#ff8800;#00ff88;#8800ff"
+
+[register.colors]
+names = "#4c0"
+flags = "#adad00"
+
+[hexdump.colors]
+header = "#ffa"
+symbols = "#f00;#0f0;#00f;#ff0;#f0f;#0ff;#00ff00;#ff00ff;#0000ff;#ff8800;#00ff88;#8800ff"
+unknown-bytes = "#666666"
+
+[pahole.colors]
+members = "#f00;#0f0;#00f;#ff0;#f0f;#0ff;#00ff00;#ff00ff;#0000ff;#ff8800;#00ff88;#8800ff"
+
+[ftree.colors]
+invalid = "#ff2222"
+union = "#ffff66"
+virtual-cast = "#ccaaff"
+down-cast = "#aaffaa"
+blacklist-pointer = "#ff9900"
+blacklist-member = "#334400"
+limited = "#88aaff"
+pretty-print = "#76d7c4"
+variable-name = "#ffffff"
+arrows = "#ff0000;#00ff00;#0000ff;#ff8000;#ff00ff;#00ffff;#00ff00;#ff00ff;#0000ff;#ff8000;#00ffff;#ff0000"
+
+[unwind.colors]
+hint = "#f55"
+hint-start = "#ff8"
+
+[history.colors]
+marker = "#d1005c"
+background = "#303030"
+statistics = "#afaf87"
+prompt = "#87afd7"
+match = "#87af87"
+
+[va.colors]
+fixed-float = "#838"
+vararg-float = "#608"
+fixed-int = "#953"
+vararg-int = "#c43"
+
+[rtos.colors]
+active-task = "#0a4"
+marked-task = "#09e"
+
+[list.colors]
+marker = "#0f0"
+
+[swo.colors]
+0 = "#ffffff"
+1 = "#ffff77"
+2 = "#ff9900"
+3 = "#ff7777"
+4 = "#00ff00"
+5 = "#0000ff"
+6 = "#ff00ff"
+7 = "#00ffff"
+8 = "#88aaff"
+9 = "#aa00aa"

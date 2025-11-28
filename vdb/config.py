@@ -176,7 +176,10 @@ class parameter(gdb.Parameter):
 #            print("st[%s] = '%s'" % (i,st[i],) )
 
     def set_default( self ):
-        self.set(self.default)
+        newdef = self.default
+        if( newdef is None ):
+            newdef = "None"
+        self.set(newdef)
 
     def set( self, new_value ):
         ret = self.get_set_string(new_value)

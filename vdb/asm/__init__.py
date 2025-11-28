@@ -120,6 +120,7 @@ color_args     = vdb.config.parameter("vdb-asm-colors-args",        "#99f", gdb_
 color_var      = vdb.config.parameter("vdb-asm-colors-variable",    "#fc8", gdb_type = vdb.config.PARAM_COLOUR)
 color_location = vdb.config.parameter("vdb-asm-colors-location",    "#08a", gdb_type = vdb.config.PARAM_COLOUR)
 color_explanation = vdb.config.parameter("vdb-asm-colors-explanation",    "#6666ff", gdb_type = vdb.config.PARAM_COLOUR)
+color_unhandled = vdb.config.parameter("vdb-asm-colors-unhandled",    "#900", gdb_type = vdb.config.PARAM_COLOUR)
 
 
 
@@ -827,7 +828,7 @@ class instruction_base( abc.ABC ):
 
     def color_mnemonic( self ):
         if( len(color_mnemonic.value) > 0 ):
-            return vdb.color.color(mnemonic,color_mnemonic.value)
+            return vdb.color.color(self.mnemonic,color_mnemonic.value)
         else:
             return self.color_mnemonic_class()
 
@@ -1746,7 +1747,7 @@ ascii mockup:
             if( "r" in showspec ):
                 rtpl=("",0)
                 if( i.unhandled ):
-                    rtpl=vdb.color.colorl("!","#900")
+                    rtpl=vdb.color.colorl("!",color_unhandled.value)
 
                 if(len(i.reference) == 0 ):
                     line.append(rtpl)

@@ -1,0 +1,203 @@
+[theme]
+name = "Desert"
+
+[prompt.colors]
+0 = "#f5deb3"  # Wheat
+1 = "#d2b48c"  # Tan
+2 = "#deb887"  # BurlyWood
+3 = "#f4a460"  # OrangeRed
+4 = "#ffcc99"  # LightOrange
+5 = "#ff9966"  # DarkOrange
+6 = "#ff6633"  # Coral
+7 = "#ff4500"  # OrangeRed
+8 = "#8b4513"  # SaddleBrown
+9 = "#a0522d"  # Sienna
+start = "#d2691e"  # Chocolate
+end = "#b87333"  # IndianRed
+git = "#f0e68c"  # Khaki
+thread = "#ffd700"  # Gold
+time = "#ffebcd"  # Wheat
+frame = "#faebd7"  # AntiqueWhite
+host = "#f5f5dc"  # Beige
+progress = "#ffffe0"  # LightYellow
+
+[shorten.colors]
+templates = "#fffac8"  # LightGoldenRodYellow
+
+[bt.colors]
+namespace = "#ffa500"  # Orange
+address = "#ffffff"  # White
+function = "#ffff99"  # LightYellow
+selected-frame-marker = "#ff4500,white,underline"  # OrangeRed with underline
+filename = "#d2b48c"  # Tan
+object-file = "#b87333"  # IndianRed
+default-object = "#a0522d"  # Sienna
+rtti-warning = "#ffcc99"  # LightOrange
+argument = "#ffffe0"  # LightYellow
+argvalue = "#ffffff"  # White
+numvalue = "#ffebcd"  # Wheat
+optimized-out = "#f5deb3"  # Wheat
+
+[memory.colors]
+nullpage = "#d2691e"  # Chocolate
+unknown = ",,underline"  # Underline only
+ascii = "#f5deb3"  # Wheat
+stack-own = "#ffcc99"  # LightOrange
+stack-foreign = "#ff9966"  # DarkOrange
+heap = "#ff6633"  # Coral
+mmap = "#ff4500"  # OrangeRed
+shared = "#f4a460"  # OrangeRed
+code = "#f0e68c"  # Khaki
+bss = "#f5f5dc"  # Beige
+readonly = "#fffac8"  # LightGoldenRodYellow
+writeonly = "#ffebcd"  # Wheat
+readwrite = "#ffffff"  # White
+executable = "#ffd700"  # Gold
+inaccessible = "#8b4513"  # SaddleBrown
+invalid = "#a0522d"  # Sienna
+section-_interp = "#d2b48c"  # Tan
+section-_note_ABI-tag = "#b87333"  # IndianRed
+section-_hash = "#a0522d"  # Sienna
+section-_gnu_hash = "#ffcc99"  # LightOrange
+section-_dynsym = "#ff9966"  # DarkOrange
+section-_dynstr = "#ff6633"  # Coral
+section-_gnu_version = "#ff4500"  # OrangeRed
+section-_gnu_version_r = "#f5deb3"  # Wheat
+section-_rela_dyn = "#f0e68c"  # Khaki
+section-_rela_plt = "#f4a460"  # OrangeRed
+section-_init = "#ffffff"  # White
+section-_plt = "#d2691e"  # Chocolate
+section-_text = "#ffebcd"  # Wheat
+section-_fini = "#fffac8"  # LightGoldenRodYellow
+section-_rodata = "#ffcc99"  # LightOrange
+section-_stapsdt_base = "#ff9966"  # DarkOrange
+section-_eh_frame_hdr = "#ff6633"  # Coral
+section-_eh_frame = "#ff4500"  # OrangeRed
+section-_gcc_except_table = "#f5deb3"  # Wheat
+section-_tdata = "#f0e68c"  # Khaki
+section-_tbss = "#f4a460"  # OrangeRed
+section-_init_array = "#ffffff"  # White
+section-_fini_array = "#d2691e"  # Chocolate
+section-_data_rel_ro = "#ffebcd"  # Wheat
+section-_dynamic = "#fffac8"  # LightGoldenRodYellow
+section-_got = "#ffcc99"  # LightOrange
+section-_got_plt = "#ff9966"  # DarkOrange
+section-_data = "#ff6633"  # Coral
+section-_bss = "#ff4500"  # OrangeRed
+section-_comment = "#f5deb3"  # Wheat
+section-_GCC_command_line = "#f0e68c"  # Khaki
+section-_note_stapsdt = "#f4a460"  # OrangeRed
+section-_debug_aranges = "#ffffff"  # White
+section-_debug_info = "#d2691e"  # Chocolate
+section-_debug_abbrev = "#b87333"  # IndianRed
+section-_debug_line = "#a0522d"  # Sienna
+section-_debug_str = "#ffcc99"  # LightOrange
+section-_debug_loc = "#ff9966"  # DarkOrange
+section-_debug_ranges = "#ff6633"  # Coral
+section-_debug_macro = "#ff4500"  # OrangeRed
+
+[vmmap.colors]
+executable = "#ffd700"  # Gold
+readonly = "#fffac8"  # LightGoldenRodYellow
+
+[asm.colors]
+class-jump = "#ff6633"  # Coral
+class-mem = "#ff9966"  # DarkOrange
+class-nop = "#ffcc99"  # LightOrange
+class-bit = "#ffebcd"  # Wheat
+class-math = "#fffac8"  # LightGoldenRodYellow
+class-sys = "#f5deb3"  # Wheat
+class-ret = "#f0e68c"  # Khaki
+class-call = "#f4a460"  # OrangeRed
+class-stack = "#ff4500"  # OrangeRed
+class-cond = "#ffcc99"  # LightOrange
+class-vector = "#ff9966"  # DarkOrange
+class-default = "#ffffff"  # White
+namespace = "#ffa500"  # Orange
+function = "#ffff99"  # LightYellow
+next-marker = "#ff4500"  # OrangeRed
+next2-marker = "#ff6633"  # Coral
+marker = "#ff9966"  # DarkOrange
+breakpoint-marker = "#ffebcd"  # Wheat
+breakpoint-disabled-marker = "#fffac8"  # LightGoldenRodYellow
+addr = "#ffffff"  # White
+offset = "#ffff99"  # LightYellow
+bytes = "#f5deb3"  # Wheat
+prefix = "#ffffff"  # White
+args = "#ffcc99"  # LightOrange
+variable = "#ff9966"  # DarkOrange
+location = "#ff6633"  # Coral
+explanation = "#fffac8"  # LightGoldenRodYellow
+unhandled = "#ff4500"  # OrangeRed
+namespace-dot = "#f5deb3"  # Wheat
+function-dot = "#ffcc99"  # LightOrange
+bytes-dot = "#ff9966"  # DarkOrange
+next-marker-dot = "#ff6633"  # Coral
+addr-dot = "#ff4500"  # OrangeRed
+offset-dot = "#ffcc99"  # LightOrange
+prefix-dot = "#ffffff"  # White
+args-dot = "#ff9966"  # DarkOrange
+jump-false-dot = "#ff6633"  # Coral
+jump-true-dot = "#ff4500"  # OrangeRed
+jump-dot = "#ffcc99"  # LightOrange
+call-dot = "#ff9966"  # DarkOrange
+jumps = "#ff6633;#ff4500;#ff9966;#ffcc99;#ffebcd;#fffac8;#f5deb3;#f0e68c;#f4a460;#ffd700;#a0522d;#b87333"
+
+[register.colors]
+names = "#ffa500"  # Orange
+flags = "#ffff99"  # LightYellow
+
+[hexdump.colors]
+header = "#f5deb3"  # Wheat
+symbols = "#ffcc99;#ff9966;#ff6633;#ff4500;#ffebcd;#fffac8;#f5deb3;#f0e68c;#f4a460;#ffd700;#a0522d;#b87333"
+
+[pahole.colors]
+members = "#ffcc99;#ff9966;#ff6633;#ff4500;#ffebcd;#fffac8;#f5deb3;#f0e68c;#f4a460;#ffd700;#a0522d;#b87333"
+
+[ftree.colors]
+invalid = "#ffffff"  # White
+union = "#ffcc99"  # LightOrange
+virtual-cast = "#ff9966"  # DarkOrange
+down-cast = "#ff6633"  # Coral
+blacklist-pointer = "#ff4500"  # OrangeRed
+blacklist-member = "#ffebcd"  # Wheat
+limited = "#fffac8"  # LightGoldenRodYellow
+pretty-print = "#f5deb3"  # Wheat
+variable-name = "#ffffff"  # White
+arrows = "#ff6633;#ff4500;#ff9966;#ffcc99;#ffebcd;#fffac8;#f5deb3;#f0e68c;#f4a460;#ffd700;#a0522d;#b87333"
+
+[unwind.colors]
+hint = "#ffcc99"  # LightOrange
+hint-start = "#ff9966"  # DarkOrange
+
+[history.colors]
+marker = "#ff4500"  # OrangeRed
+background = "#000000"  # Black
+statistics = "#ffffff"  # White
+prompt = "#f5deb3"  # Wheat
+match = "#ffebcd"  # Wheat
+
+[va.colors]
+fixed-float = "#ffcc99"  # LightOrange
+vararg-float = "#ff9966"  # DarkOrange
+fixed-int = "#ff6633"  # Coral
+vararg-int = "#ff4500"  # OrangeRed
+
+[rtos.colors]
+active-task = "#ffd700"  # Gold
+marked-task = "#ffcc99"  # LightOrange
+
+[list.colors]
+marker = "#ff4500"  # OrangeRed
+
+[swo.colors]
+0 = "#ffcc99"  # LightOrange
+1 = "#ff9966"  # DarkOrange
+2 = "#ff6633"  # Coral
+3 = "#ff4500"  # OrangeRed
+4 = "#ffebcd"  # Wheat
+5 = "#fffac8"  # LightGoldenRodYellow
+6 = "#f5deb3"  # Wheat
+7 = "#f0e68c"  # Khaki
+8 = "#f4a460"  # OrangeRed
+9 = "#ffd700"  # Gold

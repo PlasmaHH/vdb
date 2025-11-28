@@ -1,0 +1,206 @@
+[theme]
+name = "AmberCRT"
+
+[prompt.colors]
+0 = "#FFD700"   # Gold
+1 = "#FFA500"   # Orange
+2 = "#FF8C00"   # Dark Orange
+3 = "#FF6347"   # Tomato
+4 = "#FF4500"   # Orange Red
+5 = "#FFD700"
+6 = "#FFA500"
+7 = "#FF8C00"
+8 = "#FF6347"
+9 = "#FF4500"
+start = "#FFD700"
+end = "#FFA500"
+git = "#FF8C00"
+thread = "#FF6347"
+time = "#FF4500"
+frame = "#FFD700"
+host = "#FFA500"
+progress = "#FF8C00"
+
+[shorten.colors]
+templates = "#FFD700"
+
+[bt.colors]
+namespace = "#FFD700"
+address = "#FFA500"
+function = "#FFD700"
+selected-frame-marker = "#FFA500"
+filename = "#FFD700"
+object-file = "#FFA500"
+default-object = "#FF8C00"
+rtti-warning = "#FF6347"
+argument = "#FFD700"
+argvalue = "#FFA500"
+numvalue = "#FF8C00"
+optimized-out = "#FF6347"
+
+[memory.colors]
+nullpage = "#FFD700"
+unknown = "#FFA500,black,underline"  # Amber text on black with underline
+ascii = "#FFD700"
+stack-own = "#FFA500"
+stack-foreign = "#FF8C00"
+heap = "#FF6347"
+mmap = "#FF4500"
+shared = "#FFD700"
+code = "#FFA500"
+bss = "#FF8C00"
+readonly = "#FF6347"
+writeonly = "#FF4500"
+readwrite = "#FFD700"
+executable = "#FFA500"
+inaccessible = "#FF8C00"
+invalid = "#FF6347"
+section-_interp = "#FF4500"
+section-_note_ABI-tag = "#FFD700"
+section-_hash = "#FFA500"
+section-_gnu_hash = "#FF8C00"
+section-_dynsym = "#FF6347"
+section-_dynstr = "#FF4500"
+section-_gnu_version = "#FFD700"
+section-_gnu_version_r = "#FFA500"
+section-_rela_dyn = "#FF8C00"
+section-_rela_plt = "#FF6347"
+section-_init = "#FF4500"
+section-_plt = "#FFD700"
+section-_text = "#FFA500"
+section-_fini = "#FF8C00"
+section-_rodata = "#FF6347"
+section-_stapsdt_base = "#FF4500"
+section-_eh_frame_hdr = "#FFD700"
+section-_eh_frame = "#FFA500"
+section-_gcc_except_table = "#FF8C00"
+section-_tdata = "#FF6347"
+section-_tbss = "#FF4500"
+section-_init_array = "#FFD700"
+section-_fini_array = "#FFA500"
+section-_data_rel_ro = "#FF8C00"
+section-_dynamic = "#FF6347"
+section-_got = "#FF4500"
+section-_got_plt = "#FFD700"
+section-_data = "#FFA500"
+section-_bss = "#FF8C00"
+section-_comment = "#FF6347"
+section-_GCC_command_line = "#FF4500"
+section-_note_stapsdt = "#FFD700"
+section-_debug_aranges = "#FFA500"
+section-_debug_info = "#FF8C00"
+section-_debug_abbrev = "#FF6347"
+section-_debug_line = "#FF4500"
+section-_debug_str = "#FFD700"
+section-_debug_loc = "#FFA500"
+section-_debug_ranges = "#FF8C00"
+section-_debug_macro = "#FF6347"
+
+[vmmap.colors]
+executable = "#FFD700"
+readonly = "#FFA500"
+
+[asm.colors]
+class-jump = "#FF8C00"
+class-mem = "#FF6347"
+class-nop = "#FF4500"
+class-bit = "#FFD700"
+class-math = "#FFA500"
+class-sys = "#FF8C00"
+class-ret = "#FF6347"
+class-call = "#FF4500"
+class-stack = "#FFD700"
+class-cond = "#FFA500"
+class-vector = "#FF8C00"
+class-default = "#FF6347"
+namespace = "#FFD700"
+function = "#FFA500"
+next-marker = "#FF8C00"
+next2-marker = "#FF6347"
+marker = "#FF4500"
+breakpoint-marker = "#FFD700"
+breakpoint-disabled-marker = "#FFA500"
+addr = "#FF8C00"
+offset = "#FF6347"
+bytes = "#FF4500"
+prefix = "#FFD700"
+
+args = "#FF8C00"
+variable = "#FF6347"
+location = "#FF4500"
+explanation = "#FFFF99"  # Light yellow for subtle asm line highlights
+unhandled = "#FFD700"
+namespace-dot = "#FFA500"
+function-dot = "#FF8C00"
+bytes-dot = "#FF6347"
+next-marker-dot = "#FF4500"
+addr-dot = "#FFD700"
+offset-dot = "#FFA500"
+prefix-dot = "#FF8C00"
+
+args-dot = "#FF4500"
+jump-false-dot = "#FFD700"
+jump-true-dot = "#FFA500"
+jump-dot = "#FF8C00"
+call-dot = "#FF6347"
+jumps = "#FFD700;#FFA500;#FF8C00;#FF6347;#FF4500;#FFD700;#FFA500;#FF8C00;#FF6347;#FF4500;#FFD700;#FFA500"
+
+[register.colors]
+names = "#FFD700"
+flags = "#FFA500"
+
+[hexdump.colors]
+header = "#FFD700"
+symbols = "#FFA500;#FF8C00;#FF6347;#FF4500;#FFD700;#FFA500;#FF8C00;#FF6347;#FF4500;#FFD700;#FFA500;#FF8C00"
+
+[pahole.colors]
+members = "#FFD700;#FFA500;#FF8C00;#FF6347;#FF4500;#FFD700;#FFA500;#FF8C00;#FF6347;#FF4500;#FFD700;#FFA500"
+
+[ftree.colors]
+invalid = "#FFA500"
+union = "#FF8C00"
+virtual-cast = "#FF6347"
+down-cast = "#FF4500"
+blacklist-pointer = "#FFD700"
+blacklist-member = "#FFA500"
+limited = "#FF8C00"
+pretty-print = "#FF6347"
+variable-name = "#FF4500"
+arrows = "#FFD700;#FFA500;#FF8C00;#FF6347;#FF4500;#FFD700;#FFA500;#FF8C00;#FF6347;#FF4500;#FFD700;#FFA500"
+
+[unwind.colors]
+hint = "#FFD700"
+hint-start = "#FFA500"
+
+[history.colors]
+marker = "#FF8C00"
+background = "#000000"
+statistics = "#FF6347"
+prompt = "#FF4500"
+match = "#FFD700"
+
+[va.colors]
+fixed-float = "#FFA500"
+vararg-float = "#FF8C00"
+fixed-int = "#FF6347"
+vararg-int = "#FF4500"
+
+[rtos.colors]
+active-task = "#FFD700"
+marked-task = "#FFA500"
+
+[list.colors]
+marker = "#FF8C00"
+
+[swo.colors]
+0 = "#FFD700"
+1 = "#FFA500"
+2 = "#FF8C00"
+3 = "#FF6347"
+4 = "#FF4500"
+5 = "#FFD700"
+6 = "#FFA500"
+7 = "#FF8C00"
+8 = "#FF6347"
+9 = "#FF4500"
+

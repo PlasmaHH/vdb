@@ -1,0 +1,164 @@
+[theme]
+name = "VisualStudio"
+
+[prompt.colors]
+0 = "#007ACC"   # Blue for prompt
+1 = "#007ACC"
+2 = "#007ACC"
+3 = "#007ACC"
+4 = "#007ACC"
+5 = "#007ACC"
+6 = "#007ACC"
+7 = "#007ACC"
+8 = "#007ACC"
+9 = "#007ACC"
+start = "#007ACC"
+end = "#007ACC"
+git = "#007ACC"
+thread = "#007ACC"
+time = "#007ACC"
+frame = "#007ACC"
+host = "#007ACC"
+progress = "#007ACC"
+
+[shorten.colors]
+templates = "#007ACC"
+
+[bt.colors]
+namespace = "#007ACC"       # Blue for namespaces
+address = "#888"              # Gray for addresses
+function = "#007ACC"          # Blue for functions
+selected-frame-marker = "#007ACC"
+filename = "#007ACC"          # Blue for filenames
+object-file = "#007ACC"
+default-object = "#007ACC"
+rtti-warning = "#FF4500"      # Orange for warnings
+argument = "#007ACC"
+argvalue = "#007ACC"
+numvalue = "#007ACC"
+optimized-out = "#888"
+
+[memory.colors]
+nullpage = "#007ACC"
+unknown = ",,underline"
+ascii = "#007ACC"
+stack-own = "#007ACC"
+stack-foreign = "#007ACC"
+heap = "#007ACC"
+mmap = "#007ACC"
+shared = "#007ACC"
+code = "#007ACC"
+bss = "#007ACC"
+readonly = "#007ACC"
+writeonly = "#007ACC"
+readwrite = "#007ACC"
+executable = "#007ACC"
+inaccessible = "#888"
+invalid = "#FF4500"
+
+[vmmap.colors]
+executable = "#007ACC"
+readonly = "#007ACC"
+
+[asm.colors]
+class-jump = "#007ACC"        # Blue for jumps
+class-mem = "#2E8B57"         # Green for memory
+class-nop = "#888"             # Gray for NOP
+class-bit = "#007ACC"
+class-math = "#007ACC"
+class-sys = "#007ACC"
+class-ret = "#007ACC"
+class-call = "#007ACC"
+class-stack = "#007ACC"
+class-cond = "#007ACC"
+class-vector = "#007ACC"
+class-default = "#007ACC"
+namespace = "#007ACC"
+function = "#007ACC"
+next-marker = "#007ACC"
+next2-marker = "#007ACC"
+marker = "#007ACC"
+breakpoint-marker = "#FF4500"
+breakpoint-disabled-marker = "#888"
+addr = "#007ACC"
+offset = "#007ACC"
+bytes = "#007ACC"
+prefix = "#007ACC"
+args = "#007ACC"
+variable = "#007ACC"
+location = "#007ACC"
+explanation = "#888"          # Subtle gray for explanations
+unhandled = "#FF4500"
+namespace-dot = "#007ACC"
+function-dot = "#007ACC"
+bytes-dot = "#007ACC"
+next-marker-dot = "#007ACC"
+addr-dot = "#007ACC"
+offset-dot = "#007ACC"
+prefix-dot = "#007ACC"
+args-dot = "#007ACC"
+jump-false-dot = "#FF4500"
+jump-true-dot = "#007ACC"
+jump-dot = "#007ACC"
+call-dot = "#007ACC"
+jumps = "#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC"  # Doubled list
+
+[register.colors]
+names = "#007ACC"
+flags = "#007ACC"
+
+[hexdump.colors]
+header = "#007ACC"
+symbols = "#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC"  # Doubled list
+unknown-bytes = "#888"
+
+[pahole.colors]
+members = "#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC"  # Doubled list
+
+[ftree.colors]
+invalid = "#FF4500"
+union = "#007ACC"
+virtual-cast = "#007ACC"
+down-cast = "#007ACC"
+blacklist-pointer = "#FF4500"
+blacklist-member = "#FF4500"
+limited = "#007ACC"
+pretty-print = "#007ACC"
+variable-name = "#007ACC"
+arrows = "#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC;#007ACC"  # Doubled list
+
+[unwind.colors]
+hint = "#007ACC"
+hint-start = "#007ACC"
+
+[history.colors]
+marker = "#007ACC"
+background = "#007ACC"
+statistics = "#007ACC"
+prompt = "#007ACC"
+match = "#007ACC"
+
+[va.colors]
+fixed-float = "#007ACC"
+vararg-float = "#007ACC"
+fixed-int = "#007ACC"
+vararg-int = "#007ACC"
+
+[rtos.colors]
+active-task = "#007ACC"
+marked-task = "#007ACC"
+
+[list.colors]
+marker = "#007ACC"
+
+[swo.colors]
+0 = "#007ACC"
+1 = "#007ACC"
+2 = "#007ACC"
+3 = "#007ACC"
+4 = "#007ACC"
+5 = "#007ACC"
+6 = "#007ACC"
+7 = "#007ACC"
+8 = "#007ACC"
+9 = "#007ACC"

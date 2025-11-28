@@ -1,0 +1,206 @@
+[theme]
+name = "Luminous2"
+
+[prompt.colors]
+0 = "#0000FF"  # Bright blue
+1 = "#0000FF"
+2 = "#0000FF"
+3 = "#0000FF"
+4 = "#0000FF"
+5 = "#0000FF"
+6 = "#0000FF"
+7 = "#0000FF"
+8 = "#0000FF"
+9 = "#0000FF"
+start = "#0000FF"  # Bright blue
+end = "#0000FF"
+git = "#0000FF"
+thread = "#0000FF"
+time = "#0000FF"
+frame = "#0000FF"
+host = "#0000FF"
+progress = "#0000FF"
+
+[shorten.colors]
+templates = "#0000FF"  # Bright blue
+
+[bt.colors]
+namespace = "#0000FF"  # Bright blue
+address = "#000000"  # Black
+function = "#0000FF"  # Bright blue
+selected-frame-marker = "#0000FF"
+filename = "#0000FF"
+object-file = "#0000FF"
+default-object = "#0000FF"
+rtti-warning = "#0000FF"
+argument = "#000000"
+argvalue = "#000000"
+numvalue = "#0000FF"
+optimized-out = "#0000FF"
+
+[memory.colors]
+nullpage = "#000000"  # Black
+unknown = ",,underline"  # Underlined default
+ascii = "#000000"  # Black
+stack-own = "#0000FF"  # Bright blue
+stack-foreign = "#0000FF"
+heap = "#00FF00"  # Bright green
+mmap = "#00FF00"
+shared = "#00FF00"
+code = "#FF0000"  # Bright red
+bss = "#0000FF"
+readonly = "#0000FF"
+writeonly = "#0000FF"
+readwrite = "#000000"
+executable = "#00FF00"
+inaccessible = "#0000FF"
+invalid = "#0000FF"
+section-_interp = ",,underline"
+section-_note_ABI-tag = ",,underline"
+section-_hash = ",,underline"
+section-_gnu_hash = ",,underline"
+section-_dynsym = ",,underline"
+section-_dynstr = ",,underline"
+section-_gnu_version = ",,underline"
+section-_gnu_version_r = ",,underline"
+section-_rela_dyn = ",,underline"
+section-_rela_plt = ",,underline"
+section-_init = ",,underline"
+section-_plt = ",,underline"
+section-_text = ",,underline"
+section-_fini = ",,underline"
+section-_rodata = ",,underline"
+section-_stapsdt_base = ",,underline"
+section-_eh_frame_hdr = ",,underline"
+section-_eh_frame = ",,underline"
+section-_gcc_except_table = ",,underline"
+section-_tdata = ",,underline"
+section-_tbss = ",,underline"
+section-_init_array = ",,underline"
+section-_fini_array = ",,underline"
+section-_data_rel_ro = ",,underline"
+section-_dynamic = ",,underline"
+section-_got = ",,underline"
+section-_got_plt = ",,underline"
+section-_data = ",,underline"
+section-_bss = ",,underline"
+section-_comment = ",,underline"
+section-_GCC_command_line = ",,underline"
+section-_note_stapsdt = ",,underline"
+section-_debug_aranges = ",,underline"
+section-_debug_info = ",,underline"
+section-_debug_abbrev = ",,underline"
+section-_debug_line = ",,underline"
+section-_debug_str = ",,underline"
+section-_debug_loc = ",,underline"
+section-_debug_ranges = ",,underline"
+section-_debug_macro = ",,underline"
+
+[vmmap.colors]
+executable = "#00FF00"  # Bright green
+readonly = "#0000FF"  # Bright blue
+
+[asm.colors]
+class-jump = "#FF0000"  # Bright red
+class-mem = "#00FF00"  # Bright green
+class-nop = "#0000FF"  # Bright blue
+class-bit = "#00FF00"  # Bright green
+class-math = "#00FF00"  # Bright green
+class-sys = "#0000FF"  # Bright blue
+class-ret = "#0000FF"  # Bright blue
+class-call = "#00FF00"  # Bright green
+class-stack = "#00FF00"  # Bright green
+class-cond = "#00FF00"  # Bright green
+class-vector = "#00FF00"  # Bright green
+class-default = "#000000"  # Black
+namespace = "#0000FF"  # Bright blue
+function = "#0000FF"  # Bright blue
+next-marker = "#0000FF"  # Bright blue
+next2-marker = "#0000FF"  # Bright blue
+marker = "#0000FF"  # Bright blue
+breakpoint-marker = "#0000FF"  # Bright blue
+breakpoint-disabled-marker = "#0000FF"  # Bright blue
+addr = "#000000"  # Black
+offset = "#0000FF"  # Bright blue
+bytes = "#000000"  # Black
+prefix = "#000000"  # Black
+
+args = "#000000"  # Black
+variable = "#000000"  # Black
+location = "#000000"  # Black
+explanation = "#AAAAAA"  # Light gray
+unhandled = "#0000FF"  # Bright blue
+namespace-dot = "#0000FF"  # Bright blue
+function-dot = "#0000FF"  # Bright blue
+bytes-dot = "#000000"  # Black
+next-marker-dot = "#0000FF"  # Bright blue
+addr-dot = "#000000"  # Black
+offset-dot = "#0000FF"  # Bright blue
+prefix-dot = "#000000"  # Black
+
+args-dot = "#000000"  # Black
+jump-false-dot = "#0000FF"  # Bright blue
+jump-true-dot = "#0000FF"  # Bright blue
+jump-dot = "#0000FF"  # Bright blue
+call-dot = "#0000FF"  # Bright blue
+jumps = "#FF0000;#00FF00;#0000FF;#FFA500;#00FFFF;#FF00FF;#8A2BE2;#00FF00;#FF0000;#00FFFF;#FF00FF;#8A2BE2"  # 12 vibrant colors
+
+[register.colors]
+names = "#0000FF"  # Bright blue
+flags = "#00FF00"  # Bright green
+
+[hexdump.colors]
+header = "#0000FF"  # Bright blue
+symbols = "#FF0000;#00FF00;#0000FF;#FFA500;#00FFFF;#FF00FF;#8A2BE2;#00FF00;#FF0000;#00FFFF;#FF00FF;#8A2BE2"  # 12 vibrant colors
+unknown-bytes = "#000000"  # Black
+
+[pahole.colors]
+members = "#FF0000;#00FF00;#0000FF;#FFA500;#00FFFF;#FF00FF;#8A2BE2;#00FF00;#FF0000;#00FFFF;#FF00FF;#8A2BE2"  # 12 vibrant colors
+
+[ftree.colors]
+invalid = "#FF0000"  # Bright red
+union = "#00FF00"  # Bright green
+virtual-cast = "#0000FF"  # Bright blue
+down-cast = "#FFA500"  # Orange
+blacklist-pointer = "#00FFFF"  # Cyan
+blacklist-member = "#FF00FF"  # Magenta
+limited = "#8A2BE2"  # Blue Violet
+pretty-print = "#00FF00"  # Bright green
+variable-name = "#0000FF"  # Bright blue
+arrows = "#FF0000;#00FF00;#0000FF;#FFA500;#00FFFF;#FF00FF;#8A2BE2;#00FF00;#FF0000;#00FFFF;#FF00FF;#8A2BE2"  # 12 vibrant arrows
+
+[unwind.colors]
+hint = "#0000FF"  # Bright blue
+hint-start = "#0000FF"  # Bright blue
+
+[history.colors]
+marker = "#0000FF"  # Bright blue
+background = "#FFFFFF"  # White
+statistics = "#0000FF"  # Bright blue
+prompt = "#0000FF"  # Bright blue
+match = "#0000FF"  # Bright blue
+
+[va.colors]
+fixed-float = "#0000FF"  # Bright blue
+vararg-float = "#0000FF"  # Bright blue
+fixed-int = "#0000FF"  # Bright blue
+vararg-int = "#0000FF"  # Bright blue
+
+[rtos.colors]
+active-task = "#0000FF"  # Bright blue
+marked-task = "#0000FF"  # Bright blue
+
+[list.colors]
+marker = "#0000FF"  # Bright blue
+
+[swo.colors]
+0 = "#FF0000"  # Bright red
+1 = "#00FF00"  # Bright green
+2 = "#0000FF"  # Bright blue
+3 = "#FFA500"  # Orange
+4 = "#00FFFF"  # Cyan
+5 = "#FF00FF"  # Magenta
+6 = "#8A2BE2"  # Blue Violet
+7 = "#00FF00"  # Bright green
+8 = "#FF0000"  # Bright red
+9 = "#00FFFF"  # Cyan

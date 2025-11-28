@@ -1,0 +1,203 @@
+[theme]
+name = "xterm16"
+
+[prompt.colors]
+0 = "#00ffff"   # Cyan for prompt index
+1 = "#00ffff"
+2 = "#00ffff"
+3 = "#00ffff"
+4 = "#00ffff"
+5 = "#00ffff"
+6 = "#00ffff"
+7 = "#00ffff"
+8 = "#00ffff"
+9 = "#00ffff"
+start = "#00ffff"   # Cyan
+end = "#00ffff"
+git = "#00ffff"
+thread = "#00ffff"
+time = "#00ffff"
+frame = "#00ffff"
+host = "#00ffff"
+progress = "#00ffff"
+
+[shorten.colors]
+templates = "#00ffcc"   # Light cyan
+
+[bt.colors]
+namespace = "#00ccff"   # Sky blue
+address = "#ffffff"       # White
+function = "#00ccff"
+selected-frame-marker = "#ffff00"   # Yellow
+filename = "#00ffff"
+object-file = "#00ffff"
+default-object = "#00ffff"
+rtti-warning = "#ffaa00"   # Orange
+argument = "#00ffff"
+argvalue = "#ffffff"
+numvalue = "#00ccff"
+optimized-out = "#ff00ff"   # Magenta
+
+[memory.colors]
+nullpage = "#00ffff"
+unknown = ",,underline"   # Underlined white
+ascii = "#00ffff"
+stack-own = "#00ccff"
+stack-foreign = "#0099ff"
+heap = "#00ffcc"
+mmap = "#00ccff"
+shared = "#0099ff"
+code = "#ff00cc"   # Magenta
+bss = "#00ffff"
+readonly = "#00ccff"
+writeonly = "#0099ff"
+readwrite = "#00ffff"
+executable = "#ff00cc"
+inaccessible = "#ffaa00"
+invalid = "#ff0000"   # Red
+section-_interp = "#00ffff"
+section-_note_ABI-tag = "#00ffff"
+section-_hash = "#00ffff"
+section-_gnu_hash = "#00ffff"
+section-_dynsym = "#00ffff"
+section-_dynstr = "#00ffff"
+section-_gnu_version = "#00ffff"
+section-_gnu_version_r = "#00ffff"
+section-_rela_dyn = "#00ffff"
+section-_rela_plt = "#00ffff"
+section-_init = "#00ffff"
+section-_plt = "#00ffff"
+section-_text = "#00ffff"
+section-_fini = "#00ffff"
+section-_rodata = "#00ffff"
+section-_stapsdt_base = "#00ffff"
+section-_eh_frame_hdr = "#00ffff"
+section-_eh_frame = "#00ffff"
+section-_gcc_except_table = "#00ffff"
+section-_tdata = "#00ffff"
+section-_tbss = "#00ffff"
+section-_init_array = "#00ffff"
+section-_fini_array = "#00ffff"
+section-_data_rel_ro = "#00ffff"
+section-_dynamic = "#00ffff"
+section-_got = "#00ffff"
+section-_got_plt = "#00ffff"
+section-_data = "#00ffff"
+section-_bss = "#00ffff"
+section-_comment = "#00ffff"
+section-_GCC_command_line = "#00ffff"
+section-_note_stapsdt = "#00ffff"
+section-_debug_aranges = "#00ffff"
+section-_debug_info = "#00ffff"
+section-_debug_abbrev = "#00ffff"
+section-_debug_line = "#00ffff"
+section-_debug_str = "#00ffff"
+section-_debug_loc = "#00ffff"
+section-_debug_ranges = "#00ffff"
+section-_debug_macro = "#00ffff"
+
+[vmmap.colors]
+executable = "#ff00cc"
+readonly = "#00ccff"
+
+[asm.colors]
+class-jump = "#ff0000"   # Red
+class-mem = "#00ffcc"     # Teal
+class-nop = "#00ccff"     # Blue
+class-bit = "#ffaa00"     # Orange
+class-math = "#00ffff"    # Cyan
+class-sys = "#00ffcc"     # Teal
+class-ret = "#ff0000"     # Red
+class-call = "#ffaa00"    # Orange
+class-stack = "#00ccff"   # Blue
+class-cond = "#00ffcc"    # Teal
+class-vector = "#00ffff" # Cyan
+class-default = "#ffffff"
+namespace = "#00ccff"
+function = "#00ccff"
+next-marker = "#ffff00"   # Yellow
+next2-marker = "#00ffff"
+marker = "#00ffff"
+breakpoint-marker = "#ff0000"
+breakpoint-disabled-marker = "#0099ff"
+addr = "#ffffff"
+offset = "#00ffff"
+bytes = "#00ffff"
+prefix = "#ffffff"
+args = "#00ccff"
+variable = "#00ffff"
+location = "#00ffff"
+explanation = "#888888"   # Gray
+unhandled = "#ff0000"
+namespace-dot = "#00ccff"
+function-dot = "#00ccff"
+bytes-dot = "#00ffff"
+next-marker-dot = "#ffff00"
+addr-dot = "#ffffff"
+offset-dot = "#00ffff"
+prefix-dot = "#ffffff"
+args-dot = "#00ccff"
+jump-false-dot = "#ff0000"
+jump-true-dot = "#00ff00"   # Green
+jump-dot = "#00ffff"
+call-dot = "#ffaa00"
+jumps = "#ff0000;#00ff00;#0000ff;#ffff00;#ff00ff;#00ffff;#ffaa00;#00ccff;#0099ff;#0066ff;#ff6600;#66ff00"   # 12 colors
+
+[register.colors]
+names = "#00ffff"   # Cyan
+flags = "#00ccff"   # Blue
+
+[hexdump.colors]
+header = "#00ffff"   # Cyan
+symbols = "#00ccff;#0099ff;#0066ff;#0033ff;#0000ff;#0066cc;#0099cc;#00ccff;#00ffcc;#00ffff;#00ccff;#0099ff"   # 12 colors
+
+[pahole.colors]
+members = "#00ffff;#00ccff;#0099ff;#0066ff;#0033ff;#0000ff;#0066cc;#0099cc;#00ccff;#00ffcc;#00ffff;#00ccff"   # 12 colors
+
+[ftree.colors]
+invalid = "#ff0000"
+union = "#00ffff"
+virtual-cast = "#00ccff"
+down-cast = "#0099ff"
+blacklist-pointer = "#0066ff"
+blacklist-member = "#0033ff"
+limited = "#0000ff"
+pretty-print = "#0066cc"
+variable-name = "#0099ff"
+arrows = "#00ffff;#00ccff;#0099ff;#0066ff;#0033ff;#0000ff;#0066cc;#0099cc;#00ccff;#00ffcc;#00ffff;#00ccff"   # 12 colors
+
+[unwind.colors]
+hint = "#00ffff"
+hint-start = "#00ccff"
+
+[history.colors]
+marker = "#00ffff"
+background = "#000000"   # Black
+statistics = "#00ffff"
+prompt = "#00ffff"
+match = "#00ccff"
+
+[va.colors]
+fixed-float = "#00ffff"
+vararg-float = "#00ccff"
+fixed-int = "#00ffff"
+vararg-int = "#00ccff"
+
+[rtos.colors]
+active-task = "#00ffff"
+marked-task = "#00ccff"
+
+[list.colors]
+marker = "#00ffff"
+
+[swo.colors]
+0 = "#00ffff"
+1 = "#00ccff"
+2 = "#0099ff"
+3 = "#0066ff"
+4 = "#0033ff"
+5 = "#0000ff"
+6 = "#0066cc"
+7 = "#0099cc"
+8 = "#00ccff"
+9 = "#00ffcc"

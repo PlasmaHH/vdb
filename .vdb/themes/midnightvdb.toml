@@ -1,0 +1,206 @@
+[theme]
+name = "MidnightVDB"
+
+[prompt.colors]
+0 = "#87CEEB"  # SkyBlue
+1 = "#4682B4"  # SteelBlue
+2 = "#2F4F4F"  # DarkSlateGray
+3 = "#8A2BE2"  # BlueViolet
+4 = "#FF6347"  # Tomato
+5 = "#00CED1"  # DarkTurquoise
+6 = "#FFB6C1"  # LightPink
+7 = "#FFD700"  # Gold
+8 = "#98FB98"  # PaleGreen
+9 = "#BA55D3"  # Orchid
+start = "#00BFFF"  # DeepSkyBlue
+end = "#FF4500"  # OrangeRed
+git = "#7FFF00"  # Chartreuse
+thread = "#FF69B4"  # HotPink
+time = "#FFA07A"  # LightSalmon
+frame = "#8A2BE2"  # BlueViolet
+host = "#00FA9A"  # MediumSpringGreen
+progress = "#FFD700"  # Gold
+
+[shorten.colors]
+templates = "#00FFFF"  # Cyan
+
+[bt.colors]
+namespace = "#87CEEB"  # SkyBlue
+address = "#FFB6C1"  # LightPink
+function = "#FF6347"  # Tomato
+selected-frame-marker = "#FF4500"  # OrangeRed
+filename = "#8A2BE2"  # BlueViolet
+object-file = "#2F4F4F"  # DarkSlateGray
+default-object = "#00BFFF"  # DeepSkyBlue
+rtti-warning = "#FFA500"  # Orange
+argument = "#00CED1"  # DarkTurquoise
+argvalue = "#8A2BE2"  # BlueViolet
+numvalue = "#00BFFF"  # DeepSkyBlue
+optimized-out = "#FF69B4"  # HotPink
+
+[memory.colors]
+nullpage = "#FF6347"  # Tomato
+unknown = ",,underline"  # PaleGoldenRod with underline
+ascii = "#00CED1"  # DarkTurquoise
+stack-own = "#00BFFF"  # DeepSkyBlue
+stack-foreign = "#87CEEB"  # SkyBlue
+heap = "#2F4F4F"  # DarkSlateGray
+mmap = "#FFB6C1"  # LightPink
+shared = "#FF4500"  # OrangeRed
+code = "#FF69B4"  # HotPink
+bss = "#8A2BE2"  # BlueViolet
+readonly = "#7FFF00"  # Chartreuse
+writeonly = "#00FA9A"  # MediumSpringGreen
+readwrite = "#FFD700"  # Gold
+executable = "#FFA07A"  # LightSalmon
+inaccessible = "#8B0000"  # DarkRed
+invalid = "#8A2BE2"  # BlueViolet
+section-_interp = "#00BFFF"  # DeepSkyBlue
+section-_note_ABI-tag = "#FF6347"  # Tomato
+section-_hash = "#2F4F4F"  # DarkSlateGray
+section-_gnu_hash = "#87CEEB"  # SkyBlue
+section-_dynsym = "#FFB6C1"  # LightPink
+section-_dynstr = "#00CED1"  # DarkTurquoise
+section-_gnu_version = "#FF4500"  # OrangeRed
+section-_gnu_version_r = "#FF69B4"  # HotPink
+section-_rela_dyn = "#FFA500"  # Orange
+section-_rela_plt = "#00BFFF"  # DeepSkyBlue
+section-_init = "#8A2BE2"  # BlueViolet
+section-_plt = "#00CED1"  # DarkTurquoise
+section-_text = "#FF6347"  # Tomato
+section-_fini = "#FFB6C1"  # LightPink
+section-_rodata = "#2F4F4F"  # DarkSlateGray
+section-_stapsdt_base = "#87CEEB"  # SkyBlue
+section-_eh_frame_hdr = "#FF4500"  # OrangeRed
+section-_eh_frame = "#FF69B4"  # HotPink
+section-_gcc_except_table = "#FFA07A"  # LightSalmon
+section-_tdata = "#00BFFF"  # DeepSkyBlue
+section-_tbss = "#8A2BE2"  # BlueViolet
+section-_init_array = "#00CED1"  # DarkTurquoise
+section-_fini_array = "#FF6347"  # Tomato
+section-_data_rel_ro = "#FFB6C1"  # LightPink
+section-_dynamic = "#2F4F4F"  # DarkSlateGray
+section-_got = "#87CEEB"  # SkyBlue
+section-_got_plt = "#FF4500"  # OrangeRed
+section-_data = "#FF69B4"  # HotPink
+section-_bss = "#FFA500"  # Orange
+section-_comment = "#00BFFF"  # DeepSkyBlue
+section-_GCC_command_line = "#8A2BE2"  # BlueViolet
+section-_note_stapsdt = "#00CED1"  # DarkTurquoise
+section-_debug_aranges = "#FFB6C1"  # LightPink
+section-_debug_info = "#FF6347"  # Tomato
+section-_debug_abbrev = "#2F4F4F"  # DarkSlateGray
+section-_debug_line = "#87CEEB"  # SkyBlue
+section-_debug_str = "#FF4500"  # OrangeRed
+section-_debug_loc = "#FF69B4"  # HotPink
+section-_debug_ranges = "#FFA07A"  # LightSalmon
+section-_debug_macro = "#00BFFF"  # DeepSkyBlue
+
+[vmmap.colors]
+executable = "#FF69B4"  # HotPink
+readonly = "#00CED1"  # DarkTurquoise
+
+[asm.colors]
+class-jump = "#FF6347"
+class-mem = "#00BFFF"
+class-nop = "#00CED1"
+class-bit = "#00FA9A"
+class-math = "#FFA07A"
+class-sys = "#FF6347"
+class-ret = "#00CED1"
+class-call = "#00BFFF"
+class-stack = "#00FA9A"
+class-cond = "#FFA07A"
+class-vector = "#FF6347"
+class-default = "#00CED1"
+namespace = "#00BFFF"
+function = "#FF6347"
+next-marker = "#FF4500"
+next2-marker = "#FFA500"
+marker = "#FF8C00"
+breakpoint-marker = "#FFD700"
+breakpoint-disabled-marker = "#FFB6C1"
+addr = "#00CED1"
+offset = "#FF6347"
+bytes = "#FF4500"
+prefix = "#FFA500"
+
+args = "#FFD700"
+variable = "#FFB6C1"
+location = "#FF6347"
+explanation = "#808080"  # Gray
+unhandled = "#00BFFF"
+namespace-dot = "#00CED1"
+function-dot = "#FFB6C1"
+bytes-dot = "#FF4500"
+next-marker-dot = "#FFA500"
+addr-dot = "#FF8C00"
+offset-dot = "#FFD700"
+prefix-dot = "#FF6347"
+
+args-dot = "#FF4500"
+jump-false-dot = "#FFA500"
+jump-true-dot = "#FF8C00"
+jump-dot = "#FFD700"
+call-dot = "#FFB6C1"
+jumps = "#FF6347;#FF4500;#FFA500;#FF8C00;#FFD700;#FFB6C1;#FF69B4;#FF1493;#8A2BE2;#00BFFF;#2F4F4F;#87CEEB"
+
+[register.colors]
+names = "#00BFFF"
+flags = "#FFB6C1"
+
+[hexdump.colors]
+header = "#00CED1"
+symbols = "#FF6347;#FF4500;#FFA500;#FF8C00;#FFD700;#FFB6C1;#FF69B4;#FF1493;#8A2BE2;#00BFFF;#2F4F4F;#87CEEB"
+unknown-bytes = "#FFA07A"
+
+[pahole.colors]
+members = "#FF6347;#FF4500;#FFA500;#FF8C00;#FFD700;#FFB6C1;#FF69B4;#FF1493;#8A2BE2;#00BFFF;#2F4F4F;#87CEEB"
+
+[ftree.colors]
+invalid = "#00CED1"
+union = "#FFB6C1"
+virtual-cast = "#FF4500"
+down-cast = "#FFA500"
+blacklist-pointer = "#FF8C00"
+blacklist-member = "#FFD700"
+limited = "#FFB6C1"
+pretty-print = "#FF6347"
+variable-name = "#00BFFF"
+arrows = "#00BFFF;#8A2BE2;#FF6347;#FF4500;#FFA500;#FF8C00;#FFD700;#FFB6C1;#FF69B4;#FF1493;#2F4F4F;#87CEEB"
+
+[unwind.colors]
+hint = "#FFA07A"
+hint-start = "#FF6347"
+
+[history.colors]
+marker = "#FF4500"
+background = "#000000"
+statistics = "#00CED1"
+prompt = "#FFB6C1"
+match = "#FF6347"
+
+[va.colors]
+fixed-float = "#FF69B4"
+vararg-float = "#FF1493"
+fixed-int = "#8A2BE2"
+vararg-int = "#00BFFF"
+
+[rtos.colors]
+active-task = "#00CED1"
+marked-task = "#FF6347"
+
+[list.colors]
+marker = "#FF4500"
+
+[swo.colors]
+0 = "#00BFFF"
+1 = "#8A2BE2"
+2 = "#FF6347"
+3 = "#FF4500"
+4 = "#FFA500"
+5 = "#FF8C00"
+6 = "#FFD700"
+7 = "#FFB6C1"
+8 = "#FF69B4"
+9 = "#FF1493"

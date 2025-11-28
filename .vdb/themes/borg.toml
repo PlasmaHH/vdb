@@ -1,0 +1,164 @@
+[theme]
+name = "Borg"
+
+[prompt.colors]
+0 = "#cccccc"      # Default prompt text
+1 = "#00ff00"      # Command (green accent)
+2 = "#00ffff"      # User
+3 = "#00ffcc"      # Host
+4 = "#ffcc00"      # Time
+5 = "#00ccff"      # Frame
+6 = "#ff6666"      # Git
+7 = "#00ccff"      # Thread
+8 = "#cccccc"      # Progress
+9 = "#cccccc"      # Unknown
+start = "#00ff00"   # Prompt start (bright green)
+end = "#00ccff"    # Prompt end
+git = "#ff6666"    # Git branch
+thread = "#00ccff" # Thread ID
+time = "#ffcc00"   # Timestamp
+frame = "#00ffcc"  # Frame indicator
+host = "#00ffff"   # Hostname
+progress = "#ff66cc" # Progress bar
+
+[shorten.colors]
+templates = "#00ff00"  # Template markers (green)
+
+[bt.colors]
+namespace = "#00ccff"     # Namespace
+address = "#ffcc00"        # Memory address
+function = "#00ffff"       # Function name
+selected-frame-marker = "#ff6666" # Current frame
+filename = "#00ccff"       # File path
+object-file = "#ffcc00"    # Object file
+default-object = "#888888"  # Default object
+rtti-warning = "#ff6666"    # RTTI warning
+argument = "#00ffff"       # Argument
+argvalue = "#ffcc00"      # Argument value
+numvalue = "#00ccff"      # Numeric value
+optimized-out = "#888888" # Optimized out
+
+[memory.colors]
+nullpage = "#888888"       # Null page
+unknown = ",,underline"     # Unknown memory
+ascii = "#00ff00"          # ASCII characters (green)
+stack-own = "#00ccff"      # Own stack
+stack-foreign = "#ff6666"   # Foreign stack
+heap = "#ffcc00"           # Heap
+mmap = "#00ffff"           # Mapped memory
+shared = "#ff66cc"         # Shared memory
+code = "#00ff00"           # Executable code (green)
+bss = "#ffcc00"           # BSS segment
+readonly = "#00ccff"      # Read-only
+writeonly = "#ff6666"      # Write-only
+readwrite = "#ffcc00"      # Read-write
+executable = "#00ff00"      # Executable (green)
+inaccessible = "#888888"    # Inaccessible
+invalid = "#888888"        # Invalid
+
+[vmmap.colors]
+executable = "#00ff00"     # Executable (green)
+readonly = "#00ccff"       # Read-only
+
+[asm.colors]
+class-jump = "#ff6666"       # Jump instructions
+class-mem = "#00ff00"        # Memory operations (green)
+class-nop = "#888888"        # No-ops
+class-bit = "#00ccff"        # Bit operations
+class-math = "#00ffff"        # Math operations
+class-sys = "#ff66cc"         # System calls
+class-ret = "#ffcc00"         # Return
+class-call = "#00ffff"        # Function calls
+class-stack = "#00ccff"      # Stack operations
+class-cond = "#ff6666"       # Conditional
+class-vector = "#00ff00"      # Vector operations (green)
+class-default = "#888888"    # Default
+namespace = "#00ccff"        # Namespace
+function = "#00ffff"         # Function
+next-marker = "#ffcc00"      # Next instruction
+next2-marker = "#ff6666"     # Next next instruction
+marker = "#ffcc00"           # Marker
+breakpoint-marker = "#ff6666" # Breakpoint
+breakpoint-disabled-marker = "#888888" # Disabled breakpoint
+addr = "#00ffff"             # Address
+offset = "#00ccff"           # Offset
+bytes = "#ffcc00"            # Bytes
+prefix = "#888888"           # Instruction prefix
+args = "#00ffff"             # Arguments
+variable = "#ffcc00"        # Variables
+location = "#00ccff"        # Location
+explanation = "#00ff00"      # ASM explanation (green)
+unhandled = "#ff6666"        # Unhandled
+namespace-dot = "#00ccff"    # Namespace in graph
+function-dot = "#00ffff"     # Function in graph
+bytes-dot = "#ffcc00"        # Bytes in graph
+next-marker-dot = "#ff6666"  # Next in graph
+addr-dot = "#00ffff"         # Address in graph
+offset-dot = "#00ccff"       # Offset in graph
+prefix-dot = "#888888"       # Prefix in graph
+args-dot = "#00ffff"         # Args in graph
+jump-false-dot = "#ff6666"   # False jump
+jump-true-dot = "#ffcc00"    # True jump
+jump-dot = "#ff6666"         # Jump
+call-dot = "#00ffff"         # Call
+jumps = "#ff6666;#ffcc00;#00ffff;#00ccff;#ff66cc;#ff9900;#cc00ff;#ff3333;#33ff33;#3333ff;#ff6699;#66ff99" # Jump arrows
+
+[register.colors]
+names = "#00ffff"   # Register names
+flags = "#00ff00"   # Flags (green)
+
+[hexdump.colors]
+header = "#00ff00"       # Header (green)
+symbols = "#ff6666;#ffcc00;#00ffff;#00ccff;#ff66cc;#ff9900;#cc00ff;#ff3333;#33ff33;#3333ff;#ff6699;#66ff99" # Symbols
+unknown-bytes = "#888888" # Unknown bytes
+
+[pahole.colors]
+members = "#ff6666;#ffcc00;#00ffff;#00ccff;#ff66cc;#ff9900;#cc00ff;#ff3333;#33ff33;#3333ff;#ff6699;#66ff99" # Struct members
+
+[ftree.colors]
+invalid = "#ff6666"        # Invalid
+union = "#00ff00"            # Union (green)
+virtual-cast = "#ffcc00"    # Virtual cast
+down-cast = "#00ccff"       # Down cast
+blacklist-pointer = "#ff66cc" # Blacklist pointer
+blacklist-member = "#ff9900"  # Blacklist member
+limited = "#cc00ff"         # Limited
+pretty-print = "#33ff33"    # Pretty print
+variable-name = "#00ffff"    # Variable name
+arrows = "#ff6666;#ffcc00;#00ffff;#00ccff;#ff66cc;#ff9900;#cc00ff;#ff3333;#33ff33;#3333ff;#ff6699;#66ff99" # Arrows
+
+[unwind.colors]
+hint = "#00ff00"        # Unwind hint (green)
+hint-start = "#00ccff"   # Unwind start
+
+[history.colors]
+marker = "#ff6666"      # History marker
+background = "#000000"   # History background
+statistics = "#00ffff"   # Statistics
+prompt = "#00ccff"       # Prompt
+match = "#ffcc00"        # Match
+
+[va.colors]
+fixed-float = "#ffcc00"   # Fixed float
+vararg-float = "#00ff00"  # Vararg float (green)
+fixed-int = "#ff6666"     # Fixed int
+vararg-int = "#00ccff"    # Vararg int
+
+[rtos.colors]
+active-task = "#00ff00"   # Active task (green)
+marked-task = "#ff6666"   # Marked task
+
+[list.colors]
+marker = "#ffcc00"       # List marker
+
+[swo.colors]
+0 = "#ff6666"     # Channel 0
+1 = "#ffcc00"     # Channel 1
+2 = "#00ff00"     # Channel 2 (green)
+3 = "#00ccff"     # Channel 3
+4 = "#ff66cc"     # Channel 4
+5 = "#ff9900"     # Channel 5
+6 = "#cc00ff"     # Channel 6
+7 = "#ff3333"     # Channel 7
+8 = "#33ff33"     # Channel 8 (green)
+9 = "#3333ff"     # Channel 9

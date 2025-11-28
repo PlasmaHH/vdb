@@ -9,6 +9,7 @@ import importlib
 import re
 import glob
 import tomllib
+import os
 
 # The idea is that we encapsulate all theming information into one toml structure and all the modules get filled from it
 # (if supported)
@@ -160,8 +161,38 @@ def theme_load( tname, flags ):
     vdb.event.exec_hook("theme")
 
 
-def toml_save( name, file, flags ):
-    pass
+def toml_save( tname, file, flags ):
+
+    tomldata = {}
+    for name,cfg in vdb.config.registry.items():
+        if( name.find("-colors-") == -1 ):
+            continue
+        vn = name.split("-",3)
+#        print(f"{vn=}")
+        assert( vn[2] == "colors" )
+        key = f"{vn[1]}.colors"
+        section = tomldata.setdefault( key, {})
+        section[ vn[3] ] = str(cfg.value)
+
+
+    if( not "f" in flags ):
+        if( os.path.exists(file) ):
+            raise RuntimeError(f"{file} already exists, won't override unless /f is given")
+
+    ktf = known_themes.get(tname)
+    # Check if a theme by that name is already known
+    if( ktf is not None ):
+        if( ktf != file ):
+            vdb.log(f"Warning: {ktf} already contains a theme named {tname}, recommend to chose another name",level=1)
+
+    with open(file,"w") as f:
+        f.write(f'[theme]\nname = "{tname}"\n\n')
+        for key,section in tomldata.items():
+            f.write(f"[{key}]\n")
+            for k,v in section.items():
+                f.write(f'{k} = "{v}"\n')
+            f.write("\n")
+    vdb.log(f"Saved theme {tname} to {file}")
 
 def toml_list( flags ):
     print("This is the list of known themes and their toml files:")
@@ -196,7 +227,9 @@ class cmd_theme (vdb.command.command):
             show_info(flags)
             return
 
-        match( argv[0] ):
+        subcommand = argv[0]
+        argv = argv[1:]
+        match( subcommand ):
             case "refresh":
                 refresh(flags)
             case "list":
@@ -204,12 +237,11 @@ class cmd_theme (vdb.command.command):
             case "save":
                 toml_save( argv[0], argv[1], flags )
             case _:
-                theme_load(argv[0],flags)
+                theme_load(subcommand,flags)
 
 
         self.dont_repeat()
 
 cmd_theme()
-
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
