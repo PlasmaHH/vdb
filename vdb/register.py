@@ -678,18 +678,20 @@ class Registers():
 #        print("val.type = '%s'" % val.type )
 #        print("val.type.tag = '%s'" % val.type.tag )
 #        print("val.type.code = '%s'" % vdb.util.gdb_type_code(val.type.code) )
-#        print("vdb.arch.gdb_uintptr_t = '%s'" % vdb.arch.gdb_uintptr_t )
-        if( vdb.arch.uintptr_t is not None ):
-            val=int( val.cast(vdb.arch.uintptr_t) )
-        else:
-            val=int( val.cast(vdb.arch.uint(64) ) )
+#        print("vdb.arch.uintptr_t = '%s'" % vdb.arch.uintptr_t )
+
+        name = regdesc.name
+        if suffix is not None:
+            name += "." + suffix
+        retn = vdb.color.color(f"{name}",color_names.value)
+        retnl = len(name)
 
         try:
-            name = regdesc.name
-            if suffix is not None:
-                name += "." + suffix
-            retn = vdb.color.color(f"{name}",color_names.value)
-            retnl = len(name)
+
+            if( vdb.arch.uintptr_t is not None ):
+                val=int( val.cast(vdb.arch.uintptr_t) )
+            else:
+                val=int( val.cast(vdb.arch.uint(64) ) )
 
             retv = ""
             retvl = 0
@@ -711,7 +713,7 @@ class Registers():
         except:
             retv = "ERR " + regdesc.name + " : " + str(val)
             retvl = len(retv)
-            raise
+#            raise
         return ( retn, retnl, retv, retvl )
 
     def format_float( self,name, val,t ):
