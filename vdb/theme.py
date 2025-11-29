@@ -226,6 +226,12 @@ def start( ):
 # starting point. How to figure what to write? All colors configs plus a few that are specially marked by plugins?
 class cmd_theme (vdb.command.command):
     """
+theme refresh             - scans the directories for new toml files
+theme list                - list known themes
+theme save <name> <file>  - save current theme in a file
+theme next                - Activates the next theme in the known list
+theme default             - Resets everything to default
+theme <theme>             - Loads theme with that name
 """
 
     def __init__ (self):

@@ -47,6 +47,7 @@ under x86_64 Linux with gcc > 10.
     * [llist linked list tools](#llist-linked-list-tools)
     * [svd file support](#svd-file-support)
     * [pipe](#pipe)
+    * [Theme](#theme)
 * [global functionality](#global-functionality)
     * [shorten](#shorten)
     * [pointer (chaining)](#pointer-chaining)
@@ -304,6 +305,13 @@ vdb-pipe-externals
 This is an easy list of external commands. If not specified anything, the binary file name will be placed as an
 additional argument. You can place after a `:` additional default arguments and/or embed `{file}`  inside there. Ending
 the command just in `:`  will suppress the file passing. You can always put additional arguments.
+
+## Theme
+
+Since there are almost 200 different settings for colours, there is also a mechanism to use a toml file to create a
+theme that you can easily switch between.
+
+[You can find detailed information about this module here](doc/THEME.md)
 
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
