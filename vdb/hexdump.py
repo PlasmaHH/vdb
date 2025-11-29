@@ -466,15 +466,11 @@ We recommend having an alias hd = hexdump in your .gdbinit
 
     def __init__ (self):
         super ().__init__ ("hexdump", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.needs_parameters = True
 
     def do_invoke (self, argv):
-        try:
-            argv,flags = self.flags(argv)
-            call_hexdump(argv,flags)
-        except:
-            vdb.print_exc()
-            raise
-#            pass
+        argv,flags = self.flags(argv)
+        call_hexdump(argv,flags)
         self.dont_repeat()
 
 cmd_hexdump()

@@ -4,6 +4,11 @@
 import colors
 import vdb.util
 
+def _strip( cs ):
+    if( cs is not None ):
+        cs = cs.strip()
+    return cs
+
 def color( s, cs ):
     s=str(s)
     if( cs is None ):
@@ -14,7 +19,7 @@ def color( s, cs ):
         return colors.color(s,cs[0].strip())
     else:
         cs += ["","",""]
-        return colors.color(s,fg=cs[0].strip(),bg=cs[1].strip(),style=cs[2].strip())
+        return colors.color(s,fg=_strip(cs[0]),bg=_strip(cs[1]),style=_strip(cs[2]))
 
 @vdb.util.memoize()
 def mcolor( s, cs ):

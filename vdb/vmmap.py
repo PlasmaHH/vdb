@@ -312,53 +312,46 @@ vmmap <cspec> - uses this colorspec
     def __init__ (self):
         super (cmd_vmmap, self).__init__ ("vmmap", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.dont_repeat()
+        self.needs_parameters = False
 
     def do_invoke (self, argv ):
-        try:
-            colorspec = None
-            short = False
-            if( len(argv) == 0 ):
-                pass
-            elif( len(argv) >= 1 ):
-                try:
-                    if( argv[0] == "/s" ):
-                        short = True
-                        argv = argv[1:]
-                    if( len(argv) > 0 ):
-                        if( argv[0] == "refresh" ):
-                            vdb.memory.mmap.parse()
-                            return
-                        elif( argv[0] == "visual" ):
-                            visual(argv[1:])
-                            return
+        argv,flags = self.flags(argv)
+        colorspec = None
+        short = False
 
-                        addr = None
-                        try:
-                            addr = gdb.parse_and_eval(argv[0])
-                            addr = int(addr)
-                            argv = argv[1:]
-                        except:
-#                            vdb.print_exc()
-                            pass
-                        if( len(argv) > 0 ):
-                            colorspec = argv[0]
-                            vdb.memory.check_colorspec(colorspec)
-                        if( addr is not None ):
-                            return show_region( addr, colorspec )
-                except:
-                    vdb.print_exc()
-                    return
-                    pass
-            else:
-                raise Exception("vmmap got %s arguments, expecting 0 or 1" % len(argv) )
-            vdb.memory.check_colorspec(colorspec)
-            vdb.memory.print_legend(colorspec)
-            vdb.memory.mmap.print(colorspec,short)
-        except:
-            vdb.print_exc()
-            raise
-            pass
+        if( "s" in flags ):
+            short = True
+
         self.dont_repeat()
+        if( len(argv) == 0 ):
+            pass
+        elif( len(argv) >= 1 ):
+            if( len(argv) > 0 ):
+                if( argv[0] == "refresh" ):
+                    vdb.memory.mmap.parse()
+                    return
+                elif( argv[0] == "visual" ):
+                    visual(argv[1:])
+                    return
+
+                addr = None
+                try:
+                    addr = gdb.parse_and_eval(argv[0])
+                    addr = int(addr)
+                    argv = argv[1:]
+                except:
+#                            vdb.print_exc()
+                    pass
+                if( len(argv) > 0 ):
+                    colorspec = argv[0]
+                    vdb.memory.check_colorspec(colorspec)
+                if( addr is not None ):
+                    return show_region( addr, colorspec )
+        else:
+            raise Exception("vmmap got %s arguments, expecting 0 or 1" % len(argv) )
+        vdb.memory.check_colorspec(colorspec)
+        vdb.memory.print_legend(colorspec)
+        vdb.memory.mmap.print(colorspec,short)
 
 cmd_vmmap()
 
