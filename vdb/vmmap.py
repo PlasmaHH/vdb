@@ -16,6 +16,7 @@ import shutil
 
 color_executable   = vdb.config.parameter("vdb-vmmap-colors-executable",       "#e0e",        gdb_type = vdb.config.PARAM_COLOUR)
 color_readonly     = vdb.config.parameter("vdb-vmmap-colors-readonly",         "#f03",        gdb_type = vdb.config.PARAM_COLOUR)
+color_empty        = vdb.config.parameter("vdb-vmmap-colors-empty",         "#151515",        gdb_type = vdb.config.PARAM_COLOUR)
 vmmap_max_size     = vdb.config.parameter("vdb-vmmap-visual-max-size", 64*128 )
 vmmap_wrapat       = vdb.config.parameter("vdb-vmmap-wrapat", 0 )
 
@@ -261,25 +262,22 @@ def visual( argv, regions = None ):
 #            print("memc = '%s'" % (memc,) )
 #            print("region = '%s'" % (region,) )
             if( region is None ):
-                rep += dpy_chars.value[0]
+                rep += vdb.color.color( dpy_chars.value[0], [memc, color_empty.value ] )
             else:
-                ro_color = color_readonly.value
+                cs_color = color_readonly.value
                 try:
                     # This should throw if we are in a core file, where everything is readonly
                     if( gdb.selected_inferior().connection.type == "core" ):
-                        ro_color = None
+                        cs_color = color_empty.value
 #                    else:
 #                        gdb.inferiors()[0].threads()[0].handle()
                 except:
 #                    vdb.print_exc()
-                    ro_color = None
+                    cs_color = color_empty.value
                     pass
                 if( region.atype == vdb.memory.access_type.ACCESS_EX ):
-                    cs = vdb.color.color( filled_char,  [ memc, color_executable.value ] )
-                elif( region.can_write is False ):
-                    cs = vdb.color.color( filled_char,  [ memc, ro_color ] )
-                else:
-                    cs = vdb.color.color( filled_char,  memc )
+                    cs_color = color_executable.value
+                cs = vdb.color.color( filled_char,  [ memc, cs_color ] )
                 rep += cs
             if( cnt > 0 and (cnt % wrapat) == 0 ):
                 print(rep)
