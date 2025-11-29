@@ -214,7 +214,7 @@ def colors( ptr, archsize = None ):
 
 # @return pure means it is just the pointer, no additional text (but maybe additional colouring)
 # Make this return the display length too somehow
-@vdb.util.memoize( gdb.events.stop )
+@vdb.util.memoize( [ gdb.events.stop, vdb.event.theme_changed ] )
 def chain( ptr, archsize = None, maxlen = 8, test_for_ascii = True, minascii = None, last = True, tailspec = None, do_annotate = True ):
     if( archsize is None ):
         archsize = vdb.arch.pointer_size

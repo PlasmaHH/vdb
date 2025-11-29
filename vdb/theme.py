@@ -204,6 +204,19 @@ def toml_list( flags ):
 
     vdb.util.console.print(table)
 
+def theme_next( flags ):
+    use_next = False
+    first_theme = None
+    for n,_ in known_themes.items():
+        if( first_theme is None ):
+            first_theme = n
+        if( use_next ):
+            theme_load( n, flags )
+            break
+        if( n == current_theme_name ):
+            use_next = True
+    if( not use_next ):
+        theme_load( first_theme, flags )
 
 # Use this mechanism to make sure everything is loaded and has their config options setup so we can then fill it
 def start( ):
@@ -227,6 +240,7 @@ class cmd_theme (vdb.command.command):
             show_info(flags)
             return
 
+        dont_repeat = True
         subcommand = argv[0]
         argv = argv[1:]
         match( subcommand ):
@@ -236,11 +250,14 @@ class cmd_theme (vdb.command.command):
                 toml_list(flags)
             case "save":
                 toml_save( argv[0], argv[1], flags )
+            case "next":
+                theme_next(flags)
+                dont_repeat = False
             case _:
                 theme_load(subcommand,flags)
 
-
-        self.dont_repeat()
+        if( dont_repeat ):
+            self.dont_repeat(not dont_repeat)
 
 cmd_theme()
 

@@ -1008,7 +1008,6 @@ class Registers():
         if( len(rtline) > 0 ):
             rtbl.append(rtline)
 
-#        ret += "\nTABLE\n"
         ret += vdb.util.format_table(rtbl,padbefore=" ", padafter="")
 
         if( not ret.endswith("\n") ):

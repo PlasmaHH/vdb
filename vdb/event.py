@@ -149,6 +149,21 @@ def free_progspace( *darg ):
     return on_event( gdb.events.free_progspace, darg )
 
 
+class HookWrap:
+    def __init__( self, ev ):
+        self.ev = ev
+        self.stuff_to_call = []
+        register_hook(self.ev, self._call_stuff)
+        
+    def _call_stuff( self, *arg ):
+        for stc in self.stuff_to_call:
+            stc(*arg)
+
+    def __call__( self, *darg ):
+        return on_hook( self.ev, darg )
+
+    def connect( self, func ):
+        self.stuff_to_call.append(func)
 
 # Events not natively available in python, emulated through gdbscript hooks
 
@@ -163,8 +178,7 @@ def start( *darg ):
 def before_first_prompt( *darg ):
     return on_hook( events.first_prompt, darg )
 
-def theme_changed( *darg ):
-    return on_hook( events.theme, darg )
+theme_changed = HookWrap( events.theme )
 
 # Functions to be called from generated gdbscript to get events into python
 

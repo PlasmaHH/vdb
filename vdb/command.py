@@ -49,9 +49,12 @@ class command(gdb.Command,abc.ABC):
     def usage( self ):
         print(self.__doc__)
 
-    def dont_repeat( self ):
-        self.repeat = False
-        super().dont_repeat()
+    def dont_repeat( self, do_repeat = False):
+        if( do_repeat ):
+            self.repeat = True
+        else:
+            self.repeat = False
+            super().dont_repeat()
 
     def pipe( self, arg, argv ):
         import vdb.pipe # pylint: disable=redefined-outer-name,import-outside-toplevel
