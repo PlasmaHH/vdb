@@ -211,12 +211,10 @@ def theme_next( flags ):
         if( first_theme is None ):
             first_theme = n
         if( use_next ):
-            theme_load( n, flags )
-            break
+            return theme_load( n, flags )
         if( n == current_theme_name ):
             use_next = True
-    if( not use_next ):
-        theme_load( first_theme, flags )
+    theme_load( first_theme, flags )
 
 # Use this mechanism to make sure everything is loaded and has their config options setup so we can then fill it
 def start( ):
