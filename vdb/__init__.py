@@ -65,10 +65,12 @@ enable_rtt       = vdb.config.parameter( "vdb-enable-rtt",True)
 enable_table     = vdb.config.parameter( "vdb-enable-table",True)
 enable_bmp       = vdb.config.parameter( "vdb-enable-bmp",True)
 enable_theme     = vdb.config.parameter( "vdb-enable-theme",True)
+enable_cui       = vdb.config.parameter( "vdb-enable-cui",True)
+
 
 configured_modules = vdb.config.parameter( "vdb-available-modules", "prompt,backtrace,register,vmmap,hexdump,asm,xi,pahole,ftree,dashboard,hashtable,ssh,track"
                                                                     ",graph,data,syscall,types,profile,unwind,hook,history,pipe,va,llist,misc,svd,entry,rtos,xi,list"
-                                                                    ",time,swo,hardfault,reload,rtt,table,bmp,theme" )
+                                                                    ",time,swo,hardfault,reload,rtt,table,bmp,theme,cui" )
 
 
 home_first      = vdb.config.parameter( "vdb-plugin-home-first",True)

@@ -420,8 +420,7 @@ def add_overlay( addr, data, length = None ):
     # 1:3 is data at addr 1 and 2, not 3
     overlay_memory[lower:upper] = data
 
-add_overlay( 0x8004010, None, 32 )
-
+#add_overlay( 0x8004010, None, 32 )
 
 def read_u( uncached, ptr, count = 1, partial = False ):
     if( uncached ):
@@ -1003,6 +1002,14 @@ class memory_map:
             if( selected_frame is not None ):
                 selected_frame.select()
 
+    def find_section( self, section ):
+        vdb.util.bark() # print("BARK")
+        print(f"{section=}")
+        self.lazy_parse()
+        for r in sorted(self.regions):
+            r = r[2]
+            if( r.section == section ):
+                return r
 
 # XXX This is basically the vmmap implementation, maybe we move parts of it there?
     def print( self, colorspec, short = False ):

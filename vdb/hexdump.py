@@ -404,7 +404,15 @@ def call_hexdump( argv, flags ):
             oaddr = None
             olen = -1
             # Try to detect if its a variable or a pointer
-            obj = gdb.parse_and_eval(argv[0])
+            try:
+                obj = gdb.parse_and_eval(argv[0])
+            except gdb.error:
+                section = vdb.memory.mmap.find_section( argv[0] )
+                if( section is None ):
+                    raise RuntimeError(f"Now idea what {argv[0]} is")
+                hexdump(section.start,section.size,pointers=pointers,chaindepth=chainlen,values=values,align=align,uncached=uncached)
+                return None
+                pass
 #            print(f"{obj=}")
             otype = obj.type
 #            print(f"{otype=}")
@@ -434,7 +442,13 @@ def call_hexdump( argv, flags ):
 
             hexdump(oaddr,olen,pointers=pointers,chaindepth=chainlen,values=values,align=align,uncached=uncached)
         elif( len(argv) == 2 ):
-            addr = vdb.util.gint("(void*)" + argv[0])
+            try:
+                addr = vdb.util.gint("(void*)" + argv[0])
+            except:
+                section = vdb.memory.mmap.find_section( argv[0] )
+                if( section is None ):
+                    raise RuntimeError(f"Now idea what {argv[0]} is")
+                addr = section.start
             xlen = vdb.util.gint(argv[1])
             hexdump(addr,xlen,pointers=pointers,chaindepth=chainlen,values=values,align=align,uncached=uncached)
         else:
