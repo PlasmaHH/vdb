@@ -617,6 +617,7 @@ SEGGER embOS
 
     def __init__ (self):
         super (cmd_rtos, self).__init__ ("rtos", gdb.COMMAND_DATA)
+        self.needs_parameters = False
 
     def do_invoke (self, argv ):
         self.dont_repeat()

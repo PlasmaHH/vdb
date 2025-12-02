@@ -333,12 +333,14 @@ vmmap <cspec> - uses this colorspec
                     return
 
                 addr = None
+                print(f"{argv=}")
                 try:
                     addr = gdb.parse_and_eval(argv[0])
                     addr = int(addr)
                     argv = argv[1:]
                 except:
-#                            vdb.print_exc()
+                    vdb.util.bark() # print("BARK")
+                    vdb.print_exc()
                     pass
                 if( len(argv) > 0 ):
                     colorspec = argv[0]

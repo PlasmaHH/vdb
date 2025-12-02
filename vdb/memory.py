@@ -554,7 +554,7 @@ class memory_region:
         self.mtype = None
         self.can_read = False
         self.can_write = False
-        self.thread = None
+        self.threads = set()
         self.size = end-start
         self.procline = None
         self.maintline = None
@@ -599,12 +599,12 @@ class memory_region:
         s = ""
         plen = vdb.arch.pointer_size // 4
         sz,suf = vdb.util.num_suffix( self.size )
-        s += f"memory_region from {self.start:#0{plen}x} to {self.end:#0{plen}x} ({sz:.3f}{suf}Bytes):\n"
+        s += f"memory_region({id(self):#0x}) from {self.start:#0{plen}x} to {self.end:#0{plen}x} ({sz:.3f}{suf}Bytes):\n"
         s += vdb.util.ifset("Section '{}'\n",self.section)
         s += vdb.util.ifset("File '{}'\n", self.file)
         s += vdb.util.ifset("Memory Access : {}\n", self.atype )
         s += vdb.util.ifset("Memory Type : {}\n", self.mtype )
-        s += vdb.util.ifset("Associated Thread : {}\n", thread_print(self.thread) )
+        s += vdb.util.ifset("Associated Thread(s) : {}\n", thread_print(self.threads) )
         s += vdb.util.ifset("/proc/<pid>/maps {}\n", self.procline )
         s += vdb.util.ifset("info files {}\n", self.fileline )
         s += vdb.util.ifset("maint info sections {}\n", self.maintline )
@@ -650,10 +650,14 @@ class memory_key:
     def __lt__(self, other):
         return self.value < other.start
 
-def thread_print( thr ):
-    if( thr is None ):
-        return thr
-    return f"{thr.num} LWP {thr.ptid} '{thr.name}'"
+def thread_print( threads ):
+    if( len(threads) == 0 ):
+        return "None"
+
+    rlist = []
+    for thr in threads:
+        rlist.append( f"{thr.num} LWP {thr.ptid} '{thr.name}'" )
+    return ",".join(rlist)
 
 class memory_map:
 
@@ -776,7 +780,7 @@ class memory_map:
         if( mm is not None ):
             mtype = mm.mtype
             if( mtype == memory_type.FOREIGN_STACK ):
-                if( gdb.selected_thread() == mm.thread ):
+                if( gdb.selected_thread() in  mm.threads ):
                     mtype = memory_type.OWN_STACK
             ret = colormap.get(mtype,None)
             if( ret is not None ):
@@ -888,7 +892,7 @@ class memory_map:
 #        self.regions.sort()
         try:
             info_proc_mapping = gdb.execute("info proc mapping",False,True)
-            mre = re.compile("(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(.*)")
+            mre = re.compile(r"(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(0x[0-9a-fA-F]*)\s*(.*)")
 
 
             for mapping in info_proc_mapping.splitlines():
@@ -926,7 +930,7 @@ class memory_map:
 #        self.regions += map_regions
 #        self.regions.sort()
         maint_sections = gdb.execute("maint info sections ALLOBJ",False,True)
-        sre = re.compile(".*(0x[0-9a-fA-F]*)->(0x[0-9a-fA-F]*)\s*at\s*(0x[0-9a-fA-F]*):\s*(.*?)\s\s*(.*)")
+        sre = re.compile(r".*(0x[0-9a-fA-F]*)->(0x[0-9a-fA-F]*)\s*at\s*(0x[0-9a-fA-F]*):\s*(.*?)\s\s*(.*)")
 #        sec_regions = []
         for sec in maint_sections.splitlines():
             sec = sec.strip()
@@ -973,6 +977,7 @@ class memory_map:
         try:
             # check if any is a stack
             selected_frame = gdb.selected_frame()
+            own_stack_mm = None
             for thread in gdb.selected_inferior().threads():
                 thread.switch()
                 f = gdb.selected_frame()
@@ -982,8 +987,10 @@ class memory_map:
                 for mm in mms:
                     mm = mm[2]
                     if( mm ):
+                        # We set always foreign stack here, the actual code returning proper colours will in that moment
+                        # check if its the own stack. Or at least try to
                         mm.mtype = memory_type.FOREIGN_STACK
-                        mm.thread = thread
+                        mm.threads.add( thread )
         except gdb.error:
 #            vdb.print_exc()
             pass
@@ -1059,7 +1066,7 @@ def maybe_refresh( _ ):
 
 sym_cache = intervaltree.IntervalTree()
 
-symre=re.compile("0x[0-9a-fA-F]* <([^+]*)(\+[0-9]*)*>")
+symre=re.compile(r"0x[0-9a-fA-F]* <([^+]*)(\+[0-9]*)*>")
 
 # addr in, ( start, size, string ) out...
 
