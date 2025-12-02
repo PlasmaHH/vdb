@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import vdb.command
+import vdb.config
 import rich
 import gdb
 import sys
@@ -35,6 +36,9 @@ import os
 
 # XXX For now we leave the old "~/.vdb/themes/any.py" config.set based code as-is to later replace it and check if all
 # works the same
+
+sample_char = vdb.config.parameter("vdb-theme-sample-char","█")
+sample_len = vdb.config.parameter("vdb-theme-sample-len",16)
 
 
 def show_info( flags ):
@@ -76,13 +80,14 @@ class ThemeStub:
                     self.colors[col] = number + 1
 
     # Returns a rich string as we output it with a rich table later on
-    def get_color_sample( self, width = 8 ):
+    def get_color_sample( self, width = 16 ):
         cnt = 0
         ret = ""
         for x in sorted( self.colors.items(), key = lambda x:x[1], reverse = True ):
             cnt += 1
             col = _get_rich( x[0] )
-            ret += f"[{col}]X[/]"
+            X = sample_char.value
+            ret += f"[{col}]{X}[/]"
             if( cnt >= width ):
                 break
         return ret
@@ -253,7 +258,7 @@ def toml_list( flags ):
     table = rich.table.Table("Name", "File", "Sample", expand=False,row_styles = ["","on #222222"])
 
     for n,f in known_themes.items():
-        table.add_row( n, f.file, f.get_color_sample() )
+        table.add_row( n, f.file, f.get_color_sample(sample_len.value) )
 
     vdb.util.console.print(table)
 
