@@ -40,6 +40,52 @@ import os
 def show_info( flags ):
     print(f"Current theme '{current_theme_name}' was loaded from '{current_theme_file}'")
 
+rich_conversions = {}
+def _gen_theme( ):
+    tdict = {}
+    for r in range(0,16):
+        for g in range(0,16):
+            for b in range(0,16):
+                short = f"#{r:x}{g:x}{b:x}"
+                long  = f"#{r:x}{r:x}{g:x}{g:x}{b:x}{b:x}"
+                tdict[short] = long
+
+    rich_conversions.update(tdict)
+
+def _get_rich( col ):
+    return rich_conversions.get(col,col)
+
+_gen_theme()
+
+class ThemeStub:
+    def __init__( self ):
+        self.name = None
+        self.file = None
+        self.colors = {}
+
+    def add_colors( self, data ):
+        for k,d in data.items():
+            if( isinstance(d,dict) ):
+                self.add_colors(d)
+            elif( isinstance(d,str) ):
+                dlist = d.split(";")
+                for col in dlist:
+                    if( not col.startswith("#") ):
+                        continue
+                    number = self.colors.get(col,0)
+                    self.colors[col] = number + 1
+
+    # Returns a rich string as we output it with a rich table later on
+    def get_color_sample( self, width = 8 ):
+        cnt = 0
+        ret = ""
+        for x in sorted( self.colors.items(), key = lambda x:x[1], reverse = True ):
+            cnt += 1
+            col = _get_rich( x[0] )
+            ret += f"[{col}]X[/]"
+            if( cnt >= width ):
+                break
+        return ret
 
 known_themes = {}
 
@@ -62,11 +108,17 @@ def refresh( flags ):
                     continue
                 if( "v" in flags ):
                     print(f"Found theme {tname} in {tomlfile}")
-                known_themes[tname] = tomlfile
+                tstub = ThemeStub()
+                tstub.file = tomlfile
+                tstub.name = tname
+                tstub.add_colors(data)
+
+                known_themes[tname] = tstub
     print(f"Found {len(known_themes)} themes")
 
 def toml_load( tname, flags ):
-    fname = known_themes.get(tname)
+    ts = known_themes.get(tname)
+    fname = ts.file
     if( fname is None ):
         raise RuntimeError(f"Unknown theme {tname}")
 
@@ -182,8 +234,9 @@ def toml_save( tname, file, flags ):
     ktf = known_themes.get(tname)
     # Check if a theme by that name is already known
     if( ktf is not None ):
-        if( ktf != file ):
-            vdb.log(f"Warning: {ktf} already contains a theme named {tname}, recommend to chose another name",level=1)
+        ktfname = ktf.file
+        if( ktfname != file ):
+            vdb.log(f"Warning: {ktfname} already contains a theme named {tname}, recommend to chose another name",level=1)
 
     with open(file,"w") as f:
         f.write(f'[theme]\nname = "{tname}"\n\n')
@@ -197,10 +250,10 @@ def toml_save( tname, file, flags ):
 def toml_list( flags ):
     print("This is the list of known themes and their toml files:")
 
-    table = rich.table.Table("Name", "File", expand=False,row_styles = ["","on #222222"])
+    table = rich.table.Table("Name", "File", "Sample", expand=False,row_styles = ["","on #222222"])
 
     for n,f in known_themes.items():
-        table.add_row( n, f )
+        table.add_row( n, f.file, f.get_color_sample() )
 
     vdb.util.console.print(table)
 
