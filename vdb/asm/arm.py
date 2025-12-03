@@ -559,8 +559,16 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
 
 def vt_flow_bl( ins, frame, possible_registers, possible_flags ):
     if( ins.next is not None ):
-        possible_registers.set( "lr", ins.next.address, origin = "flow_bl" )
+        # LR is not saved by the caller as such even when we correctly return, LR might be different
+#        possible_registers.set( "lr", ins.next.address, origin = "flow_bl" )
         ins.add_explanation(f"Branch to {vdb.asm.format_unknown(ins.targets,'{:#0x}')} and put return address {ins.next.address:#0x} in lr register (branch and link)")
+
+    possible_registers.set("r0",None, origin = "flow_bl")
+    possible_registers.set("r1",None, origin = "flow_bl")
+    possible_registers.set("r2",None, origin = "flow_bl")
+    possible_registers.set("r3",None, origin = "flow_bl")
+    possible_registers.set("r12",None, origin = "flow_bl")
+    possible_registers.set("lr",None, origin = "flow_bl")
     return (possible_registers,possible_flags)
 
 def vt_flow_cb( ins, frame, possible_registers, possible_flags ):

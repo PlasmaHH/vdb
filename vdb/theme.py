@@ -42,7 +42,7 @@ sample_len = vdb.config.parameter("vdb-theme-sample-len",16)
 
 
 def show_info( flags ):
-    print(f"Current theme '{current_theme_name}' was loaded from '{current_theme_file}'")
+    print(f"Current theme '{current_theme_name}' was loaded from '{current_theme.file}'")
 
 rich_conversions = {}
 def _gen_theme( ):
@@ -95,7 +95,7 @@ class ThemeStub:
 known_themes = {}
 
 current_theme_name = None
-current_theme_file = None
+current_theme = None
 
 def refresh( flags ):
     global known_themes
@@ -123,9 +123,9 @@ def refresh( flags ):
 
 def toml_load( tname, flags ):
     ts = known_themes.get(tname)
-    fname = ts.file
-    if( fname is None ):
+    if( ts is None ):
         raise RuntimeError(f"Unknown theme {tname}")
+    fname = ts.file
 
     with open( fname, "rb" ) as f:
         data = tomllib.load(f)
@@ -200,8 +200,8 @@ def theme_load( tname, flags ):
     else:
         toml_data = toml_load( tname , flags)
         fname = known_themes.get(tname)
-        global current_theme_file
-        current_theme_file = fname
+        global current_theme
+        current_theme = fname
         global current_theme_name
         current_theme_name = tname
 
@@ -257,7 +257,7 @@ def toml_list( flags ):
 
     table = rich.table.Table("Name", "File", "Sample", expand=False,row_styles = ["","on #222222"])
 
-    for n,f in known_themes.items():
+    for n,f in sorted(known_themes.items()):
         table.add_row( n, f.file, f.get_color_sample(sample_len.value) )
 
     vdb.util.console.print(table)

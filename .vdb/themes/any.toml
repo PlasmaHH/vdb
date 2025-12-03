@@ -33,7 +33,6 @@ explanation     = "#6666ff"
 
 [asm]
 showspec-dot = "maobnptr"
-showspec = "maodbnptrjHcx"
 callgrind-events = "Ir,CEst"
 header-repeat = "50"
 breakpoint-numbers = "🯱🯲🯳🯴🯵🯶🯷🯸🯹"

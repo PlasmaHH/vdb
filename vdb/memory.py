@@ -1003,8 +1003,8 @@ class memory_map:
                 selected_frame.select()
 
     def find_section( self, section ):
-        vdb.util.bark() # print("BARK")
-        print(f"{section=}")
+#        vdb.util.bark() # print("BARK")
+#        print(f"{section=}")
         self.lazy_parse()
         for r in sorted(self.regions):
             r = r[2]
