@@ -472,6 +472,9 @@ def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
 #        vdb.util.inspect( possible_registers )
         post_text = f", advancing register {ins.arguments[1].register} by {ins.arguments[2].immediate}"
 
+    if( addr is not None ):
+        ins.loads_from.add( int(addr) )
+
     ins.add_explanation(f"Load value {vdb.asm.format_unknown(val)} from memory address {vdb.asm.format_unknown(addr,'{:#0x}')} into register {ins.arguments[0].register}{post_text}")
     return (possible_registers,possible_flags)
 

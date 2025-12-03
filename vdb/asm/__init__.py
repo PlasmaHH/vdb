@@ -95,6 +95,7 @@ next_marker_dot = vdb.config.parameter("vdb-asm-next-marker-dot", " → " )
 next_mark_ptr     = vdb.config.parameter("vdb-asm-next-mark-pointer", True )
 shorten_header    = vdb.config.parameter("vdb-asm-shorten-header", False )
 prefer_linear_dot = vdb.config.parameter("vdb-asm-prefer-linear-dot",False)
+loads_verbose     = vdb.config.parameter("vdb-asm-loads-verbose",True)
 debug_registers = vdb.config.parameter("vdb-asm-debug-registers",False, on_set = invalidate_cache )
 debug = vdb.config.parameter("vdb-asm-debug-all",False, on_set = invalidate_cache )
 debug_addr = vdb.config.parameter("vdb-asm-debug-address",0, on_set = invalidate_cache )
@@ -121,6 +122,8 @@ color_var      = vdb.config.parameter("vdb-asm-colors-variable",    "#fc8", gdb_
 color_location = vdb.config.parameter("vdb-asm-colors-location",    "#08a", gdb_type = vdb.config.PARAM_COLOUR)
 color_explanation = vdb.config.parameter("vdb-asm-colors-explanation",    "#6666ff", gdb_type = vdb.config.PARAM_COLOUR)
 color_unhandled = vdb.config.parameter("vdb-asm-colors-unhandled",    "#900", gdb_type = vdb.config.PARAM_COLOUR)
+color_noflow    = vdb.config.parameter("vdb-asm-colors-nowflow",    "#dd0", gdb_type = vdb.config.PARAM_COLOUR)
+color_loaded    = vdb.config.parameter("vdb-asm-colors-nowflow",    "#28dd54", gdb_type = vdb.config.PARAM_COLOUR)
 
 
 
@@ -145,7 +148,7 @@ color_call_dot       = vdb.config.parameter("vdb-asm-colors-call-dot",       "#6
 nonfunc_bytes      = vdb.config.parameter("vdb-asm-nonfunction-bytes",16)
 history_limit      = vdb.config.parameter("vdb-asm-history-limit",4)
 tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
-asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnptrjhcx" )
+asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnptrjhcxS" )
 asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnptr" )
 asm_tailspec       = vdb.config.parameter("vdb-asm-tailspec", "andD" )
 asm_sort           = vdb.config.parameter("vdb-asm-sort", True )
@@ -784,6 +787,8 @@ class instruction_base( abc.ABC ):
         self.possible_in_register_sets = []
         self.possible_out_register_sets = []
         self.iclass = None
+        self.loads_from = set()         # Set of addresses that could be determined this loads from (mostly intresting for jump tables etc.)
+        self.loaded_from = set()        # Store the instructions that load from here, considered to be loaded if anything is in here
 
         self.possible_in_flag_sets = []
         self.possible_out_flag_sets = []
@@ -886,6 +891,7 @@ class instruction_base( abc.ABC ):
         self.add_extra( f"self.line      : '{self.line}'")
         self.add_extra( f"self.mnemonic  : '{self.mnemonic}'")
         self.add_extra( f"self.next      : '{self.next}'")
+        self.add_extra( f"self.previous  : '{self.previous}'")
         self.add_extra( f"self.args      : '{self.args}'")
         self.add_extra( f"self.targets   : '{self.targets}'")
         self.add_extra( f"self.target_of : '{self.target_of}'")
@@ -908,7 +914,9 @@ class instruction_base( abc.ABC ):
     * a tuple[str,int] for table cells. Third value will be extended to be 0 to not garble the table
     * a list. Will vdb.color.concat() them to a tuple for a cell
     """
-    def add_extra( self, s, lvl = 0, static = False ):
+    def add_extra( self, s, lvl = None, static = False ):
+        if( lvl is None ):
+            lvl = "n"
 #        print(f"add_extra({type(s)}:{s})")
         if( isinstance(s,string_ref) ):
 #            s = str(s)
@@ -1463,7 +1471,7 @@ ascii mockup:
     m_trans = str.maketrans("v^-|<>u#Q~T+","╭╰─│◄►┴├⥀◆┬┼" )
     p_trans = str.maketrans("v^-|<>u#Q~T+","|  |   |  ||" )
 
-    def to_str( self, showspec = "maodbnprT", context = None, marked = None, source = False, suppress_header = False ):
+    def to_str( self, showspec = "maodbnpSrT", context = None, marked = None, source = False, suppress_header = False ):
         self.lazy_finish()
         hf = self.function
         if( shorten_header.value ):
@@ -1503,14 +1511,25 @@ ascii mockup:
                         , ("b" ,[("Bytes",",,bold",0,0)])
                         , ("n" ,[("Mnemonic",",,bold",0,0)])
                         , ("p" ,[("Args",",,bold",0,0)])
+                        , ("S" ,[("Status",",,bold",0,0)])
                         , ("r" ,[("Reference",",,bold",0,0) ])
                         , ("tT",[("Target",",,bold",0,0) ])
                         ]
         header = []
+        header_indices = {}
+        cnt = 0
         for sp,hf in headfields:
             if( any((s in showspec) for s in sp ) ):
                 header += hf
+                header_indices[sp[0]] = cnt
+                # This causes a variable number of columns
+                if( sp == "c" ):
+                    cnt += len(cg_events)
+                else:
+                    cnt += 1
         num_headfields = len(header)
+
+#        print(f"{header_indices=}")
 
         cg_columns = 0
         if( "c" in showspec ):
@@ -1743,11 +1762,37 @@ ascii mockup:
 #                print("fillup = '%s'" % fillup )
 #                line.append( " " * fillup)
 
+            if( "S" in showspec ):
+                stats = []
+                if( i.unhandled ):
+                    stats.append(vdb.color.colorl("!",color_unhandled.value))
+
+                if( i.passes == 0 ):
+                    stats.append(vdb.color.colorl("?",color_noflow.value))
+
+                if( len(i.loaded_from) ):
+                    if( loads_verbose.value ):
+                        lfstr = ""
+                        for lf in i.loaded_from:
+                            iadd = int(lf.address)
+                            lfstr += f"@{iadd:#0x}"
+                        lfstr = vdb.color.colorl(lfstr,color_loaded.value)
+                        i.add_extra( lfstr, "S" )
+                    else:
+                        stats.append(vdb.color.colorl("@",color_loaded.value))
+
+
+                rtpl=("",0)
+                if( len(stats) ):
+                    for st in stats:
+                        rtpl = vdb.color.concat(rtpl,st)
+                    line.append(rtpl)
+                else:
+                    line.append(None)
+
             reference_lines = []
             if( "r" in showspec ):
                 rtpl=("",0)
-                if( i.unhandled ):
-                    rtpl=vdb.color.colorl("!",color_unhandled.value)
 
                 if(len(i.reference) == 0 ):
                     line.append(rtpl)
@@ -1806,23 +1851,34 @@ ascii mockup:
                 for e in i.explanation:
                     line_extra.append( vdb.color.colorl(e,color_explanation.value) )
 
-            def output_extra( lst, otbl, lvl = None ):
+            # Output an extra line that is filled only sparsely, causing the jump arrows to normally break but we simply
+            # add them back
+            def output_extra( lst, otbl, lvl ):
                 if( lst is None ):
                     return
                 if( len(lst) == 0 ):
                     return
-                if( lvl is not None ):
-                    lst = list( (x,lvl) for x in lst )
-#                print("lst = '%s'" % (lst,) )
 
-                for ex,nlvl in lst:
+                input_lvl = lvl
+                lvl = header_indices.get(lvl,lvl)
+                jump_index = header_indices.get("d")
+
+                for ex in lst:
+                    # Special handling for when the list itself contains the level
+                    if( input_lvl is None ):
+                        ex,lvl = ex
+                        lvl = header_indices.get(lvl,lvl)
+#                    print(f"{ex=}")
+#                    print(f"{lvl=}")
+                    empty_line = ( len(header_indices) - 2) * [ None ]
+                    # Prevent already expanded ansi colour codes to be in there
                     if( isinstance(ex,str) ):
                         unc = vdb.color.colors.strip_color(ex)
                         if( unc != ex ):
                             raise RuntimeError(f"List contains coloured only entry: {ex}")
-#                    print("ex = '%s'" % (ex,) )
-#                    print("len(ex) = '%s'" % (len(ex),) )
-#                    print("type(ex) = '%s'" % (type(ex),) )
+
+                    # Make sure that any extra info will not cause the column to expand, we want to treat it as if its
+                    # the last info in the line
                     if( isinstance(ex,tuple) ):
                         if( len(ex) == 2 ):
                             a,b = ex
@@ -1832,24 +1888,26 @@ ascii mockup:
                     else:
                         ex = (ex,len(ex),1)
 #                    print("ex = '%s'" % (ex,) )
-                    pre = ( prejump + cg_columns) * [None]
-                    post = (postjump-1) * [None]
-                    if( postarrows is None ):
-                        el = pre + post
-                    else:
-                        el = pre + [postarrows] + post
-                    el += nlvl*[None]
-#                    el = ["m","a","h","H","o","d","BYTES" + str(len(line)-1)]
-                    el.append(ex)
-#                    print("el = '%s'" % (el,) )
-                    otbl.append(el)
 
-#            output_extra(["END"],0,otbl)
-            output_extra( reference_lines,otbl,2)
-            output_extra(i.static_extra,otbl)
-            output_extra(i.extra,otbl)
-            output_extra(i.file_line,otbl,0)
-            output_extra(line_extra,otbl,1)
+                    # postarrows is especially prepared for this case it it cannot simply be a repeat of the previous
+                    # arrows, it must visually match
+                    if( postarrows is not None ):
+                        empty_line[jump_index] = postarrows
+
+                    empty_line[lvl] = ex
+#                    print("el = '%s'" % (el,) )
+                    otbl.append(empty_line)
+
+#            i.add_extra("NORMAL EXTRA n","n")
+#            i.add_extra("NORMAL EXTRA 0",0)
+#            i.add_extra("NORMAL EXTRA 1",1)
+
+            output_extra( reference_lines,otbl,"r")
+
+            output_extra(i.static_extra,otbl,None)
+            output_extra(i.extra,otbl,None)
+#            output_extra(i.file_line,otbl,0)
+            output_extra(line_extra,otbl,"p") # the explanations
 
 
             otmap[cnt] = len(otbl)
@@ -1880,7 +1938,7 @@ ascii mockup:
         return f"Instructions in range {self.start:#0x} - {self.end:#0x} of {hf}\n{ret}"
 #        return "\n".join(ret)
 
-    def print( self, showspec = "maodbnprT", context = None, marked = None, source = False ):
+    def print( self, showspec = "maodbnpSrT", context = None, marked = None, source = False ):
         if( direct_output.value and from_tty ):
             os.write(1,self.to_str(showspec, context, marked,source).encode("utf-8"))
         else:
@@ -2895,6 +2953,7 @@ def register_flow( lng, frame : "gdb frame" ):
     if( len( lng.instructions) == 0 ):
         return None
 
+    ins_addresses = {} # All instructions of this scope
     for i in lng.instructions:
         i.passes = 0
         i.possible_in_register_sets = []
@@ -2903,6 +2962,10 @@ def register_flow( lng, frame : "gdb frame" ):
         i.possible_out_flag_sets = []
         i.extra = []
         i.reset_argspecs()
+        # Mark all bytes as belonging to the instruction (in case we load only one byte in the middle of it, because its
+        # just data not a real instruction)
+        for x in range(0,len(i.bytes)):
+            ins_addresses[int(i.address) + x] = i
 
         # Will copy only ever on the very first call where we did not have a user defined reference
         if( i.parsed_reference is None ):
@@ -3284,6 +3347,15 @@ def register_flow( lng, frame : "gdb frame" ):
                 break
             if( ins.marked and ins.passes > 0 ):
                 ins = None
+
+    # Flow is considered done, collect all info about wheere something loads from and check if its an instruction
+    # XXX Check performance of everything
+    # Now that we have the flow, go through all instructions again and figure out if any of htem loads something
+    for ins in lng.instructions:
+        for lfrm in ins.loads_from:
+            ins_at_load = ins_addresses.get(lfrm)
+            if( ins_at_load is not None ):
+                ins_at_load.loaded_from.add( ins )
 
     # while(ins) done
     if( debug_all() ):
