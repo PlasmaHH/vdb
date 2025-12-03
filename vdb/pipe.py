@@ -7,7 +7,7 @@ import subprocess
 import gdb
 import traceback
 
-commands  = vdb.config.parameter("vdb-pipe-commands","hl:grep --color=always -C50000,grep,egrep,tee,head,tail,uniq,sort,less,cat,wc", gdb_type = vdb.config.PARAM_ARRAY )
+commands  = vdb.config.parameter("vdb-pipe-commands","sed,hl:grep --color=always -C50000,grep,egrep,tee,head,tail,uniq,sort,less,cat,wc", gdb_type = vdb.config.PARAM_ARRAY )
 up_wraps  = vdb.config.parameter("vdb-pipe-wrap","python,show,info,help,x,print,set,maint,monitor", gdb_type = vdb.config.PARAM_ARRAY )
 externals = vdb.config.parameter("vdb-pipe-externals","bat:,binwalk,objdump,tmux:,addr2line:-e {file} -a", gdb_type = vdb.config.PARAM_ARRAY )
 
