@@ -5,8 +5,8 @@ extends = "default"
 [asm.colors]
 addr            = "None"
 args            = "#99f"
-#bytes           = "#059"
-bytes           = "#99f"
+bytes           = "#059"
+#bytes           = "#99f"
 function        = "#99f"
 jumps           = "#f00;#0f0;#00f;#ff0;#f0f;#0ff"
 namespace       = "#ddf"
@@ -15,8 +15,8 @@ offset          = "#444"
 prefix          = "None"
 addr-dot        = "#0000c0"
 args-dot        = "#3030a0"
-#bytes-dot       = "#005090"
-bytes-dot       = "#9090f0"
+bytes-dot       = "#005090"
+#bytes-dot       = "#9090f0"
 call-dot        = "#6600ff"
 function-dot    = "#9090f0"
 jump-dot        = "#000088"
@@ -111,5 +111,25 @@ names = "#4c0"
 templates = "#f60"
 
 [rich]
+
+[gdb]
+
+address = "blue"
+command = ",,bold"
+"disassembler comment" = "white,,dim"
+"disassembler immediate" = "blue"
+"disassembler mnemonic" = "green"
+"disassembler register" = "red"
+"filename" = "green"
+"function" = "yellow"
+"highlight" = "#ff0101"
+"line-number" = ",,dim"
+"metadata" = ",,dim"
+"title" = ",,bold"
+"tui-active-border" = "cyan"
+"tui-border" = "cyan"
+"variable" = "cyan"
+"version" = "magenta,,bold"
+
 
 # = "vim: tabstop=4 shiftwidth=4 expandtab ft=python

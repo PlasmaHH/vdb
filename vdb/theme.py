@@ -193,6 +193,19 @@ def load_rich( vl ):
     import rich.theme
     vdb.util.console = rich.console.Console( force_terminal = True, color_system = "truecolor", theme = rich.theme.Theme(theme) )
 
+def _gdb_set( key, sub, val ):
+    if( len(val) ):
+#        print(f"_gdb_set( {key=}, {sub=}, {val=} )")
+        gdb.execute(f"set style {key} {sub} {val}")
+
+def load_gdb( vl ):
+    for k,v in vl.items():
+        v += ",,"
+        vv = v.split(",")
+        _gdb_set( k, "foreground", vv[0] )
+        _gdb_set( k, "background", vv[1] )
+        _gdb_set( k, "intensity" , vv[2] )
+
 def theme_load( tname, flags ):
 
     if( tname == "default" ):
@@ -211,6 +224,8 @@ def theme_load( tname, flags ):
                     pass
                 case "rich":
                     load_rich(vl)
+                case "gdb":
+                    load_gdb(vl)
                 case _:
                     load_cfg(k,vl)
 

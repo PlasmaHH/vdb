@@ -185,6 +185,7 @@ arch_aliases = {
                 "armv7-m.main" : "arm",
                 "armv8-m" : "arm",
                 "armv8-m.main" : "arm",
+                "mips:isa32r2" : "mips",
                 }
 
 
@@ -2118,7 +2119,7 @@ def configure_arch( arch = None ):
         else:
             # might throw "no frame currently selected" when not running
             archname = gdb.selected_inferior().architecture().name()
-#            print(f"gdb frame arch {archname}")
+            print(f"gdb frame arch {archname}")
 
         origarch = archname
     except gdb.error:
