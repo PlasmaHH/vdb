@@ -1762,6 +1762,7 @@ ascii mockup:
 #                print("fillup = '%s'" % fillup )
 #                line.append( " " * fillup)
 
+            load_extra = []
             if( "S" in showspec ):
                 stats = []
                 if( i.unhandled ):
@@ -1775,9 +1776,9 @@ ascii mockup:
                         lfstr = ""
                         for lf in i.loaded_from:
                             iadd = int(lf.address)
-                            lfstr += f"@{iadd:#0x}"
-                        lfstr = vdb.color.colorl(lfstr,color_loaded.value)
-                        i.add_extra( lfstr, "S" )
+                            lfstr += f"@{iadd:#0x},"
+                        lfstr = vdb.color.colorl(lfstr[:-1],color_loaded.value)
+                        load_extra.append( lfstr )
                     else:
                         stats.append(vdb.color.colorl("@",color_loaded.value))
 
@@ -1908,6 +1909,7 @@ ascii mockup:
             output_extra(i.extra,otbl,None)
 #            output_extra(i.file_line,otbl,0)
             output_extra(line_extra,otbl,"p") # the explanations
+            output_extra( load_extra,otbl, "S" )
 
 
             otmap[cnt] = len(otbl)

@@ -475,6 +475,9 @@ def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
     if( addr is not None ):
         ins.loads_from.add( int(addr) )
 
+    if( ins.arguments[0].register == "pc" ):
+        print("HEY HERE LOOK WE LDR into PC THIS MUST BE A COMPUTED JUMP WE SHOULD DO SOMTHING ABOUT IT")
+
     ins.add_explanation(f"Load value {vdb.asm.format_unknown(val)} from memory address {vdb.asm.format_unknown(addr,'{:#0x}')} into register {ins.arguments[0].register}{post_text}")
     return (possible_registers,possible_flags)
 
