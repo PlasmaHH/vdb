@@ -1,0 +1,28 @@
+   0x00007fffffffc8dc:  01 00                   add    %eax,(%rax)
+   0x00007fffffffc8de:  00 00                   add    %al,(%rax)
+   0x00007fffffffc8e0:  60                      (bad)
+   0x00007fffffffc8e1:  72 80                   jb     0x7fffffffc863
+   0x00007fffffffc8e3:  f7 ff                   idiv   %edi
+   0x00007fffffffc8e5:  7f 00                   jg     0x7fffffffc8e7
+   0x00007fffffffc8e7:  00 a3 19 ff f7 ff       add    %ah,-0x800e7(%rbx)
+   0x00007fffffffc8ed:  7f 00                   jg     0x7fffffffc8ef
+   0x00007fffffffc8ef:  00 30                   add    %dh,(%rax)
+   0x00007fffffffc8f1:  05 e8 f7 ff 7f          add    $0x7ffff7e8,%eax
+   0x00007fffffffc8f6:  00 00                   add    %al,(%rax)
+   0x00007fffffffc8f8:  ac                      lods   %ds:(%rsi),%al
+   0x00007fffffffc8f9:  82                      (bad)
+   0x00007fffffffc8fa:  96                      xchg   %eax,%esi
+   0x00007fffffffc8fb:  06                      (bad)
+   0x00007fffffffc8fc:  00 00                   add    %al,(%rax)
+   0x00007fffffffc8fe:  00 00                   add    %al,(%rax)
+   0x00007fffffffc900:  ac                      lods   %ds:(%rsi),%al
+   0x00007fffffffc901:  64 80 f7 ff             fs xor $0xff,%bh
+   0x00007fffffffc905:  7f 00                   jg     0x7fffffffc907
+   0x00007fffffffc907:  00 fa                   add    %bh,%dl
+   0x00007fffffffc909:  04 fd                   add    $0xfd,%al
+   0x00007fffffffc90b:  f7 ff                   idiv   %edi
+   0x00007fffffffc90d:  7f 00                   jg     0x7fffffffc90f
+   0x00007fffffffc90f:  00 95 19 ff f7 ff       add    %dl,-0x800e7(%rbp)
+   0x00007fffffffc915:  7f 00                   jg     0x7fffffffc917
+   0x00007fffffffc917:  00 00                   add    %al,(%rax)
+

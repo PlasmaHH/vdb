@@ -1,0 +1,15 @@
+Dump of assembler code for function HAL_MspInit:
+   0x08001214 <+0>:     ddf6            ble.n   0x8001204 <SysTick_Handler+4>
+   0x08001216 <+2>:     f04f 5324       mov.w   r3, #687865856  @ 0x29000000
+   0x0800121a <+6>:     202a            movs    r0, #42 @ 0x2a
+   0x0800121c <+8>:     2100            movs    r1, #0
+   0x0800121e <+10>:    e9c3 0100       strd    r0, r1, [r3]
+   0x08001222 <+14>:    e9c3 0102       strd    r0, r1, [r3, #8]
+   0x08001226 <+18>:    e9c3 0104       strd    r0, r1, [r3, #16]
+   0x0800122a <+22>:    e9c3 0106       strd    r0, r1, [r3, #24]
+=> 0x0800122e <+26>:    4b0a            ldr     r3, [pc, #40]   @ (0x8001258 <COM1_MspInit+32>)
+   0x08001230 <+28>:    681b            ldr     r3, [r3, #0]
+   0x08001232 <+30>:    2b01            cmp     r3, #1
+   0x08001234 <+32>:    d1fb            bne.n   0x800122e <HAL_MspInit+26>
+   0x08001236 <+34>:    2000            movs    r0, #0
+
