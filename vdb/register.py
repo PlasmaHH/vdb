@@ -428,6 +428,7 @@ class Registers():
 #            cnt += 1
 #            sw.start()
             v = self.frame.read_register(reg)
+#            print(f"{v=}")
 #            sw.pause()
             self.all_values[reg] = ( v, v.type )
             # try to figure out which register type this is by first sorting according to its type

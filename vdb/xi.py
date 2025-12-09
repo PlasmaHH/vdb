@@ -29,23 +29,67 @@ debug = vdb.config.parameter("vdb-xi-debug", False )
 silence = vdb.config.parameter("vdb-xi-silence", True )
 location = vdb.config.parameter("vdb-xi-location", False )
 show_frame = vdb.config.parameter("vdb-xi-frame",False )
+register_groups = vdb.config.parameter("vdb-xi-groups","ivxf")
+
+def _vector_string( rval ):
+    biggest = None
+    biggest_size = 0
+    for u in rval.type.fields():
+#        print(f"{u.name=}")
+#        print(f"{u.type=}")
+        if( u.type.code == gdb.TYPE_CODE_ARRAY ):
+            etype = u.type.target()
+            if( etype.sizeof > biggest_size ):
+                biggest_size = etype.sizeof
+                biggest = u.name
+        else:
+            return rval[u.name]
+    if( biggest is not None ):
+        return rval[biggest]
+    else:
+        return str(rval)
 
 # Support showspec like the registers command
 def diff_regs( r0, r1 ):
     ret = {}
-    for rname,rval0 in chain(r0.regs.items(),r0.rflags.items()):
+
+    allregs = {}
+
+    if( "i" in register_groups.value ):
+        allregs = chain(allregs,r0.regs.items())
+    if( "x" in register_groups.value ):
+        allregs = chain(allregs,r0.rflags.items())
+    if( "v" in register_groups.value ):
+        allregs = chain(allregs,r0.vecs.items())
+    if( "f" in register_groups.value ):
+        allregs = chain(allregs,r0.fpus.items())
+
+    for rname,rval0 in allregs:
         rval1 = r1.get_value(rname)
 #        if( rval0 is None or rval1 is None ):
 #            print(f"diff_regs has no value for {rname} in both frames: {rval0=}, {rval1=}")
 #            continue
-#        print(f"{str(rname)=}")
+#        print(f"{rname=}")
+#        if( rname.name == "ymm0" ):
+#            print(f"rval0 = {rval0[0]['v2_int128']}")
+#            print(f"rval1 = {rval1[0]['v2_int128']}")
+#            print(f"{rval0 == rval1=}")
 #        print(f"{rval1=}")
         try:
-            rval0 = int(rval0[0])
-            rval1 = int(rval1[0])
+            if( rval0[0].type.code == gdb.TYPE_CODE_UNION ):
+                rval0 = _vector_string(rval0[0])
+                rval1 = _vector_string(rval1[0])
+            else:
+                rval0 = int(rval0[0])
+                rval1 = int(rval1[0])
         except gdb.error:
-            # Sometimes gdb doesnt have the register available
-            continue
+            try:
+                # This could also be because its a vector register. How can we uniformly handle those?
+                rval0 = "EX" + str(rval0[0])
+                rval1 = "EX" + str(rval1[0])
+            except gdb.error:
+                # Sometimes gdb doesnt have the register available
+                continue
         if( rval0 != rval1 ):
             # XXX Make this arch independent
             if( str(rname) != "rip" ):
@@ -219,7 +263,7 @@ class xi_listing:
             # Then flow was not active and we delayed getting the asm
             if( i.asm_string is None ):
                 try:
-                    i.asm_string,i.instruction = vdb.asm.get_single_tuple( ipc, extra_filter="r",do_flow=False)
+                    i.asm_string,i.instruction = vdb.asm.get_single_tuple( ipc, extra_filter="rS",do_flow=False)
                 except MemoryError:
                     i.asm_string = "MEMORY ERROR"
                     i.instruction = "MEMORY ERROR"
@@ -238,9 +282,17 @@ class xi_listing:
                     line.append(f"eflags={ff}")
                 else:
                     # XXX Make this depend on the type
-                    if( cv < 0 ):
-                        cv += 2**32
-                    line.append(f"{cr}={cv:#0x}")
+                    if( isinstance(cv,str) ):
+                        line.append(f"{cr}={cv}")
+                    elif( isinstance(cv,int) ):
+                        if( cv < 0 ):
+                            cv += 2**32
+                        line.append(f"{cr}={cv:#0x}")
+                    else:
+                        # Most likely a vector thing, for now make it a nice string
+                        cv = str(cv)
+                        cv = cv.replace("\n"," ")
+                        line.append(f"{cr}={cv}")
             for val,addr in i.changed_memory:
 #            print(f"XMEM {addr} => {val}")
 #            print(f"{val=}")
@@ -377,7 +429,7 @@ def xi( num, filter, full, events, flow, registers ):
                 # XXX Needs arch independence. Check for complete list of possible flags from registers.py ?
                 ist.current_flags=r._flags("eflags",r.rflags,vdb.register.flag_info,False,False,True,None)
             if( flow ):
-                ist.asm_string,ist.instruction = vdb.asm.get_single_tuple( pc[0], extra_filter="r",do_flow=flow)
+                ist.asm_string,ist.instruction = vdb.asm.get_single_tuple( pc[0], extra_filter="rS",do_flow=flow)
             # XXX Doing the whole flow thing is rather expensive, all we need is access to the register values of the
             # previous instructions output really to evaluate which memory was touched.
 #        print(f"{ist.instruction.arguments=}")
