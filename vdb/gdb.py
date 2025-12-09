@@ -100,6 +100,9 @@ class mock_type:
 def lookup_type( a ):
     return mock_type()
 
+mockdata = {
+        ("help","vdb") : None
+        }
 def execute( *args, **kwargs ):
     args = args[0].split()
 #    print("args = '%s'" % (args,) )
@@ -108,10 +111,13 @@ def execute( *args, **kwargs ):
     
 #    print("args[0] = '%s'" % args[0] )
 #    print("args[1] = '%s'" % args[1] )
-    data = ""
     if( args[0].startswith("disassemble") ):
         with open(args[1], 'r') as myfile:
             data=myfile.read()
+            return data
+    data = mockdata.get(tuple(args),"")
+    if( data is None ):
+        raise error("NO ANSWER FOUND")
     return data
 
 def selected_thread( ):

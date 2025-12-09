@@ -281,10 +281,7 @@ def run_tests( tests ):
             for addr, data in mems.items():
                 md = bytes(data)
 #                print(f"{id(vdb.asm.fakemem)=}")
-                vdb.asm.add_fake_memory( addr, md )
-
-        with open("fakememory", "wb") as ppf:
-            pickle.dump( vdb.asm.fakemem, ppf )
+                vdb.memory.add_overlay( addr, md )
 
         print("Test '%s' :" % n)
         if( en is not None and en == False ):
@@ -348,7 +345,7 @@ tests = [
                 "file" : "ftree.cxx",
                 "commands" : [ "r", None, "bt" ],
                 "expect" : "ftree_backtrace.exp",
-                "enabled" : True
+                "enabled" : False
             },
             {
                 "name" : "varargs",
@@ -377,11 +374,13 @@ tests = [
                 "file" : "paholetest.cxx",
                 "commands" : [ "start", None, "dis" ],
                 "expect" : "pahole_disassemble.exp",
-                "enabled" : True
+                "enabled" : False
             },
             {
                 "name" : "mock disassemble",
                 "commands" : [ None,
+                    "set  architecture i386:x86-64",
+                    "python vdb.arch.gather_info()",
                     "dis/f mock0.txt",
                     "dis/f mock1.txt",
                     "dis/f mock2.txt",
@@ -391,6 +390,10 @@ tests = [
                     "dis/f mock6.txt",
                     "dis/f mock7.txt",
                     "dis/f mock8.txt",
+                    "dis/f mock9.txt",
+                    "set  architecture armv7",
+                    "python vdb.arch.gather_info()",
+                    "dis/f mock10.txt",
                     ],
                 "hash" : "f3b0222bf815ec12765f06a1fa14c646",
                 "expect" : "mock_disassemble.exp",

@@ -768,7 +768,7 @@ def _vt_flow_cmovcc( flags, ins, frame, possible_registers, possible_flags ):
 def vt_flow_cmov( ins, frame, possible_registers, possible_flags , executes ):
 
     cond = ins.mnemonic.removeprefix("cmov")
-    print(f"{cond=}")
+#    print(f"{cond=}")
     # no flags affected
     return _vt_flow_cmovcc( { "ZF" : 1 }, ins, frame, possible_registers, possible_flags )
 

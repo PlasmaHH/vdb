@@ -86,5 +86,5 @@ va_list completely updated, va extraction has a higher chance of working now
 fp_offset did not update. Please single step (at the risk of clobbering fixed parameters) or inspect disasembly yourself to figure out a proper value
 Using gp_offset=8, fp_offset=48
 Possible function call(s):
-__printf( 0x402037 "%p", 0x0000000000401136 <main(int, char const**)> →   push %rbp )
+__printf( 0x402037 "%p", 0x0000000000401136 <main(int, char const**)> →   push %rbp ? )
 Exiting vdb...

@@ -1,5 +1,4 @@
- [ASCII] [STACK(OWN)] [STACK(OTHER)] [HEAP] [MMAP] [SHM] [CODE] [BSS] [NULL] [RO] [WO] [RW] [EX] [INV] [INAC] [UNK] [.text]
- [.bss]
+ [ASCII] [STACK(OWN)] [STACK(OTHER)] [HEAP] [MMAP] [SHM] [CODE] [BSS] [NULL] [RO] [WO] [RW] [EX] [INV] [INAC] [UNK]
 No current process: you must name one.
             *0  1  2  3   4  5  6  7    8  9  A  B   C  D  E  F   01234567 89ABCDEF VARIABLES POINTERS VALUES 
 0x00*40.*: .. .. .. ..  .. .. .. .. - .. .. .. ..  .. .. .. ..  ........ ........ main\(int, char const\*\*\) 

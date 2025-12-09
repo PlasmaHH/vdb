@@ -2139,7 +2139,7 @@ current_arch = None
 
 def configure_arch( arch = None ):
 #    print(f"configure_arch( {arch=} )")
-    archname = "x86"
+    archname = "x86_64"
     origarch = archname
 #    print(f"forced arch: {arch}")
     try:
@@ -2301,10 +2301,6 @@ def fix_marker( ls, alt = None, frame = None, do_flow = True ):
             else:
                 previous.rmarked = False
 
-    update_vars(ls,frame)
-    ls.do_backtrack()
-    if( do_flow ):
-        register_flow(ls,frame)
     return ls
 
 
@@ -2677,7 +2673,8 @@ def update_vars( ls, frame ):
         print(f"{funname=}")
         print(f"{frame.name()=}")
         print(f"{(fun.name == ls.function)=}")
-        print(f"{ls.function.endswith(fun.name)=}")
+        if( ls.function is not None ):
+            print(f"{ls.function.endswith(fun.name)=}")
         print(f"{ls.function == funname=}")
         print(f"{frame=}")
         print(f"{fun.symtab=}")
@@ -2854,6 +2851,8 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     # Figure out roughly how "long" the function is
     # XXX Sometimes functions are split in parts, how do we handle that?
     for line in dis.splitlines():
+        if( len(line) == 0 ):
+            continue
         vline = line.split()
         try:
             vaddr = int(vline[0],16)
@@ -2907,13 +2906,14 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     if( fakedata is None ):
         parse_cache[key] = ret
 
+#    print(f"{markers=}")
     if( markers == 0 ):
         ret = fix_marker(ret,arg,frame,do_flow)
-    else:
-        # fix_marker does the update and register flow calls too
-        update_vars(ret,frame)
-        if( do_flow ):
-            register_flow(ret,frame)
+
+    update_vars(ret,frame)
+    ret.do_backtrack()
+    if( do_flow ):
+        register_flow(ret,frame)
     return ret
 
 
@@ -2979,6 +2979,7 @@ def current_registers( frame ):
 
 
 def register_flow( lng, frame : "gdb frame" ):
+    vdb.log(f"register_flow( {lng=}, {frame=} )",level=4)
     global flow_vtable
     if( len(flow_vtable) == 0 ):
         gen_vtable()
@@ -3360,20 +3361,22 @@ def register_flow( lng, frame : "gdb frame" ):
 
         for opr in ins.parsed_reference:
             try:
+#                print(f"{opr=}")
                 # some are in brackets
                 br=""
-                pr = opr[0].strip()
+                pr = opr.strip()
                 if( pr[0] == "(" ):
                     br="("
                     pr = pr[1:]
+#                print(f"{pr=}")
                 prv = pr.split()
+#                print(f"{prv=}")
                 xr = vdb.util.xint(prv[0])
                 if xr not in printed_addrs:
-#                    print("extra = '%s'" % (extra,) )
+#                    print(f"{xr=}")
+#                    print(f"{extra=}")
                     sym,ei = extra_info(None, "~", xr, extra )
                     if( sym is None or len(sym) == 0 ):
-#                        print("type(ei) = '%s'" % (type(ei),) )
-#                        print("len(ei) = '%s'" % (len(ei),) )
                         ei = vdb.color.concat(ei,br)
                         ei = vdb.color.concat(ei,"".join(prv[1:]))
                     ins.reference.append(ei)
