@@ -1479,12 +1479,13 @@ ascii mockup:
             hf = wrap_shorten(hf)
 
         marked_line = None
-        cnt = 0
         context_start = None
         context_end = None
 
         otbl = []
 
+        # This maps the line of the assembler output to the line(s) of generated output in the table (one assembler line
+        # can possibly output more than one in the table)
         otmap = {0:0}
 
         extra_marker = None
@@ -1529,6 +1530,7 @@ ascii mockup:
                 else:
                     cnt += 1
         num_headfields = len(header)
+        cnt = 0
 
 #        print(f"{header_indices=}")
 
@@ -2119,7 +2121,7 @@ def configure_arch( arch = None ):
         else:
             # might throw "no frame currently selected" when not running
             archname = gdb.selected_inferior().architecture().name()
-            print(f"gdb frame arch {archname}")
+#            print(f"gdb frame arch {archname}")
 
         origarch = archname
     except gdb.error:
@@ -3126,13 +3128,15 @@ def register_flow( lng, frame : "gdb frame" ):
                 for _,xi in xilist:
                     if( debug_all(ins) ):
                         ins.add_extra(f"XI: {str(xi)}")
-                    rset = register_set()
-                    rset.fill( xi.final_registers, origin = "xi" )
-                    npregisters.append( rset )
-                    # This is so the next instruction gets us as input
-                    possible_registers = rset
-                    nf = current_arch.current_flags( rset )
-                    npflags.append(nf)
+                    # Sometimes XI fails itself
+                    if( xi.final_registers is not None ):
+                        rset = register_set()
+                        rset.fill( xi.final_registers, origin = "xi" )
+                        npregisters.append( rset )
+                        # This is so the next instruction gets us as input
+                        possible_registers = rset
+                        nf = current_arch.current_flags( rset )
+                        npflags.append(nf)
             if( len(npregisters) ):
                 ins.possible_out_register_sets = npregisters
 
@@ -3766,7 +3770,7 @@ def get_single_tuple( bpos, showspec_filter = "abomjhHcdtT", extra_filter = "", 
         rets = ret[1]
         reti = li.instructions[0]
     except:
-        vdb.print_exc()
+#        vdb.print_exc()
         pass
     return (rets,reti)
 

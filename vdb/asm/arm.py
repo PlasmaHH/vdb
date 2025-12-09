@@ -434,6 +434,9 @@ def set_flags_result( flag_set, result, arg = None, val = None ):
 def vt_flow_bic( ins, frame, possible_registers, possible_flags ):
 
     val0,addr = ins.arguments[1].value( possible_registers )
+    if( len(ins.arguments) <= 2 ):
+        # XXX quick hack, fix later, happens on bics r3,r2
+        return (possible_registers,possible_flags)
     val1,addr = ins.arguments[2].value( possible_registers )
 
     if( val0 is not None and val1 is not None ):

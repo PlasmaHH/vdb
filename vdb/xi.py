@@ -214,7 +214,11 @@ class xi_listing:
                     line.append(indent)
             # Then flow was not active and we delayed getting the asm
             if( i.asm_string is None ):
-                i.asm_string,i.instruction = vdb.asm.get_single_tuple( ipc, extra_filter="r",do_flow=False)
+                try:
+                    i.asm_string,i.instruction = vdb.asm.get_single_tuple( ipc, extra_filter="r",do_flow=False)
+                except MemoryError:
+                    i.asm_string = "MEMORY ERROR"
+                    i.instruction = "MEMORY ERROR"
             alen = len( vdb.color.colors.strip_color(i.asm_string ) )
             line.append( ( i.asm_string,alen) )
             if( not i.executed ):
