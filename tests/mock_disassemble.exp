@@ -1,355 +1,414 @@
 Instructions in range 0x7ffff7b17f70 - 0x7ffff7b18026 of [('Target', ',,bold', 0, 0)]
- Ma Address          Offset   Jumps Bytes                         Mnemon Args                 Reference                              
-    0x7ffff7b17f70   <+0 >:         48 8b 15 d9 3e 13 00          mov    0x133ed9(%rip),%rdx  @0xf7c4be50,=0x0
-    0x7ffff7b17f77   <+7 >:         48 8d 05 f2 8c 01 00          lea    0x18cf2(%rip),%rax   @0xf7b30c70,~0x0
-    0x7ffff7b17f7e   <+14>:         8b 8a cc 00 00 00             mov    0xcc(%rdx),%ecx      @0xcc
-    0x7ffff7b17f84   <+20>:         f6 c5 30                      test   $0x30,%ch            %=0x30
-    0x7ffff7b17f87   <+23>:   ╭◄    75 57                         jne    0x7ffff7b17fe0       __new_memcpy_ifunc+112@%=0xf7b17fe0
-                              │                                   Unhandled conditional jump: Flag value(s) ZF,0 unknown
-    0x7ffff7b17f89   <+25>:   │     48 b8 04 00 00 00 00 40 00 00 movabs $0x400000000004,%rax %=0x4
-    0x7ffff7b17f93   <+35>:   │     48 23 82 c8 00 00 00          and    0xc8(%rdx),%rax      @0xc8
-    0x7ffff7b17f9a   <+42>:   │     48 83 f8 04                   cmp    $0x4,%rax            %=0x4
-    0x7ffff7b17f9e   <+46>:   │╭◄   74 48                         je     0x7ffff7b17fe8       __new_memcpy_ifunc+120@%=0xf7b17fe8
-                              ││                                  Unhandled conditional jump: Flag value(s) ZF,1 unknown
-    0x7ffff7b17fa0   <+48>:   ││    f6 c5 01                      test   $0x1,%ch             %=0x1
-    0x7ffff7b17fa3   <+51>:   ││╭◄  74 1b                         je     0x7ffff7b17fc0       __new_memcpy_ifunc+80@%=0xf7b17fc0
-                              │││                                 Unhandled conditional jump: Flag value(s) ZF,1 unknown
-    0x7ffff7b17fa5   <+53>:   │││   f6 42 7d 02                   testb  $0x2,0x7d(%rdx)      %=0x2,@0x7d
-    0x7ffff7b17fa9   <+57>:   │││   48 8d 05 b0 63 0d 00          lea    0xd63b0(%rip),%rax   @0xf7bee360,~0x0
-    0x7ffff7b17fb0   <+64>:   │││   48 8d 15 49 63 0d 00          lea    0xd6349(%rip),%rdx   @0xf7bee300,~0x0
-    0x7ffff7b17fb7   <+71>:   │││   48 0f 44 c2                   cmove  %rdx,%rax            %=0xf7bee300
-                              │││                                 ZF is unknown
-    0x7ffff7b17fbb   <+75>:   │││   c3                            retq                        
-    0x7ffff7b17fbc   <+76>:   │││   0f 1f 40 00                   nopl   0x0(%rax)            
-    0x7ffff7b17fc0   <+80>:   ││╰►  f6 42 71 02                   testb  $0x2,0x71(%rdx)      %=0x2,@0x71
-    0x7ffff7b17fc4   <+84>:   ││╭◄  74 4a                         je     0x7ffff7b18010       __new_memcpy_ifunc+160@%=0xf7b18010
-                              │││                                 Unhandled conditional jump: Flag value(s) ZF,1 unknown
-    0x7ffff7b17fc6   <+86>:   │││   f6 c1 20                      test   $0x20,%cl            %=0x20
-    0x7ffff7b17fc9   <+89>:   │││╭◄ 75 45                         jne    0x7ffff7b18010       __new_memcpy_ifunc+160@%=0xf7b18010
-                              ││││                                Unhandled conditional jump: Flag value(s) ZF,0 unknown
-    0x7ffff7b17fcb   <+91>:   ││││  83 e1 08                      and    $0x8,%ecx            %=0x8
-    0x7ffff7b17fce   <+94>:   ││││  48 8d 05 cb 0b 0b 00          lea    0xb0bcb(%rip),%rax   @0xf7bc8ba0,~0x0
-    0x7ffff7b17fd5   <+101>:  ││││  48 8d 15 34 61 0b 00          lea    0xb6134(%rip),%rdx   @0xf7bce110,~0x0
-    0x7ffff7b17fdc   <+108>:  ││││  48 0f 45 c2                   cmovne %rdx,%rax            !,%=0xf7bc8ba0
-    0x7ffff7b17fe0   <+112>:  ├│││► c3                            retq                        
-    0x7ffff7b17fe1   <+113>:  ││││  0f 1f 80 00 00 00 00          nopl   0x0(%rax)            
-    0x7ffff7b17fe8   <+120>:  │╰││► 48 8d 05 61 a6 0d 00          lea    0xda661(%rip),%rax   @0xf7bf2650,~0x0
-    0x7ffff7b17fef   <+127>:  │ ││  80 e5 08                      and    $0x8,%ch             %=0x8
-    0x7ffff7b17ff2   <+130>:  ╰─││◄ 75 ec                         jne    0x7ffff7b17fe0       __new_memcpy_ifunc+112@%=0xf7b17fe0
-                                ││                                Unhandled conditional jump: Flag value(s) ZF,0 unknown
-    0x7ffff7b17ff4   <+132>:    ││  f6 42 7d 02                   testb  $0x2,0x7d(%rdx)      %=0x2,@0x7d
-    0x7ffff7b17ff8   <+136>:    ││  48 8d 05 b1 b0 0d 00          lea    0xdb0b1(%rip),%rax   @0xf7bf30b0,~0x0
-    0x7ffff7b17fff   <+143>:    ││  48 8d 15 3a b0 0d 00          lea    0xdb03a(%rip),%rdx   @0xf7bf3040,~0x0
-    0x7ffff7b18006   <+150>:    ││  48 0f 44 c2                   cmove  %rdx,%rax            %=0xf7bf3040
-                                ││                                ZF is unknown
-    0x7ffff7b1800a   <+154>:    ││  c3                            retq                        
-    0x7ffff7b1800b   <+155>:    ││  0f 1f 44 00 00                nopl   0x0(%rax,%rax,1)     
-    0x7ffff7b18010   <+160>:    ╰┴► f6 42 7d 02                   testb  $0x2,0x7d(%rdx)      %=0x2,@0x7d
-    0x7ffff7b18014   <+164>:        48 8d 05 b5 8c 01 00          lea    0x18cb5(%rip),%rax   @0xf7b30cd0,~0x0,ALT:,@0xf7b30cd0,~0x0
-    0x7ffff7b1801b   <+171>:        48 8d 15 ee 8b 01 00          lea    0x18bee(%rip),%rdx   @0xf7b30c10,~0x0,ALT:,@0xf7b30c10,~0x0
-    0x7ffff7b18022   <+178>:        48 0f 44 c2                   cmove  %rdx,%rax            %=0xf7b30c10
-                                                                  ZF is unknown
-                                                                  ZF is unknown
-    0x7ffff7b18026   <+182>:        c3                            retq                        
+ Ma Address              Offset   Jumps Bytes                         Mnemon Args                 S Reference                               
+    0x00007ffff7b17f70   <+0 >:         48 8b 15 d9 3e 13 00          mov    0x133ed9(%rip),%rdx    @0x7ffff7c4be50
+    0x00007ffff7b17f77   <+7 >:         48 8d 05 f2 8c 01 00          lea    0x18cf2(%rip),%rax     @0x7ffff7b30c70
+    0x00007ffff7b17f7e   <+14>:         8b 8a cc 00 00 00             mov    0xcc(%rdx),%ecx        
+    0x00007ffff7b17f84   <+20>:         f6 c5 30                      test   $0x30,%ch              %=0x30
+    0x00007ffff7b17f87   <+23>:   ╭◄    75 57                         jne    0x7ffff7b17fe0         __new_memcpy_ifunc+112@%=0x7ffff7b17fe0
+                                  │                                   Unhandled conditional jump: Flag value(s) ZF,0 unknown                              
+    0x00007ffff7b17f89   <+25>:   │     48 b8 04 00 00 00 00 40 00 00 movabs $0x400000000004,%rax   %=0x400000000004
+    0x00007ffff7b17f93   <+35>:   │     48 23 82 c8 00 00 00          and    0xc8(%rdx),%rax        
+    0x00007ffff7b17f9a   <+42>:   │     48 83 f8 04                   cmp    $0x4,%rax              %=0x4
+    0x00007ffff7b17f9e   <+46>:   │╭◄   74 48                         je     0x7ffff7b17fe8         __new_memcpy_ifunc+120@%=0x7ffff7b17fe8
+                                  ││                                  Unhandled conditional jump: Flag value(s) ZF,1 unknown                              
+    0x00007ffff7b17fa0   <+48>:   ││    f6 c5 01                      test   $0x1,%ch               %=0x1
+    0x00007ffff7b17fa3   <+51>:   ││╭◄  74 1b                         je     0x7ffff7b17fc0         __new_memcpy_ifunc+80@%=0x7ffff7b17fc0
+                                  │││                                 Unhandled conditional jump: Flag value(s) ZF,1 unknown                              
+    0x00007ffff7b17fa5   <+53>:   │││   f6 42 7d 02                   testb  $0x2,0x7d(%rdx)        %=0x2
+    0x00007ffff7b17fa9   <+57>:   │││   48 8d 05 b0 63 0d 00          lea    0xd63b0(%rip),%rax     @0x7ffff7bee360
+    0x00007ffff7b17fb0   <+64>:   │││   48 8d 15 49 63 0d 00          lea    0xd6349(%rip),%rdx     @0x7ffff7bee300
+    0x00007ffff7b17fb7   <+71>:   │││   48 0f 44 c2                   cmove  %rdx,%rax            X %=0x7ffff7bee300
+                                  │││                                 ZF is unknown                              
+    0x00007ffff7b17fbb   <+75>:   │││   c3                            retq                          
+    0x00007ffff7b17fbc   <+76>:   │││   0f 1f 40 00                   nopl   0x0(%rax)            ? 
+    0x00007ffff7b17fc0   <+80>:   ││╰►  f6 42 71 02                   testb  $0x2,0x71(%rdx)        %=0x2
+    0x00007ffff7b17fc4   <+84>:   ││╭◄  74 4a                         je     0x7ffff7b18010         __new_memcpy_ifunc+160@%=0x7ffff7b18010
+                                  │││                                 Unhandled conditional jump: Flag value(s) ZF,1 unknown                              
+    0x00007ffff7b17fc6   <+86>:   │││   f6 c1 20                      test   $0x20,%cl              %=0x20
+    0x00007ffff7b17fc9   <+89>:   │││╭◄ 75 45                         jne    0x7ffff7b18010         __new_memcpy_ifunc+160@%=0x7ffff7b18010
+                                  ││││                                Unhandled conditional jump: Flag value(s) ZF,0 unknown                              
+    0x00007ffff7b17fcb   <+91>:   ││││  83 e1 08                      and    $0x8,%ecx              %=0x8
+    0x00007ffff7b17fce   <+94>:   ││││  48 8d 05 cb 0b 0b 00          lea    0xb0bcb(%rip),%rax     @0x7ffff7bc8ba0
+    0x00007ffff7b17fd5   <+101>:  ││││  48 8d 15 34 61 0b 00          lea    0xb6134(%rip),%rdx     @0x7ffff7bce110
+    0x00007ffff7b17fdc   <+108>:  ││││  48 0f 45 c2                   cmovne %rdx,%rax            X %=0x7ffff7bce110
+                                  ││││                                ZF is unknown                              
+    0x00007ffff7b17fe0   <+112>:  ├│││► c3                            retq                          
+    0x00007ffff7b17fe1   <+113>:  ││││  0f 1f 80 00 00 00 00          nopl   0x0(%rax)            ? 
+    0x00007ffff7b17fe8   <+120>:  │╰││► 48 8d 05 61 a6 0d 00          lea    0xda661(%rip),%rax     @0x7ffff7bf2650
+    0x00007ffff7b17fef   <+127>:  │ ││  80 e5 08                      and    $0x8,%ch               %=0x8
+    0x00007ffff7b17ff2   <+130>:  ╰─││◄ 75 ec                         jne    0x7ffff7b17fe0         __new_memcpy_ifunc+112@%=0x7ffff7b17fe0
+                                    ││                                Unhandled conditional jump: Flag value(s) ZF,0 unknown                              
+    0x00007ffff7b17ff4   <+132>:    ││  f6 42 7d 02                   testb  $0x2,0x7d(%rdx)        %=0x2
+    0x00007ffff7b17ff8   <+136>:    ││  48 8d 05 b1 b0 0d 00          lea    0xdb0b1(%rip),%rax     @0x7ffff7bf30b0
+    0x00007ffff7b17fff   <+143>:    ││  48 8d 15 3a b0 0d 00          lea    0xdb03a(%rip),%rdx     @0x7ffff7bf3040
+    0x00007ffff7b18006   <+150>:    ││  48 0f 44 c2                   cmove  %rdx,%rax            X %=0x7ffff7bf3040
+                                    ││                                ZF is unknown                              
+    0x00007ffff7b1800a   <+154>:    ││  c3                            retq                          
+    0x00007ffff7b1800b   <+155>:    ││  0f 1f 44 00 00                nopl   0x0(%rax,%rax,1)     ? 
+    0x00007ffff7b18010   <+160>:    ╰┴► f6 42 7d 02                   testb  $0x2,0x7d(%rdx)        %=0x2
+    0x00007ffff7b18014   <+164>:        48 8d 05 b5 8c 01 00          lea    0x18cb5(%rip),%rax     @0x7ffff7b30cd0
+    0x00007ffff7b1801b   <+171>:        48 8d 15 ee 8b 01 00          lea    0x18bee(%rip),%rdx     @0x7ffff7b30c10
+    0x00007ffff7b18022   <+178>:        48 0f 44 c2                   cmove  %rdx,%rax            X %=0x7ffff7b30c10
+                                                                      ZF is unknown                              
+                                                                      ZF is unknown                              
+    0x00007ffff7b18026   <+182>:        c3                            retq                          
 Instructions in range 0x7f42041c8426 - 0x7f42041c8644 of __GI_abort
- Mar Address        Hist  Offset   Jumps  Bytes                            Mnemonic     Args                     Reference                                                   
-     0x7f42041c8426       <+0 >:          50                               push         %rax                     
-     0x7f42041c8427       <+1 >:          58                               pop          %rax                     
-     0x7f42041c8428       <+2 >:          64 48 8b 14 25 10 00 00 00       mov          %fs:0x10,%rdx            %=0x10
-     0x7f42041c8431       <+11>:          48 81 ec 28 01 00 00             sub          $0x128,%rsp              
-     0x7f42041c8438       <+18>:          64 48 8b 04 25 28 00 00 00       mov          %fs:0x28,%rax            %=0x28
-     0x7f42041c8441       <+27>:          48 89 84 24 18 01 00 00          mov          %rax,0x118(%rsp)         %=0x28
-     0x7f42041c8449       <+35>:          31 c0                            xor          %eax,%eax                %=0x0
-     0x7f42041c844b       <+37>:          48 39 15 c6 e8 19 00             cmp          %rdx,0x19e8c6(%rip)      %=0x10,@0x4366d18,=0x0
-     0x7f42041c8452       <+44>:   ╭◄     74 44                            je           0x7f42041c8498           __GI_abort+114@%=0x41c8498
-                                   │                                       Jump NOT taken, ZF[0] == 1
-     0x7f42041c8454       <+46>:   │      be 01 00 00 00                   mov          $0x1,%esi                %=0x1
-     0x7f42041c8459       <+51>:   │      83 3d 90 22 1a 00 00             cmpl         $0x0,0x1a2290(%rip)      %=0x0,@0x436a6f0
-     0x7f42041c8460       <+58>:   │╭◄    74 0c                            je           0x7f42041c846e           __GI_abort+72@%=0x41c846e
-                                   ││                                      Jump taken, ZF[1] == 1
-     0x7f42041c8462       <+60>:   ││     f0 0f b1 35 a6 e8 19 00          lock cmpxchg %esi,0x19e8a6(%rip)      %=0x1,@0x4366d10,=0x0
-     0x7f42041c846a       <+68>:   ││╭◄   75 0b                            jne          0x7f42041c8477           __GI_abort+81@%=0x41c8477
-                                   │││                                     Jump taken, ZF[0] == 0
-     0x7f42041c846c       <+70>:   │││╭◄  eb 23                            jmp          0x7f42041c8491           __GI_abort+107@%=0x41c8491
-     0x7f42041c846e       <+72>:   │╰││►  0f b1 35 9b e8 19 00             cmpxchg      %esi,0x19e89b(%rip)      %=0x1,@0x4366d10,=0x0
-     0x7f42041c8475       <+79>:   │╭││◄  74 1a                            je           0x7f42041c8491           __GI_abort+107@%=0x41c8491
-                                   ││││                                    Jump NOT taken, ZF[0] == 1
-     0x7f42041c8477       <+81>:   ││╰│►  48 8d 3d 92 e8 19 00             lea          0x19e892(%rip),%rdi      @0x4366d10,~0x0,ALT:,@0x4366d10,~0x0
-     0x7f42041c847e       <+88>:   ││ │   48 81 ec 80 00 00 00             sub          $0x80,%rsp               
-     0x7f42041c8485       <+95>:   ││ │   e8 f6 65 0e 00                   callq        0x7f42042aea80           __lll_lock_wait_private@%=0x42aea80
-     0x7f42041c848a       <+100>:  ││ │   48 81 c4 80 00 00 00             add          $0x80,%rsp               
-     0x7f42041c8491       <+107>:  │╰─┴►  48 89 15 80 e8 19 00             mov          %rdx,0x19e880(%rip)      %=0x10,@0x4366d18,~0x0,ALT:,%=0x10,@0x4366d18,~0x0
-     0x7f42041c8498       <+114>:  ╰───►  ff 05 76 e8 19 00                incl         0x19e876(%rip)           !,@0x4366d14,~0x0,ALT:,@0x4366d14,~0x0,ALT:,@0x4366d14,~0x0
-     0x7f42041c849e 10f   <+120>:         83 3d 7b e8 19 00 00             cmpl         $0x0,0x19e87b(%rip)      %=0x0,@0x4366d20
-     0x7f42041c84a5 9f    <+127>:   ╭──◄  75 36                            jne          0x7f42041c84dd           __GI_abort+183@%=0x41c84dd
-                                    │                                      Jump NOT taken, ZF[1] == 0
-                                    │                                      Jump NOT taken, ZF[1] == 0
-     0x7f42041c84a7       <+129>:   │     c7 05 6f e8 19 00 01 00 00 00    movl         $0x1,0x19e86f(%rip)      %=0x1,@0x4366d20,~0x0,ALT:,%=0x1,@0x4366d20,~0x0
-     0x7f42041c84b1       <+139>:   │     b8 10 00 00 00                   mov          $0x10,%eax               %=0x10
-     0x7f42041c84b6       <+144>:   │╭─►  48 ff c8                         dec          %rax                     !,%=0x10
-     0x7f42041c84b9       <+147>:   ││    48 89 e6                         mov          %rsp,%rsi                
-     0x7f42041c84bc       <+150>:   ││    48 83 f8 ff                      cmp          $0xffffffffffffffff,%rax %=0xffffffff,%=0x10
-     0x7f42041c84c0       <+154>:   ││╭◄  74 0a                            je           0x7f42041c84cc           __GI_abort+166@%=0x41c84cc
-                                    │││                                    Jump NOT taken, ZF[0] == 1
-                                    │││                                    Jump NOT taken, ZF[0] == 1
-     0x7f42041c84c2       <+156>:   │││   48 c7 04 c6 00 00 00 00          movq         $0x0,(%rsi,%rax,8)       %=0x0
-     0x7f42041c84ca       <+164>:   │╰│◄  eb ea                            jmp          0x7f42041c84b6           __GI_abort+144@%=0x41c84b6
-     0x7f42041c84cc       <+166>:   │ ╰►  31 d2                            xor          %edx,%edx                %=0x0
-     0x7f42041c84ce       <+168>:   │     bf 01 00 00 00                   mov          $0x1,%edi                %=0x1
-     0x7f42041c84d3 10c   <+173>:   │     48 83 0c 24 20                   orq          $0x20,(%rsp)             !,%=0x20
-     0x7f42041c84d8 9c    <+178>:   │     e8 43 6b 01 00                   callq        0x7f42041df020           __GI___sigprocmask@%=0x41df020
-     0x7f42041c84dd 8cf   <+183>:   ╰──►  8b 05 3d e8 19 00                mov          0x19e83d(%rip),%eax      @0x4366d20,=0x0
-     0x7f42041c84e3 7c    <+189>:         83 f8 01                         cmp          $0x1,%eax                %=0x1,%=0x0
-     0x7f42041c84e6 6c    <+192>:  ╭───◄  0f 85 bd 00 00 00                jne          0x7f42041c85a9           __GI_abort+387@%=0x41c85a9
-                                   │                                       Jump taken, ZF[0] == 0
-                                   │                                       Jump taken, ZF[0] == 0
-     0x7f42041c84ec 5c    <+198>:  │      ff 0d 22 e8 19 00                decl         0x19e822(%rip)           !,@0x4366d14,~0x0,ALT:,@0x4366d14,~0x0
-     0x7f42041c84f2 4c    <+204>:  │      c7 05 24 e8 19 00 00 00 00 00    movl         $0x0,0x19e824(%rip)      %=0x0,@0x4366d20
-     0x7f42041c84fc 3c    <+214>:  │╭──◄  75 41                            jne          0x7f42041c853f           __GI_abort+281@%=0x41c853f
-                                   ││                                      Jump taken, ZF[0] == 0
-                                   ││                                      Jump taken, ZF[0] == 0
-     0x7f42041c84fe 7d    <+216>:  ││     48 c7 05 0f e8 19 00 00 00 00 00 movq         $0x0,0x19e80f(%rip)      %=0x0,@0x4366d18
-     0x7f42041c8509 6d    <+227>:  ││     83 3d e0 21 1a 00 00             cmpl         $0x0,0x1a21e0(%rip)      %=0x0,@0x436a6f0
-     0x7f42041c8510 5d    <+234>:  ││╭─◄  74 0b                            je           0x7f42041c851d           __GI_abort+247@%=0x41c851d
-                                   │││                                     Jump taken, ZF[1] == 1
-                                   │││                                     Jump taken, ZF[1] == 1
-     0x7f42041c8512 5b    <+236>:  │││    f0 ff 0d f7 e7 19 00             lock decl    0x19e7f7(%rip)           !,@0x4366d10,~0x0,ALT:,@0x4366d10,~0x0
-     0x7f42041c8519 4b    <+243>:  │││╭◄  75 0a                            jne          0x7f42041c8525           __GI_abort+255@%=0x41c8525
-                                   ││││                                    Jump NOT taken, ZF[1] == 0
-                                   ││││                                    Jump NOT taken, ZF[1] == 0
-     0x7f42041c851b 3b    <+245>:  ││││╭◄ eb 22                            jmp          0x7f42041c853f           __GI_abort+281@%=0x41c853f
-     0x7f42041c851d 4ad   <+247>:  ││╰││► ff 0d ed e7 19 00                decl         0x19e7ed(%rip)           !,@0x4366d10,~0x0,ALT:,@0x4366d10,~0x0
- Mar Address        Hist  Offset   Jumps  Bytes                            Mnemonic     Args                     Reference                                                   
-     0x7f42041c8523 3a    <+253>:  ││╭││◄ 74 1a                            je           0x7f42041c853f           __GI_abort+281@%=0x41c853f
-                                   │││││                                   Jump taken, ZF[1] == 1
-                                   │││││                                   Jump taken, ZF[1] == 1
-     0x7f42041c8525 6e    <+255>:  │││╰│► 48 8d 3d e4 e7 19 00             lea          0x19e7e4(%rip),%rdi      @0x4366d10,~0x0,ALT:,@0x4366d10,~0x0
-     0x7f42041c852c 5     <+262>:  │││ │  48 81 ec 80 00 00 00             sub          $0x80,%rsp               
-     0x7f42041c8533 4     <+269>:  │││ │  e8 78 65 0e 00                   callq        0x7f42042aeab0           __lll_unlock_wake_private@%=0x42aeab0
-     0x7f42041c8538 3     <+274>:  │││ │  48 81 c4 80 00 00 00             add          $0x80,%rsp               
-     0x7f42041c853f 2abc  <+281>:  │╰┴─┴► bf 06 00 00 00                   mov          $0x6,%edi                %=0x6
-     0x7f42041c8544 1     <+286>:  │      e8 37 67 01 00                   callq        0x7f42041dec80           __GI_raise@%=0x41dec80
-  →  0x7f42041c8549 0     <+291>:  │      64 48 8b 14 25 10 00 00 00       mov          %fs:0x10,%rdx            %=0x10
-     0x7f42041c8552       <+300>:  │      48 39 15 bf e7 19 00             cmp          %rdx,0x19e7bf(%rip)      %=0x10,@0x4366d18,=0x0
-     0x7f42041c8559       <+307>:  │╭───◄ 74 46                            je           0x7f42041c85a1           __GI_abort+379@%=0x41c85a1
-                                   ││                                      Jump NOT taken, ZF[0] == 1
-     0x7f42041c855b       <+309>:  ││     be 01 00 00 00                   mov          $0x1,%esi                %=0x1
-     0x7f42041c8560       <+314>:  ││     31 c0                            xor          %eax,%eax                %=0x0
-     0x7f42041c8562       <+316>:  ││     83 3d 87 21 1a 00 00             cmpl         $0x0,0x1a2187(%rip)      %=0x0,@0x436a6f0
-     0x7f42041c8569       <+323>:  ││╭──◄ 74 0c                            je           0x7f42041c8577           __GI_abort+337@%=0x41c8577
-                                   │││                                     Jump taken, ZF[1] == 1
-     0x7f42041c856b       <+325>:  │││    f0 0f b1 35 9d e7 19 00          lock cmpxchg %esi,0x19e79d(%rip)      %=0x1,@0x4366d10,=0x0
-     0x7f42041c8573       <+333>:  │││╭─◄ 75 0b                            jne          0x7f42041c8580           __GI_abort+346@%=0x41c8580
-                                   ││││                                    Jump taken, ZF[0] == 0
-     0x7f42041c8575       <+335>:  ││││╭◄ eb 23                            jmp          0x7f42041c859a           __GI_abort+372@%=0x41c859a
-     0x7f42041c8577       <+337>:  ││╰││► 0f b1 35 92 e7 19 00             cmpxchg      %esi,0x19e792(%rip)      %=0x1,@0x4366d10,=0x0
-     0x7f42041c857e       <+344>:  ││╭││◄ 74 1a                            je           0x7f42041c859a           __GI_abort+372@%=0x41c859a
-                                   │││││                                   Jump NOT taken, ZF[0] == 1
-     0x7f42041c8580       <+346>:  │││╰│► 48 8d 3d 89 e7 19 00             lea          0x19e789(%rip),%rdi      @0x4366d10,~0x0,ALT:,@0x4366d10,~0x0
-     0x7f42041c8587       <+353>:  │││ │  48 81 ec 80 00 00 00             sub          $0x80,%rsp               
-     0x7f42041c858e       <+360>:  │││ │  e8 ed 64 0e 00                   callq        0x7f42042aea80           __lll_lock_wait_private@%=0x42aea80
-     0x7f42041c8593       <+365>:  │││ │  48 81 c4 80 00 00 00             add          $0x80,%rsp               
-     0x7f42041c859a       <+372>:  ││╰─┴► 48 89 15 77 e7 19 00             mov          %rdx,0x19e777(%rip)      %=0x10,@0x4366d18,~0x0,ALT:,%=0x10,@0x4366d18,~0x0
-     0x7f42041c85a1       <+379>:  │╰───► ff 05 6d e7 19 00                incl         0x19e76d(%rip)           !,@0x4366d14,~0x0,ALT:,@0x4366d14,~0x0,ALT:,@0x4366d14,~0x0
-     0x7f42041c85a7       <+385>:  │   ╭◄ eb 05                            jmp          0x7f42041c85ae           __GI_abort+392@%=0x41c85ae
-     0x7f42041c85a9       <+387>:  ╰───│► 83 f8 02                         cmp          $0x2,%eax                %=0x2,%=0x0
-     0x7f42041c85ac       <+390>:     ╭│◄ 75 47                            jne          0x7f42041c85f5           __GI_abort+463@%=0x41c85f5
-                                      ││                                   Jump taken, ZF[0] == 0
-                                      ││                                   Jump taken, ZF[0] == 0
-     0x7f42041c85ae       <+392>:     │╰► 48 8d b4 24 80 00 00 00          lea          0x80(%rsp),%rsi          
-     0x7f42041c85b6       <+400>:     │   31 c0                            xor          %eax,%eax                %=0x0
-     0x7f42041c85b8       <+402>:     │   b9 26 00 00 00                   mov          $0x26,%ecx               %=0x26
-     0x7f42041c85bd       <+407>:     │   48 83 ca ff                      or           $0xffffffffffffffff,%rdx !,%=0xffffffff,%=0x10
-     0x7f42041c85c1       <+411>:     │   c7 05 55 e7 19 00 03 00 00 00    movl         $0x3,0x19e755(%rip)      %=0x3,@0x4366d20,~0x0,ALT:,%=0x3,@0x4366d20,~0x0
-     0x7f42041c85cb       <+421>:     │   48 89 f7                         mov          %rsi,%rdi                
-     0x7f42041c85ce       <+424>:     │   f3 ab                            rep stos     %eax,%es:(%rdi)          !
-     0x7f42041c85d0       <+426>:     │   b8 10 00 00 00                   mov          $0x10,%eax               %=0x10
-     0x7f42041c85d5       <+431>:     │╭► 48 89 14 c6                      mov          %rdx,(%rsi,%rax,8)       %=0x10
-     0x7f42041c85d9       <+435>:     ││  48 ff c8                         dec          %rax                     !,%=0x10
-     0x7f42041c85dc       <+438>:     │╰◄ 75 f7                            jne          0x7f42041c85d5           __GI_abort+431@%=0x41c85d5
-                                      │                                    Jump NOT taken, ZF[1] == 0
-                                      │                                    Jump NOT taken, ZF[1] == 0
-     0x7f42041c85de       <+440>:     │   31 d2                            xor          %edx,%edx                %=0x0
-     0x7f42041c85e0       <+442>:     │   bf 06 00 00 00                   mov          $0x6,%edi                %=0x6
-     0x7f42041c85e5       <+447>:     │   c7 84 24 08 01 00 00 00 00 00 00 movl         $0x0,0x108(%rsp)         %=0x0
-     0x7f42041c85f0       <+458>:     │   e8 fb 69 01 00                   callq        0x7f42041deff0           __GI___sigaction@%=0x41deff0
-     0x7f42041c85f5       <+463>:     ╰─► 83 3d 24 e7 19 00 03             cmpl         $0x3,0x19e724(%rip)      %=0x3,@0x4366d20,=0x0
-     0x7f42041c85fc       <+470>:      ╭◄ 75 14                            jne          0x7f42041c8612           __GI_abort+492@%=0x41c8612
-                                       │                                   Jump taken, ZF[0] == 0
-                                       │                                   Jump taken, ZF[0] == 0
-     0x7f42041c85fe       <+472>:      │  c7 05 18 e7 19 00 04 00 00 00    movl         $0x4,0x19e718(%rip)      %=0x4,@0x4366d20,~0x0,ALT:,%=0x4,@0x4366d20,~0x0
-     0x7f42041c8608       <+482>:      │  bf 06 00 00 00                   mov          $0x6,%edi                %=0x6
-     0x7f42041c860d       <+487>:      │  e8 6e 66 01 00                   callq        0x7f42041dec80           __GI_raise@%=0x41dec80
-     0x7f42041c8612       <+492>:      ╰► 83 3d 07 e7 19 00 04             cmpl         $0x4,0x19e707(%rip)      %=0x4,@0x4366d20,=0x0
-     0x7f42041c8619       <+499>:      ╭◄ 75 0b                            jne          0x7f42041c8626           __GI_abort+512@%=0x41c8626
-                                       │                                   Jump taken, ZF[0] == 0
-                                       │                                   Jump taken, ZF[0] == 0
- Mar Address        Hist  Offset   Jumps  Bytes                            Mnemonic     Args                     Reference                                                   
-     0x7f42041c861b       <+501>:      │  c7 05 fb e6 19 00 05 00 00 00    movl         $0x5,0x19e6fb(%rip)      %=0x5,@0x4366d20,~0x0,ALT:,%=0x5,@0x4366d20,~0x0
-     0x7f42041c8625       <+511>:      │  f4                               hlt                                   
-     0x7f42041c8626       <+512>:      ╰► 83 3d f3 e6 19 00 05             cmpl         $0x5,0x19e6f3(%rip)      %=0x5,@0x4366d20,=0x0
-     0x7f42041c862d       <+519>:      ╭◄ 75 14                            jne          0x7f42041c8643           __GI_abort+541@%=0x41c8643
-                                       │                                   Jump taken, ZF[0] == 0
-                                       │                                   Jump taken, ZF[0] == 0
-     0x7f42041c862f       <+521>:      │  c7 05 e7 e6 19 00 06 00 00 00    movl         $0x6,0x19e6e7(%rip)      %=0x6,@0x4366d20,~0x0,ALT:,%=0x6,@0x4366d20,~0x0
-     0x7f42041c8639       <+531>:      │  bf 7f 00 00 00                   mov          $0x7f,%edi               %=0x7f
-     0x7f42041c863e       <+536>:      │  e8 cd 60 0a 00                   callq        0x7f420426e710           __GI__exit@%=0x426e710
-     0x7f42041c8643       <+541>:      ├► f4                               hlt                                   
-     0x7f42041c8644       <+542>:      ╰◄ eb fd                            jmp          0x7f42041c8643           __GI_abort+541@%=0x41c8643
+ Mar Address            Hist  Offset   Jumps  Bytes                            Mnemonic     Args                     S Reference                                  
+     0x00007f42041c8426       <+0 >:          50                               push         %rax                       
+     0x00007f42041c8427       <+1 >:          58                               pop          %rax                       
+     0x00007f42041c8428       <+2 >:          64 48 8b 14 25 10 00 00 00       mov          %fs:0x10,%rdx              %=0x10
+     0x00007f42041c8431       <+11>:          48 81 ec 28 01 00 00             sub          $0x128,%rsp                
+     0x00007f42041c8438       <+18>:          64 48 8b 04 25 28 00 00 00       mov          %fs:0x28,%rax              %=0x28
+     0x00007f42041c8441       <+27>:          48 89 84 24 18 01 00 00          mov          %rax,0x118(%rsp)           %=0x28
+     0x00007f42041c8449       <+35>:          31 c0                            xor          %eax,%eax                  %=0x0
+     0x00007f42041c844b       <+37>:          48 39 15 c6 e8 19 00             cmp          %rdx,0x19e8c6(%rip)        %=0x10,@0x7f4204366d18
+     0x00007f42041c8452       <+44>:   ╭◄     74 44                            je           0x7f42041c8498             __GI_abort+114@%=0x7f42041c8498
+                                       │                                       Unhandled conditional jump: Flag value(s) ZF,1 unknown                                        
+     0x00007f42041c8454       <+46>:   │      be 01 00 00 00                   mov          $0x1,%esi                  %=0x1
+     0x00007f42041c8459       <+51>:   │      83 3d 90 22 1a 00 00             cmpl         $0x0,0x1a2290(%rip)        %=0x0,@0x7f420436a6f0
+     0x00007f42041c8460       <+58>:   │╭◄    74 0c                            je           0x7f42041c846e             __GI_abort+72@%=0x7f42041c846e
+                                       ││                                      Unhandled conditional jump: Flag value(s) ZF,1 unknown                                        
+     0x00007f42041c8462       <+60>:   ││     f0 0f b1 35 a6 e8 19 00          lock cmpxchg %esi,0x19e8a6(%rip)        %=0x1,@0x7f4204366d10
+     0x00007f42041c846a       <+68>:   ││╭◄   75 0b                            jne          0x7f42041c8477             __GI_abort+81@%=0x7f42041c8477
+                                       │││                                     Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+     0x00007f42041c846c       <+70>:   │││╭◄  eb 23                            jmp          0x7f42041c8491             __GI_abort+107@%=0x7f42041c8491
+     0x00007f42041c846e       <+72>:   │╰││►  0f b1 35 9b e8 19 00             cmpxchg      %esi,0x19e89b(%rip)        %=0x1,@0x7f4204366d10
+     0x00007f42041c8475       <+79>:   │╭││◄  74 1a                            je           0x7f42041c8491             __GI_abort+107@%=0x7f42041c8491
+                                       ││││                                    Unhandled conditional jump: Flag value(s) ZF,1 unknown                                        
+     0x00007f42041c8477       <+81>:   ││╰│►  48 8d 3d 92 e8 19 00             lea          0x19e892(%rip),%rdi        @0x7f4204366d10
+     0x00007f42041c847e       <+88>:   ││ │   48 81 ec 80 00 00 00             sub          $0x80,%rsp                 
+     0x00007f42041c8485       <+95>:   ││ │   e8 f6 65 0e 00                   callq        0x7f42042aea80             __lll_lock_wait_private@%=0x7f42042aea80
+     0x00007f42041c848a       <+100>:  ││ │   48 81 c4 80 00 00 00             add          $0x80,%rsp                 
+     0x00007f42041c8491       <+107>:  │╰─┴►  48 89 15 80 e8 19 00             mov          %rdx,0x19e880(%rip)        %=0x10,@0x7f4204366d18
+     0x00007f42041c8498       <+114>:  ╰───►  ff 05 76 e8 19 00                incl         0x19e876(%rip)           ! @0x7f4204366d14
+     0x00007f42041c849e 10f   <+120>:         83 3d 7b e8 19 00 00             cmpl         $0x0,0x19e87b(%rip)        %=0x0,@0x7f4204366d20
+     0x00007f42041c84a5 9f    <+127>:   ╭──◄  75 36                            jne          0x7f42041c84dd             __GI_abort+183@%=0x7f42041c84dd
+                                        │                                      Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+                                        │                                      Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+     0x00007f42041c84a7       <+129>:   │     c7 05 6f e8 19 00 01 00 00 00    movl         $0x1,0x19e86f(%rip)        %=0x1,@0x7f4204366d20
+     0x00007f42041c84b1       <+139>:   │     b8 10 00 00 00                   mov          $0x10,%eax                 %=0x10
+     0x00007f42041c84b6       <+144>:   │╭─►  48 ff c8                         dec          %rax                     ! %=0x10
+     0x00007f42041c84b9       <+147>:   ││    48 89 e6                         mov          %rsp,%rsi                  
+     0x00007f42041c84bc       <+150>:   ││    48 83 f8 ff                      cmp          $0xffffffffffffffff,%rax   %=0xffffffffffffffff,%=0x10
+     0x00007f42041c84c0       <+154>:   ││╭◄  74 0a                            je           0x7f42041c84cc             __GI_abort+166@%=0x7f42041c84cc
+                                        │││                                    Jump NOT taken, ZF[0] == 1                                        
+                                        │││                                    Jump NOT taken, ZF[0] == 1                                        
+     0x00007f42041c84c2       <+156>:   │││   48 c7 04 c6 00 00 00 00          movq         $0x0,(%rsi,%rax,8)         %=0x0
+     0x00007f42041c84ca       <+164>:   │╰│◄  eb ea                            jmp          0x7f42041c84b6             __GI_abort+144@%=0x7f42041c84b6
+     0x00007f42041c84cc       <+166>:   │ ╰►  31 d2                            xor          %edx,%edx                  %=0x0
+     0x00007f42041c84ce       <+168>:   │     bf 01 00 00 00                   mov          $0x1,%edi                  %=0x1
+     0x00007f42041c84d3 10c   <+173>:   │     48 83 0c 24 20                   orq          $0x20,(%rsp)             ! %=0x20
+     0x00007f42041c84d8 9c    <+178>:   │     e8 43 6b 01 00                   callq        0x7f42041df020             __GI___sigprocmask@%=0x7f42041df020
+     0x00007f42041c84dd 8cf   <+183>:   ╰──►  8b 05 3d e8 19 00                mov          0x19e83d(%rip),%eax        @0x7f4204366d20
+     0x00007f42041c84e3 7c    <+189>:         83 f8 01                         cmp          $0x1,%eax                  %=0x1
+     0x00007f42041c84e6 6c    <+192>:  ╭───◄  0f 85 bd 00 00 00                jne          0x7f42041c85a9             __GI_abort+387@%=0x7f42041c85a9
+                                       │                                       Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+                                       │                                       Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+     0x00007f42041c84ec 5c    <+198>:  │      ff 0d 22 e8 19 00                decl         0x19e822(%rip)           ! @0x7f4204366d14
+     0x00007f42041c84f2 4c    <+204>:  │      c7 05 24 e8 19 00 00 00 00 00    movl         $0x0,0x19e824(%rip)        %=0x0,@0x7f4204366d20
+     0x00007f42041c84fc 3c    <+214>:  │╭──◄  75 41                            jne          0x7f42041c853f             __GI_abort+281@%=0x7f42041c853f
+                                       ││                                      Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+                                       ││                                      Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+     0x00007f42041c84fe 7d    <+216>:  ││     48 c7 05 0f e8 19 00 00 00 00 00 movq         $0x0,0x19e80f(%rip)        %=0x0,@0x7f4204366d18
+     0x00007f42041c8509 6d    <+227>:  ││     83 3d e0 21 1a 00 00             cmpl         $0x0,0x1a21e0(%rip)        %=0x0,@0x7f420436a6f0
+     0x00007f42041c8510 5d    <+234>:  ││╭─◄  74 0b                            je           0x7f42041c851d             __GI_abort+247@%=0x7f42041c851d
+                                       │││                                     Unhandled conditional jump: Flag value(s) ZF,1 unknown                                        
+                                       │││                                     Unhandled conditional jump: Flag value(s) ZF,1 unknown                                        
+     0x00007f42041c8512 5b    <+236>:  │││    f0 ff 0d f7 e7 19 00             lock decl    0x19e7f7(%rip)           ! @0x7f4204366d10
+     0x00007f42041c8519 4b    <+243>:  │││╭◄  75 0a                            jne          0x7f42041c8525             __GI_abort+255@%=0x7f42041c8525
+                                       ││││                                    Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+                                       ││││                                    Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+     0x00007f42041c851b 3b    <+245>:  ││││╭◄ eb 22                            jmp          0x7f42041c853f             __GI_abort+281@%=0x7f42041c853f
+     0x00007f42041c851d 4ad   <+247>:  ││╰││► ff 0d ed e7 19 00                decl         0x19e7ed(%rip)           ! @0x7f4204366d10
+ Mar Address            Hist  Offset   Jumps  Bytes                            Mnemonic     Args                     S Reference                                  
+     0x00007f42041c8523 3a    <+253>:  ││╭││◄ 74 1a                            je           0x7f42041c853f             __GI_abort+281@%=0x7f42041c853f
+                                       │││││                                   Unhandled conditional jump: Flag value(s) ZF,1 unknown                                        
+                                       │││││                                   Unhandled conditional jump: Flag value(s) ZF,1 unknown                                        
+     0x00007f42041c8525 6e    <+255>:  │││╰│► 48 8d 3d e4 e7 19 00             lea          0x19e7e4(%rip),%rdi        @0x7f4204366d10
+     0x00007f42041c852c 5     <+262>:  │││ │  48 81 ec 80 00 00 00             sub          $0x80,%rsp                 
+     0x00007f42041c8533 4     <+269>:  │││ │  e8 78 65 0e 00                   callq        0x7f42042aeab0             __lll_unlock_wake_private@%=0x7f42042aeab0
+     0x00007f42041c8538 3     <+274>:  │││ │  48 81 c4 80 00 00 00             add          $0x80,%rsp                 
+     0x00007f42041c853f 2abc  <+281>:  │╰┴─┴► bf 06 00 00 00                   mov          $0x6,%edi                  %=0x6
+     0x00007f42041c8544 1     <+286>:  │      e8 37 67 01 00                   callq        0x7f42041dec80             __GI_raise@%=0x7f42041dec80
+  →  0x00007f42041c8549 0     <+291>:  │      64 48 8b 14 25 10 00 00 00       mov          %fs:0x10,%rdx              %=0x10
+     0x00007f42041c8552       <+300>:  │      48 39 15 bf e7 19 00             cmp          %rdx,0x19e7bf(%rip)        %=0x10,@0x7f4204366d18
+     0x00007f42041c8559       <+307>:  │╭───◄ 74 46                            je           0x7f42041c85a1             __GI_abort+379@%=0x7f42041c85a1
+                                       ││                                      Unhandled conditional jump: Flag value(s) ZF,1 unknown                                        
+     0x00007f42041c855b       <+309>:  ││     be 01 00 00 00                   mov          $0x1,%esi                  %=0x1
+     0x00007f42041c8560       <+314>:  ││     31 c0                            xor          %eax,%eax                  %=0x0
+     0x00007f42041c8562       <+316>:  ││     83 3d 87 21 1a 00 00             cmpl         $0x0,0x1a2187(%rip)        %=0x0,@0x7f420436a6f0
+     0x00007f42041c8569       <+323>:  ││╭──◄ 74 0c                            je           0x7f42041c8577             __GI_abort+337@%=0x7f42041c8577
+                                       │││                                     Unhandled conditional jump: Flag value(s) ZF,1 unknown                                        
+     0x00007f42041c856b       <+325>:  │││    f0 0f b1 35 9d e7 19 00          lock cmpxchg %esi,0x19e79d(%rip)        %=0x1,@0x7f4204366d10
+     0x00007f42041c8573       <+333>:  │││╭─◄ 75 0b                            jne          0x7f42041c8580             __GI_abort+346@%=0x7f42041c8580
+                                       ││││                                    Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+     0x00007f42041c8575       <+335>:  ││││╭◄ eb 23                            jmp          0x7f42041c859a             __GI_abort+372@%=0x7f42041c859a
+     0x00007f42041c8577       <+337>:  ││╰││► 0f b1 35 92 e7 19 00             cmpxchg      %esi,0x19e792(%rip)        %=0x1,@0x7f4204366d10
+     0x00007f42041c857e       <+344>:  ││╭││◄ 74 1a                            je           0x7f42041c859a             __GI_abort+372@%=0x7f42041c859a
+                                       │││││                                   Unhandled conditional jump: Flag value(s) ZF,1 unknown                                        
+     0x00007f42041c8580       <+346>:  │││╰│► 48 8d 3d 89 e7 19 00             lea          0x19e789(%rip),%rdi        @0x7f4204366d10
+     0x00007f42041c8587       <+353>:  │││ │  48 81 ec 80 00 00 00             sub          $0x80,%rsp                 
+     0x00007f42041c858e       <+360>:  │││ │  e8 ed 64 0e 00                   callq        0x7f42042aea80             __lll_lock_wait_private@%=0x7f42042aea80
+     0x00007f42041c8593       <+365>:  │││ │  48 81 c4 80 00 00 00             add          $0x80,%rsp                 
+     0x00007f42041c859a       <+372>:  ││╰─┴► 48 89 15 77 e7 19 00             mov          %rdx,0x19e777(%rip)        %=0x10,@0x7f4204366d18
+     0x00007f42041c85a1       <+379>:  │╰───► ff 05 6d e7 19 00                incl         0x19e76d(%rip)           ! @0x7f4204366d14
+     0x00007f42041c85a7       <+385>:  │   ╭◄ eb 05                            jmp          0x7f42041c85ae             __GI_abort+392@%=0x7f42041c85ae
+     0x00007f42041c85a9       <+387>:  ╰───│► 83 f8 02                         cmp          $0x2,%eax                  %=0x2
+     0x00007f42041c85ac       <+390>:     ╭│◄ 75 47                            jne          0x7f42041c85f5             __GI_abort+463@%=0x7f42041c85f5
+                                          ││                                   Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+                                          ││                                   Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+     0x00007f42041c85ae       <+392>:     │╰► 48 8d b4 24 80 00 00 00          lea          0x80(%rsp),%rsi            
+     0x00007f42041c85b6       <+400>:     │   31 c0                            xor          %eax,%eax                  %=0x0
+     0x00007f42041c85b8       <+402>:     │   b9 26 00 00 00                   mov          $0x26,%ecx                 %=0x26
+     0x00007f42041c85bd       <+407>:     │   48 83 ca ff                      or           $0xffffffffffffffff,%rdx ! %=0xffffffffffffffff,%=0x10
+     0x00007f42041c85c1       <+411>:     │   c7 05 55 e7 19 00 03 00 00 00    movl         $0x3,0x19e755(%rip)        %=0x3,@0x7f4204366d20
+     0x00007f42041c85cb       <+421>:     │   48 89 f7                         mov          %rsi,%rdi                  
+     0x00007f42041c85ce       <+424>:     │   f3 ab                            rep stos     %eax,%es:(%rdi)          ! 
+     0x00007f42041c85d0       <+426>:     │   b8 10 00 00 00                   mov          $0x10,%eax                 %=0x10
+     0x00007f42041c85d5       <+431>:     │╭► 48 89 14 c6                      mov          %rdx,(%rsi,%rax,8)         %=0x10
+     0x00007f42041c85d9       <+435>:     ││  48 ff c8                         dec          %rax                     ! %=0x10
+     0x00007f42041c85dc       <+438>:     │╰◄ 75 f7                            jne          0x7f42041c85d5             __GI_abort+431@%=0x7f42041c85d5
+                                          │                                    Jump NOT taken, ZF[1] == 0                                        
+                                          │                                    Jump NOT taken, ZF[1] == 0                                        
+     0x00007f42041c85de       <+440>:     │   31 d2                            xor          %edx,%edx                  %=0x0
+     0x00007f42041c85e0       <+442>:     │   bf 06 00 00 00                   mov          $0x6,%edi                  %=0x6
+     0x00007f42041c85e5       <+447>:     │   c7 84 24 08 01 00 00 00 00 00 00 movl         $0x0,0x108(%rsp)           %=0x0
+     0x00007f42041c85f0       <+458>:     │   e8 fb 69 01 00                   callq        0x7f42041deff0             __GI___sigaction@%=0x7f42041deff0
+     0x00007f42041c85f5       <+463>:     ╰─► 83 3d 24 e7 19 00 03             cmpl         $0x3,0x19e724(%rip)        %=0x3,@0x7f4204366d20
+     0x00007f42041c85fc       <+470>:      ╭◄ 75 14                            jne          0x7f42041c8612             __GI_abort+492@%=0x7f42041c8612
+                                           │                                   Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+                                           │                                   Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+     0x00007f42041c85fe       <+472>:      │  c7 05 18 e7 19 00 04 00 00 00    movl         $0x4,0x19e718(%rip)        %=0x4,@0x7f4204366d20
+     0x00007f42041c8608       <+482>:      │  bf 06 00 00 00                   mov          $0x6,%edi                  %=0x6
+     0x00007f42041c860d       <+487>:      │  e8 6e 66 01 00                   callq        0x7f42041dec80             __GI_raise@%=0x7f42041dec80
+     0x00007f42041c8612       <+492>:      ╰► 83 3d 07 e7 19 00 04             cmpl         $0x4,0x19e707(%rip)        %=0x4,@0x7f4204366d20
+     0x00007f42041c8619       <+499>:      ╭◄ 75 0b                            jne          0x7f42041c8626             __GI_abort+512@%=0x7f42041c8626
+                                           │                                   Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+                                           │                                   Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+ Mar Address            Hist  Offset   Jumps  Bytes                            Mnemonic     Args                     S Reference                                  
+     0x00007f42041c861b       <+501>:      │  c7 05 fb e6 19 00 05 00 00 00    movl         $0x5,0x19e6fb(%rip)        %=0x5,@0x7f4204366d20
+     0x00007f42041c8625       <+511>:      │  f4                               hlt                                     
+     0x00007f42041c8626       <+512>:      ╰► 83 3d f3 e6 19 00 05             cmpl         $0x5,0x19e6f3(%rip)        %=0x5,@0x7f4204366d20
+     0x00007f42041c862d       <+519>:      ╭◄ 75 14                            jne          0x7f42041c8643             __GI_abort+541@%=0x7f42041c8643
+                                           │                                   Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+                                           │                                   Unhandled conditional jump: Flag value(s) ZF,0 unknown                                        
+     0x00007f42041c862f       <+521>:      │  c7 05 e7 e6 19 00 06 00 00 00    movl         $0x6,0x19e6e7(%rip)        %=0x6,@0x7f4204366d20
+     0x00007f42041c8639       <+531>:      │  bf 7f 00 00 00                   mov          $0x7f,%edi                 %=0x7f
+     0x00007f42041c863e       <+536>:      │  e8 cd 60 0a 00                   callq        0x7f420426e710             __GI__exit@%=0x7f420426e710
+     0x00007f42041c8643       <+541>:      ├► f4                               hlt                                     
+     0x00007f42041c8644       <+542>:      ╰◄ eb fd                            jmp          0x7f42041c8643             __GI_abort+541@%=0x7f42041c8643
 Instructions in range 0x1 - 0x3a of [('Target', ',,bold', 0, 0)]
- Ma Address      Offset  Jump By Mnemonic     Args      Reference Target
-    0x00000001   <+0>:        ff mov          $1,%rax   %=0x1
-    0x00000002   <+1>:   ╭◄   ff jmp          0x3       foo@%=0x3
-    0x00000003   <+2>:   ╰►   ff mov          $3,%rax   %=0x3
-    0x00000004   <+3>:   ╭◄   ff jmp          0x6       foo@%=0x6
-    0x00000005   <+4>:   │╭◄  ff jmp          0x6                 TGT:<foo>
-    0x00000006   <+5>:   ╰┴►  ff mov          $6,%rax   %=0x6
-    0x00000007   <+6>:   ╭─◄  ff jmp          0xb       foo@%=0xb
-    0x00000008   <+7>:   │╭◄  ff jmp          0xa                 TGT:<foo>
-    0x00000009   <+8>:   ││   ff mov          $3,%rax   
-    0x0000000a   <+9>:   │╰►  ff mov          $3,%rax   
-    0x0000000b   <+10>:  ╰─►  ff mov          $3,%rax   %=0x3
-    0x0000000c   <+11>:   ╭►  ff mov          $3,%rax   %=0x3
-    0x0000000d   <+12>:   ╰◄  ff jmp          0xc       foo@%=0xc
-    0x0000000e   <+13>:       ff mov          $3,%rax   
-    0x0000000f   <+14>:  ╭─►  ff mov          $3,%rax   
-    0x00000010   <+14>:  │╭►  ff mov          $3,%rax   
-    0x00000011   <+15>:  ││   ff mov          $3,%rax   
-    0x00000012   <+16>:  │╰◄  ff jmp          0x10                TGT:<foo>
-    0x00000013   <+17>:  ╰─◄  ff jmp          0xf                 TGT:<foo>
-    0x00000014   <+18>:       ff mov          $3,%rax   
-    0x00000015   <+19>:  ╭─◄  ff jmp          0x18                TGT:<foo>
-    0x00000016   <+20>:  │╭◄  ff jmp          0x19                TGT:<foo>
-    0x00000017   <+21>:  ││╭◄ ff jmp          0x19                TGT:<foo>
-    0x00000018   <+22>:  ╰││► ff mov          $3,%rax   
-    0x00000019   <+23>:   ╰┴► ff mov          $3,%rax   
-    0x0000001a   <+25>:       ff mov          $3,%rax   
-    0x0000001b   <+26>:  ╭──◄ ff jmp          0x1e                TGT:<foo>
-    0x0000001c   <+27>:  │╭─► ff mov          $3,%rax   
-    0x0000001d   <+26>:  ││╭◄ ff jmp          0x20                TGT:<foo>
-    0x0000001e   <+27>:  ╰││► ff mov          $3,%rax   
-    0x0000001f   <+28>:   ╰│◄ ff jmp          0x1c                TGT:<foo>
-    0x00000020   <+29>:    ╰► ff mov          $3,%rax   
-    0x00000021   <+30>:       ff mov          $3,%rax   
-    0x00000022   <+31>:       ff lock cmpxchg %esi      
-    0x00000023   <+32>:       ff callq        0x4654235           TGT:<wherever>
-    0x00000024   <+33>:       ff mov          $3,%rax   
-    0x00000025   <+34>:    ╭◄ ff jmp          0x26                TGT:<foo> # FIRST
-    0x00000026   <+35>:    ├► ff mov          $3,%rax   
-    0x00000027   <+36>:    ╰◄ ff jmp          0x26                TGT:<foo>
-    0x00000028   <+33>:       ff mov          $3,%rax   
-    0x00000029   <+34>:    ╭◄ ff jmp          0x2a                TGT:<foo> # first
-    0x0000002a   <+35>:    ├► ff mov          $3,%rax   
-    0x0000002b   <+35>:    │  ff mov          $3,%rax   
-    0x0000002c   <+36>:    ╰◄ ff jmp          0x2a                TGT:<foo>
-    0x0000002d   <+33>:       ff mov          $3,%rax   
-    0x0000002e   <+34>:    ╭◄ ff jmp          0x30                TGT:<foo> # first
-    0x0000002f   <+35>:    │  ff mov          $3,%rax   
-    0x00000030   <+35>:    ├► ff mov          $3,%rax   
-    0x00000031   <+36>:    ╰◄ ff jmp          0x30                TGT:<foo>
-    0x00000032   <+35>:   ╭─► ff mov          $3,%rax   
- Ma Address      Offset  Jump By Mnemonic     Args      Reference Target
-    0x00000033   <+34>:   │╭◄ ff jmp          0x34                TGT:<foo>
-    0x00000034   <+35>:   │├► ff mov          $3,%rax   
-    0x00000035   <+35>:   ││  ff mov          $3,%rax   
-    0x00000036   <+35>:   ││  ff mov          $3,%rax   
-    0x00000037   <+36>:   │╰◄ ff jmp          0x34                TGT:<foo>
-    0x00000038   <+37>:   │   ff mov          $3,%rax   
-    0x00000039   <+37>:   ╰─◄ ff jmp          0x32                TGT:<foo>
-    0x0000003a   <+37>:       ff mov          $3,%rax   
+ Ma Address              Offset  Jump By Mnemonic     Args      S Reference 
+    0x0000000000000001   <+0>:        ff mov          $1,%rax     %=0x1
+    0x0000000000000002   <+1>:   ╭◄   ff jmp          0x3         foo@%=0x3
+    0x0000000000000003   <+2>:   ╰►   ff mov          $3,%rax     %=0x3
+    0x0000000000000004   <+3>:   ╭◄   ff jmp          0x6         foo@%=0x6
+    0x0000000000000005   <+4>:   │╭◄  ff jmp          0x6       ? 
+    0x0000000000000006   <+5>:   ╰┴►  ff mov          $6,%rax     %=0x6
+    0x0000000000000007   <+6>:   ╭─◄  ff jmp          0xb         foo@%=0xb
+    0x0000000000000008   <+7>:   │╭◄  ff jmp          0xa       ? 
+    0x0000000000000009   <+8>:   ││   ff mov          $3,%rax   ? 
+    0x000000000000000a   <+9>:   │╰►  ff mov          $3,%rax   ? 
+    0x000000000000000b   <+10>:  ╰─►  ff mov          $3,%rax     %=0x3
+    0x000000000000000c   <+11>:   ╭►  ff mov          $3,%rax     %=0x3
+    0x000000000000000d   <+12>:   ╰◄  ff jmp          0xc         foo@%=0xc
+    0x000000000000000e   <+13>:       ff mov          $3,%rax   ? 
+    0x000000000000000f   <+14>:  ╭─►  ff mov          $3,%rax   ? 
+    0x0000000000000010   <+14>:  │╭►  ff mov          $3,%rax   ? 
+    0x0000000000000011   <+15>:  ││   ff mov          $3,%rax   ? 
+    0x0000000000000012   <+16>:  │╰◄  ff jmp          0x10      ? 
+    0x0000000000000013   <+17>:  ╰─◄  ff jmp          0xf       ? 
+    0x0000000000000014   <+18>:       ff mov          $3,%rax   ? 
+    0x0000000000000015   <+19>:  ╭─◄  ff jmp          0x18      ? 
+    0x0000000000000016   <+20>:  │╭◄  ff jmp          0x19      ? 
+    0x0000000000000017   <+21>:  ││╭◄ ff jmp          0x19      ? 
+    0x0000000000000018   <+22>:  ╰││► ff mov          $3,%rax   ? 
+    0x0000000000000019   <+23>:   ╰┴► ff mov          $3,%rax   ? 
+    0x000000000000001a   <+25>:       ff mov          $3,%rax   ? 
+    0x000000000000001b   <+26>:  ╭──◄ ff jmp          0x1e      ? 
+    0x000000000000001c   <+27>:  │╭─► ff mov          $3,%rax   ? 
+    0x000000000000001d   <+26>:  ││╭◄ ff jmp          0x20      ? 
+    0x000000000000001e   <+27>:  ╰││► ff mov          $3,%rax   ? 
+    0x000000000000001f   <+28>:   ╰│◄ ff jmp          0x1c      ? 
+    0x0000000000000020   <+29>:    ╰► ff mov          $3,%rax   ? 
+    0x0000000000000021   <+30>:       ff mov          $3,%rax   ? 
+    0x0000000000000022   <+31>:       ff lock cmpxchg %esi      ? 
+    0x0000000000000023   <+32>:       ff callq        0x4654235 ? 
+    0x0000000000000024   <+33>:       ff mov          $3,%rax   ? 
+    0x0000000000000025   <+34>:    ╭◄ ff jmp          0x26      ? 
+    0x0000000000000026   <+35>:    ├► ff mov          $3,%rax   ? 
+    0x0000000000000027   <+36>:    ╰◄ ff jmp          0x26      ? 
+    0x0000000000000028   <+33>:       ff mov          $3,%rax   ? 
+    0x0000000000000029   <+34>:    ╭◄ ff jmp          0x2a      ? 
+    0x000000000000002a   <+35>:    ├► ff mov          $3,%rax   ? 
+    0x000000000000002b   <+35>:    │  ff mov          $3,%rax   ? 
+    0x000000000000002c   <+36>:    ╰◄ ff jmp          0x2a      ? 
+    0x000000000000002d   <+33>:       ff mov          $3,%rax   ? 
+    0x000000000000002e   <+34>:    ╭◄ ff jmp          0x30      ? 
+    0x000000000000002f   <+35>:    │  ff mov          $3,%rax   ? 
+    0x0000000000000030   <+35>:    ├► ff mov          $3,%rax   ? 
+    0x0000000000000031   <+36>:    ╰◄ ff jmp          0x30      ? 
+    0x0000000000000032   <+35>:   ╭─► ff mov          $3,%rax   ? 
+ Ma Address              Offset  Jump By Mnemonic     Args      S Reference 
+    0x0000000000000033   <+34>:   │╭◄ ff jmp          0x34      ? 
+    0x0000000000000034   <+35>:   │├► ff mov          $3,%rax   ? 
+    0x0000000000000035   <+35>:   ││  ff mov          $3,%rax   ? 
+    0x0000000000000036   <+35>:   ││  ff mov          $3,%rax   ? 
+    0x0000000000000037   <+36>:   │╰◄ ff jmp          0x34      ? 
+    0x0000000000000038   <+37>:   │   ff mov          $3,%rax   ? 
+    0x0000000000000039   <+37>:   ╰─◄ ff jmp          0x32      ? 
+    0x000000000000003a   <+37>:       ff mov          $3,%rax   ? 
 Instructions in range 0x1 - 0xb of [('Target', ',,bold', 0, 0)]
- Mar Address    His  Offset  Jum By Mnemonic Args    Reference Target
-     0x00000001 4c   <+0>:       ff mov      $1,%rax %=0x1
-     0x00000002 3c   <+1>:   ╭◄  ff jmp      0x3     foo@%=0x3
-     0x00000003 2ac  <+2>:   ╰►  ff mov      $3,%rax %=0x3
-     0x00000004 1a   <+3>:   ╭◄  ff jmp      0x6     foo@%=0x6
-     0x00000005 1b   <+4>:   │╭◄ ff jmp      0x6               TGT:<foo>
-  →  0x00000006 0ab  <+5>:   ╰┴► ff mov      $6,%rax %=0x6
-     0x00000007      <+6>:   ╭─◄ ff jmp      0xb     foo@%=0xb
-     0x00000008      <+7>:   │╭◄ ff jmp      0xa               TGT:<foo>
-     0x00000009      <+8>:   ││  ff mov      $3,%rax 
-     0x0000000a      <+9>:   │╰► ff lock mov $3,%rax 
-     0x0000000b      <+10>:  ╰─► ff mov      $3,%rax %=0x3
+ Mar Address            His  Offset  Jum By Mnemonic Args    S Reference 
+     0x0000000000000001 4c   <+0>:       ff mov      $1,%rax   %=0x1
+     0x0000000000000002 3c   <+1>:   ╭◄  ff jmp      0x3       foo@%=0x3
+     0x0000000000000003 2ac  <+2>:   ╰►  ff mov      $3,%rax   %=0x3
+     0x0000000000000004 1a   <+3>:   ╭◄  ff jmp      0x6       foo@%=0x6
+     0x0000000000000005 1b   <+4>:   │╭◄ ff jmp      0x6     ? 
+  →  0x0000000000000006 0ab  <+5>:   ╰┴► ff mov      $6,%rax   %=0x6
+     0x0000000000000007      <+6>:   ╭─◄ ff jmp      0xb       foo@%=0xb
+     0x0000000000000008      <+7>:   │╭◄ ff jmp      0xa     ? 
+     0x0000000000000009      <+8>:   ││  ff mov      $3,%rax ? 
+     0x000000000000000a      <+9>:   │╰► ff lock mov $3,%rax ? 
+     0x000000000000000b      <+10>:  ╰─► ff mov      $3,%rax   %=0x3
 Instructions in range 0x7fb32fecb162 - 0x7fb32fecb1ad of [('Target', ',,bold', 0, 0)]
- Ma Address          Offset  Jumps  Mnemonic  Args                Reference *
-    0x7fb32fecb162   <+18>:  ╭◄     jne       0x7fb32fecb198      raise+72@%=0x2fecb198
-                             │      Unhandled conditional jump: Flag value(s) ZF,0 unknown
-    0x7fb32fecb177   <+39>:  │╭┬►   movslq    %edi,%rdx           
-    0x7fb32fecb17a   <+42>:  │││    movslq    %esi,%rsi           
-    0x7fb32fecb18d   <+61>:  │││╭◄  ja        0x7fb32fecb1ad      raise+93@%=0x2fecb1ad
-                             ││││   Unhandled conditional jump: Flag value(s) ZF,0 unknown
-                             ││││   Unhandled conditional jump: Flag value(s) ZF,0 unknown
-    0x7fb32fecb18f   <+63>:  ││││   repz retq                     
-    0x7fb32fecb191   <+65>:  ││││   nopl      0x0(%rax)           
-    0x7fb32fecb198   <+72>:  ╰│││►  test      %ecx,%ecx           
-    0x7fb32fecb19a   <+74>:   ╰││◄  jg        0x7fb32fecb177      raise+39@%=0x2fecb177
-                               ││   Unhandled conditional jump: Flag value(s) ZF,0 unknown
-    0x7fb32fecb1a9   <+89>:    ││   mov       %eax,%ecx           
-    0x7fb32fecb1ab   <+91>:    ╰│◄  jmp       0x7fb32fecb177      raise+39@%=0x2fecb177
-    0x7fb32fecb1ad   <+93>:     ╰►  mov       0x36bca4(%rip),%rdx @0x30236e33,=0xccddeeff
+ Ma Address              Offset  Jumps  Mnemonic  Args                S Reference                                                            
+    0x00007fb32fecb162   <+18>:  ╭◄     jne       0x7fb32fecb198        raise+72@%=0x7fb32fecb198
+                                 │      Unhandled conditional jump: Flag value(s) ZF,0 unknown                                
+    0x00007fb32fecb177   <+39>:  │╭┬►   movslq    %edi,%rdx           ! 
+    0x00007fb32fecb17a   <+42>:  │││    movslq    %esi,%rsi           ! 
+    0x00007fb32fecb18d   <+61>:  │││╭◄  ja        0x7fb32fecb1ad        raise+93@%=0x7fb32fecb1ad
+                                 ││││   Unhandled conditional jump: Flag value(s) ZF,0 unknown                                
+                                 ││││   Unhandled conditional jump: Flag value(s) ZF,0 unknown                                
+    0x00007fb32fecb18f   <+63>:  ││││   repz retq                       
+    0x00007fb32fecb191   <+65>:  ││││   nopl      0x0(%rax)           ? 
+    0x00007fb32fecb198   <+72>:  ╰│││►  test      %ecx,%ecx             
+    0x00007fb32fecb19a   <+74>:   ╰││◄  jg        0x7fb32fecb177        raise+39@%=0x7fb32fecb177
+                                   ││   Unhandled conditional jump: Flag value(s) ZF,0 unknown                                
+    0x00007fb32fecb1a9   <+89>:    ││   mov       %eax,%ecx             
+    0x00007fb32fecb1ab   <+91>:    ╰│◄  jmp       0x7fb32fecb177        raise+39@%=0x7fb32fecb177
+    0x00007fb32fecb1ad   <+93>:     ╰►  mov       0x36bca4(%rip),%rdx   @0x7fb330236e33,~0x7fb330236e58,ALT:,@0x7fb330236e33,~0x7fb330236e58
 Instructions in range 0x32 - 0x3a of [('Target', ',,bold', 0, 0)]
- Ma Address      Offset  Jum By Mne Args    Reference  Target
-    0x00000032   <+35>:  ╭►  ff mov $3,%rax %=0x3
-    0x00000033   <+34>:  │╭◄ ff jmp 0x34    foo@%=0x34
-    0x00000034   <+35>:  │├► ff mov $3,%rax %=0x3
-    0x00000035   <+35>:  ││  ff mov $3,%rax %=0x3
-    0x00000036   <+35>:  ││  ff mov $3,%rax %=0x3
-    0x00000037   <+36>:  │╰◄ ff jmp 0x34    foo@%=0x34
-    0x00000038   <+37>:  │   ff mov $3,%rax 
-    0x00000039   <+37>:  ╰─◄ ff jmp 0x32               TGT:<foo>
-    0x0000003a   <+37>:      ff mov $3,%rax 
+ Ma Address              Offset  Jum By Mne Args    S Reference  
+    0x0000000000000032   <+35>:  ╭►  ff mov $3,%rax   %=0x3
+    0x0000000000000033   <+34>:  │╭◄ ff jmp 0x34      foo@%=0x34
+    0x0000000000000034   <+35>:  │├► ff mov $3,%rax   %=0x3
+    0x0000000000000035   <+35>:  ││  ff mov $3,%rax   %=0x3
+    0x0000000000000036   <+35>:  ││  ff mov $3,%rax   %=0x3
+    0x0000000000000037   <+36>:  │╰◄ ff jmp 0x34      foo@%=0x34
+    0x0000000000000038   <+37>:  │   ff mov $3,%rax ? 
+    0x0000000000000039   <+37>:  ╰─◄ ff jmp 0x32    ? 
+    0x000000000000003a   <+37>:      ff mov $3,%rax ? 
 Instructions in range 0x1 - 0x16 of [('Target', ',,bold', 0, 0)]
- Ma Address      Offse  Jump By Mne Args    Reference Target
-    0x00000001   <+0>:       ff mov $1,%rax %=0x1
-    0x00000002   <+1>:  ╭◄   ff jmp 0x4     foo@%=0x4
-    0x00000003   <+3>:  │╭◄  ff jmp 0x4               TGT:<foo>
-    0x00000004   <+2>:  ├┼►  ff mov $3,%rax %=0x3
-    0x00000005   <+3>:  ││ ⥀ ff jmp 0x5     foo@%=0x5
-    0x00000006   <+4>:  ╰│─◄ ff jmp 0x4               TGT:<foo>
-    0x00000007   <+4>:   ╰─◄ ff jmp 0x4               TGT:<foo>
-    0x00000008   <+5>:       ff mov $6,%rax 
-    0x00000009   <+6>:    ╭◄ ff jmp 0xa               TGT:<foo>
-    0x0000000a   <+8>:    ├► ff mov $3,%rax 
-    0x0000000b   <+7>:    ╰◄ ff jmp 0xa               TGT:<foo>
-    0x0000000c   <+9>:       ff mov $3,%rax 
-    0x0000000d   <+7>:    ╭◄ ff jmp 0xe               TGT:<foo>
-    0x0000000e   <+7>:    ╰⥀ ff jmp 0xe               TGT:<foo>
-    0x0000000f   <+9>:       ff mov $3,%rax 
-    0x00000010   <+7>:    ╭◄ ff jmp 0x11              TGT:<foo>
-    0x00000011   <+7>:    ╰⥀ ff jmp 0x11              TGT:<foo>
-    0x00000012   <+9>:       ff mov $3,%rax 
-    0x00000013   <+7>:    ╭◄ ff jmp 0x14              TGT:<foo>
-    0x00000014   <+7>:    ├⥀ ff jmp 0x14              TGT:<foo>
-    0x00000015   <+7>:    ╰◄ ff jmp 0x14              TGT:<foo>
-    0x00000016   <+9>:       ff mov $3,%rax 
+ Ma Address              Offse  Jump By Mne Args    S Reference 
+    0x0000000000000001   <+0>:       ff mov $1,%rax   %=0x1
+    0x0000000000000002   <+1>:  ╭◄   ff jmp 0x4       foo@%=0x4
+    0x0000000000000003   <+3>:  │╭◄  ff jmp 0x4     ? 
+    0x0000000000000004   <+2>:  ├┼►  ff mov $3,%rax   %=0x3
+    0x0000000000000005   <+3>:  ││ ⥀ ff jmp 0x5       foo@%=0x5
+    0x0000000000000006   <+4>:  ╰│─◄ ff jmp 0x4     ? 
+    0x0000000000000007   <+4>:   ╰─◄ ff jmp 0x4     ? 
+    0x0000000000000008   <+5>:       ff mov $6,%rax ? 
+    0x0000000000000009   <+6>:    ╭◄ ff jmp 0xa     ? 
+    0x000000000000000a   <+8>:    ├► ff mov $3,%rax ? 
+    0x000000000000000b   <+7>:    ╰◄ ff jmp 0xa     ? 
+    0x000000000000000c   <+9>:       ff mov $3,%rax ? 
+    0x000000000000000d   <+7>:    ╭◄ ff jmp 0xe     ? 
+    0x000000000000000e   <+7>:    ╰⥀ ff jmp 0xe     ? 
+    0x000000000000000f   <+9>:       ff mov $3,%rax ? 
+    0x0000000000000010   <+7>:    ╭◄ ff jmp 0x11    ? 
+    0x0000000000000011   <+7>:    ╰⥀ ff jmp 0x11    ? 
+    0x0000000000000012   <+9>:       ff mov $3,%rax ? 
+    0x0000000000000013   <+7>:    ╭◄ ff jmp 0x14    ? 
+    0x0000000000000014   <+7>:    ├⥀ ff jmp 0x14    ? 
+    0x0000000000000015   <+7>:    ╰◄ ff jmp 0x14    ? 
+    0x0000000000000016   <+9>:       ff mov $3,%rax ? 
 Instructions in range 0x1 - 0xf of [('Target', ',,bold', 0, 0)]
- Ma Address      Offse  Jumps    By Mne Arg Reference Target
-    0x00000001   <+1>:  ╭◄       ff jmp 0x8 foo@%=0x8
-    0x00000002   <+3>:  │╭◄      ff jmp 0x8           TGT:<foo>
-    0x00000003   <+3>:  ││╭◄     ff jmp 0x8           TGT:<foo>
-    0x00000004   <+4>:  │││╭◄    ff jmp 0x8           TGT:<foo>
-    0x00000005   <+4>:  ││││╭◄   ff jmp 0x8           TGT:<foo>
-    0x00000006   <+4>:  │││││╭◄  ff jmp 0x8           TGT:<foo>
-    0x00000007   <+4>:  ││││││╭◄ ff jmp 0x8           TGT:<foo>
-    0x00000008   <+4>:  ├┼┼┼┼┼┼⥀ ff jmp 0x8 foo@%=0x8
-    0x00000009   <+4>:  ╰││││││◄ ff jmp 0x8           TGT:<foo>
-    0x0000000a   <+4>:   ╰│││││◄ ff jmp 0x8           TGT:<foo>
-    0x0000000b   <+4>:    ╰││││◄ ff jmp 0x8           TGT:<foo>
-    0x0000000c   <+4>:     ╰│││◄ ff jmp 0x8           TGT:<foo>
-    0x0000000d   <+4>:      ╰││◄ ff jmp 0x8           TGT:<foo>
-    0x0000000e   <+4>:       ╰│◄ ff jmp 0x8           TGT:<foo>
-    0x0000000f   <+4>:        ╰◄ ff jmp 0x8           TGT:<foo>
+ Ma Address              Offse  Jumps    By Mne Arg S Reference 
+    0x0000000000000001   <+1>:  ╭◄       ff jmp 0x8   foo@%=0x8
+    0x0000000000000002   <+3>:  │╭◄      ff jmp 0x8 ? 
+    0x0000000000000003   <+3>:  ││╭◄     ff jmp 0x8 ? 
+    0x0000000000000004   <+4>:  │││╭◄    ff jmp 0x8 ? 
+    0x0000000000000005   <+4>:  ││││╭◄   ff jmp 0x8 ? 
+    0x0000000000000006   <+4>:  │││││╭◄  ff jmp 0x8 ? 
+    0x0000000000000007   <+4>:  ││││││╭◄ ff jmp 0x8 ? 
+    0x0000000000000008   <+4>:  ├┼┼┼┼┼┼⥀ ff jmp 0x8   foo@%=0x8
+    0x0000000000000009   <+4>:  ╰││││││◄ ff jmp 0x8 ? 
+    0x000000000000000a   <+4>:   ╰│││││◄ ff jmp 0x8 ? 
+    0x000000000000000b   <+4>:    ╰││││◄ ff jmp 0x8 ? 
+    0x000000000000000c   <+4>:     ╰│││◄ ff jmp 0x8 ? 
+    0x000000000000000d   <+4>:      ╰││◄ ff jmp 0x8 ? 
+    0x000000000000000e   <+4>:       ╰│◄ ff jmp 0x8 ? 
+    0x000000000000000f   <+4>:        ╰◄ ff jmp 0x8 ? 
 Instructions in range 0x2 - 0xa of [('Target', ',,bold', 0, 0)]
- Ma Address      Offset   By Mnem Args               Reference      
-    0x00000002   <+35>:   ff mov  $3,%rax            %=0x3
-    0x00000003   <+44>:   ff cmp  $0x6,%eax          %=0x6,%=0x3
-    0x00000004   <+35>:   ff mov  $3,%rax            %=0x3
-    0x00000005   <+35>:   ff mov  $3,%rax            %=0x3
-    0x00000006   <+35>:   ff jmpq *0xa37d60(,%rax,8) @0xa37d63,~0x0
-                             Unhandled conditional jump: Unhandled conditional suffix mpq
-    0x00000007   <+37>:   ff mov  $4,%rax            
-    0x00000008   <+37>:   ff mov  $3,%rax            
-    0x0000000a   <+37>:   ff mov  $3,%rax            
+ Ma Address              Offset   By Mnem Args               S Reference                         
+    0x0000000000000002   <+35>:   ff mov  $3,%rax              %=0x3
+    0x0000000000000003   <+44>:   ff cmp  $0x6,%eax            %=0x6,%=0x3
+    0x0000000000000004   <+35>:   ff mov  $3,%rax              %=0x3
+    0x0000000000000005   <+35>:   ff mov  $3,%rax              %=0x3
+    0x0000000000000006   <+35>:   ff jmpq *0xa37d60(,%rax,8)   @0xa37d63,~0x0computedjumptargets
+    0x0000000000000007   <+37>:   ff mov  $4,%rax            ? 
+    0x0000000000000008   <+37>:   ff mov  $3,%rax            ? 
+    0x000000000000000a   <+37>:   ff mov  $3,%rax            ? 
+Instructions in range 0x7fffffffc8dc - 0x7fffffffc917 of [('Target', ',,bold', 0, 0)]
+ Ma Address              Offs  Ju Bytes             Mnemon Args               S Reference        
+    0x00007fffffffc8dc   <+>:     01 00             add    %eax,(%rax)          
+    0x00007fffffffc8de   <+>:     00 00             add    %al,(%rax)           
+    0x00007fffffffc8e0   <+>:     60                (bad)                     ! 
+    0x00007fffffffc8e1   <+>:     72 80             jb     0x7fffffffc863       %=0x7fffffffc863
+                                                    Unhandled conditional jump: Flag value(s) CF,1 unknown                            
+    0x00007fffffffc8e3   <+>:     f7 ff             idiv   %edi               ! 
+    0x00007fffffffc8e5   <+>:  ╭◄ 7f 00             jg     0x7fffffffc8e7       %=0x7fffffffc8e7
+                               │                    Unhandled conditional jump: Flag value(s) ZF,0 unknown                            
+    0x00007fffffffc8e7   <+>:  ╰► 00 a3 19 ff f7 ff add    %ah,-0x800e7(%rbx)   
+    0x00007fffffffc8ed   <+>:  ╭◄ 7f 00             jg     0x7fffffffc8ef       %=0x7fffffffc8ef
+                               │                    Unhandled conditional jump: Flag value(s) ZF,0 unknown                            
+                               │                    Unhandled conditional jump: Flag value(s) ZF,0 unknown                            
+    0x00007fffffffc8ef   <+>:  ╰► 00 30             add    %dh,(%rax)           
+    0x00007fffffffc8f1   <+>:     05 e8 f7 ff 7f    add    $0x7ffff7e8,%eax     
+    0x00007fffffffc8f6   <+>:     00 00             add    %al,(%rax)           
+    0x00007fffffffc8f8   <+>:     ac                lods   %ds:(%rsi),%al     ! 
+    0x00007fffffffc8f9   <+>:     82                (bad)                     ! 
+    0x00007fffffffc8fa   <+>:     96                xchg   %eax,%esi          ! 
+    0x00007fffffffc8fb   <+>:     06                (bad)                     ! 
+    0x00007fffffffc8fc   <+>:     00 00             add    %al,(%rax)           
+    0x00007fffffffc8fe   <+>:     00 00             add    %al,(%rax)           
+    0x00007fffffffc900   <+>:     ac                lods   %ds:(%rsi),%al     ! 
+    0x00007fffffffc901   <+>:     64 80 f7 ff       fs xor $0xff,%bh            %=0xff
+    0x00007fffffffc905   <+>:  ╭◄ 7f 00             jg     0x7fffffffc907       %=0x7fffffffc907
+                               │                    Unhandled conditional jump: Flag value(s) ZF,0 unknown                            
+                               │                    Unhandled conditional jump: Flag value(s) ZF,0 unknown                            
+    0x00007fffffffc907   <+>:  ╰► 00 fa             add    %bh,%dl              
+    0x00007fffffffc909   <+>:     04 fd             add    $0xfd,%al            
+    0x00007fffffffc90b   <+>:     f7 ff             idiv   %edi               ! 
+    0x00007fffffffc90d   <+>:  ╭◄ 7f 00             jg     0x7fffffffc90f       %=0x7fffffffc90f
+                               │                    Unhandled conditional jump: Flag value(s) ZF,0 unknown                            
+                               │                    Unhandled conditional jump: Flag value(s) ZF,0 unknown                            
+    0x00007fffffffc90f   <+>:  ╰► 00 95 19 ff f7 ff add    %dl,-0x800e7(%rbp)   
+    0x00007fffffffc915   <+>:  ╭◄ 7f 00             jg     0x7fffffffc917       %=0x7fffffffc917
+                               │                    Unhandled conditional jump: Flag value(s) ZF,0 unknown                            
+                               │                    Unhandled conditional jump: Flag value(s) ZF,0 unknown                            
+    0x00007fffffffc917   <+>:  ╰► 00 00             add    %al,(%rax)           
+Instructions in range 0x8001214 - 0x8001236 of HAL_MspInit
+ Mar Address    Hi  Offset  Ju Bytes     Mnemo Args              S Reference                                 
+     0x08001214 8   <+0>:      ddf6      ble.n 0x8001204         X %=0x8001204
+                                         Flags unkown, cannot determine execution, acting as if it executes                          
+     0x08001216 7   <+2>:      f04f 5324 mov.w r3, #687865856      %=0x29000000, 0x29000000
+     0x0800121a 6   <+6>:      202a      movs  r0, #42           ! %=0x2a, 0x2a
+     0x0800121c 5   <+8>:      2100      movs  r1, #0            ! %=0x0
+     0x0800121e 4   <+10>:     e9c3 0100 strd  r0, r1, [r3]        @0x29000000
+     0x08001222 3   <+14>:     e9c3 0102 strd  r0, r1, [r3, #8]    @0x29000008
+     0x08001226 2   <+18>:     e9c3 0104 strd  r0, r1, [r3, #16]   @0x29000010
+     0x0800122a 1   <+22>:     e9c3 0106 strd  r0, r1, [r3, #24]   @0x29000018
+  →  0x0800122e 0a  <+26>:  ╭► 4b0a      ldr   r3, [pc, #40]       @0x8001258, (0x8001258 <COM1_MspInit+32>)
+     0x08001230 3a  <+28>:  │  681b      ldr   r3, [r3, #0]        
+     0x08001232 2a  <+30>:  │  2b01      cmp   r3, #1              %=0x1
+     0x08001234 1a  <+32>:  ╰◄ d1fb      bne.n 0x800122e         X %=0x800122e
+                                         Unhandled conditional branch: Flag value(s) Z,0 unknown                          
+                                         Flags unkown, cannot determine execution, acting as if it executes                          
+     0x08001236     <+34>:     2000      movs  r0, #0            ! %=0x0
+The target architecture is set to "i386:x86-64".
 No current process: you must name one.
 WARNING line='   0x6 <+35>: ff jmpq     *0xa37d60(,%rax,8)' has no targets
+The target architecture is set to "armv7".
 Exiting vdb...
