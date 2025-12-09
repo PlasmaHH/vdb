@@ -174,6 +174,8 @@ xi_history = {}
 
 color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#ffaa00;#f0f;#0ff;#8B0000;#008000;#00008B;#008080;#8B008B;#ff6699;#66ff99;#3333ff" ,gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
+exec_colors = vdb.config.parameter("vdb-asm-colors-execution", "#00ee00;#ee0000;#eeee00", gdb_type = vdb.config.PARAM_COLOR_LIST )
+
 valid_archs = [ "x86", "arm" ]
 # XXX Move to vdb.arch
 arch_aliases = {
@@ -181,6 +183,7 @@ arch_aliases = {
                 "i386:x86-64" : "x86",
                 "aarch64" : "arm",
                 "armv7" : "arm",
+                "armv7e-m" : "arm",
                 "armv7-m" : "arm",
                 "armv7-m.main" : "arm",
                 "armv8-m" : "arm",
@@ -210,7 +213,7 @@ def wrap_shorten( fname ):
 def format_unknown( val, fmt = None, dret = "<unknown>"):
     if( val is None ):
         return dret
-    if( fmt is None ):
+    if( fmt is None or len(fmt) == 0 ):
         return f"{val}"
     if( isinstance(val,str) or not isinstance(val,typing.Iterable) ):
         return fmt.format(val)
@@ -801,6 +804,14 @@ class instruction_base( abc.ABC ):
         self.unhandled = False
         self.explanation = []
         self.last_seen_registers = None # last time this was marked with real registers
+        self.last_executed = None
+        self.conditional = None
+
+
+    # This is for ARM like archs where conditional execution is standard
+    # Hint: x86 wants that too for cmov
+    @abc.abstractmethod
+    def executes( self, flags ):...
 
     # parse common parts of all asm dialects like
     # - current position marker
@@ -1481,6 +1492,7 @@ ascii mockup:
         marked_line = None
         context_start = None
         context_end = None
+        context_center = None
 
         otbl = []
 
@@ -1488,7 +1500,6 @@ ascii mockup:
         # can possibly output more than one in the table)
         otmap = {0:0}
 
-        extra_marker = None
         file_line = ""
 
         cg_events = []
@@ -1551,6 +1562,8 @@ ascii mockup:
             current_pc = int( current_pc )
 #        print(f"{current_pc=:#0x}")
 #        vdb.util.bark() # print("BARK")
+#        print(f"{context=}")
+#        print(f"{marked=}")
         for idx,i in enumerate(self.instructions):
             if( idx > 0 ):
                 previous = self.instructions[idx-1]
@@ -1578,12 +1591,14 @@ ascii mockup:
                 i.file_line = None
 
             if( marked is not None):
+                # Its eactly the address
                 if( i.address == marked ):
                     i.xmarked = True
-                    extra_marker = cnt
+                    context_center = cnt
                 elif( marked > i.address ):
+                    # Or inside the instruction at that address
                     if( (marked - i.address) < len(i.bytes) ):
-                        extra_marker = cnt
+                        context_center = cnt
             line = []
             otbl.append(line)
             prejump = 0
@@ -1774,6 +1789,15 @@ ascii mockup:
                 if( i.passes == 0 ):
                     stats.append(vdb.color.colorl("?",color_noflow.value))
 
+                if( i.conditional ):
+                    match i.last_executed:
+                        case True:
+                            stats.append(vdb.color.colorl("X",exec_colors.elements[0]))
+                        case False:
+                            stats.append(vdb.color.colorl("X",exec_colors.elements[1]))
+                        case None:
+                            stats.append(vdb.color.colorl("X",exec_colors.elements[2]))
+
                 if( len(i.loaded_from) ):
                     if( loads_verbose.value ):
                         lfstr = ""
@@ -1916,11 +1940,14 @@ ascii mockup:
 
 
             otmap[cnt] = len(otbl)
-            if( context is not None and context_end is not None and context_end <= cnt ):
+            # Check if we can stop early with generating output because the context window is already full
+            if( context is not None and context_center is not None and context_end is not None and context_end <= cnt ):
+#                print(f"BREAING EARLY at {cnt=}")
                 break
 
-        if( context_start is None and extra_marker is not None ):
-            context_start, context_end = self.compute_context(context,extra_marker)
+#        print(f"{marked_line=}")
+#        print(f"{context_center=}")
+        context_start, context_end = self.compute_context(context,context_center)
 
         if( context_start is not None ):
             if( context_start < 0 ):
@@ -3077,14 +3104,38 @@ def register_flow( lng, frame : "gdb frame" ):
         # Check if we have a special function handling more than the basics
         fun = flow_vtable.get(ins.mnemonic,None)
 
-        if( fun is not None ):
+
+        def maybe_execute( ins, fun, possible_registers, possible_flags ):
             ins.possible_in_register_sets.append( possible_registers.clone() )
             ins.possible_in_flag_sets.append( possible_flags.clone() )
             # clone of registers and flags from the last instruction output register set, returns a clone of the ins
             # output sets
-            (possible_registers, possible_flags) = fun( ins, frame, possible_registers, possible_flags )
+            cond,ex = ins.executes( possible_flags )
+            if( cond ):
+                ins.last_executed = ex
+                match ex:
+                    case True:
+                        (possible_registers, possible_flags) = fun( ins, frame, possible_registers, possible_flags, True )
+#                        ins.add_extra("executed conditional instruction")
+                    case False:
+#                        ins.add_extra("did NOT execute conditional instruction")
+                        fun( ins, frame, possible_registers.clone(), possible_flags.clone(), False )
+                    case None:
+                        (possible_registers, possible_flags) = fun( ins, frame, possible_registers, possible_flags, None)
+                        ins.add_extra("Flags unkown, cannot determine execution, acting as if it executes")
+
+            else:
+                (possible_registers, possible_flags) = fun( ins, frame, possible_registers, possible_flags, None )
+                ins.last_executed = None
+#                ins.add_extra("Unconditionally executed")
+
             ins.possible_out_register_sets.append( possible_registers.clone() )
             ins.possible_out_flag_sets.append( possible_flags.clone() )
+
+            return possible_registers,possible_flags
+
+        if( fun is not None ):
+            possible_registers, possible_flags = maybe_execute( ins, fun, possible_registers, possible_flags )
         # There is none, check if there is any that can be synthesized from the table
         else:
             if( ins.mnemonic not in unhandled_mnemonics ):
@@ -3106,11 +3157,7 @@ def register_flow( lng, frame : "gdb frame" ):
                     fun = flow_vtable[best_candidate]
                     vdb.log(f"Synthesized mnemonic {ins.mnemonic} from {best_candidate}, if their flow is not handled the same, create an additional one for {ins.mnemonic}",level=4)
                     flow_vtable[ins.mnemonic] = fun
-                    ins.possible_in_register_sets.append( possible_registers.clone() )
-                    ins.possible_in_flag_sets.append( possible_flags.clone() )
-                    (possible_registers, possible_flags) = fun( ins, frame, possible_registers, possible_flags )
-                    ins.possible_out_register_sets.append( possible_registers.clone() )
-                    ins.possible_out_flag_sets.append( possible_flags.clone() )
+                    possible_registers, possible_flags = maybe_execute( ins, fun, possible_registers, possible_flags )
             else:
                 ins.unhandled = True
 

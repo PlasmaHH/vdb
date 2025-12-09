@@ -186,6 +186,14 @@ class instruction( vdb.asm.instruction_base ):
     last_cmp_immediate = 1
 
     @vdb.overrides
+    # XXX We need to implement cmov here
+    def executes( self, flags ):
+        if( self.conditional ):
+            return (False,True)
+        else:
+            return (False,True)
+
+    @vdb.overrides
     def parse( self, line, m, oldins ) -> "instruction":
 #        print(f"parse( {line=}, {m=}, {oldins=} )")
         tokens = self.parse_common( line, m, oldins )
@@ -371,6 +379,9 @@ class instruction( vdb.asm.instruction_base ):
 
 #            print("tokens = '%s'" % tokens[tpos:] )
 
+        # XXX Should we add jumps here too?
+        if( self.mnemonic.startswith( ("cmov","set","loop") ) ):
+            self.conditional = True
         # Previous insstruction "falls through" to this one, except:
         # - its a ret(urn)
         # - its an unconditional jump
@@ -401,7 +412,7 @@ def set_flags_result( flag_set, result, arg = None, val = None ):
         if( val is not None ):
             flag_set.set("OF", int( (result & sbit) != (val & sbit) ) )
 
-def vt_flow_j( ins, frame, possible_registers, possible_flags ):
+def vt_flow_j( ins, frame, possible_registers, possible_flags , executes ):
     if( not vdb.asm.annotate_jumps.value ):
         return (possible_registers,possible_flags)
 
@@ -421,7 +432,7 @@ def vt_flow_j( ins, frame, possible_registers, possible_flags ):
 
     return ( possible_registers, possible_flags )
 
-def vt_flow_push( ins, frame, possible_registers, possible_flags ):
+def vt_flow_push( ins, frame, possible_registers, possible_flags , executes ):
     vl,rname,_ = possible_registers.get("rsp")
     oldvl=vl
     if( vl is not None ):
@@ -442,7 +453,7 @@ def vt_flow_push( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
-def vt_flow_pop( ins, frame, possible_registers, possible_flags ):
+def vt_flow_pop( ins, frame, possible_registers, possible_flags , executes ):
     vl,rname,_ = possible_registers.get("rsp")
     if( vl is not None ):
         vl = int(vl) + ( vdb.arch.pointer_size // 8 )
@@ -451,7 +462,7 @@ def vt_flow_pop( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
-def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
+def vt_flow_mov( ins, frame, possible_registers, possible_flags , executes ):
     if( vdb.asm.debug_all(ins) ):
         print()
         vdb.util.bark() # print("BARK")
@@ -520,7 +531,7 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
-def vt_flow_jmp( ins, frame, possible_registers, possible_flags ):
+def vt_flow_jmp( ins, frame, possible_registers, possible_flags , executes ):
     # XXX If target of the jmp is dynamic we might want to (re)calculate it here
     # no flags affected
     tgtv,_ = ins.arguments[0].value( possible_registers )
@@ -529,7 +540,7 @@ def vt_flow_jmp( ins, frame, possible_registers, possible_flags ):
     ins.add_explanation("Jumps to the specified target address")
     return ( possible_registers, possible_flags )
 
-def vt_flow_shl( ins, frame, possible_registers, possible_flags ):
+def vt_flow_shl( ins, frame, possible_registers, possible_flags , executes ):
     shifts,_ = ins.arguments[0].value( possible_registers )
     tgtv,_ = ins.arguments[1].value( possible_registers )
 
@@ -540,7 +551,7 @@ def vt_flow_shl( ins, frame, possible_registers, possible_flags ):
     ins.add_explanation("Shifts the value in the register left by the specified number of bits")
     return ( possible_registers, possible_flags )
 
-def vt_flow_shr( ins, frame, possible_registers, possible_flags ):
+def vt_flow_shr( ins, frame, possible_registers, possible_flags , executes ):
     shifts,_ = ins.arguments[0].value( possible_registers )
     tgtv,_ = ins.arguments[1].value( possible_registers )
 
@@ -553,7 +564,7 @@ def vt_flow_shr( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 
-def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
+def vt_flow_sub( ins, frame, possible_registers, possible_flags , executes ):
     sub,_ = ins.arguments[0].value( possible_registers )
     tgtv,_ = ins.arguments[1].value( possible_registers )
     possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
@@ -578,7 +589,7 @@ def vt_flow_sub( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 
-def vt_flow_add( ins, frame, possible_registers, possible_flags ):
+def vt_flow_add( ins, frame, possible_registers, possible_flags , executes ):
     add,_ = ins.arguments[0].value( possible_registers )
     tgtv,_ = ins.arguments[1].value( possible_registers )
     possible_flags.unset( [ "CF","OF","SF","ZF","AF","PF"] )
@@ -600,7 +611,7 @@ def vt_flow_add( ins, frame, possible_registers, possible_flags ):
 
     return ( possible_registers, possible_flags )
 
-def vt_flow_test( ins, frame, possible_registers, possible_flags ):
+def vt_flow_test( ins, frame, possible_registers, possible_flags , executes ):
 #    print("ins = '%s'" % (ins,) )
     a0,_ = ins.arguments[0].value( possible_registers )
     a1,_ = ins.arguments[1].value( possible_registers )
@@ -643,7 +654,7 @@ def explain_xor( ins, v0, v1, t, args ):
         ins.add_explanation(f"Performs xor on {a0loc} {args[0]}{v0s} with {a1loc} {args[1]}{v1s} and storing the result in {a1loc} {args[1]}{ts}")
 
 
-def vt_flow_pxor( ins, frame, possible_registers, possible_flags ):
+def vt_flow_pxor( ins, frame, possible_registers, possible_flags , executes ):
     args = ins.arguments
     v0=None
     v1=None
@@ -668,7 +679,7 @@ def vt_flow_pxor( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 
-def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
+def vt_flow_xor( ins, frame, possible_registers, possible_flags , executes ):
     args = ins.arguments
 
     v0=None
@@ -700,7 +711,7 @@ def vt_flow_xor( ins, frame, possible_registers, possible_flags ):
 
     return ( possible_registers, possible_flags )
 
-def vt_flow_and( ins, frame, possible_registers, possible_flags ):
+def vt_flow_and( ins, frame, possible_registers, possible_flags , executes ):
     args = ins.arguments
 
     # We only do it when not writing to memory
@@ -749,44 +760,46 @@ def _vt_flow_cmovcc( flags, ins, frame, possible_registers, possible_flags ):
             possible_registers.set( tgt.register,  src_val, "flow_cmov" )
             msgstring = "moved"
 
-
     if( vdb.asm.annotate_cmove.value ):
         ins.add_extra( msgstring + extrastring )
 
     return ( possible_registers, possible_flags )
 
-def vt_flow_cmove( ins, frame, possible_registers, possible_flags ):
+def vt_flow_cmov( ins, frame, possible_registers, possible_flags , executes ):
+
+    cond = ins.mnemonic.removeprefix("cmov")
+    print(f"{cond=}")
     # no flags affected
     return _vt_flow_cmovcc( { "ZF" : 1 }, ins, frame, possible_registers, possible_flags )
 
-def vt_flow_endbr64( ins, frame, possible_registers, possible_flags ):
+def vt_flow_endbr64( ins, frame, possible_registers, possible_flags , executes ):
     # no flags affected
     ins.add_explanation("Ends the branch with a 64-bit address")
     return ( possible_registers, possible_flags )
 
-def vt_flow_nop( ins, frame, possible_registers, possible_flags ):
+def vt_flow_nop( ins, frame, possible_registers, possible_flags , executes ):
     # no flags affected
     ins.add_explanation("No operation, does nothing")
     return ( possible_registers, possible_flags )
 
-def vt_flow_hlt( ins, frame, possible_registers, possible_flags ):
+def vt_flow_hlt( ins, frame, possible_registers, possible_flags , executes ):
     # no flags affected
     ins.add_explanation("Halts the processor")
     return ( possible_registers, possible_flags )
 
-def vt_flow_movz( ins, frame, possible_registers, possible_flags ):
+def vt_flow_movz( ins, frame, possible_registers, possible_flags , executes ):
     # XXX Not implemented
     ins.unhandled = True
     ins.add_explanation("Moves a value with zero extension")
     return ( possible_registers, possible_flags )
 
-def vt_flow_movs( ins, frame, possible_registers, possible_flags ):
+def vt_flow_movs( ins, frame, possible_registers, possible_flags , executes ):
     # XXX Not implemented
     ins.unhandled = True
     ins.add_explanation("Moves a string from one memory location to another")
     return ( possible_registers, possible_flags )
 
-def vt_flow_neg( ins, frame, possible_registers, possible_flags ):
+def vt_flow_neg( ins, frame, possible_registers, possible_flags , executes ):
     ins.arguments[0].target = True
     val,_ = ins.arguments[0].value(  possible_registers )
     possible_flags.clear() # until we properly support them its better to not leave wrongs in
@@ -803,7 +816,7 @@ def vt_flow_neg( ins, frame, possible_registers, possible_flags ):
     ins.add_explanation("Negates the value in the register")
     return ( possible_registers, possible_flags )
 
-def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
+def vt_flow_lea( ins, frame, possible_registers, possible_flags , executes ):
 #    print("ins.line = '%s'" % (ins.line,) )
     a0 = ins.arguments[0]
     a1 = ins.arguments[1]
@@ -822,7 +835,7 @@ def vt_flow_lea( ins, frame, possible_registers, possible_flags ):
     return ( possible_registers, possible_flags )
 
 # XXX sub does exactly the same with the flags, maybe combine into a common function
-def vt_flow_cmp( ins, frame, possible_registers, possible_flags ):
+def vt_flow_cmp( ins, frame, possible_registers, possible_flags , executes ):
     a0 = ins.arguments[0]
     a1 = ins.arguments[1]
 
@@ -841,7 +854,7 @@ def vt_flow_cmp( ins, frame, possible_registers, possible_flags ):
     ins.add_explanation("Compares the values of the two operands")
     return ( possible_registers, possible_flags )
 
-def vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
+def vt_flow_syscall( ins, frame, possible_registers, possible_flags , executes ):
 #            print("possible_registers = '%s'" % (possible_registers,) )
 #            ins._gen_extra()
     rax,_,_ = possible_registers.get("rax",None)
@@ -862,7 +875,7 @@ def vt_flow_syscall( ins, frame, possible_registers, possible_flags ):
     ins.add_explanation("Executes a system call")
     return ( possible_registers, possible_flags )
 
-def vt_flow_leave( ins, frame, possible_registers, possible_flags ):
+def vt_flow_leave( ins, frame, possible_registers, possible_flags , executes ):
     rbp,_,_ = possible_registers.get("rbp",None)
     if( rbp is not None ):
         possible_registers.set("rsp",rbp,origin="flow_leave")
@@ -871,7 +884,7 @@ def vt_flow_leave( ins, frame, possible_registers, possible_flags ):
     ins.add_explanation("Restores the stack frame by moving the base pointer to the stack pointer")
     return ( possible_registers, possible_flags )
 
-def vt_flow_call( ins, frame, possible_registers, possible_flags ):
+def vt_flow_call( ins, frame, possible_registers, possible_flags , executes ):
     npr = vdb.asm.register_set()
     npr.copy( possible_registers, call_preserved_registers )
     possible_registers = npr
@@ -902,7 +915,7 @@ def vt_flow_call( ins, frame, possible_registers, possible_flags ):
     ins.add_explanation("Calls a subroutine at the specified address")
     return ( possible_registers, possible_flags )
 
-def vt_flow_ret( ins, frame, possible_registers, possible_flags ):
+def vt_flow_ret( ins, frame, possible_registers, possible_flags , executes ):
     npr = vdb.asm.register_set()
     possible_registers = npr
     # no flags affected

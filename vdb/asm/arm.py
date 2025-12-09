@@ -5,6 +5,7 @@ import gdb
 import vdb.asm
 import rich
 import typing
+import sys
 
 name = "arm"
 
@@ -56,18 +57,54 @@ for unc in unconditional_jump_mnemonics:
 
 unconditional_jump_mnemonics = narm
 
+
+
+known_instructions = set()
+
+
+def collect_instructions( name ):
+    module = sys.modules[name]
+    for funname in dir(module):
+        if( funname.startswith("vt_flow_") ):
+            funname = funname.removeprefix("vt_flow_")
+            known_instructions.add( funname )
+            # The following may not all exist but this is just for helping us parse suffixes better
+            known_instructions.add( funname + "s" ) # a possible "set flags" version
+            # byte, double and halfword versions?
+            known_instructions.add( funname + "b" )
+            known_instructions.add( funname + "d" )
+            known_instructions.add( funname + "h" )
+            # uhm, mov only?
+            known_instructions.add( funname + "t" )
+            known_instructions.add( funname + "w" )
+            # These are just hacked together what we really want is a proper list ai guess. Any way to get one
+            # automatically from gdb?
+
 def extract_conditional( mnemonic ):
-    if( mnemonic.endswith(".n") or mnemonic.endswith(".w" ) ):
-        mnemonic = mnemonic[:-2]
-    l1 = mnemonic[-1:]
-    if( l1 in conditional_suffixes ):
-        return l1
+    if( len(known_instructions) == 0 ):
+        collect_instructions(__name__)
+
+    mnemonic = mnemonic.removesuffix(".n")
+    mnemonic = mnemonic.removesuffix(".w")
+
+    # For example for movs we have the problem do we interpret it as mo with suffix vs or no suffix at all? Generally we
+    # would like to only have suffixes for known instructions as such when the remainder is not a known instruction we
+    # do not accept it. Also first the longer ones as we have nz and z
 
     l2 = mnemonic[-2:]
     if( l2 in conditional_suffixes ):
-        return l2
+        rm = mnemonic[:-2]
+        if( rm in known_instructions ):
+            return l2,rm
 
-    return None
+    l1 = mnemonic[-1:]
+    if( l1 in conditional_suffixes ):
+        rm = mnemonic[:-1]
+        if( rm in known_instructions ):
+            return l1,rm
+
+
+    return (None, mnemonic)
 
 # XXX This is just copied from x86, we need to go through things and add them here
 # The order is sometimes important
@@ -105,8 +142,15 @@ class asm_arg(vdb.asm.asm_arg_base):
             "lsl #2" : 2,
             "lsl #3" : 3
             }
+
+    def __init__( self, target, arg ):
+        self.writeback = False
+        super().__init__( target, arg )
+
     @vdb.overrides
     def parse( self, arg ):
+#        vdb.util.bark() # print("BARK")
+#        print(f"parse( {arg=} )")
         arg = arg.strip()
         if( arg.startswith("{") ):
             self.list_start = True
@@ -164,6 +208,9 @@ class asm_arg(vdb.asm.asm_arg_base):
         else:
             if( arg.find("[") != -1 ):
                 raise RuntimeError("No idea how to parse")
+            if( arg.endswith("!") ):
+                arg = arg.removesuffix("!")
+                self.writeback = True
             self.register = arg
 
         self._check(oarg,False)
@@ -197,8 +244,10 @@ class asm_arg(vdb.asm.asm_arg_base):
         if( self.jmp_target is not None ):
             ret += f"{self.jmp_target:#0x}"
 
-        return ret
+        if( self.writeback ):
+            ret += "!"
 
+        return ret
 
 
 class instruction( vdb.asm.instruction_base ):
@@ -210,6 +259,15 @@ class instruction( vdb.asm.instruction_base ):
     def __init__( self, line, m, oldins, function_range ):
         super().__init__()
         self.parse(line,m,oldins, function_range)
+
+    def executes( self, flags ):
+#        self.add_extra(f"SUFFIX {self.conditional_suffix}")
+        if( self.conditional_suffix is not None ):
+            taken,extrastring = vdb.asm.flag_check( self.conditional_suffix, flags, flag_conditions )
+            _,_,ex = flag_conditions.get(self.conditional_suffix,"??")
+#            self.add_extra(f"EX?? {ex}")
+            return (True,taken)
+        return (False,None)
 
     @vdb.overrides
     def parse( self, line, m, oldins, function_range ):
@@ -265,6 +323,10 @@ class instruction( vdb.asm.instruction_base ):
                 if( len(arg) == 0 ):
                     del args[0]
                     continue
+                if( arg == "!" ):
+                    self.arguments[-1].writeback = True
+                    del args[0]
+                    continue
                 if( arg[0] == "[" ):
                     restarg = ",".join(args).strip()
                     # Re-parse that thing and then split again
@@ -282,27 +344,29 @@ class instruction( vdb.asm.instruction_base ):
                 else:
                     del args[0]
                 aarg = asm_arg(target,arg)
+#                vdb.util.inspect(aarg)
 #                print(f"{aarg=}")
                 target = False
                 self.args.append(arg)
                 self.arguments.append(aarg)
 
         # reassemble to check the string for consistency
-        reargs = []
+        reargs = ""
         for a in self.arguments:
-            astr = ""
             if( a.list_start ):
-                astr = "{"
-            astr += str(a)
+                reargs += "{"
+            reargs += str(a)
             if( a.list_end ):
-                astr += "}"
-            reargs.append(astr)
-        reargs = ", ".join(reargs)
+                reargs += "}"
+            reargs += ", "
+
+        reargs = reargs.removesuffix(", ")
 
         if( reargs != oargs.strip() ):
-            print("CHECK OF WHOLE EXPRESION FAILED")
-            print("oargs  = '%s'" % (oargs,) )
-            print("reargs = '%s'" % (reargs,) )
+            print("ARM CHECK OF WHOLE EXPRESION FAILED")
+            print(f"{oargs=}")
+            print(f"{reargs=}")
+            print(f"{self.arguments=}")
             self.add_extra(reargs,static=True)
 
         if( self.mnemonic in call_mnemonics ):
@@ -412,10 +476,15 @@ class instruction( vdb.asm.instruction_base ):
 #            print("oldins.next = '%s'" % (oldins.next,) )
 #            print("2oldins = '%s'" % (oldins,) )
         self.iclass = self.mnemonic_class( self.mnemonic )
+
+        self.conditional_suffix, self.base_mnemonic = extract_conditional( self.mnemonic )
+        if( self.conditional_suffix is not None ):
+            self.conditional = True
+#            self.add_extra(f"COND: {self.conditional_suffix}",static=True)
         return self
 
 # for the "according to the result" flags
-def set_flags_result( flag_set, result, arg = None, val = None ):
+def set_flags_result( flag_set, result, arg = None, val = None, flagset = "ZNVC" ):
     #  So far this is a copy of x86 and obviously wrong. Before we can do anything we need to figure out a good way to
     #  make vdb.register more architecture independent as things like the register size are not handled that way yet.
 #    print(f"set_flags_result( {flag_set}, {result}, {arg} )")
@@ -425,30 +494,154 @@ def set_flags_result( flag_set, result, arg = None, val = None ):
         if( arg is not None and ( bs := arg.bitsize ) is not None ):
             result += (1 << bs)
 
-    flag_set.set("Z", int(result == 0) )
+    if( "Z" in flagset ):
+        flag_set.set("Z", int(result == 0) )
     if( arg is not None and ( bs := arg.bitsize ) is not None ):
-        sbit = ( 1 << (bs-1) )
-        flag_set.set("N", int( (result & sbit) != 0  ))
-        flag_set.set("V", int( (result & sbit) != (val & sbit) ) )
+            if( "C" in flagset ):
+                flag_set.set("C", int( (result >> arg.bitsize) & 1 ))
+            sbit = ( 1 << (bs-1) )
+            if( "N" in flagset ):
+                flag_set.set("N", int( (result & sbit) != 0  ))
+            if( "V" in flagset ):
+                flag_set.set("V", int( (result & sbit) != (val & sbit) ) )
+    return flag_set.subset( flagset )
 
-def vt_flow_bic( ins, frame, possible_registers, possible_flags ):
+# Gets the proper args from 2 and 3 arg versions of the opcode
+def _extract_args_23( ins, possible_registers ):
+    if( len(ins.arguments) == 2 ):
+        dest    = ins.arguments[0]
+        left,_  = ins.arguments[0].value( possible_registers )
+        right,_ = ins.arguments[1].value( possible_registers )
+    else: # assumed 3, might work for more too (those with that extra shift, doesnt matter for us here)
+        dest    = ins.arguments[0]
+        left,_  = ins.arguments[1].value( possible_registers )
+        right,_ = ins.arguments[2].value( possible_registers )
+    return (dest,left,right)
 
-    val0,addr = ins.arguments[1].value( possible_registers )
-    if( len(ins.arguments) <= 2 ):
-        # XXX quick hack, fix later, happens on bics r3,r2
-        return (possible_registers,possible_flags)
-    val1,addr = ins.arguments[2].value( possible_registers )
+def _format_unknown( msg, *args ):
+    uargs = []
+    for a in args:
+        u = vdb.asm.format_unknown( a[0], a[1] )
+        uargs.append(u)
+    ret = msg.format(*uargs)
+#    print(f"{msg=}")
+#    print(f"{ret=}")
+#    print(f"{uargs=}")
+    return ret
 
-    if( val0 is not None and val1 is not None ):
-        res = val0 & ~val1
-        possible_registers.set( ins.arguments[0].register, res, origin = "flow_bic" )
-        ins.add_explanation(f"Bitwise bit clear {val0} & ~{val1} => {res}")
+def vt_flow_orr( ins, frame, possible_registers, possible_flags , executes ):
+    dest,left,right = _extract_args_23( ins, possible_registers )
+
+    extext = _format_unknown( "Bitwise or of {0} and {1}, stored in register {2}", (left,"{:#0x}"),(right,"{:#0x}"),(ins.arguments[0].register,""))
+    ftext = ""
+    if( ins.mnemonic == "orrs" ):
+        possible_flags.unset( [ "N", "Z", "C" ] )
+        ftext += ", setting flags"
+
+    if( left is not None and right is not None ):
+        res = left | right
+        possible_registers.set( ins.arguments[1].register, res, origin = "flow_orr")
+        extext += f" => {res}{ftext}"
+        if( ins.mnemonic == "orrs" ):
+            filtered = set_flags_result( possible_flags, res, dest, left, "ZNC" )
+            extext += f" to {filtered}"
     else:
-        ins.add_explanation("Bitwise bit clear (and not)")
+        possible_registers.set( ins.arguments[1].register, None, origin = "flow_orr")
+        extext += ftext
 
+    ins.add_explanation(extext)
     return (possible_registers,possible_flags)
 
-def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
+def vt_flow_and( ins, frame, possible_registers, possible_flags , executes ):
+    dest,left,right = _extract_args_23( ins, possible_registers )
+
+    extext = _format_unknown( "Bitwise and of {0} and {1}, stored in register {2}", (left,"{:#0x}"),(right,"{:#0x}"),(ins.arguments[0].register,""))
+    ftext = ""
+    if( ins.mnemonic == "ands" ):
+        possible_flags.unset( [ "N", "Z", "C" ] )
+        ftext += ", setting flags"
+
+    if( left is not None and right is not None ):
+        res = left & right
+        possible_registers.set( ins.arguments[1].register, res, origin = "flow_and")
+        extext += f" => {res}{ftext}"
+        if( ins.mnemonic == "ands" ):
+            filtered = set_flags_result( possible_flags, res, dest, left, "ZNC" )
+            extext += f" to {filtered}"
+    else:
+        possible_registers.set( ins.arguments[1].register, None, origin = "flow_and")
+        extext += ftext
+
+    ins.add_explanation(extext)
+    return (possible_registers,possible_flags)
+
+
+def vt_flow_it( ins, frame, possible_registers, possible_flags , executes ):
+    mle = len(ins.mnemonic) - 1
+    cond = ins.args[0]
+    extext = f"Conditional execution of the next {mle} instructions."
+    for i,c in enumerate(ins.mnemonic[1:]):
+        if( c == "t" ):
+            extext += f"{i}) if {cond} "
+        else:
+            extext += f"{i}) if not {cond} "
+
+    ins.add_explanation(extext)
+    # We assume that the disassembler correctly synthesized these instructions suffixes
+#    ins.unhandled = True
+    return (possible_registers,possible_flags)
+
+def vt_flow_uxth( ins, frame, possible_registers, possible_flags , executes ):
+
+    right,_ = ins.arguments[1].value( possible_registers )
+
+    extext = f"Unsigned Extend Halfword, sets the higher 16 bits to 0"
+    # XXX Rotation is not yet implemented
+    if( right is not None ):
+        res = right & 0xffff
+        possible_registers.set( ins.arguments[1].register, res, origin = "flow_uxth")
+        extext += f", {right:#0x} & 0xffff => {res:#0x}"
+    else:
+        possible_registers.set( ins.arguments[1].register, None, origin = "flow_uxth")
+
+    ins.add_explanation(extext)
+    return (possible_registers,possible_flags)
+
+
+def vt_flow_bic( ins, frame, possible_registers, possible_flags , executes ):
+
+    # bic r1,r2 is the same as bic r1,r1,r2
+    if( len(ins.arguments) <= 2 ):
+        valleft,_ = ins.arguments[0].value( possible_registers )
+        valright,_ = ins.arguments[1].value( possible_registers )
+    else:
+        valleft,_ = ins.arguments[1].value( possible_registers )
+        valright,_ = ins.arguments[2].value( possible_registers )
+
+    if( len(ins.arguments) > 3 ):
+        ins.add_extra("UNHANDLED SHIFT")
+
+    extext = _format_unknown( f"Bitwise bit clear {0} & ~{1}", ( valleft, "" ), ( valright, "") )
+    ftext = ""
+    if( ins.mnemonic == "bics" ):
+        possible_flags.unset( ["C", "N", "Z"] )
+        ftext += ", setting flags CZN"
+
+    if( valleft is not None and valright is not None ):
+        res = valleft & ~valright
+        possible_registers.set( ins.arguments[0].register, res, origin = "flow_bic" )
+        extext += f" => {res}{ftext}"
+        if( ins.mnemonic == "bics" ):
+            filtered = set_flags_result( possible_flags, res, ins.arguments[1], flagset = "ZNC" )
+            extext += f" to {filtered}"
+    else:
+        possible_registers.set( ins.arguments[0].register, None, origin = "flow_bic" )
+        extext += ftext
+
+    ins.add_explanation(extext)
+    return (possible_registers,possible_flags)
+
+def vt_flow_ldr( ins, frame, possible_registers, possible_flags , executes ):
     val,addr = ins.arguments[1].value( possible_registers )
     possible_registers.set( ins.arguments[0].register, val ,origin="flow_ldr" )
 
@@ -484,7 +677,7 @@ def vt_flow_ldr( ins, frame, possible_registers, possible_flags ):
     ins.add_explanation(f"Load value {vdb.asm.format_unknown(val)} from memory address {vdb.asm.format_unknown(addr,'{:#0x}')} into register {ins.arguments[0].register}{post_text}")
     return (possible_registers,possible_flags)
 
-def vt_flow_str( ins, frame, possible_registers, possible_flags ):
+def vt_flow_str( ins, frame, possible_registers, possible_flags , executes ):
     rval,_ = ins.arguments[0].value( possible_registers )
     val,addr = ins.arguments[1].value( possible_registers )
 
@@ -504,35 +697,125 @@ def vt_flow_str( ins, frame, possible_registers, possible_flags ):
     ins.add_explanation(f"Store value {vdb.asm.format_unknown(rval)} into memory at {vdb.asm.format_unknown(addr,'{:#0x}')}")
     return (possible_registers,possible_flags)
 
+def vt_flow_stmdb( ins, frame, possible_registers, possible_flags , executes ):
+    target,_ = ins.arguments[0].value( possible_registers )
+    # ! version writes back the value
+    extext = _format_unknown( "Store Multiple Decrement Before stores the registers {0} in memory starting at {1} and decremented each step. Same as push.", ( str(ins.arguments[1:]),"" ), ( target, "{:#0x}") )
 
-def vt_flow_add( ins, frame, possible_registers, possible_flags ):
-    if( len(ins.arguments) == 2 ):
-        sumlarg = ins.arguments[0]
-        suml,_ = ins.arguments[0].value( possible_registers )
-        sumr,_ = ins.arguments[1].value( possible_registers )
-    else: # 3
-        sumlarg = ins.arguments[1]
-        suml,_ = ins.arguments[1].value( possible_registers )
-        sumr,_ = ins.arguments[2].value( possible_registers )
+    if( target is not None ):
+        target -= 4 * (len(ins.arguments)-1)
+
+    if( ins.arguments[0].writeback ):
+        extext += " Writes back decremented register"
+        possible_registers.set( ins.arguments[0].register, target )
+
+    ins.add_explanation(extext)
+    return (possible_registers,possible_flags)
+
+def vt_flow_lsl( ins, frame, possible_registers, possible_flags , executes ):
+    # XXX Many of these are almost the same, just the actual calculation differs. Unify them.
+    # lsl r0,r1 is the same as lsl r0,r0,r1
+    dest, lsl, lsr = _extract_args_23( ins, possible_registers )
+
+    extext = _format_unknown( "Logical shift left {0} by {1} bits", ( lsl, "" ), ( lsr, "" ))
+
+    ftext = ""
+    if( ins.mnemonic == "lsls" ):
+        possible_flags.unset( [ "N", "Z", "C" ] )
+        ftext += ", setting flags"
+
+    if( lsl is not None and lsr is not None ):
+        res = lsl << lsr
+        possible_registers.set( dest.register, res ,origin="flow_lsl" )
+        if( ins.mnemonic == "lsls" ):
+            filtered = set_flags_result( possible_flags, res, dest, lsl, "ZNC" )
+            extext += f"{ftext} to {filtered}"
+        extext += f" => {res}"
+    else:
+        possible_registers.set( dest.register, None )
+        extext += ftext
+
+    ins.add_explanation(extext)
+    return (possible_registers,possible_flags)
+
+
+def vt_flow_lsr( ins, frame, possible_registers, possible_flags , executes ):
+    # XXX Many of these are almost the same, just the actual calculation differs. Unify them.
+    # lsr r0,r1 is the same as lsr r0,r0,r1
+    dest, lsr, lsr = _extract_args_23( ins, possible_registers )
+
+    extext = _format_unknown( "Logical shift left {0} by {1} bits", ( lsr, "" ), ( lsr, "" ))
+
+    ftext = ""
+    if( ins.mnemonic == "lsrs" ):
+        possible_flags.unset( [ "N", "Z", "C" ] )
+        ftext += ", setting flags"
+
+    if( lsr is not None and lsr is not None ):
+        res = lsr >> lsr
+        possible_registers.set( dest.register, res ,origin="flow_lsr" )
+        if( ins.mnemonic == "lsrs" ):
+            filtered = set_flags_result( possible_flags, res, dest, lsr, "ZNC" )
+            extext += f"{ftext} to {filtered}"
+        extext += f" => {res}"
+    else:
+        possible_registers.set( dest.register, None )
+        extext += ftext
+
+    ins.add_explanation(extext)
+    return (possible_registers,possible_flags)
+
+
+# Basically sub without store, always sets flags only
+def vt_flow_cmp( ins, frame, possible_registers, possible_flags , executes ):
+    dr,cmpl, cmpr = _extract_args_23( ins, possible_registers )
+
+    extext = f"compare: subtracting {vdb.asm.format_unknown(cmpl)} and {vdb.asm.format_unknown(cmpr,'{}')}, storing only the flags"
+
+    possible_flags.unset( [ "N", "Z", "C", "V" ] )
+
+    if( cmpl is not None and cmpr is not None ):
+        sumv = cmpl - cmpr
+        extext += f" => {sumv}"
+        set_flags_result( possible_flags, sumv, dr, cmpl, "ZNC" )
+            # Carry flag: 1 if result exceeds 32 bits
+#            possible_flags.set("C", int( (sumv >> 32) & 1 ))
+            # Overflow flag: 1 if signed overflow
+        possible_flags.set("V", int( ( (cmpl ^ cmpr) & (cmpl ^ sumv) ) & 0x80000000 ))
+        filtered = possible_flags.subset( { "Z","N","C","V" } )
+        extext += f" to {filtered}"
+    else:
+        pass
+
+    ins.add_explanation(extext)
+
+    return (possible_registers,possible_flags)
+
+
+def vt_flow_add( ins, frame, possible_registers, possible_flags , executes ):
+    sumlarg, suml, sumr = _extract_args_23( ins, possible_registers )
 
     extext = f"Adding {vdb.asm.format_unknown(suml)} and {vdb.asm.format_unknown(sumr,'{}')}, storing it in {ins.arguments[0]}"
 
+    ftext = ""
     if( ins.mnemonic == "adds" ):
         possible_flags.unset( [ "N", "Z", "C", "V" ] )
-        extext += ", setting flags"
+        ftext += ", setting flags"
 
     if( suml is not None and sumr is not None ):
         sumv = suml + sumr
         possible_registers.set( ins.arguments[0].register, sumv,origin="flow_add" )
+        extext += f" => {sumv}"
         if( ins.mnemonic == "adds" ):
-            set_flags_result( possible_flags, sumv, sumlarg, suml )
+            set_flags_result( possible_flags, sumv, sumlarg, suml, "ZNC" )
             # Carry flag: 1 if result exceeds 32 bits
-            possible_flags.set("C", int( (sumv >> 32) & 1 ))
+#            possible_flags.set("C", int( (sumv >> 32) & 1 ))
             # Overflow flag: 1 if signed overflow
             possible_flags.set("V", int( ( (suml ^ sumr) & (suml ^ sumv) ) & 0x80000000 ))
             filtered = possible_flags.subset( { "Z","N","C","V" } )
-            extext += f" to {filtered}"
+            extext += f"{ftext} to {filtered}"
     else:
+        extext += ftext
         possible_registers.set( ins.arguments[0].register, None )
         ins.arguments[0].argspec = ""
 
@@ -540,7 +823,39 @@ def vt_flow_add( ins, frame, possible_registers, possible_flags ):
 
     return (possible_registers,possible_flags)
 
-def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
+def vt_flow_sub( ins, frame, possible_registers, possible_flags , executes ):
+    sublarg, subl, subr = _extract_args_23( ins, possible_registers )
+
+    extext = f"Subtracting {vdb.asm.format_unknown(subl)} and {vdb.asm.format_unknown(subr,'{}')}, storing it in {ins.arguments[0]}"
+
+    ftext = ""
+    if( ins.mnemonic == "subs" ):
+        possible_flags.unset( [ "N", "Z", "C", "V" ] )
+        ftext = ", setting flags"
+
+    if( subl is not None and subr is not None ):
+        sumv = subl - subr
+        possible_registers.set( ins.arguments[0].register, sumv,origin="flow_sub" )
+        extext += f" => {sumv}"
+        if( ins.mnemonic == "subs" ):
+            set_flags_result( possible_flags, sumv, sublarg, subl, "ZNC" )
+            # Carry flag: 1 if result exceeds 32 bits
+#            possible_flags.set("C", int( (sumv >> 32) & 1 ))
+            # Overflow flag: 1 if signed overflow
+            possible_flags.set("V", int( ( (subl ^ subr) & (subl ^ sumv) ) & 0x80000000 ))
+            filtered = possible_flags.subset( { "Z","N","C","V" } )
+            extext += f"{ftext} to {filtered}"
+    else:
+        if( ins.mnemonic == "subs" ):
+            extext += ftext
+        possible_registers.set( ins.arguments[0].register, None )
+        ins.arguments[0].argspec = ""
+
+    ins.add_explanation(extext)
+
+    return (possible_registers,possible_flags)
+
+def vt_flow_mov( ins, frame, possible_registers, possible_flags , executes ):
     frm = ins.arguments[1]
     to  = ins.arguments[0]
 
@@ -560,7 +875,7 @@ def vt_flow_mov( ins, frame, possible_registers, possible_flags ):
 
     return (possible_registers,possible_flags)
 
-def vt_flow_bl( ins, frame, possible_registers, possible_flags ):
+def vt_flow_bl( ins, frame, possible_registers, possible_flags , executes ):
     if( ins.next is not None ):
         # LR is not saved by the caller as such even when we correctly return, LR might be different
 #        possible_registers.set( "lr", ins.next.address, origin = "flow_bl" )
@@ -574,11 +889,10 @@ def vt_flow_bl( ins, frame, possible_registers, possible_flags ):
     possible_registers.set("lr",None, origin = "flow_bl")
     return (possible_registers,possible_flags)
 
-def vt_flow_cb( ins, frame, possible_registers, possible_flags ):
+def vt_flow_cb( ins, frame, possible_registers, possible_flags , executes ):
     if( vdb.asm.asm_explain.value ):
         if( ins.conditional_jump ):
-            fsub = extract_conditional( ins.mnemonic )
-            _,_,ex = flag_conditions.get(fsub,(0,0,fsub))
+            _,_,ex = flag_conditions.get(ins.conditional_suffix,(0,0,ins.conditional_suffix))
             ins.add_explanation(f"Compare and branch on {ex}")
         else:
             ins.add_explanation("Compare and branch unconditionally? that exists?")
@@ -589,18 +903,20 @@ def vt_flow_cb( ins, frame, possible_registers, possible_flags ):
     possible_flags.unset( [ "N", "Z", "C", "V" ] )
     return (possible_registers,possible_flags)
 
-def vt_flow_b( ins, frame, possible_registers, possible_flags ):
+def vt_flow_b( ins, frame, possible_registers, possible_flags , executes ):
     if( vdb.asm.asm_explain.value ):
         if( ins.conditional_jump ):
-            fsub = extract_conditional( ins.mnemonic )
-            _,_,ex = flag_conditions.get(fsub,"??")
+            _,_,ex = flag_conditions.get(ins.conditional_suffix,"??")
             ins.add_explanation(f"Branch conditionally if {ex}")
         else:
-            ins.add_explanation("Branch unconditionally")
+            if( ins.address in ins.targets ):
+                ins.add_explanation("Branch unconditionally (infinte loop)")
+            else:
+                ins.add_explanation("Branch unconditionally")
 
     if( vdb.asm.annotate_jumps.value ):
         if( ins.conditional_jump ):
-            csuf = extract_conditional( ins.mnemonic )
+            csuf = ins.conditional_suffix
             if( csuf is None ):
                 ins.add_extra("Could not extract conditional suffix")
 
@@ -615,7 +931,7 @@ def vt_flow_b( ins, frame, possible_registers, possible_flags ):
 
     return (possible_registers,possible_flags)
 
-def vt_flow_push( ins, frame, possible_registers, possible_flags ):
+def vt_flow_push( ins, frame, possible_registers, possible_flags , executes ):
     vl,rname,_ = possible_registers.get("sp")
     if( vl is not None ):
         nargs = len(ins.args)
@@ -632,7 +948,7 @@ def vt_flow_push( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
-def vt_flow_pop( ins, frame, possible_registers, possible_flags ):
+def vt_flow_pop( ins, frame, possible_registers, possible_flags , executes ):
     vl,rname,_ = possible_registers.get("sp")
     if( vl is not None ):
         nargs = len(ins.args)
@@ -650,7 +966,7 @@ def vt_flow_pop( ins, frame, possible_registers, possible_flags ):
     # no flags affected
     return ( possible_registers, possible_flags )
 
-def vt_flow_cpsid( ins, frame, possible_registers, possible_flags ):
+def vt_flow_cpsid( ins, frame, possible_registers, possible_flags , executes ):
     arg = str(ins.arguments[0])
     match arg:
         case "i":
@@ -662,7 +978,7 @@ def vt_flow_cpsid( ins, frame, possible_registers, possible_flags ):
     # XXX Change the mask registers? Guess the exact bits depend on the arch?
     return ( possible_registers, possible_flags )
 
-def vt_flow_cpsie( ins, frame, possible_registers, possible_flags ):
+def vt_flow_cpsie( ins, frame, possible_registers, possible_flags , executes ):
     arg = str(ins.arguments[0])
     match arg:
         case "i":
@@ -674,7 +990,7 @@ def vt_flow_cpsie( ins, frame, possible_registers, possible_flags ):
     # XXX Change the mask registers? Guess the exact bits depend on the arch?
     return ( possible_registers, possible_flags )
 
-def vt_flow_ldm( ins, frame, possible_registers, possible_flags ):
+def vt_flow_ldm( ins, frame, possible_registers, possible_flags , executes ):
     mnem = ins.mnemonic.removesuffix(".w")
     variant = mnem[3:]
 
