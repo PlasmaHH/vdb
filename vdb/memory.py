@@ -54,6 +54,7 @@ ignore_empty = vdb.config.parameter("vdb-memory-ignore-empty-sections", False, g
 
 test_write = vdb.config.parameter("vdb-memory-test-write-access", True )
 default_colorspec = vdb.config.parameter("vdb-memory-default-colorspec","smAa")
+null_range = vdb.config.parameter("vdb-memory-null-range",4096)
 
 
 class access_type(Enum):
@@ -1086,12 +1087,28 @@ def is_sym_at( addr, symbol ):
             return True
     return False
 
+# Gets a replication of the gdb symbol string from cache
+def get_gdb_sym_string( addr ):
+    addr = int(addr)
+    saddr,_,symname = get_gdb_sym( addr )
+    if( symname is None ):
+        return None
+    offsetstr = ""
+    if( saddr is not None ):
+        offset = addr - saddr
+        if( offset ):
+            offsetstr = f"+{offset}"
+
+    ret = f"<{symname}{offsetstr}>"
+    return ret
+
 def get_gdb_sym( addr ):
 #    vdb.util.bark() # print("BARK")
+#    vdb.util.bark(-1) # print("BARK")
 #    print(f"{addr=}")
 
     addr = int(addr)
-    if( addr < 2 ): # sometimes garbage collected symbols debug information gets just mapped to 0 instead of removed
+    if( addr < null_range.value ): # sometimes garbage collected symbols debug information gets just mapped to 0 instead of removed
         return (None,None,None)
     global sym_cache
     xs = sym_cache[addr]
@@ -1147,10 +1164,9 @@ def get_gdb_sym( addr ):
     return (None,None,None)
 
 def get_symbols( addr, xlen ):
-#    gdb.execute("reg")
-#    vdb.util.bark() # print("BARK")
-#    print(f"{str(addr)=}")
-#    print(f"{str(xlen)=}")
+#    print(f"get_symbols({addr=},{xlen=})")
+#    vdb.util.bark(-1) # print("BARK")
+
     ret = intervaltree.IntervalTree()
     xaddr = addr+xlen
 

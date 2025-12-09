@@ -65,6 +65,10 @@ def as_c_str( ptr, maxlen = 64 ):
         return None
 
 def annotate( ptr ):
+    ret = vdb.memory.get_gdb_sym_string(ptr)
+#    print(f"annotate({ptr=}) => {ret}")
+#    vdb.util.bark() # print("BARK")
+    return ret
     try:
         mv=gdb.parse_and_eval("(void*)(%s)" % int(ptr) )
         mv = str(mv)
