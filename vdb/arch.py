@@ -65,18 +65,31 @@ _active_arch = None
 def active( ):
     return _active_arch
 
-#@vdb.event.new_objfile()
+@vdb.event.new_objfile()
 def gather_info( ):
-    now_arch = gdb.selected_inferior().architecture()
+    try:
+#        print(f"{gdb.selected_frame()=}")
+#        print(f"{id(gdb.selected_frame())=}")
+#        print(f"{id(gdb.selected_frame())=}")
+        now_arch = gdb.selected_frame().architecture()
+#        print("NOW ARCH IS FRAME")
+    except gdb.error:
+        now_arch = gdb.selected_inferior().architecture()
+#        print("NOW ARCH IS INFERORI")
     global _active_arch_name
     global _active_arch
     # Nothing to be done here
+    shortcut = False
     if( now_arch.name() == _active_arch_name ):
-        return
+        shortcut = True
 #    print(f"GATHERING UPDATED INFO ABOUT NEW ARCH {now_arch.name()}, replacing previous {_active_arch_name}")
+
+    # These must be set to match the object from gdb.selected_frame.architecture()
     _active_arch_name = now_arch.name()
     _active_arch = now_arch
 
+    if( shortcut ):
+        return
     global pointer_size
     pointer_size = gdb.lookup_type("void").pointer().sizeof*8
 

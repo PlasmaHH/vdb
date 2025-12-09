@@ -418,7 +418,12 @@ class Registers():
 #        sw = vdb.util.stopwatch()
 #        print(f"registers we don't know where to put them yet (archsize {self.archsize}):")
 #        cnt = 0
+#        print(f"{self.frame.architecture()=}")
+#        print(f"{id(self.frame.architecture())=}")
+#        print(f"{self.frame=}")
+#        print(f"{id(self.frame)=}")
         for reg in self.frame.architecture().registers():
+#            print(f"REG {reg.name=}")
             self.all[reg.name] = reg
 #            cnt += 1
 #            sw.start()
@@ -452,6 +457,9 @@ class Registers():
 #        print(f"{sw.get()=}")
 #        print(f"{cnt=}")
 
+#        xmm0 = self.get_value("xmm0")
+#        rcx = self.get_value("rcx")
+#        print(f"xmm0 = {xmm0}, rcx = {rcx}")
 
 
     def get_pos( self, reg ):
@@ -711,6 +719,7 @@ class Registers():
                 retv += r
                 retvl += rl
         except:
+#            vdb.print_exc()
             retv = "ERR " + regdesc.name + " : " + str(val)
             retvl = len(retv)
 #            raise

@@ -89,6 +89,7 @@ def dereference( ptr ):
     xptr = gptr.cast(gdb.lookup_type("void").pointer())
 #        print("xptr = '%s'" % xptr )
 #        print("xptr.type = '%s'" % xptr.type )
+#    print(f"{vdb.arch.void_ptr_t=}")
     xptr = gptr.cast(vdb.arch.void_ptr_t)
 #        print("xptr = '%s'" % xptr )
 #        print("xptr.type = '%s'" % xptr.type )

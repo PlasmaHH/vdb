@@ -40,8 +40,12 @@ def diff_regs( r0, r1 ):
 #            continue
 #        print(f"{str(rname)=}")
 #        print(f"{rval1=}")
-        rval0 = int(rval0[0])
-        rval1 = int(rval1[0])
+        try:
+            rval0 = int(rval0[0])
+            rval1 = int(rval1[0])
+        except gdb.error:
+            # Sometimes gdb doesnt have the register available
+            continue
         if( rval0 != rval1 ):
             # XXX Make this arch independent
             if( str(rname) != "rip" ):
@@ -401,6 +405,7 @@ def xi( num, filter, full, events, flow, registers ):
             if( registers ):
                 oldr = r
         except gdb.error as e:
+            vdb.print_exc()
             print(f"xi aborted due to gdb error: {e}")
             break
         except KeyboardInterrupt:
@@ -462,6 +467,7 @@ xi/e       execute a "step" hook/event on each step for other plugins
 
     def __init__ (self):
         super ().__init__ ("xi", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        xi.needs_parameters = False
 
     def do_invoke (self, argv ):
         try:

@@ -245,7 +245,7 @@ def log( fmt, *posargs, **kwargs):
         level = level.value
     try:
         xpfmt=fmt.format(*posargs,**kwargs)
-    except KeyError:
+    except (ValueError,KeyError):
         try:
             xpfmt=fmt.format_map(kw_dict(**kwargs))
         # This happens when there is an invalid format specifier, which can happen if this thing wasn't really meant as

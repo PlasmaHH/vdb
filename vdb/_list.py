@@ -61,7 +61,7 @@ def get_sources( ):
     print("Gathering source file information (may take a while for bigger binaries)")
     return gdb.execute("info sources",True,True)
 
-error_re = re.compile("[0-9]+\s*(.*): No such file")
+error_re = re.compile(r"[0-9]+\s*(.*): No such file")
 def do_list( argv, flags, context, recurse = True ):
     before,after = context
     line = None
@@ -88,7 +88,7 @@ def do_list( argv, flags, context, recurse = True ):
             frame = gdb.selected_frame()
         except gdb.error:
             frame = None
-    
+
         if( frame is not None ):
             # We have a frame, so we have access to code and all that stuff, lets figure out what the user meant
             # No other arguments, chose the current frame position
@@ -109,7 +109,7 @@ def do_list( argv, flags, context, recurse = True ):
                 line = -1
         else: # no frame, lets see if gdb can be of any help here
             # "help info main" gets entry point?
-            
+
             current_file = None
             smallest_name = None
             smallest_file = None
@@ -126,10 +126,16 @@ def do_list( argv, flags, context, recurse = True ):
                     continue
                 # rest should be function position information
                 vl = sline.split(":")
+                # No line number available, ignore
+                if( len(vl) <= 1 ):
+                    continue
                 sline = ":".join(vl[1:]).strip()
 
 #                print(f"{sline=}")
                 if( smallest_name is None or len(sline) < len(smallest_name) ):
+                    # Also not in a file we know
+                    if( not os.access( current_file, os.R_OK) ):
+                        continue
                     smallest_name = sline
                     smallest_file = current_file
                     line = int(vl[0])
