@@ -123,6 +123,18 @@ def execute( *args, **kwargs ):
 def selected_thread( ):
     return None
 
+class Architecture:
+
+    def name( self ):
+        return "x86"
+
+class Frame:
+
+    def architecture( self ):
+        return Architecture()
+
+def selected_frame( ):
+    return Frame()
 
 class Architecture:
     def name( self ):
