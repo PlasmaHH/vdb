@@ -1102,6 +1102,18 @@ def get_gdb_sym_string( addr ):
     ret = f"<{symname}{offsetstr}>"
     return ret
 
+extra_symbols = intervaltree.IntervalTree()
+
+def add_extra_symbol( addr, slen, name ):
+    extra_symbols[addr:addr+slen] = ( addr, slen, name )
+
+def get_extra_sym( addr ):
+    xs =  extra_symbols[addr]
+    if( len(xs) > 0 ):
+        for x in xs:
+            return x[2]
+    return (None,None,None)
+
 def get_gdb_sym( addr ):
 #    vdb.util.bark() # print("BARK")
 #    vdb.util.bark(-1) # print("BARK")
@@ -1113,9 +1125,7 @@ def get_gdb_sym( addr ):
     global sym_cache
     xs = sym_cache[addr]
     if( len(xs) > 0 ):
-#        print("xs = '%s'" % xs )
         for x in xs:
-#            print("x = '%s'" % (x,) )
             return x[2]
     else:
         xaddr = addr
@@ -1176,11 +1186,18 @@ def get_symbols( addr, xlen ):
 #        print("start = '%s'" % (start,) )
 #        print("size = '%s'" % (size,) )
 #        print("name = '%s'" % (name,) )
+        if( start is not None ):
+            ret[start:start+size] = name
+            xaddr = start - 1
+            continue
+
+        start,size,name = get_extra_sym(xaddr)
         if( start is None ):
             xaddr -= 1
         else:
             ret[start:start+size] = name
             xaddr = start - 1
+
 #        print("xaddr = '%s'" % (xaddr,) )
 #    print("ret = '%s'" % (ret,) )
     return ret

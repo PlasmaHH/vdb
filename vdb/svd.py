@@ -333,7 +333,8 @@ class svd_device:
                 vdb.register.mmapped_descriptions[name] = (name, bitsize, r.description, None )
 #                print(f"{name} => @{r.mmap_address}[{bitsize}] = {rtype}")
                 vdb.register.mmapped_positions[name] = ( name, r.mmap_address, bitsize, rtype )
-                vdb.hexdump.annotate_range(r.mmap_address, bitsize//8, name )
+                vdb.memory.add_extra_symbol(r.mmap_address, bitsize//8, name )
+#                vdb.hexdump.annotate_range(r.mmap_address, bitsize//8, name )
         if( skip > 0 ):
             print(f"Skipped {skip} registers due to unkonwn mapping position.")
 

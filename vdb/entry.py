@@ -35,6 +35,7 @@ class cmd_entry(vdb.command.command):
 
     def __init__ (self):
         super ().__init__ ("entry", gdb.COMMAND_DATA)
+        self.needs_parameters = False
 
     def do_invoke (self, argv:list[str] ):
         self.dont_repeat()

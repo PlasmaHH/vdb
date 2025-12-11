@@ -2949,6 +2949,8 @@ def extra_info( vname, spc, addr, extra ):
     symbol = ""
     if( vname is None ):
         _,_,symbol = vdb.memory.get_gdb_sym( addr )
+        if( symbol is None ):
+            _,_,symbol = vdb.memory.get_extra_sym( addr )
         if( symbol is not None ):
             extra.value += f", esym = {symbol}"
             symbol = short_color(symbol)
