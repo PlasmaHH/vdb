@@ -26,6 +26,8 @@ auto_reconnected = vdb.config.parameter("vdb-swo-auto-reconnect", True )
 
 default_colors = vdb.config.parameter("vdb-swo-colors", "#ffffff;#ffff77;#ff9900;#ff7777;#00ff00;#0000ff;#ff00ff;#00ffff;#88aaff;#aa00aa" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
+show_packet_type = vdb.config.parameter("vdb-show-packet-type",False)
+
 # TODO
 # sync/async mode: only output what was captured "before_prompt"
 
@@ -35,7 +37,7 @@ short_rich = []
 
 for i in range(0,10):
     swo_colors.append( vdb.config.parameter( f"vdb-swo-colors-{i}", default_colors.elements[i], gdb_type = vdb.config.PARAM_COLOUR ) )
-    swo_rich.append( vdb.config.parameter( f"vdb-swo-use-rich-{i}", False ) )
+    swo_rich.append( vdb.config.parameter( f"vdb-swo-use-rich-{i}", True ) )
     short_rich.append( vdb.config.parameter( f"vdb-swo-short-rich-{i}", True ) )
 
 
@@ -45,12 +47,15 @@ def update_replacements( cfg ):
     rich_map.clear()
     for k,v in cfg.elements:
         rich_map[k] = v
+        k = k.lower()
+        if( k not in rich_map ):
+            rich_map[k] = v
 
 rich_replacements = vdb.config.parameter("vdb-swo-rich-replacements", "R:#ff0000,G:#00ff00,B:#0000ff", gdb_type = vdb.config.PARAM_ARRAY, on_set = update_replacements )
 
 class SWO:
 
-    rich_re = re.compile("\[(.*?)\]")
+    rich_re = re.compile(r"\[(.*?)\]")
 
     class ChannelBuffer:
         def __init__( self, channel ):
@@ -83,12 +88,17 @@ class SWO:
                 if( short_rich[idx].value ):
                     data = self._expand_rich( data )
 
-                with vdb.util.console.capture() as cap:
-                    vdb.util.console.print( data, end = "" )
-                outputdata = str( cap.get() )
+                try:
+                    with vdb.util.console.capture() as cap:
+                        vdb.util.console.print( data, end = "" )
+                    outputdata = str( cap.get() )
+                except MarkupError:
+                    outputdata = data
             else:
-                color = swo_colors[self.channel % len(swo_colors)].value
-                outputdata = vdb.color.color(self.buffer,color)
+                outputdata = self.buffer
+
+            color = swo_colors[self.channel % len(swo_colors)].value
+            outputdata = vdb.color.color(outputdata,color)
 
             self.output( outputdata )
             self.buffer = ""
@@ -161,6 +171,7 @@ class SWO:
             print(buf)
 
     def add_payload( self, source, payload ):
+#        print(f"add_payload( {source=}, {payload=} )")
         cbuf = self.channels.get(source)
         if( cbuf is None ):
             cbuf = SWO.ChannelBuffer(source)
@@ -191,27 +202,28 @@ class SWO:
                 0b11 : 4
                 }
 
-        if( headerbyte == 0 ):
-            print("SYNC")
-        elif( headerbyte == 0b01110000 ):
-            print("OVERFLOW")
-        # 0bCDDD0000, DDD not 0b000 or 0b111
-        elif( headerbyte & 0b00001111 == 0 ):
-            print("Possible Timestamp")
-            if( headerbyte & 0b01110000 == 0b01110000 or headerbyte & 0b0111000 == 0 ):
-                print("Uh, no timestamp")
-        if( headerbyte & 0b00001011 == 0b0000100 ):
-            print("Extension Header")
-        elif( headerbyte & 0b11011111 == 0b10010100 ):
-            print("Global Timestamp")
-        elif( headerbyte & 0b10001111 == 0b00000100 ):
-            print("Reserved 1")
-        elif( headerbyte & 0b01111111 == 0b01110000 ):
-            print("Reserved 2")
-        elif( headerbyte & 0b11011111 == 0b10000100 ):
-            print("Reserved 3")
-        elif( headerbyte & 0b11001111 == 0b11000100 ):
-            print("Reserved 4")
+        if( show_packet_type.value ):
+            if( headerbyte == 0 ):
+                print("SYNC")
+            elif( headerbyte == 0b01110000 ):
+                print("OVERFLOW")
+            # 0bCDDD0000, DDD not 0b000 or 0b111
+            elif( headerbyte & 0b00001111 == 0 ):
+                print("Possible Timestamp")
+                if( headerbyte & 0b01110000 == 0b01110000 or headerbyte & 0b0111000 == 0 ):
+                    print("Uh, no timestamp")
+            if( headerbyte & 0b00001011 == 0b0000100 ):
+                print("Extension Header")
+            elif( headerbyte & 0b11011111 == 0b10010100 ):
+                print("Global Timestamp")
+            elif( headerbyte & 0b10001111 == 0b00000100 ):
+                print("Reserved 1")
+            elif( headerbyte & 0b01111111 == 0b01110000 ):
+                print("Reserved 2")
+            elif( headerbyte & 0b11011111 == 0b10000100 ):
+                print("Reserved 3")
+            elif( headerbyte & 0b11001111 == 0b11000100 ):
+                print("Reserved 4")
 
         if( headerbyte & 0b00000011 != 0 ):
 #            print("Source Packet")

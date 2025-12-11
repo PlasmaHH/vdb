@@ -575,6 +575,23 @@ def vt_flow_and( ins, frame, possible_registers, possible_flags , executes ):
     ins.add_explanation(extext)
     return (possible_registers,possible_flags)
 
+def vt_flow_tst( ins, frame, possible_registers, possible_flags , executes ):
+    dest,left,right = _extract_args_23( ins, possible_registers )
+
+    extext = _format_unknown( "test: Bitwise and of {0} and {1}, storing only flags", (left,"{:#0x}"),(right,"{:#0x}"))
+
+    possible_flags.unset( [ "N", "Z", "C" ] )
+
+    if( left is not None and right is not None ):
+        res = left & right
+        extext += f" => {res}"
+        filtered = set_flags_result( possible_flags, res, dest, left, "ZNC" )
+        extext += f" to {filtered}"
+    else:
+        pass
+
+    ins.add_explanation(extext)
+    return (possible_registers,possible_flags)
 
 def vt_flow_it( ins, frame, possible_registers, possible_flags , executes ):
     mle = len(ins.mnemonic) - 1
