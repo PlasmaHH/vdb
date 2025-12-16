@@ -17,6 +17,7 @@ import rich.progress
 import rich.pretty
 import rich.table
 import threading
+import types
 import vdb
 
 from enum import Enum,auto
@@ -1082,9 +1083,23 @@ def is_started( ):
         return False
 
 # Since we are wrapped rich won't detect the console capabilities directly
-console = rich.console.Console( force_terminal = True, color_system = "truecolor" )
+console = None
+
+def _console_str( self, *args, **kwargs ):
+    with self.capture() as capture:
+        self.print(*args, **kwargs)
+    ret = capture.get()
+    return ret
+
+def reload_console( **kwargs ):
+    global console
+    console = rich.console.Console( **kwargs )
+    console.str = types.MethodType( _console_str, console )
 # XXX Do we want to make this depend on some option?
-rich._console = console
+    rich._console = console
+
+reload_console( force_terminal = True, color_system = "truecolor" )
+
 
 def rprint( msg ):
     console.print(msg)

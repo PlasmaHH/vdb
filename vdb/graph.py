@@ -505,7 +505,7 @@ current_track_var = None
 gt = None
 
 @vdb.event.gdb_exiting()
-def exit_gdb( ):
+def exit_gdb( _ev = None ):
     if( gt is not None and gt.process is not None ):
         gt.process.join()
 

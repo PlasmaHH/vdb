@@ -96,7 +96,12 @@ class command(gdb.Command,abc.ABC):
             argv = argv[1:]
         return ( argv, flags )
 
-    def context( self, flags ):
+    def context( self, flags, stripbefore = "" ):
+        print(f"{flags=} => ", end="")
+        for s in stripbefore:
+            flags = flags.replace(s,"")
+        print(f"{flags=}")
+
         context = (None,None)
         if( len(flags) != 0 ):
             if( flags == "*" ):

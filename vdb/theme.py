@@ -191,7 +191,7 @@ def load_cfg( prefix, vl ):
 def load_rich( vl ):
     theme = vl
     import rich.theme
-    vdb.util.console = rich.console.Console( force_terminal = True, color_system = "truecolor", theme = rich.theme.Theme(theme) )
+    vdb.util.reload_console( force_terminal = True, color_system = "truecolor", theme = rich.theme.Theme(theme) )
 
 def _gdb_set( key, sub, val ):
     if( len(val) ):

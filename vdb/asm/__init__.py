@@ -18,6 +18,7 @@ import importlib
 
 import re
 import rich
+import rich.syntax
 import traceback
 import pickle
 import sys
@@ -574,7 +575,7 @@ class asm_arg_base( ):
         except:
             vdb.print_exc()
             print("Failed to parse " + arg)
-            raise
+#            raise
         self.arg_string = arg
         self._bitsize = vdb.register.register_size( self.register )
 
@@ -804,6 +805,7 @@ class instruction_base( abc.ABC ):
         self.previous = None
         self.passes = 0
         self.file = None
+        self.lineno = None
         self.line = None
         self.unhandled = False
         self.explanation = []
@@ -1469,6 +1471,8 @@ ascii mockup:
 
     def compute_context( self, context, marked_line ):
 #        print(f"compute_context({context=},{marked_line=})")
+        if( marked_line is None ):
+            marked_line = 0
         context_start = None
         context_end = None
         if( context is not None ):
@@ -1487,7 +1491,7 @@ ascii mockup:
     m_trans = str.maketrans("v^-|<>u#Q~T+","╭╰─│◄►┴├⥀◆┬┼" )
     p_trans = str.maketrans("v^-|<>u#Q~T+","|  |   |  ||" )
 
-    def to_str( self, showspec = "maodbnpSrT", context = None, marked = None, source = False, suppress_header = False ):
+    def to_str( self, showspec = "maodbnpSrT", context = None, marked = None, source = False, suppress_header = False, full_source = False ):
         self.lazy_finish()
         hf = self.function
         if( shorten_header.value ):
@@ -1583,10 +1587,11 @@ ascii mockup:
                 elif( cnt == 0 ):
                     otbl.append( header )
 
-            if( source ):
+            if( source or full_source):
                 if( i.file is None ):
-                    i.file,i.line = info_line( i.address )
-                fl = f"{i.file}:{i.line}"
+                    i.file,i.lineno = info_line( i.address )
+                fl = f"{i.file}:{i.lineno}"
+#                print(f"SET {i.address:#0x} => {i.file}:{i.lineno}")
                 fl = [ (fl,0,0) ]
                 if( fl != file_line ):
                     file_line = fl
@@ -1885,7 +1890,7 @@ ascii mockup:
 
             # Output an extra line that is filled only sparsely, causing the jump arrows to normally break but we simply
             # add them back
-            def output_extra( lst, otbl, lvl ):
+            def output_extra( lst, otbl, lvl, nopost = False ):
                 if( lst is None ):
                     return
                 if( len(lst) == 0 ):
@@ -1923,10 +1928,14 @@ ascii mockup:
 
                     # postarrows is especially prepared for this case it it cannot simply be a repeat of the previous
                     # arrows, it must visually match
-                    if( postarrows is not None ):
+                    if( not nopost and postarrows is not None ):
                         empty_line[jump_index] = postarrows
 
                     empty_line[lvl] = ex
+                    # XXX Surely we can do this more efficiently 
+                    if( nopost ):
+                        while( empty_line[-1] is None ):
+                            empty_line.pop(-1)
 #                    print("el = '%s'" % (el,) )
                     otbl.append(empty_line)
 
@@ -1938,7 +1947,31 @@ ascii mockup:
 
             output_extra(i.static_extra,otbl,None)
             output_extra(i.extra,otbl,None)
-#            output_extra(i.file_line,otbl,0)
+            if( full_source ):
+                sline = None
+#                xx = f"{i.file}, {i.lineno}, {i.file_line}, {i.previous}"
+#                print(f"READ {i.address:#0x} => {i.file}:{i.lineno}")
+#                print(f"{i.previous=}")
+                if( i.previous is None ):
+                    # Then we also have no idea if it was output already so start anew
+                    output_extra( [ "PN" + i.file] ,otbl,0)
+                    sline = source_line( i.file, i.lineno, i.lineno )
+                else:
+                    # Check if they are the same, if yes we don't output again
+#                    print(f"PREV {i.previous.address:#0x} => {i.previous.file}:{i.previous.lineno}")
+                    if( i.previous.file != i.file ):
+                        # totally new file, display just one line
+                        output_extra( [ i.file] ,otbl,0)
+                        sline = source_line( i.file, i.lineno, i.lineno )
+                    elif( i.previous.lineno != i.lineno ):
+                        # Same file but just one different line, display all previous ones
+                        sline = source_line( i.file, int(i.previous.lineno) + 1, i.lineno )
+                if( sline is not None ):
+                    output_extra( sline,otbl,0, nopost = True)
+#                print()
+            elif( source ):
+                output_extra(i.file_line,otbl,0)
+
             output_extra(line_extra,otbl,"p") # the explanations
             output_extra( load_extra,otbl, "S" )
 
@@ -1974,11 +2007,11 @@ ascii mockup:
         return f"Instructions in range {self.start:#0x} - {self.end:#0x} of {hf}\n{ret}"
 #        return "\n".join(ret)
 
-    def print( self, showspec = "maodbnpSrT", context = None, marked = None, source = False ):
+    def print( self, showspec = "maodbnpSrT", context = None, marked = None, source = False, full_source = False ):
         if( direct_output.value and from_tty ):
-            os.write(1,self.to_str(showspec, context, marked,source).encode("utf-8"))
+            os.write(1,self.to_str(showspec, context, marked,source,False,full_source).encode("utf-8"))
         else:
-            print(self.to_str(showspec, context, marked,source))
+            print(self.to_str(showspec, context, marked,source,False,full_source))
 
     def color_dot_relist( self, s, l ):
         for r,c in l:
@@ -2776,12 +2809,33 @@ ilinere = re.compile('Line ([0-9]*) of "(.*)"')
 
 @vdb.util.memoize()
 def info_line( addr ):
-    il = gdb.execute(f"info line *{addr:#0x}",False,True)
-    m = ilinere.match(il)
-    if( m is not None ):
-        return ( m.group(2), m.group(1) )
-#    print("il = '%s'" % (il,) )
-    return (None,None)
+    ix = gdb.find_pc_line(addr)
+    if( ix.symtab is None ):
+        return (None,None)
+    return ( ix.symtab.fullname(), ix.line )
+
+# XXX This should got as an alternative method into the lines plugin
+
+@vdb.util.memoize()
+def get_rendered_source( fname ):
+    clang = gdb.current_language()
+    cw = vdb.util.console.width * 0.75
+    rs = rich.syntax.Syntax.from_path(fname,lexer=clang, line_numbers = True, code_width = int(cw) )
+    ret = vdb.util.console.str(rs)
+    return ret.split("\n")
+
+@vdb.util.memoize()
+def source_line(f_file, f_line, t_line):
+#    print(f"source_line( {f_file=}, {f_line=}, {t_line=})")
+    f_line = int(f_line)
+    t_line = int(t_line)
+    ret = []
+    rs = get_rendered_source( f_file )
+    for x in range(f_line,t_line+1):
+        rsl = rs[x-1]
+#        rsl = rsl.replace("                                ", "")
+        ret.append( (rsl,0) )
+    return ret
 
 def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached = True, do_flow = True ):
 
@@ -2840,7 +2894,9 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     archname = configure_arch(arch)
 
     if( fakedata is None ):
+        print("Waiting for gdb to disassemble",end="")
         dis = gdb.execute(f'disassemble/r {arg}',False,True)
+        print("\r",end="")
     else:
         dis = fakedata
 #    linere = re.compile("^(=>)*\s*(0x[0-9a-f]*)\s*<\+([0-9]*)>:\s*([^<]*)(<[^+]*(.*)>)*")
@@ -2866,6 +2922,7 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
             pass
 
     for line in dis.splitlines():
+#        print(f"Parsing: {line}")
 
         if( line in set(["End of assembler dump."]) ):
             continue
@@ -3737,6 +3794,7 @@ def disassemble( argv, flags, context ):
     dotty = False
     fakedata = None
     source = False
+    full_source = False
     arch = None
 
     # XXX Error out on unsupported flags
@@ -3756,10 +3814,16 @@ def disassemble( argv, flags, context ):
         return add_variable( argv )
 
     if( "d" in flags ):
+        flags = flags.replace("d","")
         dotty = True
 
     if( "s" in flags ):
+        flags = flags.replace("s","")
         source = True
+
+    if( "S" in flags ):
+        flags = flags.replace("S","")
+        full_source = True
 
     # XXX We might want to support /f25,5 or /sf245,4 or so too, maybe context parsing could include that by skipping
     # non numeric stuff?
@@ -3769,6 +3833,7 @@ def disassemble( argv, flags, context ):
         if( len(argv) > 1 ):
             arch = argv[1]
         argv=["fake"]
+        flags = flags.replace("f","")
 
 
 #    print("context = '%s'" % (context,) )
@@ -3790,7 +3855,7 @@ def disassemble( argv, flags, context ):
         pass
 
     try:
-        asm_listing.print(asm_showspec.value, context,marked, source)
+        asm_listing.print(asm_showspec.value, context,marked, source, full_source)
         if( dotty ):
             g = asm_listing.to_dot(asm_showspec_dot.value)
             oid = id(asm_listing)
@@ -3864,7 +3929,7 @@ part of a function, unlike the disassemble command those are right away disassem
             global from_tty
             from_tty = self.from_tty
             argv,flags = self.flags(argv)
-            context = self.context( flags )
+            context = self.context( flags, "rdFcvsS" )
 #            print(f"{context=}")
             disassemble( argv, flags, context )
         except gdb.error as e:
