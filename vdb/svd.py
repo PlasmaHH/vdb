@@ -21,6 +21,7 @@ import lzma
 import time
 import concurrent.futures
 import json
+import threading
 
 
 
@@ -45,6 +46,9 @@ except:
 #    from xml.etree.ElementTree import parse
 
 devices = {}
+devices_lock = threading.Lock()
+
+
 class svd_device:
 
     class cpu_description:
@@ -987,37 +991,38 @@ def svd_load_file(fname,at):
         if( not scan_silent.value ):
             print(f"=> {ndev.name}")
         ndev.origin = fname
-        global devices
+
         key_name = ndev.name
         cnt = 0
         # Check if its knonwn already, in that case we try to rename *both* with their version number
-        otherdev = devices.get(key_name,None)
-        # key_name does not include version number yet
-        if( otherdev is not None ):
-            othernewname = otherdev.name
-            if( otherdev.version is not None ):
-                del devices[key_name]
-                othernewname = f"{key_name}_{otherdev.version}"
-                devices[othernewname] = otherdev
-            if( ndev.version is not None ):
-                key_name = f"{key_name}_{ndev.version}"
+        with devices_lock:
+            otherdev = devices.get(key_name,None)
+            # key_name does not include version number yet
+            if( otherdev is not None ):
+                othernewname = otherdev.name
+                if( otherdev.version is not None ):
+                    del devices[key_name]
+                    othernewname = f"{key_name}_{otherdev.version}"
+                    devices[othernewname] = otherdev
+                if( ndev.version is not None ):
+                    key_name = f"{key_name}_{ndev.version}"
 
-        oldkey = key_name
-        # If we still have the same name
-        while( ( odev := devices.get(key_name,None) ) is not None ):
-            # already there, check if it is from the same file, in that case we can just overwrite it
-            if( odev.origin == ndev.origin ):
-                break
-            otherdev = odev
-            cnt += 1
-            key_name = oldkey + "." + str(cnt)
-        # ouotput message if the keyname had to change
+            oldkey = key_name
+            # If we still have the same name
+            while( ( odev := devices.get(key_name,None) ) is not None ):
+                # already there, check if it is from the same file, in that case we can just overwrite it
+                if( odev.origin == ndev.origin ):
+                    break
+                otherdev = odev
+                cnt += 1
+                key_name = oldkey + "." + str(cnt)
+            # ouotput message if the keyname had to change
 
-        if( key_name != ndev.name ):
-            print(f"Duplicate CPU {ndev.name}, renaming new to {key_name}, old to {othernewname}")
-        ndev.hash = vdb.util.hash( fname )
-        ndev.file_size = os.path.getsize( fname )
-        devices[key_name] = ndev
+            if( key_name != ndev.name ):
+                print(f"Duplicate CPU {ndev.name}, renaming new to {key_name}, old to {othernewname}")
+            ndev.hash = vdb.util.hash( fname )
+            ndev.file_size = os.path.getsize( fname )
+            devices[key_name] = ndev
 
 def svd_list( flt = None):
     otbl = []
@@ -1073,7 +1078,7 @@ def svd_list( flt = None):
 keep_parsing = True
 
 @vdb.event.gdb_exiting()
-def stop_parsing( ):
+def stop_parsing( ev_ ):
     global keep_parsing
     keep_parsing = False
 

@@ -20,13 +20,14 @@ import rich.console
 default_host = vdb.config.parameter("vdb-swo-host","localhost")
 default_port = vdb.config.parameter("vdb-swo-port",22888)
 
-flush_timeout = vdb.config.parameter("vdb-swo-flush-timeout", 50, docstring = "Timeout after which a buffer that did not receive anything will be flushed" )
+flush_timeout   = vdb.config.parameter("vdb-swo-flush-timeout", 50, docstring   = "Timeout after which a buffer that did not receive anything will be flushed" )
 flush_watermark = vdb.config.parameter("vdb-swo-flush-watermark", 64, docstring = "If this much bytes are in the buffer it will be flushed")
-auto_reconnected = vdb.config.parameter("vdb-swo-auto-reconnect", True )
+auto_reconnect  = vdb.config.parameter("vdb-swo-auto-reconnect", True )
 
 default_colors = vdb.config.parameter("vdb-swo-colors", "#ffffff;#ffff77;#ff9900;#ff7777;#00ff00;#0000ff;#ff00ff;#00ffff;#88aaff;#aa00aa" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
 show_packet_type = vdb.config.parameter("vdb-show-packet-type",False)
+auto_start = vdb.config.parameter("vdb-swo-autostart",False, docstring = "Autostarts before the first prompt" )
 
 # TODO
 # sync/async mode: only output what was captured "before_prompt"
@@ -62,6 +63,7 @@ class SWO:
             self.channel = channel
             self.buffer = ""
             self.last_flushed = time.time()
+            self.force_flush = False
             # XXX Guess we should attach the output target later here
 
         # other output modules should overwrite this?
@@ -83,17 +85,30 @@ class SWO:
         def flush( self ):
             idx = self.channel % len(swo_colors)
             if( swo_rich[idx].value ):
+#                print("RICH FLUSH")
+                # We might get half of a rich or ansii escape sequence or so here. 
                 data = self.buffer
-                # XXX What do we do if the buffer only contains half of some rich syntax?
+#                print(f"BUFFER: {data}")
+
                 if( short_rich[idx].value ):
                     data = self._expand_rich( data )
+#                print(f"EXPANDED BUFFER: {data}")
+                # rich for some reason doesn't like this, so we try to hide it
+                data = data.replace("\x1b[","_ANSI_ESCAPE_SEQUENCE_")
+#                print(f"ESCAPED BUFFER: {data}")
 
                 try:
                     with vdb.util.console.capture() as cap:
                         vdb.util.console.print( data, end = "" )
                     outputdata = str( cap.get() )
-                except MarkupError:
-                    outputdata = data
+#                    print(f"ENRICHED BUFFER: {outputdata=}")
+                    # rich is done, we can revert the extra escaping
+                    outputdata = outputdata.replace("_ANSI_ESCAPE_SEQUENCE_","\x1b[")
+#                    print(f"UNESCAPED BUFFER: {outputdata}")
+                except rich.errors.MarkupError:
+                    # rich didn't do anything, we can revert the extra escaping
+                    outputdata = data.replace("_ANSI_ESCAPE_SEQUENCE_","\x1b[")
+                    print(f"ERROR: {outputdata}")
             else:
                 outputdata = self.buffer
 
@@ -102,17 +117,22 @@ class SWO:
 
             self.output( outputdata )
             self.buffer = ""
+            self.force_flush = False
             self.last_flushed = time.time()
 
         def check_timeout( self, now ):
-            if( self.last_flushed + flush_timeout.value/1000.0 >= now ):
+            if( self.force_flush or self.last_flushed + flush_timeout.value/1000.0 >= now ):
                 self.flush()
 
         def add( self, payload ):
             char = payload.decode("raw_unicode_escape")
             self.buffer += char
-            if( char == "\n" or len(self.buffer) >= flush_watermark.value ):
+            if( char == "\n" ):
                 self.flush()
+            # Let the next timeout check trigger. This allows us to process the whole swo buffer at once even if we hit
+            # the watermark
+            if( len(self.buffer) >= flush_watermark.value ):
+                self.force_flush = True
 
     def __init__( self, host, port ):
         self.host = host
@@ -145,13 +165,19 @@ class SWO:
         print("Starting SWO thread...")
         timeout = 0.1
         while self.keep_running and vdb.keep_running:
-            pr,pw,pe = select.select( [ self.sock ], [], [], timeout )
-            if( len(pr) > 0 ):
-                data = self.sock.recv(1024)
-                self.buffer += data
-                if( len(self.buffer) > 2 ):
-                    self.decode()
-            self.check_timeouts()
+            try:
+                pr,pw,pe = select.select( [ self.sock ], [], [], timeout )
+                if( len(pr) > 0 ):
+                    data = self.sock.recv(1024)
+                    self.buffer += data
+                    if( len(self.buffer) > 2 ):
+                        self.decode()
+                self.check_timeouts()
+            except ConnectionResetError as e:
+                print(f"SWO Connection lost: {e}")
+                if( not auto_reconnect.value ):
+                    break
+                self._connect()
         print("Exiting SWO Thread...")
 
 
@@ -286,7 +312,10 @@ def status_swo( flags, argv ):
         row.append( len(cbuf.buffer) )
         row.append( cbuf.last_flushed )
         db = channel_outputs.get( ch )
-        row.append( db.id )
+        if( db is None ):
+            row.append( "none" )
+        else:
+            row.append( db.id )
         tbl.append(row)
     vdb.util.print_table(tbl)
 
@@ -310,6 +339,17 @@ def link_dash( flags, argv ):
     link_board( channel, db )
     # swo dash 0 1 # link channel 0 output into dashboard id 1
     # swo dash 0 tmux foobar # link channel 0 output into a new tmux dashboard
+
+@vdb.event.before_first_prompt()
+def maybe_autostart( ):
+    if( not auto_start.value ):
+        return
+    try:
+        print(f"Autostarting SWO to {default_host.value}:{default_port.value}...", end="")
+        start_swo("","")
+    except Exception as e:
+        print(f"Failed : {e}")
+    print("done")
 
 class cmd_swo (vdb.command.command):
     """

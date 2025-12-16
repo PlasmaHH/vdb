@@ -458,7 +458,7 @@ def hint( argv ):
 
 
 @vdb.event.new_objfile()
-def flush():
+def flush( _ev = None ):
     global flush_count
     flush_count += 1
     frameno = None
@@ -472,7 +472,7 @@ def flush():
 
 @vdb.event.stop()
 @vdb.event.new_objfile()
-def clear():
+def clear( _ev = None ):
     global flush_count
     flush_count=0
     global unwinder

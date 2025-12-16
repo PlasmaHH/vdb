@@ -1561,7 +1561,7 @@ class Registers():
 registers = None
 
 @vdb.event.new_objfile()
-def reset( self ):
+def reset( _ev = None ):
     global registers
     registers = None
 

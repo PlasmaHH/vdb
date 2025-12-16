@@ -24,7 +24,7 @@ need_sint_update = True
 
 @vdb.event.new_objfile()
 @vdb.event.new_thread()
-def reset_info():
+def reset_info( _ev = None ):
     global need_update
     global need_uint_update
     global need_sint_update
@@ -66,7 +66,7 @@ def active( ):
     return _active_arch
 
 @vdb.event.new_objfile()
-def gather_info( ):
+def gather_info( _ev = None ):
     try:
 #        print(f"{gdb.selected_frame()=}")
 #        print(f"{id(gdb.selected_frame())=}")
@@ -132,7 +132,7 @@ def get_pc_name( ):
 
 @vdb.event.stop()
 @vdb.event.before_prompt()
-def maybe_gather_info():
+def maybe_gather_info( _ev = None ):
     global need_update
     if( need_update ):
         gather_info()

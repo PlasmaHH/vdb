@@ -462,7 +462,8 @@ tests = [
                 "vdb shorten std::remove_reference<std::ios_base::<unnamed enum> >",
                 "vdb shorten s0<(end)1, void>",
                 "vdb shorten xtree::str::<union>::_M_allocated_capacity",
-                "vdb shorten xtree::str::<union>::_M_local_buf"
+                "vdb shorten xtree::str::<union>::_M_local_buf",
+                "vdb shorten CEL::Basic::CBatchStepListBatchStep::getStepWeight() const",
 
 
                     ],

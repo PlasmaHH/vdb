@@ -26,7 +26,7 @@ def on_event( gdbreg, darg ):
             try:
                 func(*(arg+darg) )
             except TypeError:
-#                print("a = '%s'" % a )
+                print(f"EVENT ERROR: {func=}, {arg=}")
                 func(*darg)
 
         gdbreg.connect(wrapper)

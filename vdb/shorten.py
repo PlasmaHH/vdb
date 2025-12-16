@@ -29,7 +29,7 @@ verbosity = vdb.config.parameter("vdb-shorten-verbosity",1)
 debug = vdb.config.parameter("vdb-shorten-debug",False)
 cache = vdb.config.parameter("vdb-shorten-cache",True)
 lazy  = vdb.config.parameter("vdb-shorten-lazy-load-typedefs",False)
-spacdeiff = vdb.config.parameter("vdb-shorten-accept-space-diffs", True )
+space_diff = vdb.config.parameter("vdb-shorten-accept-space-diffs", True )
 
 
 def log(fmt, *more ):
@@ -77,7 +77,8 @@ class type_or_function:
         self.tail = ""
         self.cached_string = None
         self.failed = False
-    
+        self.member_tail = None
+
     def replace_name( self, s, r ):
         if( self.name is not None ):
             self.name = self.name.replace(s,r)
@@ -223,9 +224,12 @@ class type_or_function:
     def __str__(self):
         return self.to_string()
 
+    def parse_tail( self, tail ):
+        self.member_tail = tail.split()
+
     def to_string( self, _ = 0 ):
-        if( self.cached_string is not None ):
-            return self.cached_string
+#        if( self.cached_string is not None ):
+#            return self.cached_string
 
         selfname = self.name
         if( selfname is None ):
@@ -293,6 +297,10 @@ class type_or_function:
 #            print("ret = '%s'" % (ret,) )
             ret += str(self.subobject)
 
+        if( self.member_tail is not None ):
+            ret += " "
+            ret += " ".join(self.member_tail)
+
         if( cache.value is True ):
             self.cached_string = ret
 #        print("ret = '%s'" % (ret,) )
@@ -315,14 +323,16 @@ def parse_fragment( frag, obj, level = 0 ):
 #    func_tailset = [ "()" ]
 
     swallow_next = False
+    in_tail = False
 
     i = -1
     while i < len(frag)-1:
         i += 1
 
         s=frag[i]
-#        print(f"@{level} frag[{i}]='{frag[i]}'")
+        indent(level,f"@{level} frag[{i}]='{frag[i]}', {sofar=}, {in_tail=}, obj={obj}")
         if( s == " "):
+            indent(level,f"s is space, {swallow_next=}, {sofar=}")
             if( not swallow_next ):
                 if( len(sofar) > 0 ):
 #                    print(f"'{sofar}' => '{sofar+s}'")
@@ -350,7 +360,10 @@ def parse_fragment( frag, obj, level = 0 ):
                 ct = type_or_function()
                 ct.set_type("function parameter")
                 i += 1
+#                indent(level,f"{frag[i:]=}")
                 consumed = parse_fragment( frag[i:], ct, level+1 )
+#                indent(level,f"{consumed=}")
+#                ct.dump(level+1)
                 i += consumed
                 if( ct.name is None ):
                     print(f"{ct.subobject=}")
@@ -372,23 +385,26 @@ def parse_fragment( frag, obj, level = 0 ):
 #                        print(f"S3 {obj.name=}")
                         ct.subobject = None
                     break
+            in_tail = True
 #            print("obj.name = '%s'" % (obj.name,) )
 #            print("frag[i:] = '%s'" % (frag[i:],) )
             continue
         if( s == ")" ):
 #            vdb.util.bark() # print("BARK")
             obj.name = use_sofar(sofar)
-#            print(f"A2 {obj.name=}")
-#            print("obj.name = '%s'" % (obj.name,) )
+#            indent(level,f"A2 {obj.name=}")
+#            indent(level,f"{i=}")
+
             if( i+1 < len(frag) and frag[i+1] == "(" ):
+#                vdb.util.bark() # print("BARK")
                 # a member funciton pointer special case thingie? parse parameters again I guess?
                 sub = type_or_function()
                 obj.subobject = sub
 #                        print("frag[i+1:] = '%s'" % (frag[i+1:],) )
                 consumed=parse_fragment( frag[i+1:],sub,level+1)
-#                        print("consumed = '%s'" % (consumed,) )
+#                indent(level,f"{consumed=}")
                 i += consumed
-#                    i+=1
+#            indent(level,f"s==) => {i}")
             return i
         if( s == ":" ):
             obj.add_ns( use_sofar(sofar) )
@@ -512,12 +528,17 @@ def parse_fragment( frag, obj, level = 0 ):
 #        print(f"{sofar=} += {s=}")
         sofar += s
 
-#    print("len(frag) = '%s'" % (len(frag),) )
-#    print("at end i = '%s'" % (i,) )
+    indent(level,f"{len(frag)=}")
+    indent(level,f"at end {i=}")
+    indent(level,f"{sofar=}")
+    indent(level,f"obj={obj}")
     i += 1
     if( len(sofar) > 0 ):
 #        print(f"{sofar=}")
-        obj.name = use_sofar(sofar)
+        if( in_tail ):
+            obj.parse_tail( sofar )
+        else:
+            obj.name = use_sofar(sofar)
 #        print(f"S9 {obj.name=}")
 #        print(f"exit obj.name '{obj.name}'")
     return i
@@ -536,6 +557,9 @@ def parse_function( fun, silent = False ):
     rest = rest.replace("operator()","operator__CALL__")
     rest = rest.replace("<union>","__UNION__")
     i = parse_fragment( rest , sub )
+#    print(f"{rest=}")
+#    print(f"{len(rest)=}")
+#    print(f"{i=}")
     sub.replace_name("operator__CALL__","operator()")
     sub.replace_name("__UNION__","<union>")
 
@@ -553,7 +577,7 @@ def parse_function( fun, silent = False ):
     s0 = sf
     s1 = fun
 
-    if( spacdeiff.value ):
+    if( space_diff.value ):
         s0s = s0.replace(" ","")
         s1s = s1.replace(" ","")
     else:
@@ -562,7 +586,6 @@ def parse_function( fun, silent = False ):
 
 
     if( debug.value and s0s != s1s ):
-        #		func.dump()
         print(f"Recreating the function signature leads a difference ({len(s0)},{len(s1)})")
         print(f"{fun=}")
         print(f"{sf=}")
@@ -581,6 +604,8 @@ def parse_function( fun, silent = False ):
     elif( s0s != s1s ):
         if( not silent ):
             vdb.log( f"Failed to properly parse '{fun}', shortening not possible, recommend writing a testcase", level = 2)
+            vdb.log( f"{s0=}", level = 2 )
+            vdb.log( f"{s1=}", level = 2 )
         func.failed = True
 
 #	func.dump()
@@ -662,7 +687,7 @@ for rre,subs in re_shortens:
 
 
 @vdb.event.new_objfile()
-def redo_cstdint( ):
+def redo_cstdint( _ev ):
 #    print("Reparsing cstdint shortens")
     for pref,uint in cstdint_prefixes:
         for cand in cstdint_candidates:

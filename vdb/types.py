@@ -63,7 +63,7 @@ stop_refreshing = False
 ctags = None
 
 @vdb.event.gdb_exiting()
-def abort_refresh_locations( ):
+def abort_refresh_locations( ev_ ):
     global stop_refreshing
     stop_refreshing = True
     if( ctags is not None ):

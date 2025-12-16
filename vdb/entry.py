@@ -40,11 +40,7 @@ class cmd_entry(vdb.command.command):
     def do_invoke (self, argv:list[str] ):
         self.dont_repeat()
 
-        try:
-            entry(argv)
-        except Exception: # pylint: disable=try-except-raise
-#            vdb.print_exc()
-            raise
+        entry(argv)
 
 cmd_entry()
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
