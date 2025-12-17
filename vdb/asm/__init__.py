@@ -11,6 +11,7 @@ import vdb.command
 import vdb.arch
 import vdb.register
 import vdb.memory
+import vdb.swo
 
 import gdb
 import colors
@@ -149,7 +150,7 @@ color_call_dot       = vdb.config.parameter("vdb-asm-colors-call-dot",       "#6
 nonfunc_bytes      = vdb.config.parameter("vdb-asm-nonfunction-bytes",16)
 history_limit      = vdb.config.parameter("vdb-asm-history-limit",4)
 tree_prefer_right  = vdb.config.parameter("vdb-asm-tree-prefer-right",False)
-asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnptrjhcxS" )
+asm_showspec       = vdb.config.parameter("vdb-asm-showspec", "maodbnptrjhcwxS" )
 asm_showspec_dot   = vdb.config.parameter("vdb-asm-showspec-dot", "maobnptr" )
 asm_tailspec       = vdb.config.parameter("vdb-asm-tailspec", "andD" )
 asm_sort           = vdb.config.parameter("vdb-asm-sort", True )
@@ -935,7 +936,7 @@ class instruction_base( abc.ABC ):
     def add_extra( self, s, lvl = None, static = False ):
         if( lvl is None ):
             lvl = "n"
-#        print(f"add_extra({type(s)}:{s})")
+#        print(f"add_extra({type(s)}:{s},{lvl=},{static=})")
         if( isinstance(s,string_ref) ):
 #            s = str(s)
             pass
@@ -1528,6 +1529,7 @@ ascii mockup:
                         , ("o" ,[ ("Offset",",,bold",0,0)])
                         , ("x" ,[ ("xi History",",,bold",0,0)])
                         , ("c" ,cg_header)
+                        , ("w" ,[ ("SWO",",,bold",0,0) ] )
                         , ("d" ,[ ("Jumps",",,bold",0,0) ])
                         , ("b" ,[("Bytes",",,bold",0,0)])
                         , ("n" ,[("Mnemonic",",,bold",0,0)])
@@ -1572,6 +1574,41 @@ ascii mockup:
 #        vdb.util.bark() # print("BARK")
 #        print(f"{context=}")
 #        print(f"{marked=}")
+        grad = vdb.color.gradient( [
+               (   0, "#000000"),
+               (   5, "#ffff00"),
+               (  20, "#ff8800"),
+               (  50, "#ff0000"),
+               (  90, "#aa00aa"),
+               ( 100, "#ff00ff"),
+               ] )
+
+
+
+
+        total_pccnt = 0
+        min_pccnt = 2**31
+        max_pccnt = 0
+
+        class deferred_pc_cnt:
+            def __init__( self, pc_cnt ):
+                self.pc_cnt = pc_cnt
+
+            def __call__( self ):
+                xr = self.pc_cnt - min_pccnt
+                xr /= max_pccnt
+
+                cpct = self.pc_cnt / vdb.swo.pc_total
+                cpct *= 100.0
+                xpct = self.pc_cnt / total_pccnt
+                xpct *= 100.0
+                bg,fg = grad.get(xpct)
+                gcol = f"{fg},{bg}"
+                swos = f"{self.pc_cnt} ({cpct:.03f}) [{xpct:.03f}]"
+#                sco = vdb.color.color( swos, gcol )
+#                tc = vdb.util.table_cell( swos, sco, len(swos), None, None )
+                return ( swos, gcol )
+
         for idx,i in enumerate(self.instructions):
             if( idx > 0 ):
                 previous = self.instructions[idx-1]
@@ -1726,6 +1763,21 @@ ascii mockup:
                             line.append( cv )
                 else:
                     line += [None] * len(cg_events)
+
+            if( "w" in showspec ):
+                if( len(vdb.swo.pc_counters) == 0 ):
+                    line.append(None)
+                else:
+                    pc_cnt = vdb.swo.pc_counters.get(int(i.address))
+                    if( pc_cnt is None ):
+                        line.append(None)
+                    else:
+                        # XXX Get colour for background, format according to pct/cnt settings
+                        # XXX Can we somehow get the conut for the function? Then we could make relpct too
+                        total_pccnt += pc_cnt
+                        min_pccnt = min(min_pccnt,pc_cnt)
+                        max_pccnt = max(max_pccnt,pc_cnt)
+                        line.append( deferred_pc_cnt(pc_cnt) )
 
             jumparrows = None
             postarrows = None

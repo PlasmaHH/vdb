@@ -103,7 +103,7 @@ def dap( ):
     seen = set()
 
     for i in range(0,num):
-        if( True ):
+        if( False ):
             xbase = base
             xaddr = addr + i*4
 #            xaddr = addr - i*4
@@ -111,8 +111,8 @@ def dap( ):
             xbase = base + i
             xaddr = addr
 #        r = gdb.execute( f"monitor readdp {xbase:#0x}", True, True )
-#        r = gdb.execute( f"monitor readap {xbase:#0x}", True, True )
-        r = gdb.execute( f"monitor readapex {xbase:#0x} {xaddr:#0x}", True, True )
+        r = gdb.execute( f"monitor readap {xbase:#0x}", True, True )
+#        r = gdb.execute( f"monitor readapex {xbase:#0x} {xaddr:#0x}", True, True )
 #        r = gdb.execute( f"monitor readmemap {xbase:#0x} {xaddr:#0x} 1 0", True, True )
         r = r.strip()
         if( r not in seen or False ):

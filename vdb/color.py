@@ -67,6 +67,95 @@ def scolor( s, cs ):
     except:
         return colors.color(s,fg="red",style="underline")
 
+def get_luminance( color):
+    """
+    Calculate the luminance of a CSS color (hex format).
+    """
+    # Remove the '#' character
+    color = color[1:]
+    # Parse RGB components
+    r = int(color[0:2], 16) / 255.0
+    g = int(color[2:4], 16) / 255.0
+    b = int(color[4:6], 16) / 255.0
+
+    # Convert to linear RGB
+    def linearize(x):
+        if x <= 0.03928:
+            return x / 12.92
+        else:
+            return ((x + 0.055) / 1.055) ** 2.4
+
+    r_linear = linearize(r)
+    g_linear = linearize(g)
+    b_linear = linearize(b)
+
+    # Calculate luminance
+    return 0.2126 * r_linear + 0.7152 * g_linear + 0.0722 * b_linear
+
+@vdb.util.memoize()
+def get_best_foreground_color( background_color):
+    """
+    Returns the best foreground color (black or white) for the given background.
+    """
+    luminance = get_luminance(background_color)
+    if( luminance > 0.5 ):
+        return "#000000"
+    else:
+        return "#ffffff"
+
+
+class gradient:
+    def __init__( self, colors ):
+        self.colors = list(sorted( colors ))
+
+    def get( self, val ):
+#        print(f"get( {val=} )")
+        oldcol = self.colors[0]
+        for col in self.colors:
+            if( val <= col[0] ):
+                break
+            oldcol = col
+
+#        print(f"{oldcol=}")
+#        print(f"{col=}")
+        xrange = col[0] - oldcol[0]
+#        print(f"{xrange=}")
+        xnor = val - oldcol[0]
+#        print(f"{xnor=}")
+        if( xrange != 0 ):
+            xnor /= xrange
+        bg_col = self.calc_gradient( oldcol[1], col[1],xnor )
+        fg_col = get_best_foreground_color( bg_col )
+
+        return (bg_col, fg_col)
+
+
+    def calc_gradient( self, colorl, colorr, x ):
+        rl = int(colorl[1:3],16)
+        gl = int(colorl[3:5],16)
+        bl = int(colorl[5:7],16)
+
+        rr = int(colorr[1:3],16)
+        gr = int(colorr[3:5],16)
+        br = int(colorr[5:7],16)
+
+        r = round( rl + x*(rr-rl))
+        g = round( gl + x*(gr-gl))
+        b = round( bl + x*(br-bl))
+
+        ret = f"#{r:02x}{g:02x}{b:02x}"
+#    print(f"{ret=}")
+        return ret
+
+
+
+
+
+
+
+
+
+
 def strip( s ):
     return colors.strip_color(s)
 

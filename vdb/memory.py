@@ -1079,7 +1079,8 @@ symre=re.compile(r"0x[0-9a-fA-F]* <([^+]*)(\+[0-9]*)*>")
 # addr in, ( start, size, string ) out...
 
 def is_sym_at( addr, symbol ):
-    nm = gdb.parse_and_eval(f"(void*)({addr})")
+#    nm = gdb.parse_and_eval(f"(void*)({addr})")
+    nm = gdb.format_address(addr)
 #    print("nm = '%s'" % (nm,) )
     m=symre.match(str(nm))
     if( m ):
@@ -1114,6 +1115,33 @@ def get_extra_sym( addr ):
             return x[2]
     return (None,None,None)
 
+sym_name_cache = intervaltree.IntervalTree()
+
+def get_gdb_sym_name( addr ):
+    addr = int(addr)
+    xs = sym_name_cache[addr]
+    if( len(xs) > 0 ):
+        sce = next(iter(xs))[2]
+#        assert isinstance(sce,str)
+
+    nm = gdb.format_address(addr)
+    m=symre.match(nm)
+    if( m is None ):
+        sym_name_cache[addr:addr+1] = nm
+        return nm
+    else:
+        nm = m.group(1)
+        ssz = m.group(2)
+        if( ssz is not None ):
+            ssz = int(ssz)
+        else:
+            ssz = 1
+        addr -= ssz
+        sym_name_cache[addr:addr+ssz] = nm
+        return nm
+
+
+# This function is rather expensive because it also gets the size. If you do not use the size, use get_gdb_sym_name
 def get_gdb_sym( addr ):
 #    vdb.util.bark() # print("BARK")
 #    vdb.util.bark(-1) # print("BARK")
@@ -1129,8 +1157,8 @@ def get_gdb_sym( addr ):
             return x[2]
     else:
         xaddr = addr
-        nm = gdb.parse_and_eval(f"(void*)({xaddr})")
-#        print(f"{str(nm)=}")
+#        nm = gdb.parse_and_eval(f"(void*)({xaddr})")
+        nm = gdb.format_address(xaddr)
         m=symre.match(str(nm))
 #        print(f"{m=}")
         if( m ):

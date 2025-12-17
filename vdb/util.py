@@ -463,6 +463,8 @@ def format_table( tbl, padbefore = " ", padafter = " ", as_list = False ):
             if( cell is None ):
                 cell=""
             align = Align.LEFT
+            if( callable(cell) ):
+                cell = cell()
 #            print("column = '%s'" % column )
             if isinstance(cell,color_str):
 #                print("cell = '%s'" % (cell,) )
@@ -517,6 +519,9 @@ def format_table( tbl, padbefore = " ", padafter = " ", as_list = False ):
                         else:
                             ncell = table_cell(cval,colour,clen,maxs,None)
                             maxsz[column] = max(maxsz.get(column,0),ncell.dpy_len)
+            elif( isinstance( cell, table_cell ) ):
+                ncell = cell
+                maxsz[column] = max(maxsz.get(column,0),ncell.dpy_len)
             else: # just some printable thing
                 ncell = table_cell(str(cell),None,None,None,None)
                 maxsz[column] = max(maxsz.get(column,0),ncell.dpy_len)

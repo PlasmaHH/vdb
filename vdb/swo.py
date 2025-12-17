@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import collections
 import socket
 import sys
 import threading
 import select
 import time
 import re
+import struct
 
 import gdb
 
 import vdb.command
 import vdb.color
 import vdb.util
+
 
 import rich.console
 
@@ -26,7 +29,7 @@ auto_reconnect  = vdb.config.parameter("vdb-swo-auto-reconnect", True )
 
 default_colors = vdb.config.parameter("vdb-swo-colors", "#ffffff;#ffff77;#ff9900;#ff7777;#00ff00;#0000ff;#ff00ff;#00ffff;#88aaff;#aa00aa" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
 
-show_packet_type = vdb.config.parameter("vdb-show-packet-type",False)
+show_packet_type = vdb.config.parameter("vdb-swo-show-packet-type",False)
 auto_start = vdb.config.parameter("vdb-swo-autostart",False, docstring = "Autostarts before the first prompt" )
 
 # TODO
@@ -53,6 +56,15 @@ def update_replacements( cfg ):
             rich_map[k] = v
 
 rich_replacements = vdb.config.parameter("vdb-swo-rich-replacements", "R:#ff0000,G:#00ff00,B:#0000ff", gdb_type = vdb.config.PARAM_ARRAY, on_set = update_replacements )
+
+pc_counters = collections.defaultdict(int)
+pc_total = 0
+pc2function_cache = {}
+
+def add_pc_counter( addr ):
+    pc_counters[addr] += 1
+    global pc_total
+    pc_total += 1
 
 class SWO:
 
@@ -215,19 +227,24 @@ class SWO:
 #        self.buffer = b""
 #        return
         while( len(self.buffer) > 1 ):
-            self._decode_packet()
+            if( self._decode_packet() ):
+                break
+
+    payload_map = {
+            0b01 : 1,
+            0b10 : 2,
+            0b11 : 4
+            }
 
     def _decode_packet( self ):
         headerbyte = self.buffer[0]
 #        print("########################################")
 #        print(f"{headerbyte=:#x}")
+#        print(f"{self.buffer=}")
 #        print(f"{bin(headerbyte)=}")
-        payload_map = {
-                0b01 : 1,
-                0b10 : 2,
-                0b11 : 4
-                }
 
+        # Just informative for debugging, might not be entirely correct. Protocol format from DDI 0403 for armv7 and 
+        # DDI 0553 for armv8
         if( show_packet_type.value ):
             if( headerbyte == 0 ):
                 print("SYNC")
@@ -236,44 +253,93 @@ class SWO:
             # 0bCDDD0000, DDD not 0b000 or 0b111
             elif( headerbyte & 0b00001111 == 0 ):
                 print("Possible Timestamp")
-                if( headerbyte & 0b01110000 == 0b01110000 or headerbyte & 0b0111000 == 0 ):
+                ddd = headerbyte & 0b01110000
+                if( ddd == 0b01110000 or ddd == 0 ):
                     print("Uh, no timestamp")
-            if( headerbyte & 0b00001011 == 0b0000100 ):
+            # don't elif because it may have been soemthing else than a timesampt
+            if( headerbyte & 0b00001011 == 0b00001000 ): # 0bCDDD1S00
                 print("Extension Header")
-            elif( headerbyte & 0b11011111 == 0b10010100 ):
+            elif( headerbyte & 0b11011111 == 0b10010100 ): # 0b10T10100
                 print("Global Timestamp")
-            elif( headerbyte & 0b10001111 == 0b00000100 ):
+            elif( headerbyte & 0b10001111 == 0b00000100 ): # 0b0xxx0100
                 print("Reserved 1")
-            elif( headerbyte & 0b01111111 == 0b01110000 ):
+            elif( headerbyte == 0b1110000 ):
                 print("Reserved 2")
-            elif( headerbyte & 0b11011111 == 0b10000100 ):
+            elif( headerbyte & 0b11011111 == 0b10000100 ): # 0b10x00100
                 print("Reserved 3")
-            elif( headerbyte & 0b11001111 == 0b11000100 ):
+            elif( headerbyte & 0b11001111 == 0b11000100 ): # 0b11xx0100
                 print("Reserved 4")
+            elif( headerbyte & 0b100 == 0 ): # 0bAAAAA0SS SS != b00
+                print("Instrumentation")
+            elif( headerbyte & 0b100 == 0b100 ): # 0bAAAAA0SS SS != b00
+                print("Hardware source")
+            else:
+                # If this happens we are most likely out of sync with the stream
+                print(f"Unknown Headerbyte {headerbyte:#0x}")
 
-        if( headerbyte & 0b00000011 != 0 ):
+        if( headerbyte == 0x0e ):
+            if( len(self.buffer) < 3 ):
+                return True
+
+            # exception trace packet, ignore (might be useful later on)
+            self._consume(3)
+        # A source packet
+        elif( headerbyte & 0b00000011 != 0 ):
 #            print("Source Packet")
             plb = headerbyte & 0b00000011
-            payload_len = payload_map[plb]
-#            print(f"{plb=}")
-#            print(f"{payload_len=}")
+            payload_len = self.payload_map[plb]
             if( payload_len >= len(self.buffer) ):
-            # Not enough data in buffer
-                return
+#                print(f"{payload_len=}, {len(self.buffer)=}")
+            # Not enough data in buffer, don't consume anything
+                return True
             payload = self.buffer[1:payload_len+1]
             source = headerbyte & 0b11111000
-            source <<= 3
-#            print(f"{source=}")
+            source >>= 3
 
             if( headerbyte & 0b00000100 == 0 ):
-#                print("Instrumentation Packet")
-#                print(f"{payload=}")
+#                print(f"{source=}")
                 self.add_payload(source,payload)
+            elif( headerbyte & 0b00000100 == 0b100 ):
+                if( payload_len == 1 ):
+                    addr = int(payload[0])
+                elif( payload_len == 4 ):
+                    addr = struct.unpack("I",payload)[0]
+                else:
+                    print("Invalid PC trace payload len, skipping")
+                    self._consume(1)
+                    return
+#                print(f"PC TRACE? {source=}, {headerbyte=}, {addr=:#0x}")
+                # XXX We might want to forward this into yet another thread for performance reasons to be able to really
+                # fast read these. Also this might be more useful to have that thread then hold a lock over the
+                # pc_counters dict so we can have our report etc. functionality run while swo is still active
+                add_pc_counter(addr)
             else:
-                print("Hardware Source")
-                print(f"{payload=}")
+                print(f"Unknown Source ({headerbyte:#0x})")
+                print(f"[{len(payload)}]:{payload=}")
             self._consume(1+payload_len)
-        else:
+        # XXX The timestamp and extension packets have a payload, we do not parse them, this might throw us off!
+        elif( headerbyte & 0b11011111 == 0b10010100 ): # 0b10T10100
+            print("NOT IMPLEMENTED: GLOBAL TIMESTAMP. Expect desync")
+            self._consume(1)
+        elif( headerbyte & 0b00001011 == 0b00001000 ): # 0bCDDD1S00
+            print("NOT IMPLEMENTED: EXTENSION. Expect desync")
+            self._consume(1)
+        elif( headerbyte == 0 ):
+            # sync
+            self._consume(1)
+        elif( headerbyte == 0b10000000 ):
+            # last sync
+            self._consume(1)
+        elif( headerbyte & 0b00001111 == 0 ): # 0xCDDD0000 => timestamp but only when DDD is not 0b000 or 0b111 (who thinks of such weird formats?)
+            ddd = headerbyte & 0b01110000
+            if( ddd != 0b01110000 and ddd != 0 ):
+                print("NOT IMPLEMENTED: LOCAL TIMESTAMP. Expect desync")
+                print(f"[{len(payload)}]:{payload=}")
+            else:
+                print(f"{headerbyte=}")
+                print(f"{ddd=}")
+            self._consume(1)
+        else: # no idea what we have here, last effort to just eat it
             self._consume(1)
 
 channel_outputs = {}
@@ -319,6 +385,65 @@ def status_swo( flags, argv ):
         tbl.append(row)
     vdb.util.print_table(tbl)
 
+def pc_trace( flags, argv ):
+    # XXX can we provide something similar to that on x86 linux?
+    print("Not yet implemented: would enable PC tracing on cortex-m targets")
+
+    # XXX Misuse this subcommand for debugging output trigger
+    print(f"{pc_counters=}")
+
+
+def pc_clear( flags, argv ):
+    global pc_counters
+    pc_counters = collections.defaultdict(int)
+    global pc_total
+    pc_total = 0
+
+def pc_report( flags, argv ):
+    pc_functions = collections.defaultdict(int)
+    # First boil down everything to the function level
+    total = 0
+
+    prog = vdb.util.progress_bar(num_completed = True, spinner = True)
+    num = len(pc_counters)
+    pt = prog.add_task(f"Scanning {pc_total} occurences in {num} different addresses", total = num )
+    prog.start()
+
+    for e,(k,v) in enumerate(sorted(pc_counters.items(),reverse=True)):
+        prog.update( pt, completed = e )
+        s = vdb.memory.get_gdb_sym_name( k )
+#        print(f"{k:#0x} => {s=}")
+#        assert isinstance(s,str)
+        pc_functions[s] += v
+        total += v
+    prog.stop()
+
+    ins_limit = 0
+    pct_limit = 0
+    if( len(argv) > 0 ):
+        try:
+            ins_limit = int(argv[0])
+        except ValueError:
+            pct_limit = float(argv[0])
+
+    maxrows = 2**31
+    if( len(flags) > 0 ):
+        maxrows = int(flags)
+
+    table = rich.table.Table( "Pct", "#Ins", "Function", expand=False,row_styles = ["on #222222",""])
+    # Now iterate sorted by number of instructions
+    for e,(k,v) in enumerate(sorted( pc_functions.items(), key = lambda x: x[1], reverse = True)):
+        if( e >= maxrows ):
+            break
+        pct = 100.0 *  (v / total)
+        if( pct < pct_limit ):
+            break
+        if( v < ins_limit ):
+            break
+        if( k is None ):
+            k = "[i]Sleep Mode[/i]"
+        table.add_row( f"{pct:0.03f}", str(v), k )
+    vdb.util.console.print(table)
 
 def link_dash( flags, argv ):
     print(f"link_dash({flags},{argv})")
@@ -358,29 +483,30 @@ class cmd_swo (vdb.command.command):
 
     def __init__ (self):
         super ().__init__ ("swo", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.needs_parameters = True
 
     def do_invoke (self, argv ):
-        try:
-            argv,flags = self.flags(argv)
-            if( len(argv) == 0 ):
-                argv.append(None) # to trigger usage()
+        argv,flags = self.flags(argv)
 
-            match argv[0]:
-                case "start":
-                    start_swo(flags,argv[1:])
-                case "stop":
-                    stop_swo(flags,argv[1:])
-                case "status":
-                    status_swo(flags,argv[1:])
-                case "dash":
-                    link_dash(flags,argv[1:])
-                case _:
-                    print(f"Unrecognized command {argv[0]}")
-                    self.usage()
+        match argv[0]:
+            case "start":
+                start_swo(flags,argv[1:])
+            case "stop":
+                stop_swo(flags,argv[1:])
+            case "status":
+                status_swo(flags,argv[1:])
+            case "dash":
+                link_dash(flags,argv[1:])
+            case "pc_trace":
+                pc_trace(flags,argv[1:])
+            case "pc_clear":
+                pc_clear(flags,argv[1:])
+            case "pc_report":
+                pc_report(flags,argv[1:])
+            case _:
+                print(f"Unrecognized command {argv[0]}")
+                self.usage()
 
-        except:
-            vdb.print_exc()
-            raise
         self.dont_repeat()
 
 cmd_swo()

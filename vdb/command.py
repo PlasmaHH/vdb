@@ -97,10 +97,10 @@ class command(gdb.Command,abc.ABC):
         return ( argv, flags )
 
     def context( self, flags, stripbefore = "" ):
-        print(f"{flags=} => ", end="")
+#        print(f"{flags=} => ", end="")
         for s in stripbefore:
             flags = flags.replace(s,"")
-        print(f"{flags=}")
+#        print(f"{flags=}")
 
         context = (None,None)
         if( len(flags) != 0 ):
