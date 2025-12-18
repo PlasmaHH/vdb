@@ -3374,8 +3374,8 @@ def register_flow( lng, frame : "gdb frame" ):
                 # regardless of argspec we always output based on expression (since that works even if we don't have any
                 # register values)
                 av = lng.var_expressions.get(a,None)
-                if( av is not None ):
-                    print(f"var_expressions.get({a}) =>  {av}")
+#                if( av is not None ):
+#                    print(f"var_expressions.get({a}) =>  {av}")
                 extra.value += f", av = {av}"
 #                print("av = '%s'" % (av,) )
 #                print("a = '%s'" % (a,) )
