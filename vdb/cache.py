@@ -77,9 +77,12 @@ type_cache = cache_entry()
 def lookup_type( name ):
 #    sw = vdb.util.stopwatch()
 #    sw.start()
-    t = type_cache.cache.get(name)
-    if( t is None ):
-        t = gdb.lookup_type(name)
+    t = type_cache.cache.get(name,...)
+    if( t is ... ):
+        try:
+            t = gdb.lookup_type(name)
+        except gdb.error:
+            t = None
         type_cache.cache[name] = t
         type_cache.misses += 1
     else:

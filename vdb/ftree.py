@@ -24,11 +24,12 @@ import datetime
 
 
 
-verbosity      = vdb.config.parameter("vdb-ftree-verbosity",4 )
+verbosity      = vdb.config.parameter("vdb-ftree-verbosity",1 )
 dot_filebase   = vdb.config.parameter("vdb-ftree-filebase","ftree")
 dot_command    = vdb.config.parameter("vdb-ftree-dot-command", "nohup dot -Txlib {filename} &>/dev/null &" )
 
 array_elements = vdb.config.parameter("vdb-ftree-array-elements","0:3,-4:-1", gdb_type = vdb.config.PARAM_ARRAY )
+color_void     = vdb.config.parameter("vdb-ftree-colors-void","#35a4f3",gdb_type = vdb.config.PARAM_COLOUR)
 color_invalid  = vdb.config.parameter("vdb-ftree-colors-invalid","#ff2222",gdb_type = vdb.config.PARAM_COLOUR)
 color_union    = vdb.config.parameter("vdb-ftree-colors-union","#ffff66",gdb_type = vdb.config.PARAM_COLOUR)
 color_vcast    = vdb.config.parameter("vdb-ftree-colors-virtual-cast","#ccaaff",gdb_type = vdb.config.PARAM_COLOUR)
@@ -47,6 +48,7 @@ color_arrows   = vdb.config.parameter("vdb-ftree-color-arrows",True )
 #resolve_typedefs = vdb.config.parameter("vdb-ftree-resolve-typedefs",True)
 reparse_cast = vdb.config.parameter("vdb-ftree-reparse-cast",True)
 vptr_cast = vdb.config.parameter("vdb-ftree-vptr-cast",True)
+show_void = vdb.config.parameter("vdb-ftree-show-void-nodes", False )
 
 #vdb.config.set_array_elements(array_elements)
 
@@ -58,6 +60,10 @@ def indent( i, fmt, **more ):
 def vindent( v, i, fmt, **more ):
     if( verbosity.get() >= v ):
         indent(i,fmt,**more)
+
+def vprint( v, fmt ):
+    if( verbosity.get() >= v ):
+        print(fmt)
 
 def get( val, key, alternative ):
     ret = alternative
@@ -133,6 +139,8 @@ def std_tree_node( m, val, path ):
     if( len(xm) > 0 ):
 
         node_type = vdb.cache.lookup_type(xm[-1] + "::_Link_type")
+        if( node_type is None ):
+            node_type = vdb.cache.lookup_type(xm[-1] + "::_Node_ptr")
 
         if( node_type is not None ):
             node_type = node_type.strip_typedefs()
@@ -175,10 +183,10 @@ def std_tree_member( m, val, path ):
 
             iterator_type = vdb.cache.lookup_type(xm[-1] + "::iterator")
             iterator_type = iterator_type.strip_typedefs()
-            print("iterator_type = '%s'" % (iterator_type,) )
+            vprint(4,"iterator_type = '%s'" % (iterator_type,) )
 #            node_type = vdb.cache.lookup_type(xm[-1] + "::iterator")
             node_type = vdb.cache.lookup_type( iterator_type.name + "::pointer").target().target()
-            print("node_type = '%s'" % (node_type,) )
+            vprint(4,"node_type = '%s'" % (node_type,) )
 
             if( node_type is not None ):
                 node_type = node_type.strip_typedefs()
@@ -324,7 +332,10 @@ def pretty_print( val ):
         ret += "[" + str(val["_M_string_length"]) + "]"
     except:
         pass
-    ret += str(val)
+    try:
+        ret += str(val["_M_dataplus"]["_M_p"].string())
+    except:
+        ret += str(val)
     return ret
 
 class ftree:
@@ -604,7 +615,7 @@ class ftree:
                 # This will be probably a bit messy. We have "pointers" (array indices) to some objects and we want to
                 # lay them out as elements of a table, but the normal process is to make one table per object
                 xtr = vdb.dot.tr()
-                print("entry_object.type.strip_typedefs() = '%s'" % entry_object.type.strip_typedefs() )
+                vprint(4,"entry_object.type.strip_typedefs() = '%s'" % entry_object.type.strip_typedefs() )
                 if( entry_object.type.strip_typedefs().code == gdb.TYPE_CODE_STRUCT or entry_object.type.strip_typedefs().code == gdb.TYPE_CODE_UNION ):
 #                    print("path = '%s'" % path )
 #                    traceback.print_stack()
@@ -690,6 +701,7 @@ class ftree:
             else:
                 self.value_cache[obj.get_path()] = fval
             if( force_pp ):
+#                print(f"FORCED PRETTY PRINT {fval}")
                 rettd.set(pretty_print(fval))
             elif( real_type.code == gdb.TYPE_CODE_PTR ):
 #                print(vdb.color.color("real_type.code = '%s'" % vdb.util.gdb_type_code(real_type.code),"#ff9900" ) )
@@ -719,7 +731,8 @@ class ftree:
                 except:
                     vdb.print_exc()
                     rettd["bgcolor"] = color_invalid.value
-                rettd.content = "*" + "{:#0x}".format(int(fval))
+#                rettd.content = "*" + "{:#0x}".format(int(fval))
+                rettd.content = vdb.dot.dot_escape(gdb.format_address(int(fval)))
             elif( real_type.code == gdb.TYPE_CODE_REF ):
                 try:
                     # This causes an attempt to read the value. If it is unreachable memory or so, it will throw
@@ -890,10 +903,10 @@ class ftree:
             if( newtype is not None ):
                 newtype = newtype.strip_typedefs()
                 if( newtype.code == gdb.TYPE_CODE_PTR ):
-                    print("Downcasting 0x%x to %s" % (int(val),str(newtype)) )
+                    vprint(2,"Downcasting 0x%x to %s" % (int(val),str(newtype)) )
                     val = val.cast(newtype)
                 else:
-                    print("Downcasting @0x%x to %s" % (int(val.address),str(newtype)) )
+                    vprint(2,"Downcasting @0x%x to %s" % (int(val.address),str(newtype)) )
                     # Not a pointer, lets see if casting works better if we do it through a pointer
                     valptr = val.address
                     nvalptr = valptr.cast(newtype.pointer())
@@ -984,6 +997,7 @@ class ftree:
 
     # expects a pointer to the object in val. Add code to support non-pointers too for cases where we pass a stack local
     def ftree (self, val, level, limit, graph, path = "", elements = None ):
+        print(".",end="",flush=True)
         # When someone passes a non-pointer try to make it one
         if( level == 0 and val.type.code != gdb.TYPE_CODE_PTR ):
             return self.ftree( val.address, level, limit, graph, path, elements )
@@ -1028,7 +1042,7 @@ class ftree:
             vptr = val["__vptr"] # XXX Check how different compilers do it
             vindent(4,level,"vptr = '%s'" % (vptr,) )
         except:
-            vdb.print_exc()
+#            vdb.print_exc()
             pass
 
         dval = val.dereference()
@@ -1050,7 +1064,7 @@ class ftree:
             vindent(4,level,f"Resolved {tr_dval.type=}")
             tr_xl = vdb.layout.object_layout( value = tr_dval )
             vindent(4,level,f"After resolving typedef, object has {len(tr_xl.object.subobjects)} subobjects")
-            print("tr_dval.type.fields() = '%s'" % (tr_dval.type.fields(),) )
+#            print("tr_dval.type.fields() = '%s'" % (tr_dval.type.fields(),) )
 
             if( len(tr_xl.object.subobjects) > 0 ):
                 xl = tr_xl
@@ -1083,19 +1097,19 @@ class ftree:
         n.table = vdb.dot.table()
 
         if( elements is None ):
-            print("val.type = '%s'" % val.type )
-            print("val.type.target() = '%s'" % val.type.target() )
-            print("vdb.util.gdb_type_code(val.type.target().code) = '%s'" % (vdb.util.gdb_type_code(val.type.target().code),) )
-            print("val.type.target().sizeof = '%s'" % val.type.target().sizeof )
-            print("ENode 0x%x from 0x%x to 0x%x" % (n.name,ptrval,ptrval+int(val.type.target().sizeof)) )
+            vprint(4,"val.type = '%s'" % val.type )
+            vprint(4,"val.type.target() = '%s'" % val.type.target() )
+            vprint(4,"vdb.util.gdb_type_code(val.type.target().code) = '%s'" % (vdb.util.gdb_type_code(val.type.target().code),) )
+            vprint(4,"val.type.target().sizeof = '%s'" % val.type.target().sizeof )
+            vprint(4,"ENode 0x%x from 0x%x to 0x%x" % (n.name,ptrval,ptrval+int(val.type.target().sizeof)) )
             target_type = val.type.target().strip_typedefs()
-            print("target_type = '%s'" % (target_type,) )
-            print("target_type.sizeof = '%s'" % (target_type.sizeof,) )
+            vprint(4,"target_type = '%s'" % (target_type,) )
+            vprint(4,"target_type.sizeof = '%s'" % (target_type.sizeof,) )
             tsizeof = target_type.sizeof
             if( tsizeof == 0 ): # XXX Workaround for a bug??
                 ttstr = vdb.util.fixup_type(str(target_type))
                 tsizeof = gdb.parse_and_eval(f"sizeof({ttstr})")
-                print("tsizeof = '%s'" % (tsizeof,) )
+                vprint(4,"tsizeof = '%s'" % (tsizeof,) )
             # sometimes with IAR the size is just not there
             if( tsizeof == 0 ):
                 tsizeof = 1
@@ -1188,18 +1202,32 @@ class ftree:
                 continue
 
             pelements = self.check_for_array(p)
+            is_void = False
 #            print("pelements = '%s'" % pelements )
-            if( p.val.type.target().strip_typedefs().code != gdb.TYPE_CODE_VOID ):
-                if( level < limit ):
+            if( p.val.type.target().strip_typedefs().code == gdb.TYPE_CODE_VOID ):
+                p.origin_td["bgcolor"] = color_void.value
+                is_void = True
+                # We can't do anything with voids, make them at least look nice
+                # (We could theoretically try to find global variables that reside there, like svd stuff too. Find a
+                # generic way to find variable -> get type (make sure if we point to a member of a struct we do that
+                # right, only accept pointers to the beginning of any object. pahole/layout module could help here ))
+                if( show_void.value ):
+                    vn = graph.node(int(p.val))
+                    vn.table = vdb.dot.table()
+                    vn.table.tr().td(f"{int(p.val):#0x}")
+                    vn.table.tr().td("void")
+            elif( level < limit ):
                     self.ftree( p.val, level+1, limit, graph, path = path + " -> " + p.obj.get_path(), elements = pelements )
+
             if( level >= limit and int(p.val) not in self.visited ):
                 p.origin_td["bgcolor"] = color_limit.value
                 continue
 #            print("p.val = '%s'" % int(p.val) )
 #            print("self.subobject_ports = '%s'" % self.subobject_ports )
-            e=n.edge(self.edge_redirects.get(int(p.val),int(p.val)), srcport = p.src_port, tgtport = self.subobject_ports.get(int(p.val),None))
-            if( color_arrows.value ):
-                e["color"] = self.next_color()
+            if( not is_void ):
+                e=n.edge(self.edge_redirects.get(int(p.val),int(p.val)), srcport = p.src_port, tgtport = self.subobject_ports.get(int(p.val),None))
+                if( color_arrows.value ):
+                    e["color"] = self.next_color()
 
 
 class cmd_ftree (vdb.command.command):
@@ -1227,7 +1255,7 @@ ftree <pointer>|<variable> [<limit>]  - It takes a pointer to some object or a v
 
     def do_invoke (self, argv ):
 #        argv = gdb.string_to_argv(arg)
-        self.print("argv = '%s'" % argv )
+#        self.print("argv = '%s'" % argv )
         if len(argv) > 2:
             raise gdb.GdbError('ftree takes 1-2 arguments.')
 
@@ -1262,8 +1290,10 @@ ftree <pointer>|<variable> [<limit>]  - It takes a pointer to some object or a v
             sw.start()
             try:
                 f.ftree( val, 0, limit, g )
+                print()
             except:
                 vdb.print_exc()
+
 #            import cProfile
 #            cProfile.runctx("f.ftree( val, 0, limit, g )",globals(),locals())
 #            print("f.edge_redirects = '%s'" % f.edge_redirects )
@@ -1274,7 +1304,7 @@ ftree <pointer>|<variable> [<limit>]  - It takes a pointer to some object or a v
 #            xl = vdb.layout.object_layout(val.type,val)
 #            return
             self.print_result()
-            print("limit = '%s'" % limit )
+#            print("limit = '%s'" % limit )
             g.write(filebase)
             sw.stop()
             sw.print("Writing ftree took {}")
@@ -1283,7 +1313,7 @@ ftree <pointer>|<variable> [<limit>]  - It takes a pointer to some object or a v
             cmd=dot_command.value.format(filename=filename, filebase=filebase)
             print(f"Created '{filename}', starting {cmd}")
             os.system(cmd)
-            vdb.cache.dump()
+#            vdb.cache.dump()
         except Exception as e:
             vdb.print_exc()
         self.dont_repeat()
