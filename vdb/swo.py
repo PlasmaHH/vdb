@@ -277,6 +277,9 @@ class SWO:
                 # If this happens we are most likely out of sync with the stream
                 print(f"Unknown Headerbyte {headerbyte:#0x}")
 
+        # XXX Rate limit in case of messing up with settings?
+        if( headerbyte == 0b01110000 ):
+            print("SWO OVERFLOW")
         if( headerbyte == 0x0e ):
             if( len(self.buffer) < 3 ):
                 return True
@@ -334,7 +337,7 @@ class SWO:
             ddd = headerbyte & 0b01110000
             if( ddd != 0b01110000 and ddd != 0 ):
                 print("NOT IMPLEMENTED: LOCAL TIMESTAMP. Expect desync")
-                print(f"[{len(payload)}]:{payload=}")
+#                print(f"[{len(payload)}]:{payload=}")
             else:
                 print(f"{headerbyte=}")
                 print(f"{ddd=}")
@@ -442,6 +445,8 @@ def pc_report( flags, argv ):
             break
         if( k is None ):
             k = "[i]Sleep Mode[/i]"
+        if( k == 0xffffffbc ):
+            k = "[i]Return from ISR[/i]"
         table.add_row( f"{pct:0.03f}", str(v), k )
     vdb.util.console.print(table)
 

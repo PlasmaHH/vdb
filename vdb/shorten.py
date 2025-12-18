@@ -330,9 +330,9 @@ def parse_fragment( frag, obj, level = 0 ):
         i += 1
 
         s=frag[i]
-        indent(level,f"@{level} frag[{i}]='{frag[i]}', {sofar=}, {in_tail=}, obj={obj}")
+#        indent(level,f"@{level} frag[{i}]='{frag[i]}', {sofar=}, {in_tail=}, obj={obj}")
         if( s == " "):
-            indent(level,f"s is space, {swallow_next=}, {sofar=}")
+#            indent(level,f"s is space, {swallow_next=}, {sofar=}")
             if( not swallow_next ):
                 if( len(sofar) > 0 ):
 #                    print(f"'{sofar}' => '{sofar+s}'")
@@ -528,10 +528,10 @@ def parse_fragment( frag, obj, level = 0 ):
 #        print(f"{sofar=} += {s=}")
         sofar += s
 
-    indent(level,f"{len(frag)=}")
-    indent(level,f"at end {i=}")
-    indent(level,f"{sofar=}")
-    indent(level,f"obj={obj}")
+#    indent(level,f"{len(frag)=}")
+#    indent(level,f"at end {i=}")
+#    indent(level,f"{sofar=}")
+#    indent(level,f"obj={obj}")
     i += 1
     if( len(sofar) > 0 ):
 #        print(f"{sofar=}")

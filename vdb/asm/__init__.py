@@ -2006,8 +2006,9 @@ ascii mockup:
 #                print(f"{i.previous=}")
                 if( i.previous is None ):
                     # Then we also have no idea if it was output already so start anew
-                    output_extra( [ "PN" + i.file] ,otbl,0)
-                    sline = source_line( i.file, i.lineno, i.lineno )
+                    if( i.file is not None):
+                        output_extra( [ i.file] ,otbl,0)
+                        sline = source_line( i.file, i.lineno, i.lineno )
                 else:
                     # Check if they are the same, if yes we don't output again
 #                    print(f"PREV {i.previous.address:#0x} => {i.previous.file}:{i.previous.lineno}")
@@ -2022,7 +2023,8 @@ ascii mockup:
                     output_extra( sline,otbl,0, nopost = True)
 #                print()
             elif( source ):
-                output_extra(i.file_line,otbl,0)
+                if( i.file is not None ):
+                    output_extra(i.file_line,otbl,0)
 
             output_extra(line_extra,otbl,"p") # the explanations
             output_extra( load_extra,otbl, "S" )
@@ -2946,9 +2948,9 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
     archname = configure_arch(arch)
 
     if( fakedata is None ):
-        print("Waiting for gdb to disassemble",end="")
+        print("Waiting for gdb to disassemble",end="",flush=True)
         dis = gdb.execute(f'disassemble/r {arg}',False,True)
-        print("\r",end="")
+        print("\r",end="",flush=True)
     else:
         dis = fakedata
 #    linere = re.compile("^(=>)*\s*(0x[0-9a-f]*)\s*<\+([0-9]*)>:\s*([^<]*)(<[^+]*(.*)>)*")
