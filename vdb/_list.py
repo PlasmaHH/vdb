@@ -154,15 +154,24 @@ def do_list( argv, flags, context, recurse = True ):
         start = before
         end   = after
         funsym = ""
-        filename = argv[0]
-        sources = get_sources()
-        for sline in sources.split("\n"):
-            for src in sline.split(","):
-                src = src.strip()
-                if( src.endswith(filename) ):
-                    fullname = src
-                    break
-        line = 0
+        # ok might be a function name too, lets see
+        sym = gdb.lookup_symbol(" ".join(argv))[0]
+        # Not a symbol, assume its a filename
+        if( sym is None ):
+            filename = argv[0]
+            sources = get_sources()
+            for sline in sources.split("\n"):
+                for src in sline.split(","):
+                    src = src.strip()
+                    if( src.endswith(filename) ):
+                        fullname = src
+                        break
+            line = 0
+        else:
+            line = sym.line
+            start = max(0,line-before)
+            end = line + after
+            fullname = sym.symtab.fullname()
 
 
     # Check if its accessible, if not we may need to adapt the path and try again

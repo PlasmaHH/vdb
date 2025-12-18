@@ -2973,7 +2973,20 @@ def parse_from_gdb( arg, fakedata = None, arch = None, fakeframe = None, cached 
 
     if( fakedata is None ):
         print("Waiting for gdb to disassemble",end="",flush=True)
-        dis = gdb.execute(f'disassemble/r {arg}',False,True)
+        try:
+            dis = gdb.execute(f'disassemble/r {arg}',False,True)
+        except gdb.error as e:
+            if( str(e).find("Cannot resolve method") != -1 or str(e).find("Cannot reference virtual member function") != -1 ):
+                # I consider this a bug, lets try to work around
+                sym = gdb.lookup_symbol(arg)[0]
+                if( sym is None ):
+                    raise
+                else:
+                    addr = sym.value()
+                    addr = int(addr.address)
+                    dis = gdb.execute(f'disassemble/r {addr}',False,True)
+            else:
+                raise
         print("\r",end="",flush=True)
     else:
         dis = fakedata
