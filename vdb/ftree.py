@@ -501,29 +501,24 @@ class ftree:
 #                print("so.type = '%s'" % so.type )
                 # Check if the member is in one of the base classes, if it is, we need to cast before we can use the
                 # field to access it
-                if( so.parent is not None and so.parent.type != val.type ):
-                    # To just access the field we can even use a pointer
+                try:
+                    if( so.parent is not None and so.parent.type != val.type ):
+                        # To just access the field we can even use a pointer
 #                    print(f"{val.type=}")
 #                    print(f"{so.parent.type=}")
-                    try: # Quick hack to make diamond inheritance problems working
-                        bval = val.address.cast( so.parent.type.pointer() )
-                    except gdb.error:
-                        continue
+                        try: # Quick hack to make diamond inheritance problems working
+                            bval = val.address.cast( so.parent.type.pointer() )
+                        except gdb.error:
+                            continue
 #                    print("bval = '%s'" % bval )
 #                    print("bval.type = '%s'" % bval.type )
-                    soval = bval[so.field]
-                else:
-#                if( so.name is None ):
-                    soval = val[so.field]
-#                    print("soval = '%s'" % soval )
-#                else:
-#                    print("val = '%s'" % val )
-#                    print("val.type = '%s'" % val.type )
-#                    print("obj = '%s'" % obj )
-#                    soval = val[so.name]
-#                    print("val[so.name] = '%s'" % val[so.name] )
-#                print("1path = '%s'" % path )
-#                print("so.get_path() = '%s'" % so.get_path() )
+                        soval = bval[so.field]
+                    else:
+                        soval = val[so.field]
+                # For anonymous fields this can happen
+                except TypeError:
+                    continue
+
                 l,r,p = self.xtable(so,soval,path)
                 ret += l
                 rows += r

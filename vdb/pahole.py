@@ -219,11 +219,10 @@ pahole/e - expanded output, showing each byte on one line (the default)
 
     def __init__ (self):
         super ().__init__ ("pahole", gdb.COMMAND_DATA, gdb.COMPLETE_SYMBOL)
+        self.needs_parameters = True
 
     def do_invoke (self, argv ):
 
-        if len(argv) == 0 :
-            raise gdb.GdbError('pahole takes 1 arguments.')
         condensed = default_condensed.value
         argv,flags = self.flags(argv)
         if( "c" in flags ):
@@ -242,6 +241,10 @@ pahole/e - expanded output, showing each byte on one line (the default)
             sobj = gdb.parse_and_eval(argv[0])
             stype = sobj.type
             ptype = stype.strip_typedefs()
+            if( ptype.code == gdb.TYPE_CODE_ARRAY ):
+                sobj = sobj[0]
+                stype = ptype.target()
+                ptype = stype.strip_typedefs()
             if( ptype.code == gdb.TYPE_CODE_PTR ):
                 sobj = sobj.dereference()
                 stype = ptype.target()
