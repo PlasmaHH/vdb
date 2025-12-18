@@ -137,7 +137,9 @@ def toml_load( tname, flags ):
     except KeyError:
         pass
 
-    if( extends is not None ):
+    if( extens == "default" ):
+        load_default(flags)
+    elif( extends is not None ):
         try:
             edata = toml_load( extends , flags)
             data = edata | data

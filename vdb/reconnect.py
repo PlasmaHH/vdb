@@ -20,7 +20,7 @@ def store_inferior( conn ):
         conn = gdb.selected_inferior().connection
     global last_used_connection_details
     global last_used_connection_type
-    print(f"Saving new remote connection {conn}, overwriting old {last_used_connection_details}")
+    vdb.log(f"Saving new remote connection {conn}, overwriting old {last_used_connection_details}",level=4)
     last_used_connection_type = conn.type
     last_used_connection_details = conn.details
 

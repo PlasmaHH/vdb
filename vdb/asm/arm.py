@@ -1032,4 +1032,10 @@ def current_flags( frame ):
         except:
             return vdb.asm.current_flags(frame,"apsr")
 
+# Computes a string for comparison with assembler load arguments to determine a possible load of a local variable
+# without knowing the register value
+def var_expression( offset, register ):
+    ret = f"[{register}, #{offset}]"
+    print(f"var expression {ret=}")
+    return ret
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

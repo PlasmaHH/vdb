@@ -1494,9 +1494,6 @@ ascii mockup:
 
     def to_str( self, showspec = "maodbnpSrT", context = None, marked = None, source = False, suppress_header = False, full_source = False ):
         self.lazy_finish()
-        hf = self.function
-        if( shorten_header.value ):
-            hf = wrap_shorten(hf)
 
         marked_line = None
         context_start = None
@@ -1541,9 +1538,9 @@ ascii mockup:
         header = []
         header_indices = {}
         cnt = 0
-        for sp,hf in headfields:
+        for sp,xhf in headfields:
             if( any((s in showspec) for s in sp ) ):
-                header += hf
+                header += xhf
                 header_indices[sp[0]] = cnt
                 # This causes a variable number of columns
                 if( sp == "c" ):
@@ -2055,8 +2052,16 @@ ascii mockup:
 
 #        print("ret = '%s'" % ret )
         ret = vdb.util.format_table(ret,padbefore=" ",padafter="")
+
+#        print(f"{self.function_header=}")
         if( self.function_header is not None ):
-            hf = wrap_shorten(self.function_header)
+            hf = self.function_header
+        else:
+            hf = self.function
+
+        if( shorten_header.value ):
+            hf = wrap_shorten(hf)
+
 
         return f"Instructions in range {self.start:#0x} - {self.end:#0x} of {hf}\n{ret}"
 #        return "\n".join(ret)
@@ -2647,12 +2652,14 @@ def gather_vars( frame, lng, symlist, pval = None, prefix = "", reglist = None, 
 
             # One expression relative to the base pointer
             boffset = int(baddr) - rbpval
-            expr = f"{boffset:#0x}(%{rbp})"
+#            expr = f"{boffset:#0x}(%{rbp})"
+            expr = current_arch.var_expression(boffset,rbp)
             lng.var_expressions[expr] = prefix + b.name
 
             # And one relative to the stack pointer
             boffset = int(baddr) - rspval
-            expr = f"{boffset:#0x}(%{rsp})"
+#            expr = f"{boffset:#0x}(%{rsp})"
+            expr = current_arch.var_expression(boffset,rsp)
             lng.var_expressions[expr] = prefix + b.name
 
         try:
@@ -2740,20 +2747,28 @@ def update_vars( ls, frame ):
 #    print("ls.var_addresses = '%s'" % (ls.var_addresses,) )
     ls.var_expressions = {}
 
+    # The name possibly with signature of the function we want to display
+    function_name = None
     # ls.function is sometimes mangled, try to demangle it
     if( ls.function is not None ):
         try:
             ls.function = gdb.execute(f"demangle {ls.function}",False,True).strip()
+            function_name = ls.function
         # It throws when it can't demangle, but we want to proceed with the mangled name then, better than nothing
         except gdb.error:
             pass
-
+    # ok, the listing had a name but the current frame can have one too
     fun = frame.function()
+
     if( fun ):
         try:
             funname = gdb.execute(f"demangle {fun.linkage_name}",False,True).strip()
         except gdb.error:
             funname = fun.linkage_name
+        if( function_name is None ):
+            function_name = funname
+        elif( function_name != funname ):
+            print("Weird, {function_name=} != {funname=}")
 
     if( debug_all() ):
         print(f"{type(fun)=}")
@@ -2761,7 +2776,7 @@ def update_vars( ls, frame ):
         print(f"{fun.linkage_name=}")
         print(f"   {fun.name=}")
         print(f"{ls.function=}")
-        print(f"{funname=}")
+        print(f"{function_name=}")
         print(f"{frame.name()=}")
         print(f"{(fun.name == ls.function)=}")
         if( ls.function is not None ):
@@ -2791,8 +2806,11 @@ def update_vars( ls, frame ):
 #            print("b.value(frame) = '%s'" % (b.value(frame),) )
 #        print("b.value(frame).address = '%s'" % (b.value(frame).address,) )
 
+    # function header is the one with the parameters etc. if we don't have one, we can't disply it
+    funhead = None
     if( fun is None ):
-        funhead = "????"
+        # Remove any old header to prevent outdated display
+        ls.function_header = None
     else:
         funhead = ls.function
 
@@ -2833,12 +2851,18 @@ def update_vars( ls, frame ):
         vdb.util.bark() # print("BARK")
         print("gv = '%s'" % (gv,) )
 
+    # In case fun is None, funhead is None too and this crashes, however this should never happen It hink
     if( len(gv) > 0 ):
         funhead += "(" + gv + ")"
 
     # Contains function signature and parameters location information, e.g.
     # main(int, char const**)( argc@0x7fffffffc8dc[-0x344(%rbp)] = 1, argv@0x7fffffffc8d0[-0x350(%rbp)] = 0x7fffffffcd38,)
-    ls.function_header = funhead
+    if( funhead is not None ):
+        ls.function_header = funhead
+#    print(f"{function_name=}")
+#    print(f"{funhead=}")
+#    print(f"{ls.function=}")
+#    print(f"{ls.function_header=}")
 
     if( debug_all() ):
         print(f"{ls.function_header=}")
@@ -3350,6 +3374,8 @@ def register_flow( lng, frame : "gdb frame" ):
                 # regardless of argspec we always output based on expression (since that works even if we don't have any
                 # register values)
                 av = lng.var_expressions.get(a,None)
+                if( av is not None ):
+                    print(f"var_expressions.get({a}) =>  {av}")
                 extra.value += f", av = {av}"
 #                print("av = '%s'" % (av,) )
 #                print("a = '%s'" % (a,) )

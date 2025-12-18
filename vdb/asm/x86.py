@@ -927,6 +927,11 @@ def vt_flow_ret( ins, frame, possible_registers, possible_flags , executes ):
 def current_flags( frame ):
     return vdb.asm.current_flags(frame,"eflags")
 
+# Computes a string for comparison with assembler load arguments to determine a possible load of a local variable
+# without knowing the register value
+def var_expression( offset, register ):
+    return f"{offset:#0x}(%{register})"
+
 # Enhancements:
 # To the flow we could add some "speculative memory" that we read stuff from first, that way we can in later parts of
 # the listing "see" things set in the speculative execution of further ones.

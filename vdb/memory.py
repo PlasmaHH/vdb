@@ -925,7 +925,9 @@ class memory_map:
                     elif( file.endswith( "[vdso]") ):
                         mm.mtype = memory_type.CODE
         except gdb.error as e:
-            print(e)
+            es = str(e)
+            if( es.find("Can't determine the current process's PID: you must name one.") == -1 ):
+                print(f"info proc mapping: {e}")
 
 #        self.regions += map_regions
 #        self.regions.sort()
