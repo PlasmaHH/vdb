@@ -1240,14 +1240,12 @@ Sets some memory to some value
 
     def __init__ (self):
         super().__init__ ("memset", gdb.COMMAND_DATA)
+        self.needs_parameters = True
 
     def do_invoke (self, argv ):
         self.dont_repeat()
 
-        try:
-            memset(argv[0],vdb.util.gint(argv[1]),vdb.util.gint(argv[2]))
-        except Exception as e:
-            vdb.print_exc()
+        memset(argv[0],vdb.util.gint(argv[1]),vdb.util.gint(argv[2]))
 
 cmd_memset()
 

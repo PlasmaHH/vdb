@@ -18,6 +18,9 @@ last_used_connection_type    = None
 def store_inferior( conn ):
     if( conn is None ):
         conn = gdb.selected_inferior().connection
+    if( conn is None ):
+        # Silently ignore when we are started without any connection
+        return
     global last_used_connection_details
     global last_used_connection_type
     vdb.log(f"Saving new remote connection {conn}, overwriting old {last_used_connection_details}",level=4)
