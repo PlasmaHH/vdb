@@ -137,7 +137,7 @@ def toml_load( tname, flags ):
     except KeyError:
         pass
 
-    if( extens == "default" ):
+    if( extends == "default" ):
         load_default(flags)
     elif( extends is not None ):
         try:

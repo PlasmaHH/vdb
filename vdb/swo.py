@@ -84,7 +84,10 @@ class SWO:
             if( db is not None ):
                 db.write(data)
             else:
-                print(data,end="")
+                xdata = data.replace("\x00","\\x00")
+#                if( len(xdata) != len(data) ):
+#                    print("####### ! ! NULL BYTE DETECTED")
+                print(xdata,end="")
 
         def _expand_rich( self, data ):
             newdata = data

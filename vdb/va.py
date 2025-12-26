@@ -25,18 +25,33 @@ var_int_color     = vdb.config.parameter( "vdb-va-colors-vararg-int",   "#c43", 
 int_limit = vdb.config.parameter( "vdb-va-int-limit",32*1024 )
 min_ascii = vdb.config.parameter( "vdb-va-min-ascii", 2)
 max_exponent = vdb.config.parameter( "vdb-va-max-exponent", 256 )
-default_format = vdb.config.parameter( "vdb-va-default-format", "*")
+default_format = vdb.config.parameter( "vdb-va-default-format", "**")
 max_overflow_int = vdb.config.parameter( "vdb-va-max-overflow-int", 42 )
 max_overflow_vec = vdb.config.parameter( "vdb-va-max-overflow-vector", 42 )
 
-wait_max_ins = vdb.config.parameter( "vdb-va-wait-max-instructions", 24 )
+wait_max_ins = vdb.config.parameter( "vdb-va-wait-max-instructions", 36 )
+auto_wait = vdb.config.parameter( "vdb-va-auto-wait", True )
 
 #= vdb.config.parameter( "vdb-va-", )
 #= vdb.config.parameter( "vdb-va-", )
 
-saved_iregs = [ "rdi", "rsi", "rdx", "rcx", "r8", "r9" ]
-saved_vregs = [ "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7" ]
-saved_fregs = [ "st7", "st6", "st5", "st4", "st3", "st2", "st1", "st0" ]
+
+saved_all_regs = {
+        "arm" :
+            {
+                "i": [ "r0", "r1", "r2", "r3" ],
+                "v": [],
+                "f": [],
+            },
+        "x86" :
+            {
+                "i": [ "rdi", "rsi", "rdx", "rcx", "r8", "r9" ],
+                "v": [ "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7" ],
+                "f": [ "st7", "st6", "st5", "st4", "st3", "st2", "st1", "st0" ],
+            }
+        }
+
+saved_regs = None
 
 class Value:
 
@@ -63,7 +78,10 @@ class gValue( gdb.Value ):
             super().__init__(val)
 
     def __getattr__( self, name ):
-        return self.__getitem__(name)
+        try:
+            return self.__getitem__(name)
+        except gdb.error:
+            return None
 
 def guess_vecrep( val, colorspec = None ):
     candlist = [ ( "v4_float", 4), ("v2_double", 2) ]
@@ -202,7 +220,7 @@ def convert_format( fmt ):
 #        print("f = '%s'" % (f,) )
         if( next_fmt ):
             # h for short, check whats actually passed
-            if( f in "01234567890. #+-Ih" ):
+            if( f in "01234567890.* #+-Ih" ):
                 pass
             elif( f == "%" ):
                 next_fmt = False
@@ -227,16 +245,17 @@ def convert_format( fmt ):
                 next_long = False
     return ret
 
+# Tries to find a va_list variable in the debug info
 def get_va_list( arg, frame ):
 
     if( len(arg) == 0 ):
         if True:
             b = frame.block()
             while b is not None:
-#                print("b.function = '%s'" % (b.function,) )
+                print("b.function = '%s'" % (b.function,) )
                 va_list = None
                 for s in b:
-#                    print("s = '%s'" % (s,) )
+                    print("s = '%s'" % (s,) )
                     val=frame.read_var(s)
                     if( val.type.name == "va_list" ):
                         va_list = s
@@ -250,7 +269,7 @@ def get_va_list( arg, frame ):
             else:
                 va_list = None
         else:
-            lre = re.compile("^[^\s]* =")
+            lre = re.compile(r"^[^\s]* =")
             locals = gdb.execute("info locals",False,True)
             for line in locals.splitlines():
                 m=lre.match(line)
@@ -271,15 +290,140 @@ def get_va_list( arg, frame ):
     else:
         va_list = arg[0]
 
-    return va_list
+    if( va_list is not None ):
+        va_list_val = frame.read_var(va_list)
+    else:
+        va_list_val = None
+
+    return va_list,va_list_val
+
+def setup_regs( ):
+    arch = vdb.arch.short_name()
+    global saved_regs
+    saved_regs = saved_all_regs[arch]
 
 
-def va_print( arg ):
+# encapsulates all we need to know to recover the call. These are very implementation and architecture defined. We
+# assume gcc here.
+class va_args:
 
-    arg, argdict = vdb.util.parse_vars( arg )
+    def __init__( self ):
+        # Total number of fixed arguments before the ellipsis starts
+        self.num_fixed = None
+        # Start on the stack of the general purpose type arguments (int, pointer etc.) of 8 byte each
+        self.gp_start = None
+        # Start on the stack of the floating point type arguments of 8 byte each
+        self.fp_start = None
+        # Start on the stack of the vector register arguments of 16 byte each
+        self.vec_start = None
+        # Arguments on the stack, order and size depends on the format string
+        self.overflow_start = None
+"""
+
+values before anything:
+
+$3 = {
+  {
+    gp_offset = 858927408,
+    fp_offset = 926299444,
+    overflow_arg_area = 0x7ffff78aa556 <__glibc_morecore+24>,
+    reg_save_area = 0x4746454443424140
+  }
+}
+
+
+
+"""
+def recover_args_x86( arg, argdict ):
+    return
+    print(f"recover_args_x86( {arg=}, {argdict=} )")
+    frame = gdb.selected_frame()
+    va_list = get_va_list( arg, frame )
+
+    # XXX This is all calculated for 64 bit, no 32bit support right now
+    register_bytes = 8
+
+    saved_registers = vdb.register.Register()
+
+    # We might already be past the point where the registes have been re-used, be careful
+#    for reg in saved_regs["i"]:
+#        saved_registers[reg] = int(frame.read_register(reg))
+
+#    vdb.util.pprint(saved_registers)
+
+    va = va_args()
+    if( va_list is None ):
+        print("va_list is none, trying to guess whats going on")
+    else:
+        print("va_list found, copying info")
+        # XXX We should store the fixed parameter registers here since the single stepping through the setup of the
+        # va_list will kind of destroy them (well not really as it gets copied into there but for certain decisions its
+        # useful to have them before a complete va_list structure )
+        print(f"{gdb.selected_frame()=}")
+        if( auto_wait.value ):
+            wait( arg, True )
+            print(f"{frame.is_valid()=}")
+            frame.select()
+        print(f"{gdb.selected_frame()=}")
+        va_list_val = frame.read_var(va_list)
+
+        # fp/gp offset tell us how many of the saved registers are not used for the varargs but for the "real" arguments
+        # instead.
+        # Let the user override values if necessary
+
+        # XXX btw. arg->gp_offset is not correctly shown in ASM !
+        gp_offset = va_list_val["gp_offset"]
+        gp_offset = argdict.getas(int,"gp_offset",gp_offset)
+
+        fp_offset = va_list_val["fp_offset"]
+        fp_offset = argdict.getas(int,"fp_offset",fp_offset)
+
+        gp_num = gp_offset // register_bytes
+
+        # basically the amount of max gp registers
+        fp_num = ( fp_offset - 6*register_bytes )// register_bytes
+
+        reg_save_area = va_list_val["reg_save_area"]
+        reg_save_area = argdict.getas(int,"reg_save_area",reg_save_area)
+
+        # When we are optimized the arguments to the real function are saved nowhere but in the registers.
+        print("function( ")
+        for i,(r,v) in enumerate( saved_registers.items() ):
+            if( i >= gp_num ):
+                break
+            # Format as pointer or integer, depending on heuristics
+            print(f"??gp{i} : {r}:{v:#0x},")
+
+        # Now a number of possible gp saved registers. Since we already "used up" gp_num ones, its this much left
+        registers_left = len(saved_regs["i"]) - gp_num
+        print(f"{registers_left=}")
+        for i in range(0,registers_left):
+            gp_addr = reg_save_area + gp_offset + register_bytes * i
+            var = vdb.memory.read_var( gp_addr, vdb.arch.uint(64).name )
+            print(f"{gp_addr=:#0x} : {var}")
+
+
+    print(f"{va_list=}")
+
+def va_print( argv ):
+
+    setup_regs()
+
+    arg, argdict = vdb.util.parse_vars( argv )
+
+    match vdb.arch.short_name():
+        case "arm":
+            args = recover_args_arm(arg,argdict)
+        case "x86":
+            args = recover_args_x86(arg,argdict)
+        case "_":
+            raise RuntimeError(f"Unsuported architecture: {vdb.arch.short_name()}")
+
     frame = gdb.selected_frame()
 
 
+    # Walk through the current stack to gather all addresses that are function return addresses. We use these later on
+    # as possible sentinels to stop printing
     retaddrs = set()
     nf = frame
     olvl = -1
@@ -290,13 +434,30 @@ def va_print( arg ):
         olvl = nf.level()
         nf = nf.older()
 
+    saved_registers = vdb.register.Registers()
+#    saved_registers._dump()
+
+    # We might already be past the point where the registes have been re-used, be careful
+#    for reg in saved_regs["i"]:
+#        saved_registers[reg] = int(frame.read_register(reg))
+
+#    vdb.util.pprint(saved_registers)
     try:
-        va_list = get_va_list( arg, frame )
+        if( auto_wait.value ):
+            va_list,va_list_val = wait( arg, frame, True )
+        else:
+            va_list,va_list_val = get_va_list( arg, frame )
     except RuntimeError:
         print("Cannot print va list, possibly no debug info loaded")
         va_list = None
+    if( frame.level() != 0 ):
+        print("Warning: not on innermost frame, register only arguments might be wrong")
+    frame.select()
 
     allprovided = False
+
+    print(f"{va_list=}")
+    print(f"{argdict=}")
 
     if( "gp_offset" in argdict and "fp_offset" in argdict and "reg_save_area" in argdict and "overflow_arg_area" in argdict ):
         allprovided = True
@@ -316,10 +477,22 @@ def va_print( arg ):
     else:
         gp_offset = fp_offset = reg_save_area = overflow_arg_area = None
 
+    num_fixed = None
+    # This is when we call stuff on arm, provide sensible defaults here
+    if( gp_offset is None ):
+        gp_offset = -8
+    if( fp_offset is None ):
+        fp_offset = 0
+    if( overflow_arg_area is None ):
+        overflow_arg_area = 0
+
     gp_offset = argdict.getas(int,"gp_offset",gp_offset)
     fp_offset = argdict.getas(int,"fp_offset",fp_offset)
     reg_save_area = argdict.getas(gValue,"reg_save_area", reg_save_area)
     overflow_arg_area = argdict.getas(gValue,"overflow_arg_area", overflow_arg_area)
+
+    if( reg_save_area is None ):
+        reg_save_area = va_list_val.__ap
 
     if( gp_offset > 32*8 or gp_offset < 0 or gp_offset == 0 or gp_offset%8 != 0):
         print(f"Warning! Unlikely gp_offset value ({gp_offset}), results are likely wrong. Recommend rerunning with gp_offset=8")
@@ -339,10 +512,24 @@ def va_print( arg ):
     print("Possible function call(s):")
 
     format = argdict.get( "format", default_format.value )
+    print(f"{format=}")
+
+    # * means "show everything"
+    # ** means "try to recover a format string, otherweise show everything
     if( format == "*" ):
         format = None
+    elif( format == "**" ):
+        # Assumption is that a its under the first parameters that are in the registers, so go through the saved ones.
+        format = None
 
-    num_fixed = int(gp_offset) // 8
+    if( num_fixed is None ):
+        num_fixed = int(gp_offset) // ( vdb.arch.pointer_size // 8)
+    if( num_fixed < 0 ):
+        num_fixed = -num_fixed
+        num_fixed += 1
+    print(f"{num_fixed=}")
+    print(f"{gp_offset=}")
+    print(f"{fp_offset=}")
 
     funcstr = ""
 
@@ -351,8 +538,8 @@ def va_print( arg ):
     else:
         funcstr = "func"
 
+    print(f"{format=}")
     if( format is not None ):
-#        print("format = '%s'" % (format,) )
         funcstr += "( "
         cnt = 0
         ctype_p = gdb.lookup_type("char").pointer()
@@ -379,11 +566,11 @@ def va_print( arg ):
         while i < maxi:
             i += 1
             f = format[i]
-                
+
             if( f == "*" ):
-#                print("last_string = '%s'" % (last_string,) )
+                print("last_string = '%s'" % (last_string,) )
                 format = format[:-1] + convert_format(last_string)
-#                print("format = '%s'" % (format,) )
+                print("format = '%s'" % (format,) )
                 maxi = len(format)-1
                 i -= 1
 #                print("format = '%s'" % (format,) )
@@ -393,9 +580,12 @@ def va_print( arg ):
                 funcstr += ", "
 
             if( f in "SPILUJ" ):
-                regname = saved_iregs[gp_next]
+                regname = saved_regs["i"][gp_next]
                 gp_next += 1
-                rval = vdb.register.read(regname,frame)
+                rval = saved_registers.get_value(regname)[0]
+                rval = gdb.Value(rval)
+#                print(f"{regname=} : {rval}")
+#                rval = vdb.register.read(regname,frame)
                 if( f == "S" ):
                     rval = rval.cast(ctype_p)
                     funcstr += vdb.color.color( rval, fixed_int_color.value )
@@ -424,7 +614,7 @@ def va_print( arg ):
                     rval = intformat(rval,f)
                     funcstr += vdb.color.color( rval, var_int_color.value )
             elif( f == "F" ):
-                rname = saved_vregs[ vr_next ]
+                rname = saved_regs["v"][ vr_next ]
                 vr_next += 1
                 rval = vdb.register.read(rname,frame)
                 rval,rco = guess_vecrep(rval)
@@ -439,10 +629,12 @@ def va_print( arg ):
                     gp_next += 1
                 funcstr += vdb.color.color( rval, var_float_color.value )
             elif( f == "d" or f == "D" ):
-                rname = saved_fregs[ fp_next ]
+                rname = saved_regs["f"][ fp_next ]
                 fp_next += 1
                 rval = vdb.register.read(rname,frame)
                 funcstr += vdb.color.color( rval, var_float_color.value )
+            else:
+                print(f"Unsupported format string {f}")
 
 
             cnt += 1
@@ -462,15 +654,18 @@ def va_print( arg ):
 
 
     first = True
+
     for i in range(0,num_fixed):
         if( not first ):
             funcstr += ", "
         first = False
-        if( i >= len(saved_iregs) ):
+        if( i >= len(saved_regs["i"]) ):
             break
         try:
-            irname = saved_iregs[i]
-            rval = vdb.register.read(irname,frame)
+            irname = saved_regs["i"][i]
+            print(f"{irname=}")
+            rval = saved_registers.get_value(irname)[0]
+            print(f"{rval}")
             rval,rco = guess_intrep(rval)
             if( rco is None ):
                 rco = fixed_int_color.value
@@ -480,15 +675,15 @@ def va_print( arg ):
             funcstr += vdb.color.color("?",fixed_int_color.value)
             break
 
-    ptrtype = vdb.arch.gdb_uintptr_t.pointer()
+    ptrtype = vdb.arch.uintptr_t.pointer()
     reg_save = reg_save_area.cast(ptrtype)
 
-    funcstr += "\ngp vararg".ljust(pflen)
-    funcstr += int_range( reg_save, num_fixed, len(saved_iregs) )
+    funcstr += "\ngp vararg (reg)".ljust(pflen)
+    funcstr += int_range( reg_save, num_fixed, len(saved_regs["i"]) )
 
     overflow = overflow_arg_area.cast(ptrtype)
 
-    funcstr += "\ngp vararg".ljust(pflen)
+    funcstr += "\ngp vararg (stack)".ljust(pflen)
     funcstr += int_range( overflow, 2, max_overflow_int.value, retaddrs )
 
 
@@ -502,19 +697,20 @@ def va_print( arg ):
             funcstr += ", "
         first = False
         try:
-            irname = saved_vregs[i]
+            irname = saved_regs["v"][i]
             rval = vdb.register.read(irname,frame)
             rval,rco = guess_vecrep(rval)
             if( rco is None ):
                 rco = fixed_float_color.value
             funcstr += vdb.color.color(str(rval),rco)
+        except IndexError:
+            break
         except:
             vdb.print_exc()
-
             funcstr += vdb.color.color("?",fixed_int_color.value)
 
     funcstr += "\nfp vararg".ljust(pflen)
-    funcstr += vec_range(reg_save_area,fp_offset, 0,len(saved_vregs),2)
+    funcstr += vec_range(reg_save_area,fp_offset, 0,len(saved_regs["v"]),2)
 
     # it looks like the offset here is depending on the valid number of arguments we got so far from the overflow area.
     # We can't possibly know
@@ -522,7 +718,7 @@ def va_print( arg ):
     funcstr += vec_range(overflow_arg_area,0, 0,max_overflow_vec.value,1,True)
 
 
-#    for r in saved_iregs:
+#    for r in saved_regs["i"]:
 #        rval = vdb.register.read(r,frame)
 #        ldval = rval.cast(gdb.lookup_type("long double"))
 #        print(f"{r} : 0x{int(rval):02x} {rval} {ldval}")
@@ -530,7 +726,7 @@ def va_print( arg ):
     funcstr += "\nfp fix/var".ljust(pflen)
 
 
-    for st in saved_fregs:
+    for st in saved_regs["f"]:
         rval = vdb.register.read(st,frame)
         if( rval == 0 ):
             break
@@ -546,24 +742,22 @@ def va_print( arg ):
     print(funcstr)
 
 
-def wait(arg ):
+def wait( arg, frame, auto = False ):
+    print(f"wait( {arg=} )")
 
     arg, argdict = vdb.util.parse_vars( arg )
-    frame = gdb.selected_frame()
+#    frame = gdb.selected_frame()
 
     try:
-        va_list = get_va_list( arg, frame )
+        va_list,va_list_val = get_va_list( arg, frame )
     except RuntimeError:
         va_list = None
 
     if( va_list is None ):
         print("Cannot wait for change of va_list, couldn't find it (possibly no debug info loaded)")
-        return
+        return None,None
 
-
-    va_list_val = frame.read_var(va_list)
     va_list_val = gValue(va_list_val)
-
 
     first_gp_offset = int(va_list_val.gp_offset)
     first_fp_offset = int(va_list_val.fp_offset)
@@ -575,21 +769,23 @@ def wait(arg ):
 #    print("first_reg_save_area = 0x%08x" % (first_reg_save_area,) )
 #    print("first_overflow_arg_area = 0x%08x" % (first_overflow_arg_area,) )
 
+    frame_sp = int(frame.read_register("rsp"))
+
     for i in range(0,wait_max_ins.value):
-        # maybe also stop on frame change?
-        with vdb.util.silence() as _:
-            res=gdb.execute("stepi",False,False)
-#            res=gdb.execute("p $pc",False,True)
+        # maybe also stop on frame change? What happens when we get sucked into another thread or ISR?
+#        print()
 
-        gp_offset = va_list_val.gp_offset
-        fp_offset = va_list_val.fp_offset
-        reg_save_area = va_list_val.reg_save_area
-        overflow_arg_area = va_list_val.overflow_arg_area
+        gp_offset = int(va_list_val.gp_offset)
+        fp_offset = int(va_list_val.fp_offset)
+        reg_save_area = int(va_list_val.reg_save_area)
+        overflow_arg_area = int(va_list_val.overflow_arg_area)
 
-#        print("gp_offset = '%s'" % (gp_offset,) )
-#        print("fp_offset = '%s'" % (fp_offset,) )
-#        print("reg_save_area = 0x%08x" % (reg_save_area,) )
-#        print("overflow_arg_area = 0x%08x" % (overflow_arg_area,) )
+        print(f"{frame.level()=}")
+        print(f"{frame_sp=:#0x}")
+        print("gp_offset = '%s'" % (gp_offset,) )
+        print("fp_offset = '%s'" % (fp_offset,) )
+        print("reg_save_area = 0x%08x" % (reg_save_area,) )
+        print("overflow_arg_area = 0x%08x" % (overflow_arg_area,) )
 
         # Don't use fp_offset ... it is so rarely needed, and often gcc generates code that clobbers fixed parameters
         # before it sets this up, so only output a message if it wasn't up to date
@@ -599,33 +795,70 @@ def wait(arg ):
         # sets it after the adresses, so until we find a better heuristics use this (hint: better heuristics may be
         # actual watch points, which might be generically a good tool, also with the track stuff, surely they can share
         # some code)
-        if( gp_offset != first_gp_offset ):
-#        if( gp_offset != first_gp_offset and fp_offset != first_fp_offset and reg_save_area != first_reg_save_area ):
-            print("va_list completely updated, va extraction has a higher chance of working now")
-            if( first_fp_offset == fp_offset ):
-                print("fp_offset did not update. Please single step (at the risk of clobbering fixed parameters) or inspect disasembly yourself to figure out a proper value")
+
+#        if( gp_offset != first_gp_offset ):
+        if( gp_offset != first_gp_offset and fp_offset != first_fp_offset and reg_save_area != first_reg_save_area ):
+            if( not auto ):
+                print("va_list completely updated, va extraction has a higher chance of working now")
             break
+
+        if( frame.level() != 0 ):
+            print("Can only reliably single step to fill va_list in innermost frame but we are not (anymore)")
+            if(
+            gp_offset <= 64 # 8 * n for n parameters before the varargs, more than 8 should be too unusual
+            and
+            fp_offset < 128 # 48 +  n * 16 for float/double args. long double is in xmm
+            ):
+#            print("fp and gp fine")
+                # XXX This logic only works if we are the frame that sets up va_list, if we get it passed then I guess sp
+                # might be further off? But then the address should be in some register?
+                # so sp = oldsp - 0xd8 (reserve space for local data on the stack)
+                # reg save is the area where we store the argument registers
+                rdif = frame_sp - reg_save_area
+                # overflow arg area is all the additional args that by calling convention did not go into the registers but
+                # on the stack
+                # al contains the number of vector registers used, float and double go there
+                # long doubles are stored as extended floating points on the stack (16 byte)
+                odif = overflow_arg_area - frame_sp
+                print(f"{rdif=}")
+                print(f"{odif=}")
+                if( rdif > 0 and rdif < 256
+                and
+                odif > 0 and odif < 64
+                ):
+                    if( not auto ):
+                        print("All variables look good, we should be able to continue")
+                    break
+
+
+        # Do the step after the check in case the position where the user had its breakpoint is setup correctly
+        print("VA SINGLE STEP")
+        with vdb.util.silence() as _:
+            res=gdb.execute("stepi",False,False)
     else:
         print(f"Executed vdb-va-wait-max-instructions ({wait_max_ins.value}) instructions but still the va_list members did not all change. We may need a higher value or did miss the right point, check manually")
+    return va_list,va_list_val
 
 class cmd_va (vdb.command.command):
-    """Take va and transform it into more useful views"""
+    """In a C-style vararg function like printf, this tries to parse and recover the passed arguments. This is most
+    useful if you do not have any debug information for those functions.
+
+va               - Try to figure out everything automatically
+va var=val       - Runs with special variable var set to val. See documentation for all the variables.
+"""
 
     def __init__ (self):
         super (cmd_va, self).__init__ ("va", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.needs_parameters = False
 
     def do_invoke (self, argv ):
-        try:
-            if( len(argv) == 1 ):
-                if( argv[0] == "wait" ):
-                    print("Waiting...")
-                    wait(argv[1:])
-                    return
-            va_print(argv)
-        except:
-            vdb.print_exc()
-            raise
-            pass
+        argv,flags = self.flags(argv)
+        if( len(argv) == 1 ):
+            if( argv[0] == "wait" ):
+                print("Waiting...")
+                wait(argv[1:])
+                return
+        va_print(argv)
         self.dont_repeat()
 
 cmd_va()

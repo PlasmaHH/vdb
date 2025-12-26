@@ -179,20 +179,6 @@ color_list = vdb.config.parameter("vdb-asm-colors-jumps", "#f00;#0f0;#00f;#ff0;#
 exec_colors = vdb.config.parameter("vdb-asm-colors-execution", "#00ee00;#ee0000;#eeee00", gdb_type = vdb.config.PARAM_COLOR_LIST )
 
 valid_archs = [ "x86", "arm" ]
-# XXX Move to vdb.arch
-arch_aliases = {
-                "i386" : "x86",
-                "i386:x86-64" : "x86",
-                "aarch64" : "arm",
-                "armv7" : "arm",
-                "armv7e-m" : "arm",
-                "armv7-m" : "arm",
-                "armv7-m.main" : "arm",
-                "armv8-m" : "arm",
-                "armv8-m.main" : "arm",
-                "mips:isa32r2" : "mips",
-                }
-
 
 def debug_all( ins = None ):
     if( debug_addr.value is not None and ins is not None ):
@@ -2258,15 +2244,8 @@ def configure_arch( arch = None ):
         except:
             vdb.log(f"Not configured for architecture {archname}, falling back to x86", level=2 )
 
-    
+    archname = vdb.arch.short_name( archname )
 #    print(f"Trying aliases of {archname}")
-    archname = arch_aliases.get(archname,archname)
-#    print(f"dealiased {archname=}")
-    if( archname.startswith("armv") ):
-        vdb.log(f"Architecture {archname} prefix mapped to arm, you might want to add it to aliases",level=3)
-        arch_aliases[archname] = "arm"
-        archname = "arm"
-#    traceback.print_stack()
 
     global current_arch
     if( current_arch is not None and archname == current_arch.name ): # already setup

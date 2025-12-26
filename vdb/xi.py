@@ -519,7 +519,7 @@ xi/e       execute a "step" hook/event on each step for other plugins
 
     def __init__ (self):
         super ().__init__ ("xi", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-        xi.needs_parameters = False
+        self.needs_parameters = False
 
     def do_invoke (self, argv ):
         try:

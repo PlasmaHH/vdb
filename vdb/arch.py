@@ -127,6 +127,37 @@ pc_name_map = {
 def name( ):
     return _active_arch_name
 
+arch_aliases = {
+                "x86" : "x86",
+                "arm" : "arm",
+                "i386" : "x86",
+                "i386:x86-64" : "x86",
+                "aarch64" : "arm",
+                "armv7" : "arm",
+                "armv7e-m" : "arm",
+                "armv7-m" : "arm",
+                "armv7-m.main" : "arm",
+                "armv8-m" : "arm",
+                "armv8-m.main" : "arm",
+                "mips:isa32r2" : "mips",
+                }
+
+def short_name( arch = None ):
+    if( arch is None ):
+        arch = _active_arch_name
+    ret = arch_aliases.get(arch)
+    if( ret is None ):
+        print(f"Cannot find alias for {arch}")
+        if( arch.startswith("arm") ):
+            arch_aliases[arch] = ret = "arm"
+            print("Assuming arm")
+        elif( arch.startswith("i386") ):
+            arch_aliases[arch] = ret ="x86"
+            print("Assuming x86")
+        else:
+            ret = arch
+    return ret
+
 def get_pc_name( ):
     return pc_name
 

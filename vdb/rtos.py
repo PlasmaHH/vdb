@@ -212,7 +212,7 @@ class os:
             if( id_filter == t.id ):
                 col = color_marked_task.value
             usage = f"{t.stack_usage}/{t.stack_size}"
-            tbl.append( [ vdb.color.colorl(f"{int(t.id):#0x}",col), t.name, f"{int(t.stack):#0x}", usage, t.priority, self._status_string(t.status), t.entry, t.pc, t.lr ] )
+            tbl.append( [ vdb.color.colorl(f"{int(t.id):#0x}",col), str(t.name), f"{int(t.stack):#0x}", usage, str(t.priority), self._status_string(t.status), str(t.entry), str(t.pc), str(t.lr) ] )
 
         if( with_bt is not None ):
 #            print("unwinder.enabled = '%s'" % (unwinder.enabled,) )

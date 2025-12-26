@@ -421,7 +421,10 @@ def add_overlay( addr, data, length = None ):
     # 1:3 is data at addr 1 and 2, not 3
     overlay_memory[lower:upper] = data
 
-#add_overlay( 0x8004010, None, 32 )
+
+def read_var( ptr, ctype ):
+    ret = gdb.parse_and_eval( f"*(({ctype})({ptr}))" )
+    return ret
 
 def read_u( uncached, ptr, count = 1, partial = False ):
     if( uncached ):

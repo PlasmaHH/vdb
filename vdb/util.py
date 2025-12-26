@@ -1112,8 +1112,8 @@ def rprint( msg ):
 def pprint( data ):
     rich.pretty.pprint( data, console = console, expand_all = True, indent_guides = False )
 
-def inspect( x ):
-    rich.inspect( x, console = vdb.util.console )
+def inspect( x, **kwargs ):
+    rich.inspect( x, console = vdb.util.console, **kwargs )
 
 def progress_bar( bar_width = 120, complete_style = "bar.complete", style = "bar.back", spinner = None, num_completed = False, download = False, speed = False ):
     dcol = list(rich.progress.Progress.get_default_columns())
