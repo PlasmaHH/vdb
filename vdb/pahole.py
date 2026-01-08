@@ -17,8 +17,8 @@ default_condensed = vdb.config.parameter("vdb-pahole-default-condensed",True)
 
 
 color_list = vdb.config.parameter("vdb-pahole-colors-members", "#f00;#0f0;#00f;#ff0;#f0f;#0ff" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
-color_empty = vdb.config.parameter("vdb-pahole-color-empty", "#444" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
-color_type = vdb.config.parameter("vdb-pahole-color-type", "#cc4400" , gdb_type = vdb.config.PARAM_COLOUR_LIST )
+color_empty = vdb.config.parameter("vdb-pahole-colors-empty", "#444" , gdb_type = vdb.config.PARAM_COLOUR )
+color_type = vdb.config.parameter("vdb-pahole-colors-type", "#cc4400" , gdb_type = vdb.config.PARAM_COLOUR )
 print_summary = vdb.config.parameter("vdb-pahole-summary", True )
 
 

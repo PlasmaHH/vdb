@@ -30,10 +30,15 @@ gnuplot_bin = vdb.config.parameter("vdb-graph-gnuplot-binary", "" )
 
 #plot_style = vdb.config.parameter("vdb-graph-plot-style","_mpl-gallery")
 plot_style = vdb.config.parameter("vdb-graph-plot-style","dark_background")
-default_window = vdb.config.parameter("vdb-graph-default-window",60.0)
+default_window = vdb.config.parameter("vdb-graph-default-window", 1e30)#60.0)
 default_bins = vdb.config.parameter("vdb-graph-default-bins",200)
 default_hist_update = vdb.config.parameter("vdb-graph-default-histogram-updates",0.25)
 default_line_update = vdb.config.parameter("vdb-graph-default-line-updates",0.2)
+
+bg_color = vdb.config.parameter("vdb-graph-colors-background", "#000", gdb_type = vdb.config.PARAM_COLOUR)
+graph_colors = vdb.config.parameter("vdb-graph-colors-graph", "#f00;#0f0;#00f;#ff0;#f0f;#0ff", gdb_type = vdb.config.PARAM_COLOUR_LIST)
+avg_colors = vdb.config.parameter("vdb-graph-colors-graph", "#0f0;#00f;#ff0;#f0f;#0ff;#f00", gdb_type = vdb.config.PARAM_COLOUR_LIST)
+averages = vdb.config.parameter("vdb-graph-averages", 0 )
 
 
 # XXX Refactoring plan:
@@ -42,6 +47,8 @@ default_line_update = vdb.config.parameter("vdb-graph-default-line-updates",0.2)
 # first: when to acquire data. On breakpoint/trackpoint? one shot?
 # second: acquire and process data into some uniform object (e.g. that unify mechanism)
 # third: pass it on to the selected plot mechanism (gnuplot, matplotlib, maybe text plot facilities??)
+# also find a good way to include multiple values in the chart right away, possibly with multiple axis. Might want/need
+# 3d too?
 
 # Find ways to influence the histogram during its running. Since this is  different process with a simple queue if we
 # want to do it from within gdb we need protocol commands. What things do we want to control?
@@ -226,6 +233,9 @@ class plot_process(graph_process):
         self.range = 0
         self.running = False
         self.lines = None
+        self.averages = None
+        self.averaging = 0
+        self.name = None
 
     def do_add( self, ndata ):
         self.data = numpy.concatenate( (self.data,ndata ) )
@@ -251,7 +261,7 @@ class plot_process(graph_process):
         try:
             if( len(self.data) == 0 ):
                 return
-            
+
 #            print("self.data = '%s'" % (self.data,) )
 
 #            self.lines.set_data(self.data)
@@ -263,8 +273,19 @@ class plot_process(graph_process):
             if( minx+default_window.get() < maxx ):
                 minx = maxx - default_window.get()
 
+            # These sometimes spew out warnings when no data is present, ignore that.
             self.axis.set_xlim(minx,maxx)
             self.axis.set_ylim(miny,maxy)
+
+            if( self.averaging ):
+                n = self.averaging
+                avdata = numpy.cumsum( self.data, dtype = float )
+                avdata[n:] = avdata[n:] - avdata[:-n]
+                avdata = avdata[n - 1:] / n
+                avdata = numpy.pad( avdata, n//2, constant_values = None )
+                if( n % 2 == 0):
+                    avdata = avdata[:-1]
+                self.averages.set_data( self.timestamps, avdata )
 
 #            print("self.timestamps = '%s'" % (self.timestamps,) )
             self.lines.set_data(self.timestamps,self.data)
@@ -298,7 +319,7 @@ class plot_process(graph_process):
 #            self.axis.set_ylim(top=maxy)
         except:
             vdb.print_exc()
-        return self.lines
+        return [ self.lines, self.averages ]
 #        return self.bar.patches
 
 
@@ -327,14 +348,19 @@ class plot_process(graph_process):
         plt.style.use( plot_style.value )
         fig, self.axis = plt.subplots(layout="tight")
 
+        self.axis.set_facecolor(bg_color.value)
+
 #        _,_,self.bar = self.axis.plot(self.data,self.bins,lw=1,ec="yellow",fc="green",alpha=0.5)
 #        self.axis.set_ylim(top=55)
         self.axis.set_xlim(1.69386530e+09,1.69386530e+09 + 3600)
         self.axis.set_ylim(0,100)
-        self.lines = self.axis.plot([], [], label="Current")[0]
+        self.lines = self.axis.plot([], [], label=self.name, color = graph_colors.get()[0] )[0]
+        if( self.averaging ):
+            self.averages = self.axis.plot([], [], label=f"{self.name} avg {averages.get()}", color = avg_colors.get()[0] )[0]
         anim = animation.FuncAnimation(fig, self.update, interval=default_line_update.get()*1000, save_count=3)
 #        ani = animation.FuncAnimation( fig, self.update, interval=100, repeat=False,blit=False,save_count=False)
 #        print("plt.show()")
+        plt.legend()
         plt.show()
         sys.exit(0)
 
@@ -517,14 +543,14 @@ def exit_gdb( _ev = None ):
         gt.process.join()
 
 def refresh_track( ev = None ):
-    vdb.util.bark() # print("BARK")
+#    vdb.util.bark() # print("BARK")
     global gt
     if( gt is None or gt.process is None ):
         return
-    print(f"{id(gt)=}")
-    print(f"{id(pp)=}")
+#    print(f"{id(gt)=}")
+#    print(f"{id(pp)=}")
     if( gt == pp ):
-        vdb.util.bark() # print("BARK")
+#        vdb.util.bark() # print("BARK")
         alldata,tsdata = extract_track( current_track_var,False,timeseries = True)
         gt.set( (alldata,tsdata) )
     else:
@@ -550,7 +576,7 @@ def refresh_track( ev = None ):
         gt.queue = None
         print("Matplotlib process is not alive anymore, interrupting track if possible")
         vdb.track.interrupt()
-    vdb.util.bark() # print("BARK")
+#    vdb.util.bark() # print("BARK")
 
 ht = None
 
@@ -570,18 +596,25 @@ def follow_track_lines( tvar, relative_ts ):
     global current_track_var
     current_track_var = tvar
     gt = pp
+    pp.averaging = averages.get()
+    t = vdb.track.by_number( int(tvar[0]) )
+    print(f"{t[0].name=}")
+    pp.name = t[0].name
+    if( pp.name is None ):
+        pp.name = t[0].expression
     pp.start()
     refresh_track()
     # XXX wuick hack only, we do it better after refactoring
-    t = vdb.track.by_number( int(tvar[0]) )
     t[0].notify_targets.add( refresh_track )
-    print(f"{t=}")
+#    print(f"{t=}")
 
 
-def extract_track( tvar, relative_ts, timeseries = False ):
+def extract_track( xtvar, relative_ts, timeseries = False ):
 #    print(f"extract_track( {tvar=}, {relative_ts=}, {timeseries=} )")
     # extract_track( tvar=['VALUE'], relative_ts=False, timeseries=False )
-    vdb.util.bark() # print("BARK")
+#    vdb.util.bark() # print("BARK")
+#    print(f"{xtvar=}")
+    param,tvar = vdb.command.command.extract_parameters(xtvar)
     if( len(tvar) == 0 ):
         print("Well, you should tell which track data variables to plot. Do `track show` or  `track data` to check what is available")
         return
@@ -594,6 +627,11 @@ def extract_track( tvar, relative_ts, timeseries = False ):
     plotlines = ""
 
     ids = []
+
+    # This really is a hack only... we want this at the outer layer, properly for multiple ones
+#    print(f"{tvar=}")
+#    print(f"{param=}")
+
     # extract all numbers from all the things we need
     # check if its 
     # - a track id

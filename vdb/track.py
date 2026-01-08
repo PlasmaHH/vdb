@@ -556,6 +556,7 @@ class track_item(track_item_base):
         self.seen_ids = set()
         self.pseudo_items = []
         self.notify_targets = set()
+        self.type_cast = None
         if( self.unify ):
             # so far we only support struct packs for this
             names,_ = unpack_prepare(self.pack_expression)
@@ -716,7 +717,10 @@ class track_item(track_item_base):
             elif( self.use_execute ):
                 val=gdb.execute(self.expression,False,True)
                 if( self.eval_after ):
-                    val = gdb.parse_and_eval("$")
+                    if( self.type_cast ):
+                        val = gdb.parse_and_eval(f"({self.type_cast})$")
+                    else:
+                        val = gdb.parse_and_eval("$")
             else:
                 val=gdb.parse_and_eval(self.expression)
             val = str(val)
@@ -728,6 +732,11 @@ class track_item(track_item_base):
             print("e = '%s'" % e )
             vdb.print_exc()
             pass
+        global next_interrupt
+        if( next_interrupt ):
+            next_interrupt = False
+            return True
+
         return False
 
 # For a=b like expressions we split stuff up and remove it from argv. The part before the = is the name of the variable
@@ -769,10 +778,25 @@ def track( argv, execute, eval_after, do_eval ):
     argv.pop(0)
 
     exlist = []
+
+    # XXX Do that on the upper level and pass the dict directly
+    param,argv = vdb.command.command.extract_parameters(argv)
+
     while( len(argv) > 0 ):
         ename,argv = extract_ename(argv)
         exlist.append( (ename,argv[0]) )
         argv.pop(0)
+
+    for a in argv:
+        exlist.append( (a,a) )
+
+    typecast = None
+    
+    for k,v in param.items():
+        if( k == "type" ):
+            typecast = v
+            continue
+        exlist.append( (k,v) )
 
 #    print(f"{exlist=}")
 
@@ -830,6 +854,7 @@ def track( argv, execute, eval_after, do_eval ):
     # Attach all expressions as track items to that breakpoint
     for ename,expr in exlist:
         nti = track_item( expr, execute, eval_after, do_eval , ename)
+        nti.type_cast = typecast
         if( bp_match is not None ):
             if( isinstance(bp_match,track_breakpoint) ):
                 bp_match.add_item(nti)
@@ -1008,98 +1033,6 @@ def get_track_items( argv, execute, eval_after, do_eval, as_struct, un ):
         nti = track_item( e, execute, eval_after, do_eval , ename, pack_expression = pack, unify = un )
         ret.append(nti)
     return ret
-
-class cmd_track (vdb.command.command):
-    """Track one or more expressions per breakpoint
-
-track/[ExX] <id|location> <expression>
-
-track   - pass expression to parse_and_eval
-track/E - interpret expression as python code to evaluate
-track/x - execute expression and use resulting gdb value
-track/X - execute expression and then run parse_and_eval on the result ($)
-
-id           is the id of an existing breakpoint
-location    can be any location that gdb understands for breakpoints
-expression  is the expression expected by any of the above formats. Upon hitting the breakpoint, it will be evaluated and then automatically continued. The special expression $ret is used to denote a return value of a finish expression.
-
-The expression can also be prefixed with foo= so that in the generated table the name will be foo instead of the expression so that you can easier identify the meaning of it
-
-If no breakpoint can be found with an existing location, we try to set one at that location, otherwise we try to re-use the same location
-Note: while it works ok for breakpoints and watchpoints, using catchpoints is somewhat difficult and often does not work
-
-Available subcommands:
-show     - show a list of trackpoints (similar to info break)
-data     - show the list of data collected so far
-clear    - clear all data collected so far 
-del <id> - delete the trackpoint with the given trackpoint id
-set <name>     - work with tracking sets (see documentation for them)
-
-interval trackings:
-track/i <time> <track-items>
-track/i <time>,<count> <track-items>
-
-You should have a look at the data and graph modules, which can take the data from here and draw graphics and histograms
-"""
-
-    def __init__ (self):
-        super (cmd_track, self).__init__ ("track", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-        self.needs_parameters = True
-
-    def do_invoke (self, argv ):
-        try:
-            execute = False
-            eval_after_execute = False
-            python_eval = False
-            as_struct = False
-            argv,flags = self.flags(argv)
-            unify = False
-            rich = False
-
-            if( "r" in flags ):
-                rich = True
-            if( "u" in flags ):
-                unify = True
-            if( "E" in flags ):
-                python_eval = True
-            elif( "x" in flags ):
-                execute = True
-            elif( "X" in flags ):
-                execute = True
-                eval_after_execute = True
-            if( "s" in flags ):
-                as_struct = True
-
-            if( len(argv) == 0 ):
-                show()
-            elif( "i" in flags ):
-#                interval( argv[1:], execute,eval_after_execute,python_eval )
-                interval( argv[0], get_track_items( argv[1:], execute,eval_after_execute,python_eval,as_struct,unify ) )
-            elif( argv[0] == "show" ):
-                show()
-            elif( argv[0] == "data" ):
-                print_data(rich)
-            elif( argv[0] == "del" ):
-                do_del(argv[1:])
-            elif( argv[0] == "clear" ):
-               clear()
-            elif( argv[0] == "set" ):
-               init_set( argv[1:] )
-            elif( argv[0] == "set.disable" ):
-               del_set( argv[1:] )
-            elif( argv[0] == "set.show" ):
-               show_set( argv[1:] )
-            elif( len(argv) > 1 ):
-                track(argv,execute,eval_after_execute,python_eval)
-            else:
-                print (self.__doc__)
-        except:
-            vdb.print_exc()
-            raise
-            pass
-        self.dont_repeat()
-
-cmd_track()
 
 """
 Notes for track sets
@@ -1793,6 +1726,9 @@ def event( ):
 
 next_interrupt = False
 # Called from other plugins to schedule an interrupt
+# We cannot do gdb.execute("interrupt") here becasue we might be in a continue call from  interval() that would mess
+# things up because the interrupt itself would not return until to the continue. This will be used in interval() and the
+# breakpoint callbacks
 def interrupt( ):
     global next_interrupt
     next_interrupt = True
@@ -1862,6 +1798,99 @@ def interval( iv, nti ):
         del trackings_by_number[n.number]
     rich.inspect(trackings_by_number)
     prompt()
+
+class cmd_track (vdb.command.command):
+    """Track one or more expressions per breakpoint
+
+track/[ExX] <id|location> <expression>
+
+track   - pass expression to parse_and_eval
+track/E - interpret expression as python code to evaluate
+track/x - execute expression and use resulting gdb value
+track/X - execute expression and then run parse_and_eval on the result ($)
+
+id           is the id of an existing breakpoint
+location    can be any location that gdb understands for breakpoints
+expression  is the expression expected by any of the above formats. Upon hitting the breakpoint, it will be evaluated and then automatically continued. The special expression $ret is used to denote a return value of a finish expression.
+
+The expression can also be prefixed with foo= so that in the generated table the name will be foo instead of the expression so that you can easier identify the meaning of it
+
+If no breakpoint can be found with an existing location, we try to set one at that location, otherwise we try to re-use the same location
+Note: while it works ok for breakpoints and watchpoints, using catchpoints is somewhat difficult and often does not work
+
+Available subcommands:
+show     - show a list of trackpoints (similar to info break)
+data     - show the list of data collected so far
+clear    - clear all data collected so far 
+del <id> - delete the trackpoint with the given trackpoint id
+set <name>     - work with tracking sets (see documentation for them)
+
+interval trackings:
+track/i <time> <track-items>
+track/i <time>,<count> <track-items>
+
+You should have a look at the data and graph modules, which can take the data from here and draw graphics and histograms
+"""
+
+    def __init__ (self):
+        super (cmd_track, self).__init__ ("track", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.needs_parameters = True
+
+    def do_invoke (self, argv ):
+        try:
+            execute = False
+            eval_after_execute = False
+            python_eval = False
+            as_struct = False
+            argv,flags = self.flags(argv)
+            unify = False
+            rich = False
+
+            if( "r" in flags ):
+                rich = True
+            if( "u" in flags ):
+                unify = True
+            if( "E" in flags ):
+                python_eval = True
+            elif( "x" in flags ):
+                execute = True
+            elif( "X" in flags ):
+                execute = True
+                eval_after_execute = True
+            if( "s" in flags ):
+                as_struct = True
+
+            if( len(argv) == 0 ):
+                show()
+            elif( "i" in flags ):
+#                interval( argv[1:], execute,eval_after_execute,python_eval )
+                interval( argv[0], get_track_items( argv[1:], execute,eval_after_execute,python_eval,as_struct,unify ) )
+            elif( argv[0] == "show" ):
+                show()
+            elif( argv[0] == "data" ):
+                print_data(rich)
+            elif( argv[0] == "del" ):
+                do_del(argv[1:])
+            elif( argv[0] == "clear" ):
+               clear()
+            elif( argv[0] == "set" ):
+               init_set( argv[1:] )
+            elif( argv[0] == "set.disable" ):
+               del_set( argv[1:] )
+            elif( argv[0] == "set.show" ):
+               show_set( argv[1:] )
+            elif( len(argv) > 1 ):
+                track(argv,execute,eval_after_execute,python_eval)
+            else:
+                print (self.__doc__)
+        except:
+            vdb.print_exc()
+            raise
+            pass
+        self.dont_repeat()
+
+cmd_track()
+
 
 
 # FIXME

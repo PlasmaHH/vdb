@@ -147,8 +147,13 @@ class parameter(gdb.Parameter):
         if( self.gdb_type == gdb.PARAM_INTEGER ):
             if( self.value is None ):
                 return 0
+        if( self.gdb_type == PARAM_COLOUR_LIST ):
+            return self.elements
+        if( self.gdb_type == PARAM_ARRAY ):
+            return self.elements
         if( self.is_float ):
             return self.fvalue
+        # XXX What about lists? arrays? those should be handled here too
         return self.value
 
     def check_colour( self, _ ):

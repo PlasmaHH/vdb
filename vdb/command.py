@@ -7,6 +7,7 @@ import gdb
 import traceback
 import sys
 import shutil
+import copy
 
 import abc
 
@@ -45,6 +46,62 @@ class command(gdb.Command,abc.ABC):
         self.repeat = True
         self.from_tty = None
         self.needs_parameters = None
+
+    @staticmethod
+    def extract_parameters( iargv ):
+        argv = copy.copy(iargv)
+        if( len(argv) == 0 ):
+            return ({},argv)
+
+        params = {}
+        retargv = []
+
+        last_front = None
+        while( len(argv) ):
+            front = argv.pop(0)
+#        print(f"{front=}")
+
+            # a = b ?
+            if( front == "=" and last_front is not None ):
+                if( len(argv) ):
+                    val = argv.pop(0)
+                    params[last_front] = val
+                    last_front=None
+                else: # nothing left
+                    if( last_front is not None ):
+                        retargv.append(last_front)
+                    last_front=front
+            # a= b ?
+            elif( front.endswith("=") ):
+                if( len(argv) ):
+                    val = argv.pop(0)
+                    params[front[:-1]] = val
+                    last_front=None
+                else: # nothing left
+                    if( last_front is not None ):
+                        retargv.append(last_front)
+                    last_front=front
+            elif( front.startswith("=") and last_front is not None ):
+                params[last_front] = front[1:]
+                last_front=None
+            elif( front.find("=") != -1  and not front.startswith("=") ):
+                vfront = front.split("=",1)
+                params[vfront[0]] = vfront[1]
+                if( last_front is not None ):
+                    retargv.append(last_front)
+                last_front = None
+            else:
+                if( last_front is not None ):
+                    retargv.append(last_front)
+                last_front = front
+
+        if( last_front is not None ):
+            retargv.append(last_front)
+
+        return (params,retargv)
+
+
+
 
     def usage( self ):
         print(self.__doc__)
