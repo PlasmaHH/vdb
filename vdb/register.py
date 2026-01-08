@@ -1483,7 +1483,9 @@ class Registers():
             if( val is not None ):
                 # ok it matches, but is it really a bit?
                 if( len(pfilter.split(".")) == 3 ):
-                    return f"{int(val):#0x}"
+                    ival = int(val)
+                    gdb.add_history( ival )
+                    return f"{ival:#0x}"
 
         addrmap = {}
 

@@ -555,6 +555,7 @@ class track_item(track_item_base):
         self.pack_ids = {}
         self.seen_ids = set()
         self.pseudo_items = []
+        self.notify_targets = set()
         if( self.unify ):
             # so far we only support struct packs for this
             names,_ = unpack_prepare(self.pack_expression)
@@ -686,7 +687,16 @@ class track_item(track_item_base):
         td = tracking_data.setdefault(now,{})
         td[number] = data
 
-    # return If we should stop at this breakpoint and drop to the prompt
+    def notify_all( self ):
+        for nt in self.notify_targets:
+            try:
+#                nt.notify(self)
+                # XXX Hack until graph is done
+                nt(self)
+            except Exception:
+                vdb.print_exc()
+
+    # return True If we should stop at this breakpoint and drop to the prompt
     def invoke( self, now ):
         try:
 #            vdb.util.bark() # print("BARK")
@@ -713,6 +723,7 @@ class track_item(track_item_base):
             if( len(val) > 0 and val[-1] == "\n" ):
                 val = val[:-1]
             self.save_data(now,str(val))
+            self.notify_all()
         except Exception as e:
             print("e = '%s'" % e )
             vdb.print_exc()

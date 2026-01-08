@@ -36,6 +36,13 @@ default_hist_update = vdb.config.parameter("vdb-graph-default-histogram-updates"
 default_line_update = vdb.config.parameter("vdb-graph-default-line-updates",0.2)
 
 
+# XXX Refactoring plan:
+# split things  up into multiple "layers"
+# zeroth: define graphs, what data to plot and how (lines. histogram etc.)
+# first: when to acquire data. On breakpoint/trackpoint? one shot?
+# second: acquire and process data into some uniform object (e.g. that unify mechanism)
+# third: pass it on to the selected plot mechanism (gnuplot, matplotlib, maybe text plot facilities??)
+
 # Find ways to influence the histogram during its running. Since this is  different process with a simple queue if we
 # want to do it from within gdb we need protocol commands. What things do we want to control?
 # - Number of bins
@@ -463,7 +470,7 @@ def test2( argv ):
 
 
 def extract_graph( argv ):
-    return test2(argv)
+#    return test2(argv)
     name = argv[0]
     gvar = gdb.parse_and_eval(argv[0])
 
@@ -509,12 +516,11 @@ def exit_gdb( _ev = None ):
     if( gt is not None and gt.process is not None ):
         gt.process.join()
 
-@vdb.event.stop()
-def refresh_track( ):
+def refresh_track( ev = None ):
+    vdb.util.bark() # print("BARK")
     global gt
     if( gt is None or gt.process is None ):
         return
-    vdb.util.bark() # print("BARK")
     print(f"{id(gt)=}")
     print(f"{id(pp)=}")
     if( gt == pp ):
@@ -544,7 +550,7 @@ def refresh_track( ):
         gt.queue = None
         print("Matplotlib process is not alive anymore, interrupting track if possible")
         vdb.track.interrupt()
-#    vdb.util.bark() # print("BARK")
+    vdb.util.bark() # print("BARK")
 
 ht = None
 
@@ -566,6 +572,10 @@ def follow_track_lines( tvar, relative_ts ):
     gt = pp
     pp.start()
     refresh_track()
+    # XXX wuick hack only, we do it better after refactoring
+    t = vdb.track.by_number( int(tvar[0]) )
+    t[0].notify_targets.add( refresh_track )
+    print(f"{t=}")
 
 
 def extract_track( tvar, relative_ts, timeseries = False ):
