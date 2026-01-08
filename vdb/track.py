@@ -727,7 +727,11 @@ class track_item(track_item_base):
             if( len(val) > 0 and val[-1] == "\n" ):
                 val = val[:-1]
             self.save_data(now,str(val))
+#            t0 = time.time()
+#            print(f"{tracking_data=}")
             self.notify_all()
+#            t1 = time.time()
+#            print(f"NOTIFY {t1-t0=}")
         except Exception as e:
             print("e = '%s'" % e )
             vdb.print_exc()
@@ -1280,6 +1284,7 @@ class data_track_action( track_action ):
 #        vdb.util.bark() # print("BARK")
         if( val is not None ):
 #            print(f"{ex} = {val}")
+            # XXX Is there a faster way? We call that in the loop below multiple times or the same now
             td = tracking_data.setdefault(now,{})
             td[number] = str(val)
 

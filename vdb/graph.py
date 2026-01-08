@@ -89,21 +89,32 @@ class graph_process:
     def __init__( self ):
         self.process = None
         self.queue = None
+        self.last_set = 0
 
     def add( self, data ):
 #        print(f"add({data})")
         self.queue.put( ("add",data) )
-#        print("P self.queue.qsize() = '%s'" % (self.queue.qsize(),) )
+        if( self.queue.qsize() > 10 ):
+#            print(f"P {self.queue.qsize()=}")
+#            print(f"P {self.queue.empty()=}")
+            time.sleep(0.001)
+        self.last_set = 0
 
     def set( self, data ):
 #        vdb.util.bark() # print("BARK")
         data = numpy.array(data)
 #        print("data = '%s'" % (data,) )
+        now = time.time()
+        if( now - self.last_set <= default_hist_update.get() ):
+            return
         self.queue.put( ("set",data) )
-#        print("self.queue.qsize() = '%s'" % (self.queue.qsize(),) )
+#        print("P self.queue.qsize() = '%s'" % (self.queue.qsize(),) )
+        if( self.queue.qsize() > 1 ):
+            time.sleep(0.01)
+        self.last_set = now
 
     @abc.abstractmethod
-    def do_add( self, ndata ):
+    def do_add( self, ndata, ts = None ):
         pass
 
     @abc.abstractmethod
@@ -111,20 +122,37 @@ class graph_process:
         pass
 
     def handle_queue( self ):
-#        print("update()")
-#        print("C self.queue.qsize() = '%s'" % (self.queue.qsize(),) )
         cnt = 0
-        try:
-            while( ( ndp := self.queue.get(False) ) is not None ):
-                cnt += 1
-                cmd,ndata = ndp
-                match cmd:
-                    case "add":
-                        self.do_add(ndata)
-                    case "set":
-                        self.do_set(ndata)
-        except queue.Empty:
-            pass
+        t0 = time.time()
+#        print(f"C0 {self.queue.qsize()=}")
+        time_left = default_hist_update.get()
+        while(True):
+#                print(f"C1 {self.queue.qsize()=}")
+            # Before we do anything, check if we have time left
+            elapsed = time.time() - t0
+            time_left = default_hist_update.get() - elapsed
+            if( time_left < 0 ):
+#                print(f"{time_left=}")
+                break
+
+            try:
+                ndp = self.queue.get(True,time_left)
+            except queue.Empty:
+#                print("EMPTY")
+#                print(f"E0 {self.queue.qsize()=}")
+#                print(f"{self.queue.empty()=}")
+                if( self.queue.qsize() == 0 ):
+                    break
+                continue
+#            print(f"{ndp=}")
+
+            cnt += 1
+            cmd,ndata = ndp
+            match cmd:
+                case "add":
+                    self.do_add(ndata)
+                case "set":
+                    self.do_set(ndata)
         return cnt
 
     def start( self ):
@@ -227,8 +255,8 @@ class plot_process(graph_process):
 
     def __init__( self ):
         super().__init__()
-        self.data = numpy.array([])
-        self.timestamps = numpy.array([])
+        self.data = None
+        self.timestamps = None
         self.axis = None
         self.range = 0
         self.running = False
@@ -238,7 +266,20 @@ class plot_process(graph_process):
         self.name = None
 
     def do_add( self, ndata ):
-        self.data = numpy.concatenate( (self.data,ndata ) )
+        ts = None
+        if( isinstance(ndata,tuple) ):
+            ndata,ts = ndata
+
+#        print(f"{len(ndata)=}")
+
+        if( self.data is None ):
+            self.data = ndata
+        else:
+            self.data = numpy.concatenate( (self.data,ndata ) )
+        if( self.timestamps is None ):
+            self.timestamps = ts
+        else:
+            self.timestamps = numpy.concatenate( (self.timestamps,ts) )
 
     def do_set( self, ndata ):
         self.data = numpy.array(ndata[0])
@@ -248,7 +289,8 @@ class plot_process(graph_process):
 #        vdb.util.bark() # print("BARK")
         cnt = self.handle_queue()
 #        vdb.util.bark() # print("BARK")
-#        print("cnt = '%s'" % (cnt,) )
+#        print(f"{cnt=}")
+
         if( cnt == 0 ):
             return
 #        vdb.util.bark() # print("BARK")
@@ -547,15 +589,27 @@ def refresh_track( ev = None ):
     global gt
     if( gt is None or gt.process is None ):
         return
+
+    fragments = True
 #    print(f"{id(gt)=}")
 #    print(f"{id(pp)=}")
     if( gt == pp ):
 #        vdb.util.bark() # print("BARK")
-        alldata,tsdata = extract_track( current_track_var,False,timeseries = True)
-        gt.set( (alldata,tsdata) )
+#        t0 = time.time()
+        alldata,tsdata = extract_track( current_track_var,False,timeseries = True, fragments = fragments)
+#        t1 = time.time()
+        if( fragments ):
+#            print(f"{len(alldata)=}")
+#            print(f"{len(tsdata)=}")
+            gt.add( (alldata,tsdata) )
+        else:
+            gt.set( (alldata,tsdata) )
+#        t2 = time.time()
+#        print(f"{t2-t1=}")
+#        print(f"{t1-t0=}")
     else:
         vdb.util.bark() # print("BARK")
-        alldata,_ = extract_track( current_track_var,False,timeseries = False)
+        alldata,_ = extract_track( current_track_var,False,timeseries = False, fragments = fragments)
         gt.set(alldata)
 #    print("alldata = '%s'" % (alldata,) )
     gt.process.join(timeout=0)
@@ -609,7 +663,7 @@ def follow_track_lines( tvar, relative_ts ):
 #    print(f"{t=}")
 
 
-def extract_track( xtvar, relative_ts, timeseries = False ):
+def extract_track( xtvar, relative_ts, timeseries = False, fragments = True ):
 #    print(f"extract_track( {tvar=}, {relative_ts=}, {timeseries=} )")
     # extract_track( tvar=['VALUE'], relative_ts=False, timeseries=False )
 #    vdb.util.bark() # print("BARK")
@@ -619,6 +673,8 @@ def extract_track( xtvar, relative_ts, timeseries = False ):
         print("Well, you should tell which track data variables to plot. Do `track show` or  `track data` to check what is available")
         return
     td = vdb.track.tracking_data
+    if( fragments ):
+        vdb.track.tracking_data = {}
 
     ts_offset = 0
     first = None
@@ -671,6 +727,13 @@ def extract_track( xtvar, relative_ts, timeseries = False ):
 #    print("ids = '%s'" % (ids,) )
     ret = []
     retts = []
+    # XXX This is getting nonlinearily expensive and makes the whole thing unsuitable for longer runs. The target has
+    # the ability to just add data, maybe we delete the tracking data here? But if we do, we cannot restart the
+    # graphing, so maybe make that an option, or possibly store all the fragments in a list and upon restarting send
+    # them all again?
+    # Or maybe we can structure track in a way that it can start at a different point. If dicts where trees this would
+    # be possible to start iterating based on a timestamp.
+
     for stamp,ts in td.items():
 #        print("ts = '%s'" % (ts,) )
         for id in ids:
