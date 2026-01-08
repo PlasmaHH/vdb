@@ -310,7 +310,7 @@ theme <theme>             - Loads theme with that name
 """
 
     def __init__ (self):
-        super (cmd_theme, self).__init__ ("theme", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        super (cmd_theme, self).__init__ ("theme", gdb.COMMAND_DATA )
         self.needs_parameters = False
 
     def do_invoke (self, argv ):
@@ -337,6 +337,11 @@ theme <theme>             - Loads theme with that name
 
         if( dont_repeat ):
             self.dont_repeat(not dont_repeat)
+
+    def complete( self, text, word ):
+#        print(f"{text=}")
+#        print(f"{word=}")
+        return self.matches(word,[ "list", "refresh", "save", "next" ] + list(sorted(known_themes.keys())))
 
 cmd_theme()
 

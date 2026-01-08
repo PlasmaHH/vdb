@@ -676,8 +676,10 @@ re_shortens = [
             r"std::__detail::_Map_base<\1, \2>"),
         (r"std::_Hashtable<(.*),(.*),std::allocator<\2 >,std::__detail::_Select1st,std::equal_to<int>,std::hash<int>,std::__detail::_Mod_range_hashing,std::__detail::_Default_ranged_hash,std::__detail::_Prime_rehash_policy,std::__detail::_Hashtable_traits<false,false,true> >",
             r"std::_Hashtable<\1, \2>"),
-        (r"std::_Rb_tree<(.*),(.*),std::_Select1st<\2 >,std::less<\1>,std::allocator<\2 > >",
-            r"std::_Rb_tree<\1, \2>")
+        (r"std::_Rb_tree<(.*),(.*),\s*std::_Select1st<.*>,\s*std::less<.*>,\s*std::allocator<.*> >",
+            r"std::_Rb_tree<\1, \2>"),
+        (r"std::map<(.*),(.*),.*std::allocator<std::pair<.*> > >",
+            r"std::map<\1,\2>"),
         ]
 
 cre_shortens = [ ]
