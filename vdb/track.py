@@ -489,6 +489,8 @@ def stop( bpev ):
     return False
 
 tracking_data = {}
+# Quick hack for writing a single csv file
+tracking_line = {}
 
 class pseudo_item:
 
@@ -528,6 +530,15 @@ class track_item_base:
     def invoke( self, now ):
         return False
 
+
+# XXX another hack for quick csv, needs a redesign of the whole thing (mostly for other reasons we also want the track
+# items to not directly be invoked by gdb but through a common place so we can detect that better)
+
+do_all_csv = None
+do_all_csv_last = None
+last_write = None
+
+
 class track_item(track_item_base):
 
     next_number = 1
@@ -557,6 +568,7 @@ class track_item(track_item_base):
         self.pseudo_items = []
         self.notify_targets = set()
         self.type_cast = None
+        self.log_file = None
         if( self.unify ):
             # so far we only support struct packs for this
             names,_ = unpack_prepare(self.pack_expression)
@@ -688,6 +700,12 @@ class track_item(track_item_base):
         td = tracking_data.setdefault(now,{})
         td[number] = data
 
+        self.csv_output( data, now )
+
+        if( self.log_file is not None ):
+            self.log_file.write(f"{number};{now};{data}\n")
+            self.log_file.flush()
+
     def notify_all( self ):
         for nt in self.notify_targets:
             try:
@@ -696,6 +714,42 @@ class track_item(track_item_base):
                 nt(self)
             except Exception:
                 vdb.print_exc()
+
+    def csv_output( self, val, now ):
+        if( do_all_csv is None ):
+            return
+        global do_all_csv_last
+        if( do_all_csv_last is None ):
+            do_all_csv_last = now
+
+        nme = self.name
+
+        if( nme is None ):
+            nme = self.expression
+
+        global last_write
+        if( now != do_all_csv_last ):
+            # Its not the same, write the old data
+            do_all_csv_last = now
+
+            # We never wrote, write the headers
+            if( last_write is None ):
+                do_all_csv.write("timestamp;")
+                for k in tracking_line.keys():
+                    do_all_csv.write(f"{k};")
+                do_all_csv.write("\n")
+
+            do_all_csv.write(f"{now:.9f};")
+            for k,v in tracking_line.items():
+                do_all_csv.write(f"{v};")
+                tracking_line[k] = None
+            do_all_csv.write("\n")
+            do_all_csv.flush()
+
+            last_write = now
+
+        tracking_line[nme] = str(val)
+
 
     # return True If we should stop at this breakpoint and drop to the prompt
     def invoke( self, now ):
@@ -906,6 +960,17 @@ def cleanup_trackings( ):
         do_sub_trackings = False
     else:
         do_sub_trackings = True
+
+def do_log( argv ):
+    if( argv[0] == "*" ):
+        fn = argv[1]
+        global do_all_csv
+        do_all_csv = open(fn,"w+")
+    else:
+        num = int(argv[0])
+        fn = argv[1]
+        t = trackings_by_number[num]
+        t.log_file = open(fn,"w+")
 
 def do_del( argv ):
     for arg in argv:
@@ -1876,6 +1941,8 @@ You should have a look at the data and graph modules, which can take the data fr
                 print_data(rich)
             elif( argv[0] == "del" ):
                 do_del(argv[1:])
+            elif( argv[0] == "log" ):
+                do_log(argv[1:])
             elif( argv[0] == "clear" ):
                clear()
             elif( argv[0] == "set" ):
