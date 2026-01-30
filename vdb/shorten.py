@@ -656,7 +656,7 @@ shortens = {
         }
 
 cstdint_candidates = [
-        "int", "long", "long long", "short", ""
+        "int", "long long", "long", "short", ""
         ]
 
 cstdint_prefixes = [

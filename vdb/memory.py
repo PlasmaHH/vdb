@@ -426,22 +426,22 @@ def read_var( ptr, ctype ):
     ret = gdb.parse_and_eval( f"*(({ctype})({ptr}))" )
     return ret
 
-def read_u( uncached, ptr, count = 1, partial = False ):
+def read_u( uncached, ptr, count = 1, partial = False, sparse = False ):
     if( uncached ):
-        return read_uncached( ptr, count, partial )
+        return read_uncached( ptr, count, partial, sparse )
     else:
-        return read( ptr, count, partial )
+        return read( ptr, count, partial, sparse = sparse)
 
 @vdb.util.memoize( [gdb.events.stop, gdb.events.memory_changed, gdb.events.inferior_call,gdb.events.new_objfile,gdb.events.new_inferior] )
-def read( ptr, count = 1, partial = False, spec = None ):
-    ret = read_uncached(ptr,count,partial)
+def read( ptr, count = 1, partial = False, spec = None, sparse = False ):
+    ret = read_uncached(ptr,count,partial,sparse)
     if( spec is not None ):
         ret = struct.unpack( spec, ret )[0]
     return ret
 
 # XXX Feature idea: dont use memoryview but our own thing (might be interval tree based) that supports "inaccessible"
 # for a byte, so that at least hexdump and maybe others can display that
-def read_uncached( ptr, count = 1, partial = False ):
+def read_uncached( ptr, count = 1, partial = False, sparse = False ):
     """Reads some memory from the inferior
 
     Args:
@@ -456,34 +456,72 @@ def read_uncached( ptr, count = 1, partial = False ):
 
         Memory overlays will be honoured.
     """
-#    print(f"read_uncached({ptr:#0x}, {count}, {partial})")
+#    print(f"read_uncached({ptr:#0x}, {count}, {partial}, {sparse})")
     result = None
     if( isinstance(ptr,str) ):
         addr=vdb.util.gint(ptr)
     else:
         addr=ptr
-#    print(f"read_uncached( {addr:#0x}, {count}, {partial=})")
 
     try:
-#        print("addr = '%s'" % (addr,) )
+        # Get the adderss into range of 2**<ptrsizeinbits>
         while( addr < 0 ):
             addr += 2** vdb.arch.pointer_size
         addr=int(addr)
 #        if( addr.bit_length() > vdb.arch.pointer_size ):
         addr &= ( 2 ** vdb.arch.pointer_size - 1 )
 
-#        addr = vdb.util.gint("&main")
-#        print("addr = '%s'" % (addr,) )
-#        print("count = '%s'" % (count,) )
-#        print("addr.bit_length() = '%s'" % (addr.bit_length(),) )
+#        print(f"gdb...read_memory({addr:#0x},{count})")
         result = gdb.selected_inferior().read_memory(addr, count)
     except gdb.error:
-        if( partial ):
+#        vdb.print_exc()
+#        print(f"{partial=} {sparse=} {addr:#0x} {count}")
+        if( sparse ):
+            # We should read the whole range and then just overlay all the stuff on each other. The most efficient way
+            # is probably some binary search kind of thing
+            # The one byte requested was not there
+            if( count == 1 ):
+                return None
+            first_addr = addr
+            first_len = count // 2
+            second_addr = addr + first_len
+            second_len = count - first_len
+            first_part = read_uncached( first_addr, first_len, False, True )
+            second_part = read_uncached( second_addr, second_len, False, True )
+
+#            print(f"{first_part=}")
+#            print(f"{second_part=}")
+            # Now how do we combine them?
+            # Both None? whole block none
+            if( first_part is None and second_part is None ):
+                return None
+
+#            print(f"{isinstance(first_part,memoryview)=}")
+#            print(f"{isinstance(second_part,memoryview)=}")
+            # Both memory? concat them, if all is readable the end result will be a memoryview always
+            if( isinstance(first_part,memoryview) and isinstance(second_part,memoryview) ):
+                firstb = r0.tobytes()
+                secondb = second.tobytes()
+                allbytes = firstb+secondb
+                return memoryview(allbytes).cast("c")
+
+            ret = []
+            if( first_part is not None ):
+                ret += list(first_part)
+            else:
+                ret += [...] * first_len
+            if( second_part is not None ):
+                ret += list(second_part)
+            else:
+                ret += [...] * second_len
+            return ret
+
+        elif( partial ):
             if( count == 1 ):
                 return None
             cnt0 = count // 2
             cnt1 = count-cnt0
-            r0 = read_uncached( ptr, cnt0, partial=True )
+            r0 = read_uncached( ptr, cnt0, partial=True, sparse = sparse )
 #            if( r0 is None ):
 #                print(f"{r0=}")
 #            else:
@@ -491,7 +529,7 @@ def read_uncached( ptr, count = 1, partial = False ):
             if( r0 is None ): # then not even a single byte could be read
                 return None
             if( len(r0) >= cnt0 ):
-                r1 = read_uncached( ptr + cnt0, cnt1, partial=True )
+                r1 = read_uncached( ptr + cnt0, cnt1, partial=True, sparse = sparse )
                 if( r1 is not None ):
                     r0b = r0.tobytes()
                     r1b = r1.tobytes()

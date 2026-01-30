@@ -92,7 +92,7 @@ def tile_format( cnt, t, l ):
         l += " "
     return (t,l)
 
-def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False, symbols = True, align = None, uncached = False ):
+def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False, symbols = True, align = None, uncached = False, sparse = False ):
 
     if( align is None ):
         align = default_align.value
@@ -117,8 +117,8 @@ def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False,
 
     olen = xlen
 
-#    print(f"hexdump reads {addr:#0x}")
-    data = vdb.memory.read_u(uncached,addr,xlen,partial=True)
+#    print(f"hexdump reads {addr:#0x} {uncached=}, {sparse=}")
+    data = vdb.memory.read_u(uncached,addr,xlen,partial=True,sparse = sparse)
 #    print(f"{type(data)=}")
 #    if( data is not None ):
 #        print(f"{data.tobytes()=}")
@@ -365,6 +365,7 @@ def call_hexdump( argv, flags ):
     values = False
     align = None
     uncached = False
+    sparse = False
     chainlen = -1
 
     m = re.search("p[0-9]*",flags)
@@ -382,6 +383,10 @@ def call_hexdump( argv, flags ):
         uncached = True
         flags = flags.replace("u","")
 
+    if( flags.find("s") != -1 ):
+        sparse = True
+        flags = flags.replace("s","")
+
     if( flags.find("v") != -1 ):
         values = True
         flags = flags.replace("v","")
@@ -393,6 +398,21 @@ def call_hexdump( argv, flags ):
     if( len(flags) > 0 ):
         print(f"Unknown flags {flags}")
         return
+
+    # XXX Generally we want suport in the command parser to get any two addresses or lengths plus evaluation of the
+    # arguments. Then use that facility everywhere.
+    # addr,addr support (no spaces please)
+    if( len(argv) == 1  and "," in argv[0] ):
+        va = argv[0].split(",")
+        v0 = vdb.util.gint(va[0])
+        v1 = vdb.util.gint(va[1])
+
+        if( v1 > v0 ):
+            argv = [ v0, v1-v0 ]
+        else:
+            argv = [ v0, v1 ]
+
+#    print(f"{argv=}")
 
     if( len(argv) > 0 and argv[0] == "annotate" ):
         annotate( argv[1:] )
@@ -410,7 +430,7 @@ def call_hexdump( argv, flags ):
                 section = vdb.memory.mmap.find_section( argv[0] )
                 if( section is None ):
                     raise RuntimeError(f"Now idea what {argv[0]} is")
-                hexdump(section.start,section.size,pointers=pointers,chaindepth=chainlen,values=values,align=align,uncached=uncached)
+                hexdump(section.start,section.size,pointers=pointers,chaindepth=chainlen,values=values,align=align,uncached=uncached, sparse = sparse)
                 return None
                 pass
 #            print(f"{obj=}")
@@ -440,17 +460,17 @@ def call_hexdump( argv, flags ):
                 olen = dtype.sizeof
 #            print(f"{olen=}")
 
-            hexdump(oaddr,olen,pointers=pointers,chaindepth=chainlen,values=values,align=align,uncached=uncached)
+            hexdump(oaddr,olen,pointers=pointers,chaindepth=chainlen,values=values,align=align,uncached=uncached,sparse=sparse)
         elif( len(argv) == 2 ):
             try:
-                addr = vdb.util.gint("(void*)" + argv[0])
+                addr = vdb.util.gint(f"(void*){argv[0]}")
             except:
                 section = vdb.memory.mmap.find_section( argv[0] )
                 if( section is None ):
                     raise RuntimeError(f"Now idea what {argv[0]} is")
                 addr = section.start
-            xlen = vdb.util.gint(argv[1])
-            hexdump(addr,xlen,pointers=pointers,chaindepth=chainlen,values=values,align=align,uncached=uncached)
+            xlen = vdb.util.gint(str(argv[1]))
+            hexdump(addr,xlen,pointers=pointers,chaindepth=chainlen,values=values,align=align,uncached=uncached,sparse=sparse)
         else:
             print(cmd_hexdump.__doc__)
     return
