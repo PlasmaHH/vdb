@@ -432,6 +432,8 @@ def read_u( uncached, ptr, count = 1, partial = False, sparse = False ):
     else:
         return read( ptr, count, partial, sparse = sparse)
 
+
+# XXX Do that caching manually and have a "volatile blacklist" feature that we mainly will use for peripherals
 @vdb.util.memoize( [gdb.events.stop, gdb.events.memory_changed, gdb.events.inferior_call,gdb.events.new_objfile,gdb.events.new_inferior] )
 def read( ptr, count = 1, partial = False, spec = None, sparse = False ):
     ret = read_uncached(ptr,count,partial,sparse)

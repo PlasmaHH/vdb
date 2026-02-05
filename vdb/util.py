@@ -1156,5 +1156,11 @@ class exception_context:
         if( value is not None ):
             value.add_note(self.scope)
 
+def extract_flag( flags, flag, deflt = False ):
+    ret = deflt
+    if( flag in flags ):
+        ret = True
+        flags = flags.replace(flag,"")
+    return ret,flags
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python

@@ -10,6 +10,20 @@ This command dumps the range of memory specified by the parameter. If you omit t
 to the value of `vdb-hexdump-default-len`. It will try to dump that many bytes, if along the way it reaches a point
 where memory will not be accessible anymore, it stops.
 
+#### Parameters
+
+You can provide the addres and range in various ways:
+
+* `hexdump <symbol>` The symbol is taken as the address to display a default amount of bytes from. Ususally you want to
+    use ` &symbol`  to use the address of a variable.
+* `hexdump <variable>` unless its an integer, this uses the variable and its size to display it.
+* `hexdump <symbol> <len>` A symbol and a specific amount of bytes.
+* `hexdump <address>,<address>`  (no space) Instead of giving the length, use a second address as the boundary. This
+    must be bigger (if its smaller it is interpreted as a length)
+
+Symbol or address can be any form of expression that gdb can parse. If you need to use spaces in it, quote the whole
+expression. Additionally when not displaying with a range, it can be the name of a section.
+
 ![](img/hd.png)
 
 If it knows the memory belongs to some symbol, it will colour it in a specific colour and annotate the symbol at the
@@ -21,7 +35,8 @@ vdb-hexdump-colors-header
 ```
 controls the colour of the header (the one that should make it a bit simpler to find certain bytes).
 
-The option `vdb-hexdump-row-format` determines how a row looks like, you can reorder certain elements here.
+The option `vdb-hexdump-row-format` determines how a row looks like, you can reorder certain elements here. Have a look
+at the default value to see which are available.
 
 ### `hexdump/p[#]`
 
@@ -46,6 +61,22 @@ vdb-hexdump-default-align
 to `True` to have that behaviour always on.
 
 ![](img/hd.align.png)
+
+### `hexdump/u`
+
+Do an uncached read. This is mostly useful to access things that change even when stopped like microcontroller
+peripheral registers.
+
+### `hexdump/s`
+
+Sparse mode. Normally hexdump tries to balance speed and ability to display all data. That means it checks if the
+address can be read from and then reads until it hits a position where it cannot read anymore.
+
+Sparse mode however tries to read in the range you gave it everything it can and then display nothing for the bytes that
+could not be read.
+
+> Due to the way it tries to be smart about what it can read the sizes read can differ. Thus it may happend for certain
+> hardware that you do not read things in the proper size (like only ever a single or four bytes at once). 
 
 ### `hexdump/v`
 
@@ -73,6 +104,14 @@ Using the `frame` keyword, vdb will try to annotate all variables local to this 
 (The debug output will likely vanish in a future version)
 
 Note how in the places where there is a hole in the object only 'fd' is being displayed.
+
+## Annotations
+
+There are several sources of annotations that you might see
+
+* Manually added via the `hexdump annotate`  command.
+* Globally known variables
+* When working with svd files, all peripheral registers currently active
 
 ## Configuration
 

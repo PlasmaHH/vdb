@@ -664,7 +664,7 @@ def follow_track_lines( tvar, relative_ts ):
 
 
 def extract_track( xtvar, relative_ts, timeseries = False, fragments = True ):
-#    print(f"extract_track( {tvar=}, {relative_ts=}, {timeseries=} )")
+#    print(f"extract_track( {tvar=}, {relative_ts=}, {timeseries=} )"
     # extract_track( tvar=['VALUE'], relative_ts=False, timeseries=False )
 #    vdb.util.bark() # print("BARK")
 #    print(f"{xtvar=}")
@@ -673,6 +673,9 @@ def extract_track( xtvar, relative_ts, timeseries = False, fragments = True ):
         print("Well, you should tell which track data variables to plot. Do `track show` or  `track data` to check what is available")
         return
     td = vdb.track.tracking_data
+    # XXX Instead of doing it this way, can we maybe quickly copy the data and stuff it into a queue and if there is
+    # already something in the queue just replace that? That way we can "drop" updates in between. Before we try that
+    # out, create some "FPS" measurements
     if( fragments ):
         vdb.track.tracking_data = {}
 

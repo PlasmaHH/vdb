@@ -49,14 +49,6 @@ def print_header( ):
     print(vdb.color.color(rowh,color_head.value))
 #    print(vdb.color.color(f'  {" "*plen}  0  1  2  3   4  5  6  7    8  9  A  B   C  D  E  F   01234567 89ABCDEF',color_head.value))
 
-
-class sym_location:
-
-    def __init__( self ):
-        self.start = 0
-        self.end = 0
-        self.name = ""
-
 annotation_tree = intervaltree.IntervalTree()
 default_sizes = { }
 
@@ -94,10 +86,9 @@ def tile_format( cnt, t, l ):
 
 def hexdump( addr, xlen = -1, pointers = False, chaindepth = -1, values = False, symbols = True, align = None, uncached = False, sparse = False ):
 
+    vdb.log(f"hexdump( {addr=:#0x}, {xlen=}, {pointers=}, {chaindepth=}, {values=}, {symbols=}, {align=}, {uncached=}, {sparse=})",level=6)
     if( align is None ):
         align = default_align.value
-
-
 
     if( chaindepth < 0 ):
         chaindepth = default_chaindepth.value
@@ -357,7 +348,7 @@ def annotate( argv ):
 
 
 def call_hexdump( argv, flags ):
-#    argv = gdb.string_to_argv(arg)
+
     if( len(argv) == 0 ):
         print(cmd_hexdump.__doc__)
         return
@@ -377,23 +368,10 @@ def call_hexdump( argv, flags ):
             pass
         flags = flags.replace(m.group(0),"")
 
-    # Maybe we want a "flags consume" object thing?
-
-    if( flags.find("u") != -1 ):
-        uncached = True
-        flags = flags.replace("u","")
-
-    if( flags.find("s") != -1 ):
-        sparse = True
-        flags = flags.replace("s","")
-
-    if( flags.find("v") != -1 ):
-        values = True
-        flags = flags.replace("v","")
-
-    if( flags.find("a") != -1 ):
-        align = True
-        flags = flags.replace("a","")
+    uncached,flags = vdb.util.extract_flag(flags,"u",uncached)
+    sparse,flags = vdb.util.extract_flag(flags,"s",sparse)
+    values,flags = vdb.util.extract_flag(flags,"v",values)
+    align,flags = vdb.util.extract_flag(flags,"a",align)
 
     if( len(flags) > 0 ):
         print(f"Unknown flags {flags}")
@@ -411,8 +389,6 @@ def call_hexdump( argv, flags ):
             argv = [ v0, v1-v0 ]
         else:
             argv = [ v0, v1 ]
-
-#    print(f"{argv=}")
 
     if( len(argv) > 0 and argv[0] == "annotate" ):
         annotate( argv[1:] )
@@ -484,11 +460,13 @@ The hexdump will output coloured pointer offsets according to the vmmap informat
 it has some known annotations (like static variables or previously registered annotations). You are encouraged for raw
 memory that you parse to write code to be able to annotate bytes yourself.
 
-hexdump[/p#|v] <addr> [<len>]               - shows a hexdump of <len> or vdb-hexdump-default-len bytes
+hexdump[/p#|v|s|u] <addr> [,<addr2>|<len>]   - shows a hexdump of <len> or until <addr2> or vdb-hexdump-default-len bytes
 
 hexdump/p#                                  - In the annotation text, show pointer chains of (aligned) pointers with max length of #
 hexdump/v                                   - In case of annotated known variables, print their pretty printed values too
 hexdump/a                                   - Output addresses 16 byte aligned
+hexdump/u                                   - Do not cache any memory reads
+hexdump/s                                   - Sparse mode, try to read over access errors and display as much as you can
 
 hexdump annotate <varname>                  - annotates the variable <varname> according to the type information known to gdb
 hexdump annotate <addres> <type>            - annotates the given address like a variable of type <type>
