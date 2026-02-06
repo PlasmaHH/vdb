@@ -22,6 +22,8 @@ def dev_list( ):
                         row_styles = ["on #222222",""], title = "Found Blackmagic Probes" )
 
     for sp in serial.tools.list_ports.comports():
+        if( sp.interface is None ):
+            continue
         if( re.search("black.*magic.*gdb",sp.interface,re.IGNORECASE) is None ):
             continue
         if( sp.vid ):
@@ -74,7 +76,7 @@ def _find_mcu( ):
 
     index = None
     for sl in scanresult.split("\n"):
-        m = re.search("([0-9]+)\s+(.*?)\s+(.*)",sl)
+        m = re.search(r"([0-9]+)\s+(.*?)\s+(.*)",sl)
         if( m is None ):
             continue
         index = int(m.group(1))
@@ -89,6 +91,8 @@ def _find_mcu( ):
 def attach( flags ):
     device = None
     for sp in serial.tools.list_ports.comports():
+        if( sp.interface is None ):
+            continue
         if( re.search("black.*magic.*gdb",sp.interface,re.IGNORECASE) is not None ):
             device = sp.device
             break
@@ -152,6 +156,7 @@ bmp/s attach - attach and load necessary svd files
 
     def __init__ (self):
         super (cmd_bmp, self).__init__ ("bmp", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        self.needs_parameters = True
 
     def do_invoke (self, argv ):
         argv,flags = self.flags(argv)

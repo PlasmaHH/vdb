@@ -47,7 +47,9 @@ under x86_64 Linux with gcc > 10.
     * [llist linked list tools](#llist-linked-list-tools)
     * [svd file support](#svd-file-support)
     * [pipe](#pipe)
+    * [bmp](#bmp)
     * [Theme](#theme)
+    * [Reconnect](#reconnect)
 * [global functionality](#global-functionality)
     * [shorten](#shorten)
     * [pointer (chaining)](#pointer-chaining)
@@ -306,12 +308,24 @@ This is an easy list of external commands. If not specified anything, the binary
 additional argument. You can place after a `:` additional default arguments and/or embed `{file}`  inside there. Ending
 the command just in `:`  will suppress the file passing. You can always put additional arguments.
 
+
+## bmp
+
+Black magic probe support. If you use the black magic probe, this command can help you with auto detection and automatic
+loading of svd files.
+[You can find detailed information about this module here](doc/BMP.md)
+
 ## Theme
 
 Since there are almost 200 different settings for colours, there is also a mechanism to use a toml file to create a
 theme that you can easily switch between.
 
 [You can find detailed information about this module here](doc/THEME.md)
+
+
+## Reconnect
+Provides a `reconnect`  command. It will try to re-do the last `target`  command being executed. It can not always
+capture the last one though as gdb does not provide us with all updates.
 
 # global functionality
 There is some functionality used by multiple modules. Whenever possible we load this lazily so it doesn't get used when
