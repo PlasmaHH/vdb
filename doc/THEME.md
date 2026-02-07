@@ -1,8 +1,7 @@
 
 # Themes
 
-Due to the massive number of color settings you can create themes via toml files. 
-
+Due to the massive number of color settings you can create themes via toml files.
 
 ## File format
 The format is rather simple:
@@ -18,14 +17,16 @@ function = "#548598"
 This will be translated into setting `vdb-asm-colors-function`  to `#548598`.
 
 Theoretically you can use this to set more than the colors, though the shipped themes will generally just set colors,
-you can use all other settings too
+you can use all other settings too.
 
 ### Existing
 
 In the example `.vdb`  directory we have a bunch of themes. These are all AI generated. You can use them as a starting
 point, or as-is if you are happy with them.
 
-### Extending 
+![alttext](img/theme.0.png "hovertext")
+
+### Extending
 
 By using `extends = "xyz"`  you can base your theme on another, first `xyz`  will be loaded and then yours on top of
 that
@@ -53,7 +54,14 @@ If you created a new theme, run this command. It will scan all `.vdb`  dirs for 
 
 ## `theme list`
 
-List known theme names along with their files
+List known theme names along with their files.
+
+It will also show a few samples of the colours, sorted by the frequency that colour is used in the theme config.
+
+You can set
+
+* `vdb-theme-sample-char`  to control which character is used in the sample output column.
+* `vdb-theme-sample-len`  at most this much colours are shown.
 
 ## `theme save <name> <file>`
 
@@ -77,5 +85,6 @@ Loads the theme with the given name. Must be exactly as written in the list.
 
 # Settings
 
-There isn't directly any setting for the module, but you can set the `vdb-theme` setting in your init file and it will
-activate that one.
+There isn't directly any setting for themes themselves, but you can set the `vdb-theme` setting in your init file and it will
+activate that one always on startup.
+

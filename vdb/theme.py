@@ -42,7 +42,10 @@ sample_len = vdb.config.parameter("vdb-theme-sample-len",16)
 
 
 def show_info( flags ):
-    print(f"Current theme '{current_theme_name}' was loaded from '{current_theme.file}'")
+    if( current_theme is None ):
+        print("No theme loaded, using default colours or colours configured by individual settings")
+    else:
+        print(f"Current theme '{current_theme_name}' was loaded from '{current_theme.file}'")
 
 rich_conversions = {}
 def _gen_theme( ):
@@ -297,10 +300,10 @@ def start( ):
     if( vdb.cfgtheme.value ):
         theme_load(vdb.cfgtheme.value,"")
 
-# XXX Add a save command (use /f to overwrite). It will probably not support multiple files, its thought of as a
-# starting point. How to figure what to write? All colors configs plus a few that are specially marked by plugins?
 class cmd_theme (vdb.command.command):
     """
+Theme support for colors
+
 theme refresh             - scans the directories for new toml files
 theme list                - list known themes
 theme save <name> <file>  - save current theme in a file

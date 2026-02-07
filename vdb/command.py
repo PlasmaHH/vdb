@@ -47,6 +47,9 @@ class command(gdb.Command,abc.ABC):
         self.from_tty = None
         self.needs_parameters = None
 
+        if( self.__doc__ is not None ):
+            self.__doc__ = self.__doc__.strip()
+
     @staticmethod
     def extract_parameters( iargv ):
         argv = copy.copy(iargv)

@@ -13,12 +13,12 @@ externals = vdb.config.parameter("vdb-pipe-externals","bat:,binwalk,objdump,tmux
 
 pipe_commands = { }
 
-def add( cmd, ncall ):
+def add( cmd, ncall, alias = None ):
 #    global pipe_commands
-    pipe_commands[cmd] = ncall
+    pipe_commands[cmd] = (ncall,alias)
 
 def call( cmd, data, argv ):
-    ncall = pipe_commands.get(cmd,None)
+    (ncall,_) = pipe_commands.get(cmd,(None,None))
     if( ncall is not None ):
         ncall(data, argv)
     else:
@@ -45,6 +45,14 @@ class cmd_external(vdb.command.command):
 #        print("self.arglist = '%s'" % (self.arglist,) )
         super ().__init__ (self.cmdname, gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.needs_parameters = False
+
+        self.__doc__ = f"Executes external command `{self.cmdname}`"
+        if( self.arglist is None ):
+            self.__doc__ += " with user provided arguments and then the current executable name"
+        elif( len(self.arglist) > 0 ):
+            self.__doc__ += f" with user provided arguments after `{self.arglist}`"
+        else:
+            self.__doc__ += f" with user provided arguments only"
 
     def do_invoke (self, argv):
         try:
@@ -111,6 +119,7 @@ class cmd_wrap(vdb.command.command):
         self.saved_from_tty = None
         # Strictly speaking we don't know
         self.needs_parameters = False
+        self.__doc__ = f"Executes command `{self.cmdname}` as `{self.wrapped_name}` to provide pipe support"
 
     def do_invoke (self, argv):
 #        vdb.util.bark() # print("BARK")
@@ -160,7 +169,7 @@ for icmd in commands.elements:
         cmd = icmd[0]
         acmd = icmd[1].split()
 
-        add(icmd[0],functools.partial(do_cmd_alias,acmd[0],acmd[1:]))
+        add(icmd[0],functools.partial(do_cmd_alias,acmd[0],acmd[1:]),acmd)
     else:
         add(icmd,functools.partial(do_cmd,icmd))
 

@@ -202,14 +202,26 @@ class cmd_vdb (vdb.command.command):
         vdb.subcommands.show([])
         print("Available module commands:")
         maxlen = 0
-        for n,c in vdb.command.command_registry.items():
-            maxlen = max(maxlen,len(n))
 
+        tbl = rich.table.Table("Command","Info","Module",row_styles = ["on #222222",""])
         for n,c in vdb.command.command_registry.items():
             ns = n.ljust(maxlen)
             doc = c.__doc__
-            doc = doc.split("\n")[0]
-            print(f" {ns} : {doc}")
+            if( doc is not None ):
+                doc = doc.split("\n")[0]
+            tbl.add_row( ns, doc, c.__module__ )
+        vdb.util.console.print(tbl)
+
+        print("Available commands you can pipe other commands output to:")
+        tbl = rich.table.Table("Command","Alias for" ,row_styles = ["on #222222",""])
+        for n,c in vdb.pipe.pipe_commands.items():
+            if( c[1] is not None ):
+                cs = " ".join(c[1])
+            else:
+                cs = n
+            tbl.add_row( n, cs )
+        vdb.util.console.print(tbl)
+
 
 cmd_vdb()
 
