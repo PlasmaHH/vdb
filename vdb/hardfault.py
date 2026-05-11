@@ -14,6 +14,7 @@ import vdb.command
 import vdb.color
 import vdb.util
 import vdb.register
+import vdb.memory
 
 import rich.console
 
@@ -26,6 +27,15 @@ def get_reasons( flags, val ):
         if( mask & val != 0 ):
             ret.append( f"[{txt[0]}] {txt[1]}" )
     return ret
+
+def recover_sp( name, sp ):
+    # order on stack should be r0, r1, r2, r3, r12, lr, pc, we want pc
+    mem = vdb.memory.read_uncached(sp + 6*4,4)
+    if( mem is not None ):
+        mem = int.from_bytes(mem,byteorder="little",signed=False)
+        print(f"Possible recovered pc {mem:#0x} from {name} @{sp:#0x}")
+    else:
+        print(f"{name} does not point to valid memory")
 
 def hardfault_info():
     print("Hard Fault interesting registers:")
@@ -98,6 +108,12 @@ def hardfault_info():
         print(f"MemManage Fault while trying to access memory at {mmfar:#0x}")
     else:
         print("MMFAR not valid")
+
+
+    msp = registers.read("msp")
+    recover_sp("msp",int(msp))
+    psp = registers.read("psp")
+    recover_sp("psp",int(psp))
 
     gdb.execute("bt")
 

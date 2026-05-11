@@ -370,6 +370,7 @@ class os_zephyr( os ):
         thread = gdb.parse_and_eval("_kernel.threads")
         current_thread = gdb.parse_and_eval("_kernel.cpus.current")
 
+
         while thread:
             t = task()
             ret.append(t)

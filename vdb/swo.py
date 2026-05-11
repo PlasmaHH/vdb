@@ -31,6 +31,8 @@ default_colors = vdb.config.parameter("vdb-swo-colors", "#ffffff;#ffff77;#ff9900
 
 show_packet_type = vdb.config.parameter("vdb-swo-show-packet-type",False)
 auto_start = vdb.config.parameter("vdb-swo-autostart",False, docstring = "Autostarts before the first prompt" )
+trace_file = vdb.config.parameter("vdb-swo-pc-trace-file","")
+trace_lru  = vdb.config.parameter("vdb-swo-pc-trace-lru",0)
 
 # TODO
 # sync/async mode: only output what was captured "before_prompt"
@@ -61,10 +63,17 @@ pc_counters = collections.defaultdict(int)
 pc_total = 0
 pc2function_cache = {}
 
+pc_trace_f = None
+pc_lru_q = None
+# check this whole performance path, its quite critical and we have some ifs that might not be necessary
 def add_pc_counter( addr ):
     pc_counters[addr] += 1
     global pc_total
     pc_total += 1
+    if( pc_trace_f is not None ):
+        pc_trace_f.write(f"{addr:#0x},")
+    if( pc_lru_q is not None ):
+        pc_lru_q.append(addr)
 
 class SWO:
 
@@ -318,7 +327,8 @@ class SWO:
                 # XXX We might want to forward this into yet another thread for performance reasons to be able to really
                 # fast read these. Also this might be more useful to have that thread then hold a lock over the
                 # pc_counters dict so we can have our report etc. functionality run while swo is still active
-                add_pc_counter(addr)
+                if( addr ): # We have some problem where we get 0s all the time, not sure how, but lets filter them
+                    add_pc_counter(addr)
             else:
                 print(f"Unknown Source ({headerbyte:#0x})")
                 print(f"[{len(payload)}]:{payload=}")
@@ -356,14 +366,30 @@ def link_board( channel, dashboard ):
 swo = None
 
 def start_swo( flags, argv ):
+    # XXX Here we also allow for monitor commands to start the stuff but first auto detect which debugger probe we have
+    # (I think there are several, we might want a common auto detect place or even a monitor mode abstraction layer)
     global swo
 
     host = default_host.value
     port = default_port.value
     # XXX Support passing at command line
+    if( len(trace_file.value) ):
+        global pc_trace_f
+        pc_trace_f = open(trace_file.value,"w")
+        print(f"Opened SWO PC Trace file {trace_file.value}")
+
+    if( trace_lru.value ):
+        global pc_lru_q
+        pc_lru_q = collections.deque( maxlen = trace_lru.value )
+        print(f"Initialized SWO PC LRU Queue with {trace_lru.value} entries")
 
     stop_swo(None,None)
     swo = SWO(host,port)
+
+@vdb.event.stop()
+def flush_trace( ):
+    if( pc_trace_f is not None ):
+        pc_trace_f.flush()
 
 @vdb.event.gdb_exiting()
 def stop_swo( flags = None, argv = None ):
@@ -395,6 +421,12 @@ def pc_trace( flags, argv ):
     # XXX can we provide something similar to that on x86 linux?
     print("Not yet implemented: would enable PC tracing on cortex-m targets")
 
+
+#    reg/m DWT.DWT_CTRL.PCSAMPLENA=1
+#    reg/m DWT.DWT_CTRL.CYCCNTENA=1
+#    reg/m DWT.DWT_CTRL.POSTPRESET=3
+#    reg/m DWT.DWT_CTRL.CYCTAP=0
+
     # XXX Misuse this subcommand for debugging output trigger
     print(f"{pc_counters=}")
 
@@ -404,6 +436,14 @@ def pc_clear( flags, argv ):
     pc_counters = collections.defaultdict(int)
     global pc_total
     pc_total = 0
+
+def pc_lru( flags, argv ):
+    if( pc_lru_q is None ):
+        print("No PC LRU entries")
+        return
+    print(f"Last {len(pc_lru_q)} addresses:")
+    for a in pc_lru_q:
+        print(f"{a:#0x}")
 
 def pc_report( flags, argv ):
     pc_functions = collections.defaultdict(int)
@@ -511,6 +551,8 @@ class cmd_swo (vdb.command.command):
                 pc_clear(flags,argv[1:])
             case "pc_report":
                 pc_report(flags,argv[1:])
+            case "pc_lru":
+                pc_lru(flags,argv[1:])
             case _:
                 print(f"Unrecognized command {argv[0]}")
                 self.usage()

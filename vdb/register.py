@@ -1754,4 +1754,122 @@ We recommend having an alias reg = registers in your .gdbinit
 
 cmd_registers()
 
+def get_sysclk_stm32u5(read32, hse_freq=None):
+    """
+    read32(addr) -> liest 32-bit Wert (z.B. via gdb)
+    hse_freq: externe Quarzfrequenz in Hz (optional, sonst None)
+
+    Rückgabe: System Clock in Hz (oder None wenn nicht bestimmbar)
+    """
+
+    RCC_BASE = 0x40021000
+    RCC_BASE = 0x46020c00
+
+    RCC_CR      = read32(RCC_BASE + 0x00)
+    RCC_CFGR    = read32(RCC_BASE + 0x10)
+    RCC_PLLCFGR = read32(RCC_BASE + 0x28)
+
+    # --- Clock Source bestimmen ---
+    sws = (RCC_CFGR >> 2) & 0b11
+
+    # --- MSI Frequenz bestimmen ---
+    def get_msi_freq():
+        # MSIRANGE Bits (typisch STM32U5: RCC_CR[7:4])
+        msirange = (RCC_CR >> 4) & 0xF
+
+        msi_table = {
+            0: 100_000,
+            1: 200_000,
+            2: 400_000,
+            3: 800_000,
+            4: 1_000_000,
+            5: 2_000_000,
+            6: 4_000_000,
+            7: 8_000_000,
+            8: 16_000_000,
+            9: 24_000_000,
+            10: 32_000_000,
+            11: 48_000_000,
+        }
+
+        return msi_table.get(msirange, None)
+
+    # --- HSI ---
+    def get_hsi_freq():
+        return 16_000_000  # U5 typisch
+
+    # --- HSE ---
+    def get_hse_freq():
+        return hse_freq  # kann None sein
+
+    # --- PLL ---
+    def get_pll_freq():
+        pll_src = (RCC_PLLCFGR >> 0) & 0b11
+
+        if pll_src == 0:
+            fin = None
+        elif pll_src == 1:
+            fin = get_msi_freq()
+        elif pll_src == 2:
+            fin = get_hsi_freq()
+        elif pll_src == 3:
+            fin = get_hse_freq()
+        else:
+            fin = None
+
+        if fin is None:
+            return None
+
+        # Divider/Mul (Bitpositionen U5 prüfen!)
+        pllm = ((RCC_PLLCFGR >> 4) & 0x7) + 1
+        plln = (RCC_PLLCFGR >> 8) & 0x7F
+        pllr = ((RCC_PLLCFGR >> 25) & 0x7) + 1
+
+        if pllm == 0 or pllr == 0:
+            return None
+
+        vco = fin / pllm * plln
+        fout = vco / pllr
+
+        return int(fout)
+
+    # --- Hauptswitch ---
+    if sws == 0:
+        sysclk = get_msi_freq()
+    elif sws == 1:
+        sysclk = get_hsi_freq()
+    elif sws == 2:
+        sysclk = get_hse_freq()
+    elif sws == 3:
+        sysclk = get_pll_freq()
+    else:
+        sysclk = None
+
+    if sysclk is None:
+        return None
+
+    # --- AHB Prescaler ---
+    hpre = (RCC_CFGR >> 4) & 0xF
+
+    ahb_div_table = {
+        0: 1, 1: 1, 2: 1, 3: 1,
+        4: 2, 5: 4, 6: 8, 7: 16,
+        8: 64, 9: 128, 10: 256, 11: 512
+    }
+
+    ahb_div = ahb_div_table.get(hpre, 1)
+
+    hclk = sysclk // ahb_div
+
+    return hclk
+
+def gdb_read32(addr):
+    import gdb
+    return int(gdb.parse_and_eval(f"*((unsigned int*){addr})"))
+
+def get_freq( ):
+    freq = get_sysclk_stm32u5(gdb_read32, hse_freq=16_000_000)
+#    freq = get_sysclk_stm32u5(gdb_read32, hse_freq=16)
+    print(freq)
+
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
