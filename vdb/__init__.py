@@ -108,7 +108,7 @@ initsearch_down = vdb.config.parameter( "vdb-init-search-down",True)
 def print_exc( use_rich = None ):
 
     if( use_rich is None ):
-        use_rich =  rich_tracebacks.value
+        use_rich =  rich_tracebacks#.value
 
     if( use_rich ):
         vdb.util.console.print_exception( show_locals = True )

@@ -922,6 +922,23 @@ def vt_flow_ret( ins, frame, possible_registers, possible_flags , executes ):
     ins.add_explanation("Returns from a subroutine")
     return ( possible_registers, possible_flags )
 
+def vt_flow_rdpid( ins, frame, possible_registers, possible_flags , executes ):
+    tgt = ins.arguments[0]
+    possible_registers.set( tgt.register, 0, origin = "flow_rdpid" )
+    ins.add_explanation("Reads current executing core (assumes 0 for simulation)")
+    return ( possible_registers, possible_flags )
+
+
+def vt_flow_xchg( ins, frame, possible_registers, possible_flags , executes ):
+    tgt = ins.arguments[0]
+    print(f"{tgt.register=}")
+    print(f"{tgt.dereference=}")
+    tgt = ins.arguments[1]
+    print(f"{tgt.register=}")
+    print(f"{tgt.dereference=}")
+    ins.add_explanation(f"Exchanges contents of {ins.arguments[0]} and {ins.arguments[1]}, using bus lock for memory access")
+    return ( possible_registers, possible_flags )
+
 
 
 def current_flags( frame ):
