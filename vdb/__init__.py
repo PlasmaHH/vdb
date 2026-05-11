@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import vdb.config
-import vdb.subcommands
-import vdb.command
-import vdb.util
 
 import gdb
 
@@ -21,8 +17,34 @@ import traceback
 from typing import Dict
 from types import ModuleType, TracebackType
 
+# Since these two are required before start, we cannot currently set them, we leave them here as-is for the case where
+# we find a better way to achieve the same purpose (maybe gdb one day allows us to set configs it doesnt know yet about)
+rich_tracebacks = True #vdb.config.parameter( "vdb-rich-traceback",True)
+simulate_venv   = True #vdb.config.parameter( "vdb-simulate-venv",True)
 
 
+# To import things from the venv we figure this out as early as possible
+if( simulate_venv):
+    for python in [ f"python{sys.version_info[0]}.{sys.version_info[1]}", "python3", "python" ]:
+        try:
+            paths = subprocess.check_output(f'{python} -c "import os,sys;print(os.linesep.join(sys.path).strip())"',shell=True).decode("utf-8").split()
+            print(f"{paths=}")
+            sys.path.extend(paths)
+            break
+        except subprocess.CalledProcessError:
+            continue
+
+# enabling as early as possible gives the most value
+if( rich_tracebacks):
+    import rich.traceback
+    rich.traceback.install(show_locals=True)
+
+# Only after we fixed the venv thing we can import all the other stuff
+
+import vdb.config
+import vdb.subcommands
+import vdb.command
+import vdb.util
 # First setup the most important settings that configure which parts we want to have active
 
 enable = vdb.config.parameter( "vdb-enable", True )
@@ -81,24 +103,7 @@ max_threads     = vdb.config.parameter( "vdb-max-threads",4)
 inithome_first  = vdb.config.parameter( "vdb-init-home-first",True)
 initsearch_down = vdb.config.parameter( "vdb-init-search-down",True)
 
-# Since these two are required before start, we cannot currently set them, we leave them here as-is for the case where
-# we find a better way to achieve the same purpose (maybe gdb one day allows us to set configs it doesnt know yet about)
-rich_tracebacks = vdb.config.parameter( "vdb-rich-traceback",True)
-simulate_venv   = vdb.config.parameter( "vdb-simulate-venv",True)
 
-# enabling as early as possible gives the most value
-if( rich_tracebacks.value ):
-    import rich.traceback
-    rich.traceback.install(show_locals=True)
-
-if( simulate_venv.value ):
-    for python in [ f"python{sys.version_info[0]}.{sys.version_info[1]}", "python3", "python" ]:
-        try:
-            paths = subprocess.check_output(f'{python} -c "import os,sys;print(os.linesep.join(sys.path).strip())"',shell=True).decode("utf-8").split()
-            sys.path.extend(paths)
-            break
-        except subprocess.CalledProcessError:
-            continue
 
 def print_exc( use_rich = None ):
 

@@ -10,6 +10,8 @@ try:
     # nothing more than an import vdb is necsesary
     import vdb
 except ModuleNotFoundError:
+    import traceback
+#    traceback.print_exc()
     not_found = True
 
 # Don't do it in the except clause since it may throw an exception which then gets chained which is confusing sometimes
@@ -22,6 +24,10 @@ if( not_found ):
     directory       = path.abspath(directory)
     sys.path.append(directory)
 
-    import vdb
+    try:
+        import vdb
+    except ModuleNotFoundError:
+        import traceback
+        traceback.print_exc()
 
 # vim: tabstop=4 shiftwidth=4 expandtab ft=python
