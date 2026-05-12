@@ -30,5 +30,5 @@ This tries to be as smart as possible and connect to the probe and setting up vd
 
 * `vdb-bmp-scan-retries` retry this often to scan for an MCU before giving up
 * `vdb-bmp-retry-delay` wait that much seconds between retries to give whatever you scan for time to wake up
-* `vdb-bmp-all-mem-accessible` Normally the bmp does tell gdb that all but the flash and ram are inaccessbile. For SoCs
-    this would block access to  peripheral and memory mapped things
+* `vdb-bmp-all-mem-accessbile` Normally the bmp does tell gdb that all but the flash and ram are inaccessible. For SoCs
+    this would block access to peripheral and memory mapped things. Note: the parameter name contains a typo (`accessbile` instead of `accessible`).

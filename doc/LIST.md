@@ -21,7 +21,6 @@ sources. If the wrong one is chosen enter a more complete path.
 
 ## configuration
 
-src_command     = vdb.config.parameter("
 ### `vdb-list-source-command`
 
 You can change the command used to render the code. The default is `bat -r {start}:{end} -H {line} {file}
@@ -29,7 +28,6 @@ You can change the command used to render the code. The default is `bat -r {star
 
 If this is empty/None then no command is used and the source code is just printed without any syntax highlighting.
 
-marker_color    = vdb.config.parameter("
 ### `vdb-list-colors-marker`
 
 In case of no external command being used the currently active line number will be printed in this colour.

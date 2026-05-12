@@ -41,6 +41,9 @@ small outputs.
 Setting `vdb-track-clear-at-start` to off will disable the automated clearing of tracking data when (re)starting a
 process.
 
+The `vdb-track-verbosity` setting (default `2`) controls how much output the track module produces. Set to `0` to
+suppress most messages, or higher values for more debug output.
+
 If at a specific breakpoint an expression did not yield any output (or caused an exception) this field will remain
 empty.
 

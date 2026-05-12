@@ -105,7 +105,7 @@ The default is 10 seconds.
 
 With the option
 ```
-vwd-dash-disable-silent
+vdb-dash-disable-silent
 ```
 you can suppress any message when disabling a dashboard. This is useful when the dashboard has any catastrophic
 malfunction and you want to disable it without ever sending data to it.

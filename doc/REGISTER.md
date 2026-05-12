@@ -66,7 +66,7 @@ Using `&` in front of the filter (which can be empty in that case) will cause th
 register resides at too.
 
 Sometimes the memory is not accessible, in that case we will automatically blacklist that register and never try to
-display it again. Set `vdb-register-mmaped-unavailable-zero` to instead use zero as the value for the register.
+display it again. Set `vdb-register-mmaped-unavilable-zero` to instead use zero as the value for the register (note: the parameter name contains a typo).
 
 #### Setting registers
 Memory mapped registers support setting them or manipulating them via bitmasks. Supported operations are

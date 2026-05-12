@@ -8,7 +8,6 @@ acceptable.
 
 ![](img/hashtable.good.png)
 ![](img/hashtable.bad.png)
-[You can find detailed information about this module here](HASHTABLE.md)
 
 For now there is basic support for some `std::` and some `boost::instrusive` hashtables, once we get things settles we
 might be able to figure out a nice way to add custom support.
